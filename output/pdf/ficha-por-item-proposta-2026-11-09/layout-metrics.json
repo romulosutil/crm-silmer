@@ -1,0 +1,1157 @@
+{
+  "results": [
+    {
+      "orientation": "portrait",
+      "sheets": [
+        {
+          "item": "1",
+          "width": 733.21875,
+          "height": 1062.046875,
+          "scrollHeight": 1062,
+          "footerBottom": 1062.046875,
+          "productionFields": 14,
+          "minFontPx": 13,
+          "nameWritingWidthMm": 54.64886067708333,
+          "nameWritingHeightMm": 5.291666666666667,
+          "extraValues": [
+            {
+              "text": "Raglan tradicional",
+              "x": 57,
+              "y": 388.078125,
+              "width": 123,
+              "height": 33.78125
+            },
+            {
+              "text": "Logotipo na frente, nome e número nas costas",
+              "x": 533.609375,
+              "y": 388.078125,
+              "width": 199.609375,
+              "height": 33.78125
+            },
+            {
+              "text": "Azul royal",
+              "x": 100,
+              "y": 424.859375,
+              "width": 66,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 480.609375,
+              "y": 424.859375,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Amarelo ouro",
+              "x": 154,
+              "y": 444.75,
+              "width": 91,
+              "height": 16.890625
+            },
+            {
+              "text": "Verde bandeira",
+              "x": 552.609375,
+              "y": 444.75,
+              "width": 102,
+              "height": 16.890625
+            },
+            {
+              "text": "Laranja",
+              "x": 89,
+              "y": 464.640625,
+              "width": 49,
+              "height": 16.890625
+            },
+            {
+              "text": "Vermelho",
+              "x": 496.609375,
+              "y": 464.640625,
+              "width": 64,
+              "height": 16.890625
+            }
+          ],
+          "overflow": false,
+          "label": "Pedido 01-CRMItem 1 de 8 · Folha 1/8"
+        },
+        {
+          "item": "2",
+          "width": 733.21875,
+          "height": 1062.046875,
+          "scrollHeight": 1062,
+          "footerBottom": 1062.046875,
+          "productionFields": 14,
+          "minFontPx": 13,
+          "nameWritingWidthMm": 54.64886067708333,
+          "nameWritingHeightMm": 5.291666666666667,
+          "extraValues": [
+            {
+              "text": "Acinturada",
+              "x": 57,
+              "y": 366.1875,
+              "width": 74,
+              "height": 16.890625
+            },
+            {
+              "text": "Símbolo no peito esquerdo",
+              "x": 533.609375,
+              "y": 366.1875,
+              "width": 181,
+              "height": 16.890625
+            },
+            {
+              "text": "Azul marinho",
+              "x": 100,
+              "y": 386.078125,
+              "width": 86,
+              "height": 16.890625
+            },
+            {
+              "text": "Azul marinho",
+              "x": 480.609375,
+              "y": 386.078125,
+              "width": 86,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 154,
+              "y": 405.96875,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 552.609375,
+              "y": 405.96875,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Azul marinho",
+              "x": 89,
+              "y": 425.859375,
+              "width": 86,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 496.609375,
+              "y": 425.859375,
+              "width": 47,
+              "height": 16.890625
+            }
+          ],
+          "overflow": false,
+          "label": "Pedido 01-CRMItem 2 de 8 · Folha 2/8"
+        },
+        {
+          "item": "3",
+          "width": 733.21875,
+          "height": 1062.046875,
+          "scrollHeight": 1062,
+          "footerBottom": 1062.046875,
+          "productionFields": 14,
+          "minFontPx": 13,
+          "nameWritingWidthMm": 54.64886067708333,
+          "nameWritingHeightMm": 5.291666666666667,
+          "extraValues": [
+            {
+              "text": "Tradicional",
+              "x": 57,
+              "y": 366.1875,
+              "width": 75,
+              "height": 16.890625
+            },
+            {
+              "text": "Arte colorida na frente",
+              "x": 533.609375,
+              "y": 366.1875,
+              "width": 151,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 100,
+              "y": 386.078125,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 480.609375,
+              "y": 386.078125,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Azul royal",
+              "x": 154,
+              "y": 405.96875,
+              "width": 66,
+              "height": 16.890625
+            },
+            {
+              "text": "Azul royal",
+              "x": 552.609375,
+              "y": 405.96875,
+              "width": 66,
+              "height": 16.890625
+            },
+            {
+              "text": "Azul royal",
+              "x": 89,
+              "y": 425.859375,
+              "width": 66,
+              "height": 16.890625
+            },
+            {
+              "text": "Azul royal",
+              "x": 496.609375,
+              "y": 425.859375,
+              "width": 66,
+              "height": 16.890625
+            }
+          ],
+          "overflow": false,
+          "label": "Pedido 01-CRMItem 3 de 8 · Folha 3/8"
+        },
+        {
+          "item": "4",
+          "width": 733.21875,
+          "height": 1062.046875,
+          "scrollHeight": 1062,
+          "footerBottom": 1062.046875,
+          "productionFields": 14,
+          "minFontPx": 13,
+          "nameWritingWidthMm": 54.64886067708333,
+          "nameWritingHeightMm": 5.291666666666667,
+          "extraValues": [
+            {
+              "text": "Tradicional",
+              "x": 57,
+              "y": 366.1875,
+              "width": 75,
+              "height": 16.890625
+            },
+            {
+              "text": "Marca no peito e nas costas",
+              "x": 533.609375,
+              "y": 366.1875,
+              "width": 188,
+              "height": 16.890625
+            },
+            {
+              "text": "Verde bandeira",
+              "x": 100,
+              "y": 386.078125,
+              "width": 102,
+              "height": 16.890625
+            },
+            {
+              "text": "Verde bandeira",
+              "x": 480.609375,
+              "y": 386.078125,
+              "width": 102,
+              "height": 16.890625
+            },
+            {
+              "text": "Verde bandeira",
+              "x": 154,
+              "y": 405.96875,
+              "width": 102,
+              "height": 16.890625
+            },
+            {
+              "text": "Verde bandeira",
+              "x": 552.609375,
+              "y": 405.96875,
+              "width": 102,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 89,
+              "y": 425.859375,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 496.609375,
+              "y": 425.859375,
+              "width": 47,
+              "height": 16.890625
+            }
+          ],
+          "overflow": false,
+          "label": "Pedido 01-CRMItem 4 de 8 · Folha 4/8"
+        },
+        {
+          "item": "5",
+          "width": 733.21875,
+          "height": 1062.046875,
+          "scrollHeight": 1062,
+          "footerBottom": 1062.046875,
+          "productionFields": 14,
+          "minFontPx": 13,
+          "nameWritingWidthMm": 54.64886067708333,
+          "nameWritingHeightMm": 5.291666666666667,
+          "extraValues": [
+            {
+              "text": "Esportiva",
+              "x": 57,
+              "y": 366.1875,
+              "width": 62,
+              "height": 33.78125
+            },
+            {
+              "text": "Identificação da equipe na frente",
+              "x": 533.609375,
+              "y": 366.1875,
+              "width": 199.609375,
+              "height": 33.78125
+            },
+            {
+              "text": "Cinza",
+              "x": 100,
+              "y": 402.96875,
+              "width": 38,
+              "height": 16.890625
+            },
+            {
+              "text": "Cinza",
+              "x": 480.609375,
+              "y": 402.96875,
+              "width": 38,
+              "height": 16.890625
+            },
+            {
+              "text": "Preto",
+              "x": 154,
+              "y": 422.859375,
+              "width": 36,
+              "height": 16.890625
+            },
+            {
+              "text": "Preto",
+              "x": 552.609375,
+              "y": 422.859375,
+              "width": 36,
+              "height": 16.890625
+            },
+            {
+              "text": "Preto",
+              "x": 89,
+              "y": 442.75,
+              "width": 36,
+              "height": 16.890625
+            },
+            {
+              "text": "Preto",
+              "x": 496.609375,
+              "y": 442.75,
+              "width": 36,
+              "height": 16.890625
+            }
+          ],
+          "overflow": false,
+          "label": "Pedido 01-CRMItem 5 de 8 · Folha 5/8"
+        },
+        {
+          "item": "6",
+          "width": 733.21875,
+          "height": 1062.046875,
+          "scrollHeight": 1062,
+          "footerBottom": 1062.046875,
+          "productionFields": 14,
+          "minFontPx": 13,
+          "nameWritingWidthMm": 54.64886067708333,
+          "nameWritingHeightMm": 5.291666666666667,
+          "extraValues": [
+            {
+              "text": "Baby look",
+              "x": 57,
+              "y": 366.1875,
+              "width": 66,
+              "height": 33.78125
+            },
+            {
+              "text": "Símbolo centralizado na frente",
+              "x": 533.609375,
+              "y": 366.1875,
+              "width": 199.609375,
+              "height": 33.78125
+            },
+            {
+              "text": "Branco",
+              "x": 100,
+              "y": 402.96875,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 480.609375,
+              "y": 402.96875,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Laranja",
+              "x": 154,
+              "y": 422.859375,
+              "width": 49,
+              "height": 16.890625
+            },
+            {
+              "text": "Laranja",
+              "x": 552.609375,
+              "y": 422.859375,
+              "width": 49,
+              "height": 16.890625
+            },
+            {
+              "text": "Laranja",
+              "x": 89,
+              "y": 442.75,
+              "width": 49,
+              "height": 16.890625
+            },
+            {
+              "text": "Laranja",
+              "x": 496.609375,
+              "y": 442.75,
+              "width": 49,
+              "height": 16.890625
+            }
+          ],
+          "overflow": false,
+          "label": "Pedido 01-CRMItem 6 de 8 · Folha 6/8"
+        },
+        {
+          "item": "7",
+          "width": 733.21875,
+          "height": 1062.046875,
+          "scrollHeight": 1062,
+          "footerBottom": 1062.046875,
+          "productionFields": 14,
+          "minFontPx": 13,
+          "nameWritingWidthMm": 54.64886067708333,
+          "nameWritingHeightMm": 5.291666666666667,
+          "extraValues": [
+            {
+              "text": "Tradicional",
+              "x": 57,
+              "y": 366.1875,
+              "width": 75,
+              "height": 16.890625
+            },
+            {
+              "text": "Símbolo no peito esquerdo",
+              "x": 533.609375,
+              "y": 366.1875,
+              "width": 181,
+              "height": 16.890625
+            },
+            {
+              "text": "Azul marinho",
+              "x": 100,
+              "y": 386.078125,
+              "width": 86,
+              "height": 16.890625
+            },
+            {
+              "text": "Azul marinho",
+              "x": 480.609375,
+              "y": 386.078125,
+              "width": 86,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 154,
+              "y": 405.96875,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 552.609375,
+              "y": 405.96875,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 89,
+              "y": 425.859375,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 496.609375,
+              "y": 425.859375,
+              "width": 47,
+              "height": 16.890625
+            }
+          ],
+          "overflow": false,
+          "label": "Pedido 01-CRMItem 7 de 8 · Folha 7/8"
+        },
+        {
+          "item": "8",
+          "width": 733.21875,
+          "height": 1062.046875,
+          "scrollHeight": 1062,
+          "footerBottom": 1062.046875,
+          "productionFields": 14,
+          "minFontPx": 13,
+          "nameWritingWidthMm": 54.64886067708333,
+          "nameWritingHeightMm": 5.291666666666667,
+          "extraValues": [
+            {
+              "text": "Reta",
+              "x": 57,
+              "y": 366.1875,
+              "width": 31,
+              "height": 16.890625
+            },
+            {
+              "text": "Marca em branco na frente",
+              "x": 533.609375,
+              "y": 366.1875,
+              "width": 182,
+              "height": 16.890625
+            },
+            {
+              "text": "Preto",
+              "x": 100,
+              "y": 386.078125,
+              "width": 36,
+              "height": 16.890625
+            },
+            {
+              "text": "Preto",
+              "x": 480.609375,
+              "y": 386.078125,
+              "width": 36,
+              "height": 16.890625
+            },
+            {
+              "text": "Cinza",
+              "x": 154,
+              "y": 405.96875,
+              "width": 38,
+              "height": 16.890625
+            },
+            {
+              "text": "Cinza",
+              "x": 552.609375,
+              "y": 405.96875,
+              "width": 38,
+              "height": 16.890625
+            },
+            {
+              "text": "Cinza",
+              "x": 89,
+              "y": 425.859375,
+              "width": 38,
+              "height": 16.890625
+            },
+            {
+              "text": "Cinza",
+              "x": 496.609375,
+              "y": 425.859375,
+              "width": 38,
+              "height": 16.890625
+            }
+          ],
+          "overflow": false,
+          "label": "Pedido 01-CRMItem 8 de 8 · Folha 8/8"
+        }
+      ]
+    },
+    {
+      "orientation": "landscape",
+      "sheets": [
+        {
+          "item": "1",
+          "width": 1062.046875,
+          "height": 733.21875,
+          "scrollHeight": 733,
+          "footerBottom": 733.21875,
+          "productionFields": 14,
+          "minFontPx": 13,
+          "nameWritingWidthMm": 26.636100260416665,
+          "nameWritingHeightMm": 3.96875,
+          "extraValues": [
+            {
+              "text": "Raglan tradicional",
+              "x": 57,
+              "y": 373.1875,
+              "width": 123,
+              "height": 33.78125
+            },
+            {
+              "text": "Logotipo na frente, nome e número nas costas",
+              "x": 514.34375,
+              "y": 373.1875,
+              "width": 180.34375,
+              "height": 33.78125
+            },
+            {
+              "text": "Azul royal",
+              "x": 100,
+              "y": 409.96875,
+              "width": 66,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 461.34375,
+              "y": 409.96875,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Amarelo ouro",
+              "x": 154,
+              "y": 429.859375,
+              "width": 91,
+              "height": 16.890625
+            },
+            {
+              "text": "Verde bandeira",
+              "x": 533.34375,
+              "y": 429.859375,
+              "width": 102,
+              "height": 16.890625
+            },
+            {
+              "text": "Laranja",
+              "x": 89,
+              "y": 449.75,
+              "width": 49,
+              "height": 16.890625
+            },
+            {
+              "text": "Vermelho",
+              "x": 477.34375,
+              "y": 449.75,
+              "width": 64,
+              "height": 16.890625
+            }
+          ],
+          "overflow": false,
+          "label": "Pedido 01-CRMItem 1 de 8 · Folha 1/8"
+        },
+        {
+          "item": "2",
+          "width": 1062.046875,
+          "height": 733.21875,
+          "scrollHeight": 733,
+          "footerBottom": 733.21875,
+          "productionFields": 14,
+          "minFontPx": 13,
+          "nameWritingWidthMm": 26.636100260416665,
+          "nameWritingHeightMm": 3.96875,
+          "extraValues": [
+            {
+              "text": "Acinturada",
+              "x": 57,
+              "y": 351.296875,
+              "width": 74,
+              "height": 33.78125
+            },
+            {
+              "text": "Símbolo no peito esquerdo",
+              "x": 514.34375,
+              "y": 351.296875,
+              "width": 180.34375,
+              "height": 33.78125
+            },
+            {
+              "text": "Azul marinho",
+              "x": 100,
+              "y": 388.078125,
+              "width": 86,
+              "height": 16.890625
+            },
+            {
+              "text": "Azul marinho",
+              "x": 461.34375,
+              "y": 388.078125,
+              "width": 86,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 154,
+              "y": 407.96875,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 533.34375,
+              "y": 407.96875,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Azul marinho",
+              "x": 89,
+              "y": 427.859375,
+              "width": 86,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 477.34375,
+              "y": 427.859375,
+              "width": 47,
+              "height": 16.890625
+            }
+          ],
+          "overflow": false,
+          "label": "Pedido 01-CRMItem 2 de 8 · Folha 2/8"
+        },
+        {
+          "item": "3",
+          "width": 1062.046875,
+          "height": 733.21875,
+          "scrollHeight": 733,
+          "footerBottom": 733.21875,
+          "productionFields": 14,
+          "minFontPx": 13,
+          "nameWritingWidthMm": 26.636100260416665,
+          "nameWritingHeightMm": 3.96875,
+          "extraValues": [
+            {
+              "text": "Tradicional",
+              "x": 57,
+              "y": 351.296875,
+              "width": 75,
+              "height": 16.890625
+            },
+            {
+              "text": "Arte colorida na frente",
+              "x": 514.34375,
+              "y": 351.296875,
+              "width": 151,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 100,
+              "y": 371.1875,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 461.34375,
+              "y": 371.1875,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Azul royal",
+              "x": 154,
+              "y": 391.078125,
+              "width": 66,
+              "height": 16.890625
+            },
+            {
+              "text": "Azul royal",
+              "x": 533.34375,
+              "y": 391.078125,
+              "width": 66,
+              "height": 16.890625
+            },
+            {
+              "text": "Azul royal",
+              "x": 89,
+              "y": 410.96875,
+              "width": 66,
+              "height": 16.890625
+            },
+            {
+              "text": "Azul royal",
+              "x": 477.34375,
+              "y": 410.96875,
+              "width": 66,
+              "height": 16.890625
+            }
+          ],
+          "overflow": false,
+          "label": "Pedido 01-CRMItem 3 de 8 · Folha 3/8"
+        },
+        {
+          "item": "4",
+          "width": 1062.046875,
+          "height": 733.21875,
+          "scrollHeight": 733,
+          "footerBottom": 733.21875,
+          "productionFields": 14,
+          "minFontPx": 13,
+          "nameWritingWidthMm": 26.636100260416665,
+          "nameWritingHeightMm": 3.96875,
+          "extraValues": [
+            {
+              "text": "Tradicional",
+              "x": 57,
+              "y": 351.296875,
+              "width": 75,
+              "height": 33.78125
+            },
+            {
+              "text": "Marca no peito e nas costas",
+              "x": 514.34375,
+              "y": 351.296875,
+              "width": 180.34375,
+              "height": 33.78125
+            },
+            {
+              "text": "Verde bandeira",
+              "x": 100,
+              "y": 388.078125,
+              "width": 102,
+              "height": 16.890625
+            },
+            {
+              "text": "Verde bandeira",
+              "x": 461.34375,
+              "y": 388.078125,
+              "width": 102,
+              "height": 16.890625
+            },
+            {
+              "text": "Verde bandeira",
+              "x": 154,
+              "y": 407.96875,
+              "width": 102,
+              "height": 16.890625
+            },
+            {
+              "text": "Verde bandeira",
+              "x": 533.34375,
+              "y": 407.96875,
+              "width": 102,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 89,
+              "y": 427.859375,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 477.34375,
+              "y": 427.859375,
+              "width": 47,
+              "height": 16.890625
+            }
+          ],
+          "overflow": false,
+          "label": "Pedido 01-CRMItem 4 de 8 · Folha 4/8"
+        },
+        {
+          "item": "5",
+          "width": 1062.046875,
+          "height": 733.21875,
+          "scrollHeight": 733,
+          "footerBottom": 733.21875,
+          "productionFields": 14,
+          "minFontPx": 13,
+          "nameWritingWidthMm": 26.636100260416665,
+          "nameWritingHeightMm": 3.96875,
+          "extraValues": [
+            {
+              "text": "Esportiva",
+              "x": 57,
+              "y": 351.296875,
+              "width": 62,
+              "height": 33.78125
+            },
+            {
+              "text": "Identificação da equipe na frente",
+              "x": 514.34375,
+              "y": 351.296875,
+              "width": 180.34375,
+              "height": 33.78125
+            },
+            {
+              "text": "Cinza",
+              "x": 100,
+              "y": 388.078125,
+              "width": 38,
+              "height": 16.890625
+            },
+            {
+              "text": "Cinza",
+              "x": 461.34375,
+              "y": 388.078125,
+              "width": 38,
+              "height": 16.890625
+            },
+            {
+              "text": "Preto",
+              "x": 154,
+              "y": 407.96875,
+              "width": 36,
+              "height": 16.890625
+            },
+            {
+              "text": "Preto",
+              "x": 533.34375,
+              "y": 407.96875,
+              "width": 36,
+              "height": 16.890625
+            },
+            {
+              "text": "Preto",
+              "x": 89,
+              "y": 427.859375,
+              "width": 36,
+              "height": 16.890625
+            },
+            {
+              "text": "Preto",
+              "x": 477.34375,
+              "y": 427.859375,
+              "width": 36,
+              "height": 16.890625
+            }
+          ],
+          "overflow": false,
+          "label": "Pedido 01-CRMItem 5 de 8 · Folha 5/8"
+        },
+        {
+          "item": "6",
+          "width": 1062.046875,
+          "height": 733.21875,
+          "scrollHeight": 733,
+          "footerBottom": 733.21875,
+          "productionFields": 14,
+          "minFontPx": 13,
+          "nameWritingWidthMm": 26.636100260416665,
+          "nameWritingHeightMm": 3.96875,
+          "extraValues": [
+            {
+              "text": "Baby look",
+              "x": 57,
+              "y": 351.296875,
+              "width": 66,
+              "height": 33.78125
+            },
+            {
+              "text": "Símbolo centralizado na frente",
+              "x": 514.34375,
+              "y": 351.296875,
+              "width": 180.34375,
+              "height": 33.78125
+            },
+            {
+              "text": "Branco",
+              "x": 100,
+              "y": 388.078125,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 461.34375,
+              "y": 388.078125,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Laranja",
+              "x": 154,
+              "y": 407.96875,
+              "width": 49,
+              "height": 16.890625
+            },
+            {
+              "text": "Laranja",
+              "x": 533.34375,
+              "y": 407.96875,
+              "width": 49,
+              "height": 16.890625
+            },
+            {
+              "text": "Laranja",
+              "x": 89,
+              "y": 427.859375,
+              "width": 49,
+              "height": 16.890625
+            },
+            {
+              "text": "Laranja",
+              "x": 477.34375,
+              "y": 427.859375,
+              "width": 49,
+              "height": 16.890625
+            }
+          ],
+          "overflow": false,
+          "label": "Pedido 01-CRMItem 6 de 8 · Folha 6/8"
+        },
+        {
+          "item": "7",
+          "width": 1062.046875,
+          "height": 733.21875,
+          "scrollHeight": 733,
+          "footerBottom": 733.21875,
+          "productionFields": 14,
+          "minFontPx": 13,
+          "nameWritingWidthMm": 26.636100260416665,
+          "nameWritingHeightMm": 3.96875,
+          "extraValues": [
+            {
+              "text": "Tradicional",
+              "x": 57,
+              "y": 351.296875,
+              "width": 75,
+              "height": 33.78125
+            },
+            {
+              "text": "Símbolo no peito esquerdo",
+              "x": 514.34375,
+              "y": 351.296875,
+              "width": 180.34375,
+              "height": 33.78125
+            },
+            {
+              "text": "Azul marinho",
+              "x": 100,
+              "y": 388.078125,
+              "width": 86,
+              "height": 16.890625
+            },
+            {
+              "text": "Azul marinho",
+              "x": 461.34375,
+              "y": 388.078125,
+              "width": 86,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 154,
+              "y": 407.96875,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 533.34375,
+              "y": 407.96875,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 89,
+              "y": 427.859375,
+              "width": 47,
+              "height": 16.890625
+            },
+            {
+              "text": "Branco",
+              "x": 477.34375,
+              "y": 427.859375,
+              "width": 47,
+              "height": 16.890625
+            }
+          ],
+          "overflow": false,
+          "label": "Pedido 01-CRMItem 7 de 8 · Folha 7/8"
+        },
+        {
+          "item": "8",
+          "width": 1062.046875,
+          "height": 733.21875,
+          "scrollHeight": 733,
+          "footerBottom": 733.21875,
+          "productionFields": 14,
+          "minFontPx": 13,
+          "nameWritingWidthMm": 26.636100260416665,
+          "nameWritingHeightMm": 3.96875,
+          "extraValues": [
+            {
+              "text": "Reta",
+              "x": 57,
+              "y": 351.296875,
+              "width": 31,
+              "height": 33.78125
+            },
+            {
+              "text": "Marca em branco na frente",
+              "x": 514.34375,
+              "y": 351.296875,
+              "width": 180.34375,
+              "height": 33.78125
+            },
+            {
+              "text": "Preto",
+              "x": 100,
+              "y": 388.078125,
+              "width": 36,
+              "height": 16.890625
+            },
+            {
+              "text": "Preto",
+              "x": 461.34375,
+              "y": 388.078125,
+              "width": 36,
+              "height": 16.890625
+            },
+            {
+              "text": "Cinza",
+              "x": 154,
+              "y": 407.96875,
+              "width": 38,
+              "height": 16.890625
+            },
+            {
+              "text": "Cinza",
+              "x": 533.34375,
+              "y": 407.96875,
+              "width": 38,
+              "height": 16.890625
+            },
+            {
+              "text": "Cinza",
+              "x": 89,
+              "y": 427.859375,
+              "width": 38,
+              "height": 16.890625
+            },
+            {
+              "text": "Cinza",
+              "x": 477.34375,
+              "y": 427.859375,
+              "width": 38,
+              "height": 16.890625
+            }
+          ],
+          "overflow": false,
+          "label": "Pedido 01-CRMItem 8 de 8 · Folha 8/8"
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "overflowGuard": {
+    "scenario": "five observations with 200 characters each",
+    "height": 1062,
+    "contentHeight": 1145,
+    "detected": true
+  }
+}

@@ -1,0 +1,176 @@
+{
+  "retrato": {
+    "pages": [
+      {
+        "item": 1,
+        "trackedValues": 52,
+        "missing": [],
+        "gradePairs": 10,
+        "minFontPt": 9.75,
+        "outsidePage": 0,
+        "widthPt": 594.95996,
+        "heightPt": 841.91998
+      },
+      {
+        "item": 2,
+        "trackedValues": 45,
+        "missing": [],
+        "gradePairs": 3,
+        "minFontPt": 9.75,
+        "outsidePage": 0,
+        "widthPt": 594.95996,
+        "heightPt": 841.91998
+      },
+      {
+        "item": 3,
+        "trackedValues": 45,
+        "missing": [],
+        "gradePairs": 3,
+        "minFontPt": 9.75,
+        "outsidePage": 0,
+        "widthPt": 594.95996,
+        "heightPt": 841.91998
+      },
+      {
+        "item": 4,
+        "trackedValues": 45,
+        "missing": [],
+        "gradePairs": 3,
+        "minFontPt": 9.75,
+        "outsidePage": 0,
+        "widthPt": 594.95996,
+        "heightPt": 841.91998
+      },
+      {
+        "item": 5,
+        "trackedValues": 45,
+        "missing": [],
+        "gradePairs": 3,
+        "minFontPt": 9.75,
+        "outsidePage": 0,
+        "widthPt": 594.95996,
+        "heightPt": 841.91998
+      },
+      {
+        "item": 6,
+        "trackedValues": 45,
+        "missing": [],
+        "gradePairs": 3,
+        "minFontPt": 9.75,
+        "outsidePage": 0,
+        "widthPt": 594.95996,
+        "heightPt": 841.91998
+      },
+      {
+        "item": 7,
+        "trackedValues": 45,
+        "missing": [],
+        "gradePairs": 3,
+        "minFontPt": 9.75,
+        "outsidePage": 0,
+        "widthPt": 594.95996,
+        "heightPt": 841.91998
+      },
+      {
+        "item": 8,
+        "trackedValues": 45,
+        "missing": [],
+        "gradePairs": 3,
+        "minFontPt": 9.75,
+        "outsidePage": 0,
+        "widthPt": 594.95996,
+        "heightPt": 841.91998
+      }
+    ],
+    "pageCount": 8,
+    "gradePairs": 31,
+    "sha256": "29b2488c506cace3ae04b8521245f2a48985508bdc8841ba15eb78d8bc2073e5"
+  },
+  "paisagem": {
+    "pages": [
+      {
+        "item": 1,
+        "trackedValues": 52,
+        "missing": [],
+        "gradePairs": 10,
+        "minFontPt": 9.75,
+        "outsidePage": 0,
+        "widthPt": 841.91998,
+        "heightPt": 594.95996
+      },
+      {
+        "item": 2,
+        "trackedValues": 45,
+        "missing": [],
+        "gradePairs": 3,
+        "minFontPt": 9.75,
+        "outsidePage": 0,
+        "widthPt": 841.91998,
+        "heightPt": 594.95996
+      },
+      {
+        "item": 3,
+        "trackedValues": 45,
+        "missing": [],
+        "gradePairs": 3,
+        "minFontPt": 9.75,
+        "outsidePage": 0,
+        "widthPt": 841.91998,
+        "heightPt": 594.95996
+      },
+      {
+        "item": 4,
+        "trackedValues": 45,
+        "missing": [],
+        "gradePairs": 3,
+        "minFontPt": 9.75,
+        "outsidePage": 0,
+        "widthPt": 841.91998,
+        "heightPt": 594.95996
+      },
+      {
+        "item": 5,
+        "trackedValues": 45,
+        "missing": [],
+        "gradePairs": 3,
+        "minFontPt": 9.75,
+        "outsidePage": 0,
+        "widthPt": 841.91998,
+        "heightPt": 594.95996
+      },
+      {
+        "item": 6,
+        "trackedValues": 45,
+        "missing": [],
+        "gradePairs": 3,
+        "minFontPt": 9.75,
+        "outsidePage": 0,
+        "widthPt": 841.91998,
+        "heightPt": 594.95996
+      },
+      {
+        "item": 7,
+        "trackedValues": 45,
+        "missing": [],
+        "gradePairs": 3,
+        "minFontPt": 9.75,
+        "outsidePage": 0,
+        "widthPt": 841.91998,
+        "heightPt": 594.95996
+      },
+      {
+        "item": 8,
+        "trackedValues": 45,
+        "missing": [],
+        "gradePairs": 3,
+        "minFontPt": 9.75,
+        "outsidePage": 0,
+        "widthPt": 841.91998,
+        "heightPt": 594.95996
+      }
+    ],
+    "pageCount": 8,
+    "gradePairs": 31,
+    "sha256": "a836020be1b6c312b5b0ec9dbfc9bd0b7e55c77c4bc134c5ba3578e6ca1a7ce4"
+  }
+}

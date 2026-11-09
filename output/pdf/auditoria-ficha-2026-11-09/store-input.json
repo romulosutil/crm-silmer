@@ -1,0 +1,33 @@
+{
+  "cliente": {
+    "nome": "LOJA SINTETICA ENVIO0911 - NAO PRODUZIR",
+    "telefone": "5527900009110"
+  },
+  "item": {
+    "cor_id": "preta",
+    "prazo_dias": 10,
+    "quantidade": 10,
+    "tamanho_id": "m"
+  },
+  "numero_loja": "LJ-00CE31A0",
+  "pagamento": {
+    "forma": "pix",
+    "gateway": "infinitepay",
+    "invoice_slug": "fatura-sintetica-audit0911",
+    "pago_em": "2026-11-09T14:42:38.778Z",
+    "receipt_url": "https://recibo.infinitepay.io/sintetico-audit0911",
+    "transaction_nsu": "nsu-sintetico-audit0911-00ce31a0-defc-4844-8529-7fdab4af8690",
+    "valor_pago_centavos": 18000
+  },
+  "pedido_id": "00ce31a0-defc-4844-8529-7fdab4af8690",
+  "produto": {
+    "slug": "camisa-masculina-lisa"
+  },
+  "schema_version": "1.0",
+  "teste": true,
+  "valor_centavos": 18000,
+  "entrega": {
+    "tipo": "envio",
+    "cep": "69301-000"
+  }
+}

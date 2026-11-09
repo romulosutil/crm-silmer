@@ -1,0 +1,1786 @@
+{
+  "environment": {
+    "host": "mel",
+    "app": "http://127.0.0.1:4173",
+    "api": "http://127.0.0.1:3002",
+    "database": "localhost:5436/crm_silmer",
+    "commit": "5bc36118f6e0d1a96a6e04301484ab778fcf61b8"
+  },
+  "attendance": {
+    "id": "80b5c616-802f-4de2-a1e2-fe10c999e5b2",
+    "number": "01-CRM",
+    "version": 9,
+    "items": 8,
+    "pieces": 97,
+    "gradeLines": 31,
+    "pages": 6,
+    "observations": 5,
+    "serviceData": 11,
+    "files": 6,
+    "customerRegistrationStatus": "complete"
+  },
+  "store": {
+    "id": "bbc54ea0-e2a5-474d-9197-817f1ca9f92f",
+    "number": "02-CRM",
+    "isTest": true,
+    "pages": 1
+  },
+  "counts": {
+    "print": {
+      "fields": 134,
+      "inHtml": 134,
+      "inPdf": 134
+    },
+    "excluded-legacy": {
+      "fields": 8,
+      "inHtml": 0,
+      "inPdf": 0
+    },
+    "fallback-only": {
+      "fields": 8,
+      "inHtml": 0,
+      "inPdf": 0
+    },
+    "excluded-service-data": {
+      "fields": 11,
+      "inHtml": 0,
+      "inPdf": 0
+    },
+    "excluded-money": {
+      "fields": 2,
+      "inHtml": 0,
+      "inPdf": 0
+    },
+    "excluded-registration": {
+      "fields": 8,
+      "inHtml": 0,
+      "inPdf": 0
+    },
+    "excluded-file": {
+      "fields": 6,
+      "inHtml": 0,
+      "inPdf": 0
+    }
+  },
+  "checks": [
+    {
+      "name": "8 itens distintos no PDF",
+      "passed": true,
+      "details": 8
+    },
+    {
+      "name": "31 tamanhos no PDF",
+      "passed": true,
+      "details": 31
+    },
+    {
+      "name": "16 cores de mangas no PDF",
+      "passed": true,
+      "details": 16
+    },
+    {
+      "name": "8 vieses de manga no PDF",
+      "passed": true,
+      "details": 8
+    },
+    {
+      "name": "5 observacoes no PDF",
+      "passed": true,
+      "details": 5
+    },
+    {
+      "name": "11 dados atendimento ausentes",
+      "passed": true,
+      "details": 11
+    },
+    {
+      "name": "8 modelos legados ausentes",
+      "passed": true,
+      "details": 8
+    },
+    {
+      "name": "8 vieses gola separados ausentes",
+      "passed": true,
+      "details": 8
+    },
+    {
+      "name": "6 arquivos ausentes no papel",
+      "passed": true,
+      "details": 6
+    },
+    {
+      "name": "14 campos producao vazios",
+      "passed": true,
+      "details": 14
+    },
+    {
+      "name": "6 paginas, 5 comerciais e 1 producao",
+      "passed": true,
+      "details": 6
+    },
+    {
+      "name": "Numero pedido na pagina 1",
+      "passed": true,
+      "details": "01-CRM"
+    },
+    {
+      "name": "Numero pedido na pagina 2",
+      "passed": true,
+      "details": "01-CRM"
+    },
+    {
+      "name": "Numero pedido na pagina 3",
+      "passed": true,
+      "details": "01-CRM"
+    },
+    {
+      "name": "Numero pedido na pagina 4",
+      "passed": true,
+      "details": "01-CRM"
+    },
+    {
+      "name": "Numero pedido na pagina 5",
+      "passed": true,
+      "details": "01-CRM"
+    },
+    {
+      "name": "Nenhum campo presente HTML perdido no PDF",
+      "passed": true,
+      "details": []
+    },
+    {
+      "name": "Loja CEP salvo mas ausente no PDF",
+      "passed": true,
+      "details": "Dados de envio — CEP: 69301-000. Entrar em contato para pegar as informações de entrega."
+    },
+    {
+      "name": "Loja valor Pix comprovante presentes",
+      "passed": true,
+      "details": true
+    },
+    {
+      "name": "Arquivo arte presente no storage via API",
+      "passed": true,
+      "details": 6
+    }
+  ],
+  "fields": [
+    {
+      "field": "items[0].cor",
+      "value": "AZUL I01COR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].cor_costas",
+      "value": "BRANCO I01COSTAS",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].cor_frente",
+      "value": "AZUL I01FRENTE",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].cor_manga_direita",
+      "value": "AMARELO I01MANGADIR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].cor_manga_esquerda",
+      "value": "VERDE I01MANGAESQ",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].estampa",
+      "value": "LOGO NO PEITO E NAS MANGAS I01ESTAMPA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].gola",
+      "value": "REDONDA I01GOLA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].modelo",
+      "value": "MANGA RAGLAN I01MODELO",
+      "category": "atendimento",
+      "expectation": "excluded-legacy",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "items[0].tipo",
+      "value": "CAMISETA DE MANGA LONGA I01TIPO",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].tipo_servico",
+      "value": "SILK I01TECNICA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].vies_gola",
+      "value": "LARANJA I01VIESGOLA",
+      "category": "atendimento",
+      "expectation": "fallback-only",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "items[0].vies_mangas",
+      "value": "VERMELHO I01VIESMANGAS",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].malhas[0]",
+      "value": "DRY FIT I01MALHA1",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].malhas[1]",
+      "value": "POLIESTER I01MALHA2",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].grade[0].tamanho",
+      "value": "I01TAM01",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].grade[1].tamanho",
+      "value": "I01TAM02",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].grade[2].tamanho",
+      "value": "I01TAM03",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].grade[3].tamanho",
+      "value": "I01TAM04",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].grade[4].tamanho",
+      "value": "I01TAM05",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].grade[5].tamanho",
+      "value": "I01TAM06",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].grade[6].tamanho",
+      "value": "I01TAM07",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].grade[7].tamanho",
+      "value": "I01TAM08",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].grade[8].tamanho",
+      "value": "I01TAM09",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[0].grade[9].tamanho",
+      "value": "I01TAM10",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[1].cor",
+      "value": "AZUL I02COR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[1].cor_costas",
+      "value": "BRANCO I02COSTAS",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[1].cor_frente",
+      "value": "AZUL I02FRENTE",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[1].cor_manga_direita",
+      "value": "AMARELO I02MANGADIR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[1].cor_manga_esquerda",
+      "value": "VERDE I02MANGAESQ",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[1].estampa",
+      "value": "LOGO NO PEITO E NAS MANGAS I02ESTAMPA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[1].gola",
+      "value": "REDONDA I02GOLA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[1].modelo",
+      "value": "MANGA RAGLAN I02MODELO",
+      "category": "atendimento",
+      "expectation": "excluded-legacy",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "items[1].tipo",
+      "value": "CAMISETA DE MANGA LONGA I02TIPO",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[1].tipo_servico",
+      "value": "SILK I02TECNICA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[1].vies_gola",
+      "value": "LARANJA I02VIESGOLA",
+      "category": "atendimento",
+      "expectation": "fallback-only",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "items[1].vies_mangas",
+      "value": "VERMELHO I02VIESMANGAS",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[1].malhas[0]",
+      "value": "DRY FIT I02MALHA1",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[1].malhas[1]",
+      "value": "POLIESTER I02MALHA2",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[1].grade[0].tamanho",
+      "value": "I02TAM01",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[1].grade[1].tamanho",
+      "value": "I02TAM02",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[1].grade[2].tamanho",
+      "value": "I02TAM03",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[2].cor",
+      "value": "AZUL I03COR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[2].cor_costas",
+      "value": "BRANCO I03COSTAS",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[2].cor_frente",
+      "value": "AZUL I03FRENTE",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[2].cor_manga_direita",
+      "value": "AMARELO I03MANGADIR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[2].cor_manga_esquerda",
+      "value": "VERDE I03MANGAESQ",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[2].estampa",
+      "value": "LOGO NO PEITO E NAS MANGAS I03ESTAMPA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[2].gola",
+      "value": "REDONDA I03GOLA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[2].modelo",
+      "value": "MANGA RAGLAN I03MODELO",
+      "category": "atendimento",
+      "expectation": "excluded-legacy",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "items[2].tipo",
+      "value": "CAMISETA DE MANGA LONGA I03TIPO",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[2].tipo_servico",
+      "value": "SILK I03TECNICA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[2].vies_gola",
+      "value": "LARANJA I03VIESGOLA",
+      "category": "atendimento",
+      "expectation": "fallback-only",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "items[2].vies_mangas",
+      "value": "VERMELHO I03VIESMANGAS",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[2].malhas[0]",
+      "value": "DRY FIT I03MALHA1",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[2].malhas[1]",
+      "value": "POLIESTER I03MALHA2",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[2].grade[0].tamanho",
+      "value": "I03TAM01",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[2].grade[1].tamanho",
+      "value": "I03TAM02",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[2].grade[2].tamanho",
+      "value": "I03TAM03",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[3].cor",
+      "value": "AZUL I04COR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[3].cor_costas",
+      "value": "BRANCO I04COSTAS",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[3].cor_frente",
+      "value": "AZUL I04FRENTE",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[3].cor_manga_direita",
+      "value": "AMARELO I04MANGADIR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[3].cor_manga_esquerda",
+      "value": "VERDE I04MANGAESQ",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[3].estampa",
+      "value": "LOGO NO PEITO E NAS MANGAS I04ESTAMPA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[3].gola",
+      "value": "REDONDA I04GOLA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[3].modelo",
+      "value": "MANGA RAGLAN I04MODELO",
+      "category": "atendimento",
+      "expectation": "excluded-legacy",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "items[3].tipo",
+      "value": "CAMISETA DE MANGA LONGA I04TIPO",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[3].tipo_servico",
+      "value": "SILK I04TECNICA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[3].vies_gola",
+      "value": "LARANJA I04VIESGOLA",
+      "category": "atendimento",
+      "expectation": "fallback-only",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "items[3].vies_mangas",
+      "value": "VERMELHO I04VIESMANGAS",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[3].malhas[0]",
+      "value": "DRY FIT I04MALHA1",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[3].malhas[1]",
+      "value": "POLIESTER I04MALHA2",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[3].grade[0].tamanho",
+      "value": "I04TAM01",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[3].grade[1].tamanho",
+      "value": "I04TAM02",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[3].grade[2].tamanho",
+      "value": "I04TAM03",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[4].cor",
+      "value": "AZUL I05COR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[4].cor_costas",
+      "value": "BRANCO I05COSTAS",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[4].cor_frente",
+      "value": "AZUL I05FRENTE",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[4].cor_manga_direita",
+      "value": "AMARELO I05MANGADIR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[4].cor_manga_esquerda",
+      "value": "VERDE I05MANGAESQ",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[4].estampa",
+      "value": "LOGO NO PEITO E NAS MANGAS I05ESTAMPA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[4].gola",
+      "value": "REDONDA I05GOLA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[4].modelo",
+      "value": "MANGA RAGLAN I05MODELO",
+      "category": "atendimento",
+      "expectation": "excluded-legacy",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "items[4].tipo",
+      "value": "CAMISETA DE MANGA LONGA I05TIPO",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[4].tipo_servico",
+      "value": "SILK I05TECNICA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[4].vies_gola",
+      "value": "LARANJA I05VIESGOLA",
+      "category": "atendimento",
+      "expectation": "fallback-only",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "items[4].vies_mangas",
+      "value": "VERMELHO I05VIESMANGAS",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[4].malhas[0]",
+      "value": "DRY FIT I05MALHA1",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[4].malhas[1]",
+      "value": "POLIESTER I05MALHA2",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[4].grade[0].tamanho",
+      "value": "I05TAM01",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[4].grade[1].tamanho",
+      "value": "I05TAM02",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[4].grade[2].tamanho",
+      "value": "I05TAM03",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[5].cor",
+      "value": "AZUL I06COR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[5].cor_costas",
+      "value": "BRANCO I06COSTAS",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[5].cor_frente",
+      "value": "AZUL I06FRENTE",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[5].cor_manga_direita",
+      "value": "AMARELO I06MANGADIR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[5].cor_manga_esquerda",
+      "value": "VERDE I06MANGAESQ",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[5].estampa",
+      "value": "LOGO NO PEITO E NAS MANGAS I06ESTAMPA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[5].gola",
+      "value": "REDONDA I06GOLA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[5].modelo",
+      "value": "MANGA RAGLAN I06MODELO",
+      "category": "atendimento",
+      "expectation": "excluded-legacy",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "items[5].tipo",
+      "value": "CAMISETA DE MANGA LONGA I06TIPO",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[5].tipo_servico",
+      "value": "SILK I06TECNICA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[5].vies_gola",
+      "value": "LARANJA I06VIESGOLA",
+      "category": "atendimento",
+      "expectation": "fallback-only",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "items[5].vies_mangas",
+      "value": "VERMELHO I06VIESMANGAS",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[5].malhas[0]",
+      "value": "DRY FIT I06MALHA1",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[5].malhas[1]",
+      "value": "POLIESTER I06MALHA2",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[5].grade[0].tamanho",
+      "value": "I06TAM01",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[5].grade[1].tamanho",
+      "value": "I06TAM02",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[5].grade[2].tamanho",
+      "value": "I06TAM03",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[6].cor",
+      "value": "AZUL I07COR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[6].cor_costas",
+      "value": "BRANCO I07COSTAS",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[6].cor_frente",
+      "value": "AZUL I07FRENTE",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[6].cor_manga_direita",
+      "value": "AMARELO I07MANGADIR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[6].cor_manga_esquerda",
+      "value": "VERDE I07MANGAESQ",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[6].estampa",
+      "value": "LOGO NO PEITO E NAS MANGAS I07ESTAMPA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[6].gola",
+      "value": "REDONDA I07GOLA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[6].modelo",
+      "value": "MANGA RAGLAN I07MODELO",
+      "category": "atendimento",
+      "expectation": "excluded-legacy",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "items[6].tipo",
+      "value": "CAMISETA DE MANGA LONGA I07TIPO",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[6].tipo_servico",
+      "value": "SILK I07TECNICA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[6].vies_gola",
+      "value": "LARANJA I07VIESGOLA",
+      "category": "atendimento",
+      "expectation": "fallback-only",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "items[6].vies_mangas",
+      "value": "VERMELHO I07VIESMANGAS",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[6].malhas[0]",
+      "value": "DRY FIT I07MALHA1",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[6].malhas[1]",
+      "value": "POLIESTER I07MALHA2",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[6].grade[0].tamanho",
+      "value": "I07TAM01",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[6].grade[1].tamanho",
+      "value": "I07TAM02",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[6].grade[2].tamanho",
+      "value": "I07TAM03",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[7].cor",
+      "value": "AZUL I08COR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[7].cor_costas",
+      "value": "BRANCO I08COSTAS",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[7].cor_frente",
+      "value": "AZUL I08FRENTE",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[7].cor_manga_direita",
+      "value": "AMARELO I08MANGADIR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[7].cor_manga_esquerda",
+      "value": "VERDE I08MANGAESQ",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[7].estampa",
+      "value": "LOGO NO PEITO E NAS MANGAS I08ESTAMPA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[7].gola",
+      "value": "REDONDA I08GOLA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[7].modelo",
+      "value": "MANGA RAGLAN I08MODELO",
+      "category": "atendimento",
+      "expectation": "excluded-legacy",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "items[7].tipo",
+      "value": "CAMISETA DE MANGA LONGA I08TIPO",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[7].tipo_servico",
+      "value": "SILK I08TECNICA",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[7].vies_gola",
+      "value": "LARANJA I08VIESGOLA",
+      "category": "atendimento",
+      "expectation": "fallback-only",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "items[7].vies_mangas",
+      "value": "VERMELHO I08VIESMANGAS",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[7].malhas[0]",
+      "value": "DRY FIT I08MALHA1",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[7].malhas[1]",
+      "value": "POLIESTER I08MALHA2",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[7].grade[0].tamanho",
+      "value": "I08TAM01",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[7].grade[1].tamanho",
+      "value": "I08TAM02",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "items[7].grade[2].tamanho",
+      "value": "I08TAM03",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "serviceData.notes",
+      "value": "NOTAS0911ATENDIMENTO - Fazer manga curta e nao longa; nao produzir.",
+      "category": "atendimento",
+      "expectation": "excluded-service-data",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "serviceData.customizations",
+      "value": "PERSON0911 - nomes individuais",
+      "category": "atendimento",
+      "expectation": "excluded-service-data",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "serviceData.numbers",
+      "value": "NUM0911 - 01 a 97",
+      "category": "atendimento",
+      "expectation": "excluded-service-data",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "serviceData.sponsors",
+      "value": "PATROC0911 - marca sintetica",
+      "category": "atendimento",
+      "expectation": "excluded-service-data",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "serviceData.delivery_address",
+      "value": "ENDERECO0911 - Rua sintetica 9109",
+      "category": "atendimento",
+      "expectation": "excluded-service-data",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "serviceData.delivery_mode",
+      "value": "ENTREGA0911 - envio",
+      "category": "atendimento",
+      "expectation": "excluded-service-data",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "serviceData.needed_by",
+      "value": "PRAZO0911 - 19 novembro",
+      "category": "atendimento",
+      "expectation": "excluded-service-data",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "serviceData.purchase_profile",
+      "value": "PERFIL0911 - organizador",
+      "category": "atendimento",
+      "expectation": "excluded-service-data",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "serviceData.purpose",
+      "value": "FINALIDADE0911 - evento sintetico",
+      "category": "atendimento",
+      "expectation": "excluded-service-data",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "serviceData.city_or_postal_code",
+      "value": "CEP0911 - 69301-000",
+      "category": "atendimento",
+      "expectation": "excluded-service-data",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "serviceData.product_model",
+      "value": "MODELO0911ATENDIMENTO - manga raglan",
+      "category": "atendimento",
+      "expectation": "excluded-service-data",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "observations[0]",
+      "value": "OBS0911LINHA1 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "observations[1]",
+      "value": "OBS0911LINHA2 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "observations[2]",
+      "value": "OBS0911LINHA3 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "observations[3]",
+      "value": "OBS0911LINHA4 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "observations[4]",
+      "value": "OBS0911LINHA5 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "summary.nome",
+      "value": "PEDIDO SINTETICO NOME0911 - NAO PRODUZIR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "summary.cliente",
+      "value": "AUDITORIA SINTETICA FICHA 0911 - NAO PRODUZIR",
+      "category": "atendimento",
+      "expectation": "print",
+      "stored": true,
+      "html": true,
+      "pdf": true
+    },
+    {
+      "field": "finalAmountCents",
+      "value": "9.876,54",
+      "category": "atendimento",
+      "expectation": "excluded-money",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "paymentCondition",
+      "value": "cartao_credito",
+      "category": "atendimento",
+      "expectation": "excluded-money",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "contact.registration.legalName",
+      "value": "EMPRESA SINTETICA CADASTRO0911",
+      "category": "atendimento",
+      "expectation": "excluded-registration",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "contact.registration.document",
+      "value": "12ABC34501DE35",
+      "category": "atendimento",
+      "expectation": "excluded-registration",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "contact.registration.instagram",
+      "value": "auditoria_ficha_0911",
+      "category": "atendimento",
+      "expectation": "excluded-registration",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "contact.registration.city",
+      "value": "CIDADE CAD0911",
+      "category": "atendimento",
+      "expectation": "excluded-registration",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "contact.registration.street",
+      "value": "RUA CAD0911",
+      "category": "atendimento",
+      "expectation": "excluded-registration",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "contact.registration.district",
+      "value": "BAIRRO CAD0911",
+      "category": "atendimento",
+      "expectation": "excluded-registration",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "contact.registration.number",
+      "value": "9109",
+      "category": "atendimento",
+      "expectation": "excluded-registration",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "contact.registration.complement",
+      "value": "SALA CAD0911",
+      "category": "atendimento",
+      "expectation": "excluded-registration",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "files[0]",
+      "value": "ARQUIVO0911_1_reference.svg",
+      "category": "atendimento",
+      "expectation": "excluded-file",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "files[1]",
+      "value": "ARQUIVO0911_2_reference.svg",
+      "category": "atendimento",
+      "expectation": "excluded-file",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "files[2]",
+      "value": "ARQUIVO0911_3_reference.svg",
+      "category": "atendimento",
+      "expectation": "excluded-file",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "files[3]",
+      "value": "ARQUIVO0911_4_reference.svg",
+      "category": "atendimento",
+      "expectation": "excluded-file",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "files[4]",
+      "value": "ARQUIVO0911_5_reference.svg",
+      "category": "atendimento",
+      "expectation": "excluded-file",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    },
+    {
+      "field": "files[5]",
+      "value": "ARQUIVO0911_6_final.svg",
+      "category": "atendimento",
+      "expectation": "excluded-file",
+      "stored": true,
+      "html": false,
+      "pdf": false
+    }
+  ],
+  "negativeHttpProbes": [
+    {
+      "method": "PATCH",
+      "path": "/api/v1/orders/80b5c616-802f-4de2-a1e2-fe10c999e5b2/sections/items",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": "ORDER_INVALID"
+        }
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/orders/80b5c616-802f-4de2-a1e2-fe10c999e5b2/sections/items",
+      "status": 400,
+      "response": {
+        "error": {
+          "code": "ORDER_INVALID"
+        }
+      }
+    }
+  ],
+  "fixtureMethod": "Fixture sintetica via PostgresOrderRepository.projectBriefing; demais campos via API HTTP. Nenhum SQL de UPDATE manual.",
+  "pdfHtmlDifferences": []
+}

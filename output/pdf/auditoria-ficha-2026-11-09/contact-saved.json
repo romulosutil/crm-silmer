@@ -1,0 +1,29 @@
+{
+  "createdAt": "2026-11-09T14:40:49.626Z",
+  "displayName": "AUDITORIA SINTETICA FICHA 0911 - NAO PRODUZIR",
+  "id": "3ac8760e-862b-41db-bde2-55d2ae346400",
+  "identities": [],
+  "phone": "5527900009109",
+  "phoneSource": "manual",
+  "email": "auditoria-ficha-0911@example.invalid",
+  "label": "AUDITORIA SINTETICA FICHA 0911 - NAO PRODUZIR",
+  "latestActivityAt": "2026-11-09T14:40:49.686Z",
+  "provisional": false,
+  "registration": {
+    "personType": "company",
+    "document": "12ABC34501DE35",
+    "legalName": "EMPRESA SINTETICA CADASTRO0911",
+    "instagram": "auditoria_ficha_0911",
+    "stateRegistration": "ISENTO",
+    "postalCode": "69301000",
+    "city": "CIDADE CAD0911",
+    "state": "RR",
+    "street": "RUA CAD0911",
+    "district": "BAIRRO CAD0911",
+    "number": "9109",
+    "complement": "SALA CAD0911"
+  },
+  "registrationStatus": "complete",
+  "updatedAt": "2026-11-09T14:40:49.686Z",
+  "version": 2
+}

@@ -1,0 +1,255 @@
+SILMER                                                                                                                                                                                                                        PEDIDO
+
+
+FICHA DE PEDIDO                                                                                                                                                                                                             01-CRM
+RESUMO DO PEDIDO
+
+ CLIENTE                                                                                                           ENTREGA PROMETIDA                                                             TOTAL DE PEÇAS
+ AUDITORIA SINTETICA FICHA 0911 - NAO PRODUZIR                                                                     20/11/2026                                                                    97
+ NOME DO PEDIDO                                                                                       VENDEDOR                                                       DATA DO PEDIDO                                FAB
+ PEDIDO SINTETICO NOME0911 - NAO PRODUZIR                                                             Admin Comercial                                                09/11/2026                                    FAB 01
+
+LASTRO DO PEDIDO
+
+ PRIMEIRO CONTATO                                                                      PAGO EM                                                                          ENTREGUE EM
+ 09/11/2026                                                                            09/11/2026                                                                       09/11/2026
+
+
+ ARTE DO PEDIDO       O cliente envia a arte e A Silmer cria a arte
+
+ITENS: OS SETE PONTOS E OS ADICIONAIS
+
+               1   TIPO DE ROUPA                                               2   COR                                                     3   QUANTIDADE               4   TÉCNICA
+
+              CAMISETA DE MANGA LONGA I01TIPO                              AZUL I01COR
+                                                                                                                                          55 peças no item             SILK I01TECNICA
+
+   ITEM
+               5   MODELO DE MALHA                                         6       TAMANHOS                                                                            7    GOLA
+    1         DRY FIT I01MALHA1 / POLIESTER I01MALHA2                      I01TAM01        I01TAM02   I01TAM03   I01TAM04   I01TAM05    I01TAM06    I01TAM07           REDONDA I01GOLA
+MASCULINO
+  parte 1/2                                                                        1          2          3          4          5           6             7
+
+              ADICIONAIS   QUANTIDADE INFORMADA 99     ESTAMPA (REFERÊNCIA) LOGO NO PEITO E NAS MANGAS I01ESTAMPA                      COR DO TECIDO — FRENTE AZUL I01FRENTE    COR DO TECIDO — COSTAS BRANCO I01COSTAS
+
+              COR DO TECIDO — MANGA DIREITA AMARELO I01MANGADIR        COR DO TECIDO — MANGA ESQUERDA VERDE I01MANGAESQ                     VIÉS DAS MANGAS VERMELHO I01VIESMANGAS
+
+
+
+               1   TIPO DE ROUPA                                               2   COR                                                     3   QUANTIDADE               4   TÉCNICA
+
+              CAMISETA DE MANGA LONGA I01TIPO                              AZUL I01COR                                                                                 SILK I01TECNICA
+                                                                                                                                          Total do item na parte 1
+
+
+   ITEM
+               5   MODELO DE MALHA                                         6       TAMANHOS                                                                            7    GOLA
+    1         DRY FIT I01MALHA1 / POLIESTER I01MALHA2                      I01TAM08        I01TAM09   I01TAM10                                                         REDONDA I01GOLA
+MASCULINO
+  parte 2/2                                                                        8          9         10
+
+              ADICIONAIS   QUANTIDADE INFORMADA 99     ESTAMPA (REFERÊNCIA) LOGO NO PEITO E NAS MANGAS I01ESTAMPA                      COR DO TECIDO — FRENTE AZUL I01FRENTE    COR DO TECIDO — COSTAS BRANCO I01COSTAS
+
+              COR DO TECIDO — MANGA DIREITA AMARELO I01MANGADIR        COR DO TECIDO — MANGA ESQUERDA VERDE I01MANGAESQ                     VIÉS DAS MANGAS VERMELHO I01VIESMANGAS
+SILMER                                                                                                                                                                                                             PEDIDO
+
+
+FICHA DE PEDIDO
+                                                                                                                                                                              Página 2 · continuação dos itens
+                                                                                                                                                                                                                 01-CRM
+
+ ARTE DO PEDIDO     O cliente envia a arte e A Silmer cria a arte
+
+ITENS: CONTINUAÇÃO
+
+             1   TIPO DE ROUPA                                                2   COR                                     3   QUANTIDADE            4   TÉCNICA
+
+            CAMISETA DE MANGA LONGA I02TIPO                               AZUL I02COR
+                                                                                                                         6 peças no item           SILK I02TECNICA
+
+  ITEM
+             5   MODELO DE MALHA                                          6       TAMANHOS                                                         7    GOLA
+   2        DRY FIT I02MALHA1 / POLIESTER I02MALHA2                       I02TAM01      I02TAM02   I02TAM03                                       REDONDA I02GOLA
+ FEMININO                                                                         1          2        3
+
+            ADICIONAIS   QUANTIDADE INFORMADA 100      ESTAMPA (REFERÊNCIA) LOGO NO PEITO E NAS MANGAS I02ESTAMPA   COR DO TECIDO — FRENTE AZUL I02FRENTE      COR DO TECIDO — COSTAS BRANCO I02COSTAS
+
+            COR DO TECIDO — MANGA DIREITA AMARELO I02MANGADIR         COR DO TECIDO — MANGA ESQUERDA VERDE I02MANGAESQ    VIÉS DAS MANGAS VERMELHO I02VIESMANGAS
+
+
+
+             1   TIPO DE ROUPA                                                2   COR                                     3   QUANTIDADE            4   TÉCNICA
+
+            CAMISETA DE MANGA LONGA I03TIPO                               AZUL I03COR
+                                                                                                                         6 peças no item           SILK I03TECNICA
+
+
+  ITEM
+             5   MODELO DE MALHA                                          6       TAMANHOS                                                         7    GOLA
+   3        DRY FIT I03MALHA1 / POLIESTER I03MALHA2                       I03TAM01      I03TAM02   I03TAM03                                       REDONDA I03GOLA
+ INFANTIL                                                                         1          2        3
+
+            ADICIONAIS   QUANTIDADE INFORMADA 101      ESTAMPA (REFERÊNCIA) LOGO NO PEITO E NAS MANGAS I03ESTAMPA   COR DO TECIDO — FRENTE AZUL I03FRENTE      COR DO TECIDO — COSTAS BRANCO I03COSTAS
+
+            COR DO TECIDO — MANGA DIREITA AMARELO I03MANGADIR         COR DO TECIDO — MANGA ESQUERDA VERDE I03MANGAESQ    VIÉS DAS MANGAS VERMELHO I03VIESMANGAS
+SILMER                                                                                                                                                                                                             PEDIDO
+
+
+FICHA DE PEDIDO
+                                                                                                                                                                              Página 3 · continuação dos itens
+                                                                                                                                                                                                                 01-CRM
+
+ ARTE DO PEDIDO     O cliente envia a arte e A Silmer cria a arte
+
+ITENS: CONTINUAÇÃO
+
+             1   TIPO DE ROUPA                                                2   COR                                     3   QUANTIDADE            4   TÉCNICA
+
+            CAMISETA DE MANGA LONGA I04TIPO                               AZUL I04COR
+                                                                                                                         6 peças no item           SILK I04TECNICA
+
+  ITEM
+             5   MODELO DE MALHA                                          6       TAMANHOS                                                         7    GOLA
+   4        DRY FIT I04MALHA1 / POLIESTER I04MALHA2                       I04TAM01      I04TAM02   I04TAM03                                       REDONDA I04GOLA
+ UNISSEX                                                                          1          2        3
+
+            ADICIONAIS   QUANTIDADE INFORMADA 102      ESTAMPA (REFERÊNCIA) LOGO NO PEITO E NAS MANGAS I04ESTAMPA   COR DO TECIDO — FRENTE AZUL I04FRENTE      COR DO TECIDO — COSTAS BRANCO I04COSTAS
+
+            COR DO TECIDO — MANGA DIREITA AMARELO I04MANGADIR         COR DO TECIDO — MANGA ESQUERDA VERDE I04MANGAESQ    VIÉS DAS MANGAS VERMELHO I04VIESMANGAS
+
+
+
+             1   TIPO DE ROUPA                                                2   COR                                     3   QUANTIDADE            4   TÉCNICA
+
+            CAMISETA DE MANGA LONGA I05TIPO                               AZUL I05COR
+                                                                                                                         6 peças no item           SILK I05TECNICA
+
+  ITEM
+             5   MODELO DE MALHA                                          6       TAMANHOS                                                         7    GOLA
+   5        DRY FIT I05MALHA1 / POLIESTER I05MALHA2                       I05TAM01      I05TAM02   I05TAM03                                       REDONDA I05GOLA
+MASCULINO                                                                         1          2        3
+
+            ADICIONAIS   QUANTIDADE INFORMADA 103      ESTAMPA (REFERÊNCIA) LOGO NO PEITO E NAS MANGAS I05ESTAMPA   COR DO TECIDO — FRENTE AZUL I05FRENTE      COR DO TECIDO — COSTAS BRANCO I05COSTAS
+
+            COR DO TECIDO — MANGA DIREITA AMARELO I05MANGADIR         COR DO TECIDO — MANGA ESQUERDA VERDE I05MANGAESQ    VIÉS DAS MANGAS VERMELHO I05VIESMANGAS
+SILMER                                                                                                                                                                                                             PEDIDO
+
+
+FICHA DE PEDIDO
+                                                                                                                                                                              Página 4 · continuação dos itens
+                                                                                                                                                                                                                 01-CRM
+
+ ARTE DO PEDIDO     O cliente envia a arte e A Silmer cria a arte
+
+ITENS: CONTINUAÇÃO
+
+             1   TIPO DE ROUPA                                                2   COR                                     3   QUANTIDADE            4   TÉCNICA
+
+            CAMISETA DE MANGA LONGA I06TIPO                               AZUL I06COR
+                                                                                                                         6 peças no item           SILK I06TECNICA
+
+  ITEM
+             5   MODELO DE MALHA                                          6       TAMANHOS                                                         7    GOLA
+   6        DRY FIT I06MALHA1 / POLIESTER I06MALHA2                       I06TAM01      I06TAM02   I06TAM03                                       REDONDA I06GOLA
+ FEMININO                                                                         1          2        3
+
+            ADICIONAIS   QUANTIDADE INFORMADA 104      ESTAMPA (REFERÊNCIA) LOGO NO PEITO E NAS MANGAS I06ESTAMPA   COR DO TECIDO — FRENTE AZUL I06FRENTE      COR DO TECIDO — COSTAS BRANCO I06COSTAS
+
+            COR DO TECIDO — MANGA DIREITA AMARELO I06MANGADIR         COR DO TECIDO — MANGA ESQUERDA VERDE I06MANGAESQ    VIÉS DAS MANGAS VERMELHO I06VIESMANGAS
+
+
+
+             1   TIPO DE ROUPA                                                2   COR                                     3   QUANTIDADE            4   TÉCNICA
+
+            CAMISETA DE MANGA LONGA I07TIPO                               AZUL I07COR
+                                                                                                                         6 peças no item           SILK I07TECNICA
+
+  ITEM
+             5   MODELO DE MALHA                                          6       TAMANHOS                                                         7    GOLA
+   7        DRY FIT I07MALHA1 / POLIESTER I07MALHA2                       I07TAM01      I07TAM02   I07TAM03                                       REDONDA I07GOLA
+ INFANTIL                                                                         1          2        3
+
+            ADICIONAIS   QUANTIDADE INFORMADA 105      ESTAMPA (REFERÊNCIA) LOGO NO PEITO E NAS MANGAS I07ESTAMPA   COR DO TECIDO — FRENTE AZUL I07FRENTE      COR DO TECIDO — COSTAS BRANCO I07COSTAS
+
+            COR DO TECIDO — MANGA DIREITA AMARELO I07MANGADIR         COR DO TECIDO — MANGA ESQUERDA VERDE I07MANGAESQ    VIÉS DAS MANGAS VERMELHO I07VIESMANGAS
+SILMER                                                                                                                                                                                                                           PEDIDO
+
+
+FICHA DE PEDIDO
+                                                                                                                                                                                            Página 5 · continuação dos itens
+                                                                                                                                                                                                                               01-CRM
+
+ ARTE DO PEDIDO     O cliente envia a arte e A Silmer cria a arte
+
+ITENS: CONTINUAÇÃO
+
+             1   TIPO DE ROUPA                                                  2   COR                                           3   QUANTIDADE                  4   TÉCNICA
+
+            CAMISETA DE MANGA LONGA I08TIPO                                 AZUL I08COR
+                                                                                                                                 6 peças no item                 SILK I08TECNICA
+
+  ITEM
+             5   MODELO DE MALHA                                            6       TAMANHOS                                                                     7    GOLA
+   8        DRY FIT I08MALHA1 / POLIESTER I08MALHA2                         I08TAM01      I08TAM02   I08TAM03                                                   REDONDA I08GOLA
+ UNISSEX                                                                            1          2        3
+
+            ADICIONAIS   QUANTIDADE INFORMADA 106      ESTAMPA (REFERÊNCIA) LOGO NO PEITO E NAS MANGAS I08ESTAMPA             COR DO TECIDO — FRENTE AZUL I08FRENTE          COR DO TECIDO — COSTAS BRANCO I08COSTAS
+
+            COR DO TECIDO — MANGA DIREITA AMARELO I08MANGADIR          COR DO TECIDO — MANGA ESQUERDA VERDE I08MANGAESQ           VIÉS DAS MANGAS VERMELHO I08VIESMANGAS
+
+
+
+ OBSERVAÇÕES DO PEDIDO
+  1. OBS0911LINHA1 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.
+
+                                                                                                                                                                                                                                 97
+  2. OBS0911LINHA2 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.                                         TOTAL
+  3. OBS0911LINHA3 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.                                         DE PEÇAS
+
+  4. OBS0911LINHA4 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.
+  5. OBS0911LINHA5 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.
+SILMER                                                                                                                                                                        PEDIDO
+
+
+CONTROLE DE PRODUÇÃO                                                                                                                                                        01-CRM
+
+ Preenchimento exclusivo da equipe de produção e arte. Os 14 campos abaixo devem chegar vazios a esta etapa.
+
+
+
+  1      Arremate                                                                2      Conferência e embalagem         3     Cores da arte
+         Registro de conferência e execução.                                            Fechamento físico do pedido.          Número de cores de tinta por parte da peça.
+
+
+ Conferido para arrematar por:                                                  Conferido / Embalado por:              Nº de cores — frente:
+
+
+
+
+ Data:                                                                          Data:                                  Nº de cores — costas:
+
+
+
+
+ Arrematado:                                                                                                           Nº de cores — manga direita:
+
+
+
+
+ Data:                                                                                                                 Nº de cores — manga esquerda:
+
+
+
+
+ OBS:                                                                                                                  Total das partes:
+
+
+
+
+                                                                                                                       OBS:
+
+
+
+
+                                                                                                                       Nº total de cores do pedido:
+

@@ -1,0 +1,294 @@
+{
+  "gradeChecks": [
+    {
+      "size": "I01TAM01",
+      "expectedQuantity": 1,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 1
+    },
+    {
+      "size": "I01TAM02",
+      "expectedQuantity": 2,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 1
+    },
+    {
+      "size": "I01TAM03",
+      "expectedQuantity": 3,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 1
+    },
+    {
+      "size": "I01TAM04",
+      "expectedQuantity": 4,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 1
+    },
+    {
+      "size": "I01TAM05",
+      "expectedQuantity": 5,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 1
+    },
+    {
+      "size": "I01TAM06",
+      "expectedQuantity": 6,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 1
+    },
+    {
+      "size": "I01TAM07",
+      "expectedQuantity": 7,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 1
+    },
+    {
+      "size": "I01TAM08",
+      "expectedQuantity": 8,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 1
+    },
+    {
+      "size": "I01TAM09",
+      "expectedQuantity": 9,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 1
+    },
+    {
+      "size": "I01TAM10",
+      "expectedQuantity": 10,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 1
+    },
+    {
+      "size": "I02TAM01",
+      "expectedQuantity": 1,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 2
+    },
+    {
+      "size": "I02TAM02",
+      "expectedQuantity": 2,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 2
+    },
+    {
+      "size": "I02TAM03",
+      "expectedQuantity": 3,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 2
+    },
+    {
+      "size": "I03TAM01",
+      "expectedQuantity": 1,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 2
+    },
+    {
+      "size": "I03TAM02",
+      "expectedQuantity": 2,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 2
+    },
+    {
+      "size": "I03TAM03",
+      "expectedQuantity": 3,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 2
+    },
+    {
+      "size": "I04TAM01",
+      "expectedQuantity": 1,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 3
+    },
+    {
+      "size": "I04TAM02",
+      "expectedQuantity": 2,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 3
+    },
+    {
+      "size": "I04TAM03",
+      "expectedQuantity": 3,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 3
+    },
+    {
+      "size": "I05TAM01",
+      "expectedQuantity": 1,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 3
+    },
+    {
+      "size": "I05TAM02",
+      "expectedQuantity": 2,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 3
+    },
+    {
+      "size": "I05TAM03",
+      "expectedQuantity": 3,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 3
+    },
+    {
+      "size": "I06TAM01",
+      "expectedQuantity": 1,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 4
+    },
+    {
+      "size": "I06TAM02",
+      "expectedQuantity": 2,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 4
+    },
+    {
+      "size": "I06TAM03",
+      "expectedQuantity": 3,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 4
+    },
+    {
+      "size": "I07TAM01",
+      "expectedQuantity": 1,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 4
+    },
+    {
+      "size": "I07TAM02",
+      "expectedQuantity": 2,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 4
+    },
+    {
+      "size": "I07TAM03",
+      "expectedQuantity": 3,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 4
+    },
+    {
+      "size": "I08TAM01",
+      "expectedQuantity": 1,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 5
+    },
+    {
+      "size": "I08TAM02",
+      "expectedQuantity": 2,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 5
+    },
+    {
+      "size": "I08TAM03",
+      "expectedQuantity": 3,
+      "pdfLabelCount": 1,
+      "quantityBelowLabel": true,
+      "page": 5
+    }
+  ],
+  "gradePairsMatched": 31,
+  "markerFontSizesPt": {
+    "I01MANGADIR": [7.5],
+    "I01VIESMANGAS": [7.5],
+    "OBS0911LINHA1": [7.12]
+  },
+  "labelFontSizesPt": {
+    "ADICIONAIS": [5.25, 6.0],
+    "MANGA": [5.25, 7.5],
+    "DIREITA": [5.25]
+  },
+  "pageBounds": [
+    {
+      "page": 1,
+      "widthPt": 841.91998,
+      "heightPt": 594.95996,
+      "minX": 25.4999989375,
+      "maxX": 809.9911770903661,
+      "minY": 26.18041881414922,
+      "maxY": 448.58933675877677,
+      "outsidePage": 0
+    },
+    {
+      "page": 2,
+      "widthPt": 841.91998,
+      "heightPt": 594.95996,
+      "minX": 25.4999989375,
+      "maxX": 809.9911770903661,
+      "minY": 26.18041881414922,
+      "maxY": 317.33934222752686,
+      "outsidePage": 0
+    },
+    {
+      "page": 3,
+      "widthPt": 841.91998,
+      "heightPt": 594.95996,
+      "minX": 25.4999989375,
+      "maxX": 809.9911770903661,
+      "minY": 26.180418814149334,
+      "maxY": 317.33934222752686,
+      "outsidePage": 0
+    },
+    {
+      "page": 4,
+      "widthPt": 841.91998,
+      "heightPt": 594.95996,
+      "minX": 25.4999989375,
+      "maxX": 809.9911770903661,
+      "minY": 26.180418814149334,
+      "maxY": 317.33934222752686,
+      "outsidePage": 0
+    },
+    {
+      "page": 5,
+      "widthPt": 841.91998,
+      "heightPt": 594.95996,
+      "minX": 25.4999989375,
+      "maxX": 809.9911770903661,
+      "minY": 26.180418814149107,
+      "maxY": 271.50987636458774,
+      "outsidePage": 0
+    },
+    {
+      "page": 6,
+      "widthPt": 841.91998,
+      "heightPt": 594.95996,
+      "minX": 25.4999989375,
+      "maxX": 809.9911770903661,
+      "minY": 26.180418814149107,
+      "maxY": 397.1920000378324,
+      "outsidePage": 0
+    }
+  ]
+}

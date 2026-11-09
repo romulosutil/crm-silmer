@@ -1,0 +1,351 @@
+{
+  "confirmedAt": "2026-11-09T14:40:50.243Z",
+  "confirmedBy": {
+    "id": "user-4777636e30198163bdc84f86aec4e164",
+    "name": "Admin Comercial"
+  },
+  "conversationId": null,
+  "createdAt": "2026-11-09T14:40:49.731Z",
+  "deliveredOn": "2026-11-09",
+  "fabCode": "01",
+  "ficha": {
+    "artwork": {
+      "feito_pela_silmer": true,
+      "feito_pelo_cliente": true,
+      "files": [],
+      "sem_estampa": false
+    },
+    "items": [
+      {
+        "cor": "AZUL I01COR",
+        "cor_costas": "BRANCO I01COSTAS",
+        "cor_frente": "AZUL I01FRENTE",
+        "cor_manga_direita": "AMARELO I01MANGADIR",
+        "cor_manga_esquerda": "VERDE I01MANGAESQ",
+        "estampa": "LOGO NO PEITO E NAS MANGAS I01ESTAMPA",
+        "gola": "REDONDA I01GOLA",
+        "grade": [
+          {
+            "quantidade": 1,
+            "tamanho": "I01TAM01"
+          },
+          {
+            "quantidade": 2,
+            "tamanho": "I01TAM02"
+          },
+          {
+            "quantidade": 3,
+            "tamanho": "I01TAM03"
+          },
+          {
+            "quantidade": 4,
+            "tamanho": "I01TAM04"
+          },
+          {
+            "quantidade": 5,
+            "tamanho": "I01TAM05"
+          },
+          {
+            "quantidade": 6,
+            "tamanho": "I01TAM06"
+          },
+          {
+            "quantidade": 7,
+            "tamanho": "I01TAM07"
+          },
+          {
+            "quantidade": 8,
+            "tamanho": "I01TAM08"
+          },
+          {
+            "quantidade": 9,
+            "tamanho": "I01TAM09"
+          },
+          {
+            "quantidade": 10,
+            "tamanho": "I01TAM10"
+          }
+        ],
+        "malhas": ["DRY FIT I01MALHA1", "POLIESTER I01MALHA2"],
+        "modelo": "MANGA RAGLAN I01MODELO",
+        "publico": "masculino",
+        "quantidade_informada": 99,
+        "tipo": "CAMISETA DE MANGA LONGA I01TIPO",
+        "tipo_servico": "SILK I01TECNICA",
+        "vies_gola": "LARANJA I01VIESGOLA",
+        "vies_mangas": "VERMELHO I01VIESMANGAS"
+      },
+      {
+        "cor": "AZUL I02COR",
+        "cor_costas": "BRANCO I02COSTAS",
+        "cor_frente": "AZUL I02FRENTE",
+        "cor_manga_direita": "AMARELO I02MANGADIR",
+        "cor_manga_esquerda": "VERDE I02MANGAESQ",
+        "estampa": "LOGO NO PEITO E NAS MANGAS I02ESTAMPA",
+        "gola": "REDONDA I02GOLA",
+        "grade": [
+          {
+            "quantidade": 1,
+            "tamanho": "I02TAM01"
+          },
+          {
+            "quantidade": 2,
+            "tamanho": "I02TAM02"
+          },
+          {
+            "quantidade": 3,
+            "tamanho": "I02TAM03"
+          }
+        ],
+        "malhas": ["DRY FIT I02MALHA1", "POLIESTER I02MALHA2"],
+        "modelo": "MANGA RAGLAN I02MODELO",
+        "publico": "feminino",
+        "quantidade_informada": 100,
+        "tipo": "CAMISETA DE MANGA LONGA I02TIPO",
+        "tipo_servico": "SILK I02TECNICA",
+        "vies_gola": "LARANJA I02VIESGOLA",
+        "vies_mangas": "VERMELHO I02VIESMANGAS"
+      },
+      {
+        "cor": "AZUL I03COR",
+        "cor_costas": "BRANCO I03COSTAS",
+        "cor_frente": "AZUL I03FRENTE",
+        "cor_manga_direita": "AMARELO I03MANGADIR",
+        "cor_manga_esquerda": "VERDE I03MANGAESQ",
+        "estampa": "LOGO NO PEITO E NAS MANGAS I03ESTAMPA",
+        "gola": "REDONDA I03GOLA",
+        "grade": [
+          {
+            "quantidade": 1,
+            "tamanho": "I03TAM01"
+          },
+          {
+            "quantidade": 2,
+            "tamanho": "I03TAM02"
+          },
+          {
+            "quantidade": 3,
+            "tamanho": "I03TAM03"
+          }
+        ],
+        "malhas": ["DRY FIT I03MALHA1", "POLIESTER I03MALHA2"],
+        "modelo": "MANGA RAGLAN I03MODELO",
+        "publico": "infantil",
+        "quantidade_informada": 101,
+        "tipo": "CAMISETA DE MANGA LONGA I03TIPO",
+        "tipo_servico": "SILK I03TECNICA",
+        "vies_gola": "LARANJA I03VIESGOLA",
+        "vies_mangas": "VERMELHO I03VIESMANGAS"
+      },
+      {
+        "cor": "AZUL I04COR",
+        "cor_costas": "BRANCO I04COSTAS",
+        "cor_frente": "AZUL I04FRENTE",
+        "cor_manga_direita": "AMARELO I04MANGADIR",
+        "cor_manga_esquerda": "VERDE I04MANGAESQ",
+        "estampa": "LOGO NO PEITO E NAS MANGAS I04ESTAMPA",
+        "gola": "REDONDA I04GOLA",
+        "grade": [
+          {
+            "quantidade": 1,
+            "tamanho": "I04TAM01"
+          },
+          {
+            "quantidade": 2,
+            "tamanho": "I04TAM02"
+          },
+          {
+            "quantidade": 3,
+            "tamanho": "I04TAM03"
+          }
+        ],
+        "malhas": ["DRY FIT I04MALHA1", "POLIESTER I04MALHA2"],
+        "modelo": "MANGA RAGLAN I04MODELO",
+        "publico": "unissex",
+        "quantidade_informada": 102,
+        "tipo": "CAMISETA DE MANGA LONGA I04TIPO",
+        "tipo_servico": "SILK I04TECNICA",
+        "vies_gola": "LARANJA I04VIESGOLA",
+        "vies_mangas": "VERMELHO I04VIESMANGAS"
+      },
+      {
+        "cor": "AZUL I05COR",
+        "cor_costas": "BRANCO I05COSTAS",
+        "cor_frente": "AZUL I05FRENTE",
+        "cor_manga_direita": "AMARELO I05MANGADIR",
+        "cor_manga_esquerda": "VERDE I05MANGAESQ",
+        "estampa": "LOGO NO PEITO E NAS MANGAS I05ESTAMPA",
+        "gola": "REDONDA I05GOLA",
+        "grade": [
+          {
+            "quantidade": 1,
+            "tamanho": "I05TAM01"
+          },
+          {
+            "quantidade": 2,
+            "tamanho": "I05TAM02"
+          },
+          {
+            "quantidade": 3,
+            "tamanho": "I05TAM03"
+          }
+        ],
+        "malhas": ["DRY FIT I05MALHA1", "POLIESTER I05MALHA2"],
+        "modelo": "MANGA RAGLAN I05MODELO",
+        "publico": "masculino",
+        "quantidade_informada": 103,
+        "tipo": "CAMISETA DE MANGA LONGA I05TIPO",
+        "tipo_servico": "SILK I05TECNICA",
+        "vies_gola": "LARANJA I05VIESGOLA",
+        "vies_mangas": "VERMELHO I05VIESMANGAS"
+      },
+      {
+        "cor": "AZUL I06COR",
+        "cor_costas": "BRANCO I06COSTAS",
+        "cor_frente": "AZUL I06FRENTE",
+        "cor_manga_direita": "AMARELO I06MANGADIR",
+        "cor_manga_esquerda": "VERDE I06MANGAESQ",
+        "estampa": "LOGO NO PEITO E NAS MANGAS I06ESTAMPA",
+        "gola": "REDONDA I06GOLA",
+        "grade": [
+          {
+            "quantidade": 1,
+            "tamanho": "I06TAM01"
+          },
+          {
+            "quantidade": 2,
+            "tamanho": "I06TAM02"
+          },
+          {
+            "quantidade": 3,
+            "tamanho": "I06TAM03"
+          }
+        ],
+        "malhas": ["DRY FIT I06MALHA1", "POLIESTER I06MALHA2"],
+        "modelo": "MANGA RAGLAN I06MODELO",
+        "publico": "feminino",
+        "quantidade_informada": 104,
+        "tipo": "CAMISETA DE MANGA LONGA I06TIPO",
+        "tipo_servico": "SILK I06TECNICA",
+        "vies_gola": "LARANJA I06VIESGOLA",
+        "vies_mangas": "VERMELHO I06VIESMANGAS"
+      },
+      {
+        "cor": "AZUL I07COR",
+        "cor_costas": "BRANCO I07COSTAS",
+        "cor_frente": "AZUL I07FRENTE",
+        "cor_manga_direita": "AMARELO I07MANGADIR",
+        "cor_manga_esquerda": "VERDE I07MANGAESQ",
+        "estampa": "LOGO NO PEITO E NAS MANGAS I07ESTAMPA",
+        "gola": "REDONDA I07GOLA",
+        "grade": [
+          {
+            "quantidade": 1,
+            "tamanho": "I07TAM01"
+          },
+          {
+            "quantidade": 2,
+            "tamanho": "I07TAM02"
+          },
+          {
+            "quantidade": 3,
+            "tamanho": "I07TAM03"
+          }
+        ],
+        "malhas": ["DRY FIT I07MALHA1", "POLIESTER I07MALHA2"],
+        "modelo": "MANGA RAGLAN I07MODELO",
+        "publico": "infantil",
+        "quantidade_informada": 105,
+        "tipo": "CAMISETA DE MANGA LONGA I07TIPO",
+        "tipo_servico": "SILK I07TECNICA",
+        "vies_gola": "LARANJA I07VIESGOLA",
+        "vies_mangas": "VERMELHO I07VIESMANGAS"
+      },
+      {
+        "cor": "AZUL I08COR",
+        "cor_costas": "BRANCO I08COSTAS",
+        "cor_frente": "AZUL I08FRENTE",
+        "cor_manga_direita": "AMARELO I08MANGADIR",
+        "cor_manga_esquerda": "VERDE I08MANGAESQ",
+        "estampa": "LOGO NO PEITO E NAS MANGAS I08ESTAMPA",
+        "gola": "REDONDA I08GOLA",
+        "grade": [
+          {
+            "quantidade": 1,
+            "tamanho": "I08TAM01"
+          },
+          {
+            "quantidade": 2,
+            "tamanho": "I08TAM02"
+          },
+          {
+            "quantidade": 3,
+            "tamanho": "I08TAM03"
+          }
+        ],
+        "malhas": ["DRY FIT I08MALHA1", "POLIESTER I08MALHA2"],
+        "modelo": "MANGA RAGLAN I08MODELO",
+        "publico": "unissex",
+        "quantidade_informada": 106,
+        "tipo": "CAMISETA DE MANGA LONGA I08TIPO",
+        "tipo_servico": "SILK I08TECNICA",
+        "vies_gola": "LARANJA I08VIESGOLA",
+        "vies_mangas": "VERMELHO I08VIESMANGAS"
+      }
+    ],
+    "observations": [
+      "OBS0911LINHA1 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.",
+      "OBS0911LINHA2 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.",
+      "OBS0911LINHA3 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.",
+      "OBS0911LINHA4 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria.",
+      "OBS0911LINHA5 - Instrucao sintetica de producao: conferir mangas, acabamento e grade; separar e identificar cada embalagem. Nao produzir este pedido de auditoria."
+    ],
+    "serviceData": {
+      "notes": "NOTAS0911ATENDIMENTO - Fazer manga curta e nao longa; nao produzir.",
+      "customizations": "PERSON0911 - nomes individuais",
+      "numbers": "NUM0911 - 01 a 97",
+      "sponsors": "PATROC0911 - marca sintetica",
+      "delivery_address": "ENDERECO0911 - Rua sintetica 9109",
+      "delivery_mode": "ENTREGA0911 - envio",
+      "needed_by": "PRAZO0911 - 19 novembro",
+      "purchase_profile": "PERFIL0911 - organizador",
+      "purpose": "FINALIDADE0911 - evento sintetico",
+      "city_or_postal_code": "CEP0911 - 69301-000",
+      "product_model": "MODELO0911ATENDIMENTO - manga raglan"
+    },
+    "summary": {
+      "data_entrega_confirmada": "2026-11-20",
+      "nome": "PEDIDO SINTETICO NOME0911 - NAO PRODUZIR",
+      "aplicacao": null,
+      "cliente": "AUDITORIA SINTETICA FICHA 0911 - NAO PRODUZIR"
+    }
+  },
+  "fichaFirstPrintedAt": null,
+  "fichaFirstPrintedBy": null,
+  "finalAmountCents": 987654,
+  "firstContactAt": "2026-11-09T14:40:49.731Z",
+  "gatewayPayment": null,
+  "id": "80b5c616-802f-4de2-a1e2-fe10c999e5b2",
+  "isTest": false,
+  "lastMessage": null,
+  "leadTimeBusinessDays": null,
+  "locked": false,
+  "missingFields": [],
+  "number": "01-CRM",
+  "orderDate": "2026-11-09",
+  "origin": "atendimento",
+  "paidOn": "2026-11-09",
+  "paymentReviewRequired": false,
+  "paymentCondition": "cartao_credito",
+  "reopenedAt": null,
+  "reopenedBy": null,
+  "seller": {
+    "id": "user-4777636e30198163bdc84f86aec4e164",
+    "name": "Admin Comercial"
+  },
+  "status": "confirmado",
+  "storeNumber": null,
+  "totalPieces": 97,
+  "updatedAt": "2026-11-09T14:40:50.283Z",
+  "version": 9
+}

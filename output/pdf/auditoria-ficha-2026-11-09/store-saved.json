@@ -1,0 +1,87 @@
+{
+  "order": {
+    "confirmedAt": "2026-11-09T14:42:38.796Z",
+    "confirmedBy": { "id": "system:loja-do-site", "name": "Loja do site" },
+    "conversationId": null,
+    "createdAt": "2026-11-09T14:42:38.796Z",
+    "deliveredOn": null,
+    "fabCode": "01",
+    "ficha": {
+      "artwork": {
+        "feito_pela_silmer": false,
+        "feito_pelo_cliente": false,
+        "files": [],
+        "sem_estampa": true
+      },
+      "items": [
+        {
+          "cor": "Preto",
+          "cor_costas": "",
+          "cor_frente": "",
+          "cor_manga_direita": "",
+          "cor_manga_esquerda": "",
+          "estampa": "",
+          "gola": "Gola redonda",
+          "grade": [{ "quantidade": 10, "tamanho": "M" }],
+          "malhas": ["Dry fit liso de poliéster"],
+          "modelo": "",
+          "publico": "masculino",
+          "quantidade_informada": null,
+          "tipo": "Camiseta",
+          "tipo_servico": "",
+          "vies_gola": "",
+          "vies_mangas": ""
+        }
+      ],
+      "loja": {
+        "comprovanteUrl": "https://recibo.infinitepay.io/sintetico-audit0911",
+        "produto": {
+          "nome": "Camisa Masculina Lisa Dry Fit",
+          "slug": "camisa-masculina-lisa"
+        },
+        "telefone": "5527900009110"
+      },
+      "observations": [
+        "Dados de envio — CEP: 69301-000. Entrar em contato para pegar as informações de entrega."
+      ],
+      "serviceData": {},
+      "summary": {
+        "cliente": "LOJA SINTETICA ENVIO0911 - NAO PRODUZIR",
+        "data_entrega_confirmada": null,
+        "nome": null
+      }
+    },
+    "fichaFirstPrintedAt": null,
+    "fichaFirstPrintedBy": null,
+    "finalAmountCents": 18000,
+    "firstContactAt": "2026-11-09T14:42:38.778Z",
+    "gatewayPayment": {
+      "confirmedAt": "2026-11-09T14:42:38.778Z",
+      "invoiceSlug": "fatura-sintetica-audit0911",
+      "paidAmountCents": 18000,
+      "source": "infinitepay",
+      "transactionNsu": "nsu-sintetico-audit0911-00ce31a0-defc-4844-8529-7fdab4af8690",
+      "receiptUrl": "https://recibo.infinitepay.io/sintetico-audit0911"
+    },
+    "id": "bbc54ea0-e2a5-474d-9197-817f1ca9f92f",
+    "isTest": true,
+    "lastMessage": null,
+    "leadTimeBusinessDays": 10,
+    "locked": true,
+    "missingFields": [],
+    "number": "02-CRM",
+    "orderDate": "2026-11-09",
+    "origin": "loja",
+    "paidOn": "2026-11-09",
+    "paymentReviewRequired": false,
+    "paymentCondition": "pix",
+    "reopenedAt": null,
+    "reopenedBy": null,
+    "seller": null,
+    "status": "confirmado",
+    "storeNumber": "LJ-00CE31A0",
+    "totalPieces": 10,
+    "updatedAt": "2026-11-09T14:42:38.796Z",
+    "version": 1
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "bbc54ea0-e2a5-474d-9197-817f1ca9f92f",
+  "number": "02-CRM",
+  "isTest": true,
+  "seedMethod": "createStoreOrderService.record com fixture sintetica, sem webhook ou chamada InfinitePay",
+  "htmlStatus": 200,
+  "pdfStatus": 200,
+  "billingReadStatus": 404,
+  "observations": [
+    "Dados de envio — CEP: 69301-000. Entrar em contato para pegar as informações de entrega."
+  ],
+  "htmlSha256": "d14ef3c5d73718226f90b7cd9f8a9764a9614e10ee9e3952d9c6baccff8ad3f3",
+  "pdfSha256": "8634a3f117786c8af607c17c47afff0bb8958376f8271a1a3ad62ada60f00ff1"
+}

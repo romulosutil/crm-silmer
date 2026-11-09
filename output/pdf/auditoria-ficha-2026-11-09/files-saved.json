@@ -1,0 +1,92 @@
+{
+  "final": {
+    "contentType": "image/svg+xml",
+    "extension": "svg",
+    "id": "file-cfa40fc5-b43a-411e-81c7-479690fce1ee",
+    "name": "ARQUIVO0911_6_final.svg",
+    "sizeBytes": 214,
+    "slot": "final",
+    "thumbnail": false,
+    "uploadedAt": "2026-11-09T14:40:50.209Z",
+    "uploadedBy": {
+      "id": "user-4777636e30198163bdc84f86aec4e164",
+      "name": "Admin Comercial"
+    }
+  },
+  "limits": {
+    "maxBytes": 10485760,
+    "maxReferences": 5
+  },
+  "references": [
+    {
+      "contentType": "image/svg+xml",
+      "extension": "svg",
+      "id": "file-6ef20b71-af5d-4548-a4b9-7e661cb752cc",
+      "name": "ARQUIVO0911_1_reference.svg",
+      "sizeBytes": 218,
+      "slot": "reference",
+      "thumbnail": false,
+      "uploadedAt": "2026-11-09T14:40:49.918Z",
+      "uploadedBy": {
+        "id": "user-4777636e30198163bdc84f86aec4e164",
+        "name": "Admin Comercial"
+      }
+    },
+    {
+      "contentType": "image/svg+xml",
+      "extension": "svg",
+      "id": "file-4735a72c-6e9f-4532-b43d-4b3e94be5485",
+      "name": "ARQUIVO0911_2_reference.svg",
+      "sizeBytes": 218,
+      "slot": "reference",
+      "thumbnail": false,
+      "uploadedAt": "2026-11-09T14:40:50.129Z",
+      "uploadedBy": {
+        "id": "user-4777636e30198163bdc84f86aec4e164",
+        "name": "Admin Comercial"
+      }
+    },
+    {
+      "contentType": "image/svg+xml",
+      "extension": "svg",
+      "id": "file-70f3bf96-65b8-4c06-b8e3-c1012d49303b",
+      "name": "ARQUIVO0911_3_reference.svg",
+      "sizeBytes": 218,
+      "slot": "reference",
+      "thumbnail": false,
+      "uploadedAt": "2026-11-09T14:40:50.151Z",
+      "uploadedBy": {
+        "id": "user-4777636e30198163bdc84f86aec4e164",
+        "name": "Admin Comercial"
+      }
+    },
+    {
+      "contentType": "image/svg+xml",
+      "extension": "svg",
+      "id": "file-be10e05a-4e5c-4b31-be61-58d8079825bb",
+      "name": "ARQUIVO0911_4_reference.svg",
+      "sizeBytes": 218,
+      "slot": "reference",
+      "thumbnail": false,
+      "uploadedAt": "2026-11-09T14:40:50.171Z",
+      "uploadedBy": {
+        "id": "user-4777636e30198163bdc84f86aec4e164",
+        "name": "Admin Comercial"
+      }
+    },
+    {
+      "contentType": "image/svg+xml",
+      "extension": "svg",
+      "id": "file-bfa47493-048c-428c-b353-c5d9897f8299",
+      "name": "ARQUIVO0911_5_reference.svg",
+      "sizeBytes": 218,
+      "slot": "reference",
+      "thumbnail": false,
+      "uploadedAt": "2026-11-09T14:40:50.190Z",
+      "uploadedBy": {
+        "id": "user-4777636e30198163bdc84f86aec4e164",
+        "name": "Admin Comercial"
+      }
+    }
+  ]
+}

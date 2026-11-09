@@ -1,0 +1,32 @@
+✔ v6 prints the audience by the item number and "Modelo de malha" (ADR 025, PUB-07) (4.3186ms)
+✔ v6 prints the quantity said only when it differs from the sizes (ADR 025, PUB-02) (1.7881ms)
+✔ v6 reads an order stored before ADR 025 without an audience (0.556ms)
+✔ the v6 sample prints every audience once and a quantity said that differs (1.2726ms)
+✔ v6 package is locked by hash and approved by the PO for development (9.7805ms)
+✔ orders print on v6 only with the PO approval recorded (PIM-10) (0.5071ms)
+✔ COB-01/13: billing requires a human seller session, keeps links private and denies Financeiro (174.5106ms)
+✔ COB-04: CSRF, strict command shapes and idempotency key are checked before billing writes (14.9606ms)
+✔ COB-06/14: technical reserve is credential/workflow bound and cannot be invoked by a browser session (8.547ms)
+✔ COB-06/13: callback rejects extra unverified claims and never leaks upstream payloads (6.0134ms)
+✔ COB-01/16: technical capabilities never grant human commercial commands (1.0039ms)
+✔ COB-02: exact cent split for 0, X and 100 percent (1.9226ms)
+✔ COB-13: private gateway URLs have a closed HTTPS host allowlist (0.4062ms)
+✔ OLIST-10/40: cents are authoritative; negotiated quantity discounts sum exactly (3.5811ms)
+✔ new compositions have no inferred price; missing lines never produce a partial total (0.4037ms)
+✔ OLIST-42: reorder preserves identities and M in different garments stays separate (0.888ms)
+✔ OLIST-10/43: quantity change keeps negotiated subtotal but requires explicit review (0.4952ms)
+✔ clearing a subtotal returns to incomplete rather than zero-price sale (0.2332ms)
+✔ OLIST-42: duplication allocates fresh group/line IDs and does not inherit review (0.4761ms)
+✔ OLIST-40: group and cross-group overflow fail before lossy Number conversion (0.5148ms)
+✔ malformed and hostile money/quantities cannot be coerced or echoed (0.8557ms)
+✔ duplicate identities, unknown totals and duplicated sizes are rejected (1.017ms)
+✔ fractional ERP units do not restrict valid CRM subtotals or cause automatic rounding (0.444ms)
+✔ sparse arrays cannot skip validation and produce a complete zero total (0.9408ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 24
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 424.1665

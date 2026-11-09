@@ -868,10 +868,12 @@ export async function startWorkerFromEnvironment(options = {}) {
         options.importModule,
       ),
     });
+    // Sem `queue`: o consumidor Olist cria a própria fila, com o backoff
+    // pré-efeito de 15 s a 300 s. Passar a fila padrão daqui o reduziria a
+    // base de 1 s (cerca de 2 minutos até dead_letter).
     const olistWorker = createOlistWorkerRuntime({
       database,
       environment,
-      queue,
       logger,
       workerId: 'olist-' + process.pid,
     });

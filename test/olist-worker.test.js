@@ -474,3 +474,31 @@ test('LIVENESS the worker settles a granted retry as retryable and retrySafe', a
   assert.equal(settled[0].retryable, true);
   assert.equal(settled[0].retrySafe, true);
 });
+
+test('T15 the real worker startup lets the Olist consumer build its own queue (15 s to 300 s pre-effect backoff)', async () => {
+  // createOlistWorkerRuntime only applies the slow pre-effect backoff when it
+  // receives no queue. The startup used to pass the shared default queue
+  // (1 s base, about 2 minutes to dead_letter), which silently overrode it.
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(
+    new URL('../apps/worker/src/worker.js', import.meta.url),
+    'utf8',
+  );
+  const call = /createOlistWorkerRuntime\(\{([^}]*)\}\)/u.exec(
+    source.slice(
+      source.indexOf('export async function startWorkerFromEnvironment'),
+    ),
+  );
+  assert.ok(call, 'the startup must call createOlistWorkerRuntime');
+  assert.doesNotMatch(
+    call[1],
+    /\bqueue\b/u,
+    'the startup must not hand the shared default queue to the Olist consumer',
+  );
+  // Without a queue the consumer applies the documented backoff.
+  assert.match(
+    source,
+    /retryBaseMs:\s*15_000,\s*retryMaxMs:\s*300_000/u,
+    'the Olist consumer queue keeps the 15 s to 300 s pre-effect backoff',
+  );
+});

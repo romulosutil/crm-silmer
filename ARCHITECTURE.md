@@ -1,5 +1,14 @@
 # Arquitetura — baseline do CRM Silmer
 
+## Cadastro obrigatório somente para exportação Olist em 10/11/2026
+
+[ADR 082](docs/adr/082-cadastro-obrigatorio-somente-no-envio-olist.md) corrige a
+ADR 081: confirmar o Pedido e gerar ficha/PDF não exigem cadastro completo;
+novo envio Olist exige. A validação por campo e a revalidação no servidor
+devem impedir o bypass por nome/telefone, inclusive em jobs antigos. O commit
+`865388f0` ainda precisa dessa correção funcional em OLC-T01–T04; vínculo
+histórico e recuperação preservam seus contratos próprios.
+
 ## Envio simples da ficha para o Olist (09/11/2026)
 
 [ADR 072](docs/adr/072-envio-em-aberto-sem-duplicar-cadastros-do-erp.md) e

@@ -1,346 +1,242 @@
 # Prompts para gerar venda Olist pelo pedido confirmado
 
-O resultado esperado é abrir um Pedido **Confirmado**, clicar em **Gerar no
-Olist**, acompanhar na mesma página e receber o número da venda ERP conferida.
-Os dados vêm do Pedido estruturado; o PDF não é enviado nem interpretado.
+O fluxo é abrir um Pedido **Confirmado**, clicar em **Gerar no Olist** e acompanhar o resultado na mesma página. A integração usa os dados estruturados do Pedido, sem enviar ou interpretar o PDF.
 
-Use os blocos 1 a 6 em ordem. Cada bloco corresponde a uma tarefa com entrega,
-evidência, commit e push próprios. Os blocos 7 e 8 são trilhas separadas e não
-precisam ser executados para concluir a geração. Estes prompts orientam o
-trabalho futuro; não indicam que a implementação já foi feita.
+**Regra corrigida pelo proprietário:** cadastro completo e válido é obrigatório para gerar no Olist. Ele não é obrigatório para salvar ou confirmar o Pedido nem para gerar a ficha/PDF. O bypass por cadastro vazio ou parcial entregue no commit 865388f0 é uma regressão a corrigir, conforme a [ADR 082](../../adr/082-cadastro-obrigatorio-somente-no-envio-olist.md).
 
-Contrato: [OLC-01–16](../../../.specs/features/olist-confirmed/spec.md).
-Tarefas: [OLC-T01–T06 e OLC-F01–F04](../../../.specs/features/olist-confirmed/tasks.md).
-Decisão: [ADR 079](../../adr/079-olist-a-partir-do-pedido-confirmado.md);
-frete no total: [ADR 080](../../adr/080-valor-final-com-frete.md) /
-[RFC 062](../../rfc/062-valor-final-com-frete.md).
-O planejamento documental OLIST-PLAN-03 está na
-[lista principal](../../../.specs/features/crm-mvp/tasks.md).
+## O que mudou nas últimas 12 horas
 
-## Regras para todos os blocos
+Levantamento em **10/11/2026, às 13h54, horário de São Paulo**. Janela analisada: **01h54 a 13h54**. Base: master atualizada, commit **865388f0**. Foram conferidos os commits integrados nessa janela e seus arquivos de origem; branches não integradas não contam como entrega.
 
-Trabalhe no checkout adequado, seguindo AGENTS.md e a precedência das fontes.
-Leia o estado atual antes de editar; preserve mudanças locais de terceiros.
-Consulte o grafo existente somente para descoberta, confirme com `rg` e fontes
-atuais e nunca gere ou versione Graphify no Windows. Use somente infraestrutura
-existente, dados sintéticos e os componentes Vue atuais.
+| Entrega identificada                                                                                | Evidência                                                           | Consequência para os prompts                                                                                                                             |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cadastro vazio/parcial passou a usar comprador ERP por nome e telefone                              | Commit 865388f0; ADR 081; existing-buyer.js e olist-preview-plan.js | Contraria o esclarecimento do proprietário. Corrigir nos blocos 1–4 e preservar a independência da confirmação/PDF.                                      |
+| Frete foi especificado como parte do total, com decisões P1–P3 confirmadas                          | Commits 18f5e657, 3d89b990 e d8200857; ADR 080 / RFC 062            | É contrato aprovado, ainda sem campo de frete no Pedido. Continua trabalho dos blocos 1–4.                                                               |
+| Ativação das cobranças foi registrada primeiro para recebimento e depois para emissão/envio         | Commits 2b2b6da2 e 57b5ea70; BREL-10/T9                             | Preservar funções e flags já ativadas. Teste manual de pagamento e homologação real continuam pendentes; não confundir ativação com quitação comprovada. |
+| Registro de produção do Melhor Envio foi integrado                                                  | Commit f312e0e6; runbook Melhor Envio                               | Reutilizar conexão/cotação. A data da ativação descrita no runbook é anterior à janela; integrar esse registro não implementa frete no total.            |
+| Ficha v8 por item, fonte local, rótulo Modelo e ajuste de paginação Linux foram entregues no código | Commits 8fd8f04a e eb36ec8d; FPI-T01                                | Preservar componentes, templates e amostras. PRINT_TEMPLATE continua v6; aprovação, troca e assinatura são gates próprios.                               |
+| Desempenho da equipe e fila de espera foram adicionados ao Dashboard                                | Commits a148a741 e 2845f889                                         | Adaptar apenas a leitura do total com frete. Preservar métricas, componentes e permissões entregues.                                                     |
+| Testes de banco, polling n8n, autorização e limites SSE foram reforçados                            | Commits e60c3369, 9f23aa1c, 4465f30e e 8f2b5bb4                     | Reutilizar a cobertura; não refazer essas entregas como parte de Olist.                                                                                  |
+| Regra de checkout único e branches curtos foi registrada                                            | Commit 769e81a4; AGENTS.md                                          | Uma sessão altera o checkout; partir da master limpa/atualizada, usar branch curta e PR, sem push direto à master.                                       |
 
-O PO decidiu em 10/11/2026 que o Olist passa por refatoração conforme os blocos
-1 a 6: este pacote é a direção vigente e prevalece sobre o que a master já tem
-de Olist onde houver divergência; o código existente é ponto de partida e de
-reaproveitamento. O valor final do Pedido é a soma dos subtotais por linha de
-tamanho, calculada pelo backend (ADR 057 itens 4 e 6), mais o frete. O frete é
-funcionalidade nova, ainda não implementada: a master não tem o campo. O
-contrato está fechado na ADR 080 e é implementado no bloco 1 (OLC-T01); veja
-também ADR 079, decisão 9, e os critérios OLC-05a–j da spec. Decisões do PO
-sobre o frete: quem informa é o vendedor responsável pelo Pedido (Admin não
-informa por herança); a cotação de modules/shipping é só sugestão, com preço
-lido no servidor; o frete é definido até a confirmação e congela com ela; o
-Dashboard usa o total único, sem separar peças e frete. As propostas técnicas
-P1–P3 da ADR 080 foram confirmadas pelo PO em 10/11/2026 e não devem ser ampliadas. O
-cancelamento local vale só para Pedido não confirmado.
+A correção documental da ADR 082 é posterior ao levantamento. Ela registra a orientação do proprietário; a correção funcional do cadastro ainda está pendente.
 
-A entrega principal não inclui remoção Financeiro, exportação de pendentes,
-menu/busca Olist, prévia obrigatória, a restrição do cancelamento local
-(OLC-F03) ou troca de ficha.
-Mantenha a habilitação individual e a autorização de leitura comercial sem
-acrescentar edição geral. Não exigir pagamento integral ou check Nota criada.
-Não invente preços, rateie total histórico, arredonde centavos nem repita uma
-inclusão de resultado incerto. Não execute scripts de prova como produção.
+## Como copiar e executar
 
-Ao encerrar cada bloco, informe: tarefa/requisitos, arquivos alterados,
-comportamento, verificações/resultados, migração/rollback, commit/push e riscos.
-Só marque tarefas realmente concluídas. Código/teste local não comprova deploy
-ou efeito real no ERP. Nunca inclua PII, credencial ou link privado na evidência.
+Cada bloco abaixo contém **um prompt completo em uma única caixa de código**. Copie a caixa do bloco desejado; não é necessário juntar regras de várias partes do documento.
+
+Execute os blocos **1 → 2 → 3 → 4 → 5 → 6**, conferindo a entrega anterior. Os blocos **7 e 8 são independentes** e não bloqueiam a geração. Os checkboxes OLC representam a adequação ao fluxo vigente, não a ausência de todo o código existente.
+
+| Bloco | Ponto de partida que deve ser reaproveitado                                              | Trabalho restante                                                                 |
+| ----- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| 1     | Preços por tamanho, total calculado, composição de legado, checkbox e controle de acesso | Corrigir gate de cadastro, implementar frete e ajustar contratos necessários      |
+| 2     | modules/olist: conexão, client, recursos, payload, inspector e quotas                    | Adequar cadastro e frete sem reconstruir o adapter                                |
+| 3     | API de exportação, reservas, ledger, dispatcher, worker e recuperação                    | Restringir a confirmado e integrar o comando direto com os gates atuais           |
+| 4     | OrderOlistPanel, editor de valores, UsersView e configuração administrativa              | Simplificar a jornada e integrar frete/pendências corretas                        |
+| 5     | Testes e runbooks Olist, billing, shipping e impressão                                   | Verificar a adequação integrada sem reabrir entregas concluídas                   |
+| 6     | Restrição de piloto e mecanismos de ativação/recuperação existentes                      | Confirmar estado operacional atual e executar caso real somente quando autorizado |
+
+Fontes: [spec OLC](../../../.specs/features/olist-confirmed/spec.md), [tarefas OLC](../../../.specs/features/olist-confirmed/tasks.md), [ADR 079](../../adr/079-olist-a-partir-do-pedido-confirmado.md), [ADR 080](../../adr/080-valor-final-com-frete.md), [ADR 082](../../adr/082-cadastro-obrigatorio-somente-no-envio-olist.md) e [RFC 062](../../rfc/062-valor-final-com-frete.md).
 
 ## Bloco 1 Dados e autorização
 
+**Tarefa:** OLC-T01. **Estado:** parcial; adaptar o existente e corrigir cadastro antes de liberar envio.
+
 ```text
-Implemente OLC-T01 de .specs/features/olist-confirmed/tasks.md, atendendo
-OLC-01–06/09/10/14. Leia primeiro a spec correspondente, a ADR 079 e as regras
-gerais deste documento. Objetivo: preparar Pedido confirmado e dados ERP sem
-alterar sua confirmação, total, ficha/PDF, cobrança ou pagamento históricos.
+Execute OLC-T01 de .specs/features/olist-confirmed/tasks.md.
+Leia AGENTS.md, RULES.md, a spec OLC e as ADRs 079, 080 e 082.
+Use a master atualizada como ponto de partida e preserve mudanças de terceiros.
 
-Pode editar módulos Orders, Contacts e Identity Access, rotas/runtimes API
-correspondentes, migrations expand, OpenAPI e testes; para o frete, também o
-vínculo com modules/shipping e os pontos de leitura do total em cobrança e
-Dashboard, preservando cobranças, ficha e histórico existentes. Não edite Financeiro
-para removê-lo, templates de impressão ou a jornada n8n. Preserve alterações
-locais de terceiros e confirme nomes/caminhos atuais com rg antes de editar.
+Objetivo: preparar dados e autorização para gerar no Olist somente a partir de Pedido confirmado, reaproveitando o código existente.
 
-Implemente Habilitado Olist default falso, gerido por Admin, com autorização
-explícita na API: humano ativo + leitura comercial do Pedido + checkbox + piloto.
-Admin precisa do checkbox. Não acrescente projeção/entrada ao perfil Financeiro.
+1. Corrija primeiro a regressão do commit 865388f0. Cadastro completo e válido é obrigatório para novo envio Olist; cadastro vazio, parcial ou inválido bloqueia somente essa integração. Nome/telefone ou referência ERP não dispensam o cadastro. Salvar/confirmar o Pedido e gerar ficha/PDF continuam sem esse requisito.
 
-Reutilize size-pricing.js e olist-exact-cent.js. Persista IDs estáveis. Pedido
-novo: reaproveite os subtotais por linha de tamanho existentes; o valor final é
-a soma calculada pelo backend mais o frete do Pedido (centavos inteiros não
-negativos; zero ou ausente equivale a sem frete; Pedido legado sem frete fica
-preservado), sem igualar outro total. Pedido antigo ou da loja que só tem total: persista a composição por
-tamanho por comando aditivo versionado/auditado, cuja soma deve igualar
-exatamente o total existente (ADR 057 item 6); a ausência exige preenchimento
-humano, sem rateio. Derive grade/IDs no servidor e vincule 1:1 aos
-grupos/tamanhos/quantidades confirmados, sem editar grade ou atributos pelo
-enriquecimento. Implemente o contrato do frete no Pedido fechado na ADR 080
-(na master é só estimativa separada em modules/shipping), cobrindo OLC-05a–j:
-frete em centavos inteiros, aditivo, default zero, versionado e auditado, com
-origem; quem informa é só o vendedor responsável, com Pedido pendente (Admin
-não responsável, outro vendedor e automação negados); a cotação persistida é
-sugestão, aplicada pelo servidor a partir da cotação e do serviço escolhidos,
-nunca por preço vindo do navegador, e cotação nova ou desatualizada não muda
-o frete gravado; comando com expectedVersion e idempotência; a confirmação
-calcula soma dos subtotais + frete e congela o frete; Pedido confirmado não
-aceita alteração; cobrança, quitação e Dashboard leem o total único. Escolha
-nomes de campo, rota e migração na implementação e registre-os no OpenAPI.
-Trate loja/legados por adapter e complemento ERP aditivo, com frete zero, sem
-destravar checkout. Não substitua globalmente o campo de valor final nem
-reescreva snapshot/PDF.
+2. Reaproveite checkbox, gestão de usuários, modules/olist/src/access.js, migrations 0063–0065, preços por tamanho e composição de legado já existentes. Humano ativo + leitura comercial do Pedido + Habilitado Olist + piloto são obrigatórios. Admin não herda geração. Não acrescente acesso ao perfil Financeiro.
 
-Defina registros de operação, recursos compartilhados e tentativas, snapshot
-cifrado, referências estáveis e unicidades por conta/Pedido/identidade. Prepare
-contratos e guardas de alteração incompatível, inclusive reabertura e correção
-administrativa da loja, para a reserva serializada do bloco 3.
+3. Implemente o frete aprovado na ADR 080 e OLC-05a–j. Dado aditivo em centavos inteiros não negativos, default zero, versionado, auditado e com origem. Somente o vendedor responsável informa/aplica frete em Pedido pendente. Admin não responsável, outro vendedor, automação e alteração em confirmado são negados.
 
-Verifique autorização positiva/negativa, preço ausente/inexato/divergente,
-quantidade alterada, identidades de linhas, overflow e migrations no PostgreSQL
-dedicado com dados sintéticos. Use comandos existentes do projeto; documente
-rollback e evidências. Não ative conta nem crie cadastros/vendas reais.
+4. Reutilize modules/shipping e conversation-shipping-runtime.js como origem de sugestão. O comando recebe a identidade da cotação/serviço; o servidor lê o preço e confere Pedido, serviço e validade. Não aceite preço de cotação do navegador. Cotação nova/desatualizada não muda frete gravado. Divergência ou origem desatualizada é aviso, sem bloquear confirmação por si só. Não crie alçada para zero, já no preço ou abaixo do cotado.
+
+5. Pedido novo: mantenha subtotais existentes e calcule no backend peças + frete. Não reintroduza total digitado. Quantidade não muda frete automaticamente. Confirmação congela peças/frete/origem/total e recusa valor declarado divergente. Pedido legado/loja com apenas total usa composição aditiva 1:1, sem rateio nem reprecificação, frete zero e snapshot preservado.
+
+6. Reutilize registros, reservas, referências e guardas existentes; altere somente contratos necessários. Pagamento/entrega compatíveis não invalidam conteúdo exportável apenas por incremento de versão global. Preservar cobrança, quitação, histórico, Dashboard e impressão v6/v7/v8.
+
+Pode editar Orders, Contacts, Identity Access, rotas/runtimes API, migrations expand, OpenAPI e testes; para frete, pontos necessários de shipping, billing e Dashboard. Não remova Financeiro nem altere workflows ou dados reais.
+
+Verifique cadastro vazio/parcial/completo: confirmação/PDF independentes, exportação bloqueada quando necessário, inclusive com token/job antigo. Cubra frete zero/positivo/inválido/overflow, autorização, cotação de outro Pedido/desatualizada, preço do navegador, idempotência, concorrência, legado/loja e reconfirmação com cobrança.
+
+Use banco dedicado e dados sintéticos. Entregue diff, testes/resultados, migração/rollback, riscos e commit/push/PR conforme AGENTS.md. Não marque OLC-T01 concluída apenas por código já existente. Nenhuma escrita real ao ERP é autorizada por este prompt.
 ```
 
 ## Bloco 2 Conexão e comunicação com Olist
 
+**Tarefa:** OLC-T02. **Depende de:** OLC-T01. **Estado:** adapter existente; adequar cadastro e frete.
+
 ```text
-Implemente OLC-T02 após conferir a conclusão e o contrato de OLC-T01.
-Requisitos OLC-04/06–08/11/12/14. Leia a spec OLC, a ADR 079, regras gerais
-deste documento e phase1-report.md; preserve o escopo exact-cent-v1.
+Execute OLC-T02 após conferir OLC-T01 e seus contratos.
+Leia AGENTS.md, RULES.md, spec/tarefas OLC e ADRs 079, 080 e 082.
 
-Pode editar adapter/runtime de integração na API/worker/módulos existentes,
-configuração, migrations compatíveis, OpenAPI, testes e runbook relacionado.
-Não crie serviço, Redis, store global ou acesso n8n direto ao banco. Preserve
-Financeiro, billing e impressão. Não ligue scripts de prova ao runtime.
+Objetivo: adaptar a integração existente, sem reconstruir conexão e client.
 
-Implemente conexão administrativa central com sessão/CSRF, conta esperada,
-tokens cifrados, renovação serializada, desconexão e parâmetros comerciais
-explícitos/versionados. Não use usuário CRM para inferir vendedor ERP.
+1. Confira modules/olist/src/connection.js, client.js, resource-resolver.js, resource-writer.js, sale-payload.js e readonly-inspector.js. Reutilize credenciais cifradas, renovação serializada, conta esperada, configuração central, reservas e quotas. Não crie conexão paralela nem execute scripts de prova como runtime.
 
-Implemente adapter limitado para resolver e criar comprador/produto/variação,
-criar venda e ler resultados. Confira identidade fiscal/comercial, conta,
-referência, produtos, quantidades, marcadores e valores exatos. Trate o
-valorFrete no adapter e no inspector (hoje exigem ausente ou zero): envie o
-frete do Pedido em centavos exatos, fora dos unitários, e confira que o
-valorFrete e o total retornados igualam o frete e o total do Pedido (soma dos
-subtotais mais frete); valorFrete ausente só equivale a zero se o frete do
-Pedido for zero. Não altere
-cadastro remoto encontrado nem peça escopos fiscais/estoque/baixa desnecessários.
+2. Aplique cadastro completo obrigatório somente ao novo envio Olist. Ajuste olist-preview-plan.js e a resolução necessária para impedir bypass por cadastro vazio/parcial e busca por nome/telefone. Valide identidade com dados completos sem sobrescrever cadastro ERP ou misturar fontes parciais. Preserve os contratos administrativos de vínculo histórico.
 
-Reaproveite fixtures e descobertas das provas, sem IDs de casos reais,
-credenciais, journals ou digests antigos. Teste quota, expiração, falha de
-renovação, resposta sem ID, timeout e divergência com fixtures sintéticas.
-Nenhuma escrita real é autorizada por este bloco. Entregue configuração e
-runbook sem segredos, contratos, testes, limitações e rollback.
+3. Adapte valorFrete, hoje aceito apenas ausente/zero. Envie o frete congelado do Pedido fora dos unitários. Confira em centavos: total de produtos = soma das linhas; total da venda = produtos + frete. Não exija que os dois totais sejam iguais quando há frete positivo. valorFrete ausente só equivale a zero se o frete esperado for zero.
+
+4. Mantenha valorDesconto e valorOutrasDespesas zero, identidades estáveis e conferência exata da ADR 062. Não dilua frete em preço, compense linhas, arredonde negociação ou aceite divergência. Preserve ID remoto e bloqueie repetição criadora em resultado incerto.
+
+5. Não reconfigure Melhor Envio ou InfinitePay: suas ativações estão registradas. Olist tem conexão, credenciais e gates próprios. Não inferir vendedor ERP pelo usuário CRM nem emitir fiscal, estoque ou baixa.
+
+Pode editar adapter, API/worker, configuração, contratos OpenAPI, testes e runbook da fronteira. Preserve Financeiro, billing e templates. Não acrescente infraestrutura.
+
+Teste cadastro incompleto/completo, frete zero/ausente/positivo/divergente/fracionário, quotas, renovação, timeout, resposta sem ID e leitura divergente com fixtures sintéticas. Entregue evidências, contratos, limitações, rollback e commit/push/PR. Não use credenciais, IDs ou journals das provas como dados do runtime. Nenhum POST real está autorizado.
 ```
 
 ## Bloco 3 Geração e recuperação
 
+**Tarefa:** OLC-T03. **Depende de:** OLC-T01 e OLC-T02. **Estado:** comando/worker existentes; refatorar a jornada.
+
 ```text
-Implemente OLC-T03 após OLC-T01/T02. Requisitos OLC-01/03/07–12/14.
-Leia a spec OLC, ADR 079, regras gerais e contratos entregues nos blocos anteriores.
-Objetivo: um comando por Pedido confirmado cria uma única venda conferida.
+Execute OLC-T03 após conferir OLC-T01/T02.
+Leia AGENTS.md, RULES.md, spec OLC e ADRs 079, 080 e 082.
 
-Pode editar aplicação/repositórios Orders e integração, API/worker, migrations
-compatíveis, OpenAPI, testes de concorrência e runbook. Preserve Financeiro,
-InfinitePay, templates e comandos comerciais não relacionados. Não crie
-prévia obrigatória ou vínculo genérico de vendas antigas como dependência.
+Objetivo: aceitar Gerar no Olist por Pedido confirmado e concluir uma única venda conferida.
 
-O comando valida status confirmado, ator/checkbox/piloto, cadastro e todas as
-linhas/valores antes de inclusões, inclusive que o total do Pedido é a soma dos
-subtotais mais o frete congelado na confirmação e no snapshot; divergência
-bloqueia. O frete integra a revisão comercial exportável. Congele conteúdo/configuração e grave reserva,
-snapshot, auditoria e job numa transação. Duas abas, chaves distintas e replay
-devem retornar a mesma operação sem segunda venda.
+1. Reutilize apps/api/src/olist-export-command.js, olist-runtime.js, modules/olist/src/dispatcher.js, repository.js e apps/worker/src/olist-runtime.js. Preserve ledger, reservas por identidade, invalidação administrativa, quota e recuperação existentes. Não recrie tabelas ou um segundo dispatcher.
 
-Execute cliente → produtos/variações → venda. Reserve cada recurso compartilhado
-por conta/identidade, persista IDs e revalide acesso/versões antes de cada efeito.
-Serialize com reabertura e correção da loja; bloqueie alterações incompatíveis
-durante envio e após sucesso. Não declare pagamento nem mude status comercial.
-Use revisão/fingerprint do conteúdo comercial relevante ou revalide esse
-conteúdo quando a versão global mudar só por pagamento/entrega compatíveis;
-essas ações não devem invalidar envio cujo conteúdo continua idêntico.
+2. Restrinja geração a confirmado. Integre validação e aceitação em um comando pelo Pedido, sem impor tela/previewId de prévia ao usuário. Pode reutilizar validação interna e seus mecanismos de prova; não remova proteção para reduzir um gesto.
 
-Implemente estado persistido, conferência exata e recuperação administrativa
-mínima da própria operação. Resultado incerto bloqueia criação e dependentes;
-busca vazia não permite reenviar. Retomada criadora exige ausência de efeito
-comprovada e revalidação. Divergência preserva ID e pede conferência.
+3. Exija cadastro completo na aceitação e antes dos efeitos, inclusive com token antigo, job já enfileirado ou cadastro alterado. Cadastro incompleto bloqueia somente exportação, sem impedir confirmação/PDF. Efeito já iniciado é reconciliado; não apagar nem repetir para aplicar a correção.
 
-Verifique PostgreSQL com conexões/processos independentes, falha após cada
-cadastro, crash, resposta perdida, commit falho após sucesso remoto, revogação,
-reabertura concorrente e replay. Use dados sintéticos, sem POST real ao Olist.
-Documente restauração/rollback preservando vínculos e efeitos externos.
+4. Valide peças + frete congelado = total do Pedido antes de inclusões. Congele conteúdo/configuração e preserve a aceitação transacional de reserva, snapshot cifrado, auditoria e job. Reutilize o que já existe e adapte apenas as diferenças do contrato.
+
+5. Execute cliente → produtos/variações → venda com IDs confirmados preservados. Revalide status, revisão comercial, conexão, checkbox e piloto antes de cada efeito. Serialize com reabertura/correção da loja. Pagamento/entrega compatíveis não devem interromper conteúdo inalterado apenas por mudar a versão global.
+
+6. Preserve uma operação ativa por conta/Pedido, gerações arquivadas e referências estáveis. Duas abas/chaves e replay não criam segunda venda. Falha pré-efeito só retoma com prova; incerteza ou busca vazia não autoriza novo POST. Recupere administrativamente a própria operação sem exigir vínculo genérico novo.
+
+Pode editar aplicação/repositórios Orders e Olist, API/worker, migrations compatíveis, OpenAPI, testes e runbook. Preserve Financeiro, billing, impressão e históricos. Não altere comportamento do cancelamento OLC-F03 nesta tarefa; mantenha filtros de cancelados.
+
+Verifique concorrência com conexões/processos independentes, cadastro incompleto e token/job antigo, revogação, falha após cada cadastro, resposta perdida, commit falho após sucesso remoto e divergência de frete/valores. Use dados sintéticos, sem escrita real. Entregue evidências, rollback e commit/push/PR.
 ```
 
 ## Bloco 4 Interface dentro do pedido
 
+**Tarefa:** OLC-T04. **Depende de:** OLC-T01 a OLC-T03. **Estado:** painel existente; simplificar e conectar os ajustes.
+
 ```text
-Implemente OLC-T04 após OLC-T01–T03. Requisitos OLC-01–06/10/13/14/16.
-Leia a spec OLC, ADR 079, regras gerais, design.md e contratos API atuais.
-Objetivo: no detalhe existente de um Confirmado, clicar Gerar no Olist e
-acompanhar o resultado na mesma página.
+Execute OLC-T04 após conferir OLC-T01–T03.
+Leia AGENTS.md, RULES.md, spec OLC, ADRs 079/080/082 e design.md.
 
-Pode editar OrderView e componentes/composables associados, UsersView para o
-checkbox, configuração administrativa mínima, CSS pelos tokens atuais e E2E.
-Confirme os caminhos com rg. Preserve Gerar pedido, Gerar PDF, billing,
-FinanceView, loja, versões da ficha e mudanças locais de terceiros.
+Objetivo: no detalhe de Confirmado, clicar Gerar no Olist e acompanhar a operação na mesma página.
 
-Adicione bloco Olist com pendências por campo/peça/tamanho e composição
-monetária autorizada, usada em Pedido antigo ou da loja sem subtotais. O valor
-final nunca é digitado: vem da soma dos subtotais calculada pelo backend mais o
-frete. Mostre peças, frete com origem e total (ADR 080), inclusive no Pedido
-pendente e em Gerar pedido. Só o vendedor responsável edita o frete ou usa a
-cotação sugerida, e só em Pedido pendente; a sugestão nunca muda o valor sem
-ação dele e mostra aviso quando difere ou está desatualizada. Confirmado
-mostra o frete somente leitura. Nesses Pedidos antigos/da loja o total existente
-permanece somente leitura e a soma da composição precisa coincidir com ele.
-Usuário sem permissão de correção vê motivo/responsável.
-Não crie menu/busca Olist, assistente ou tela de prévia obrigatória.
+1. Reutilize OrderOlistPanel.vue, OrderPricedItemsSection.vue, olist-feedback.js, UsersView e configuração administrativa existentes. Releia os componentes atuais antes de editar: rótulo Modelo, ficha v8 por item e melhorias do Dashboard já foram entregues. Preserve Gerar pedido, Gerar PDF, billing, loja e todos os templates/gates.
 
-Ligue Gerar no Olist ao comando real. Mostre Aguardando processamento,
-Processando… com etapa, Gerado no Olist · Venda nº … e o número CRM.
-Recupere após reload; previna novo envio. Falha de consulta mostra Atualizar
-situação, que só lê. Incerteza mostra Conferência necessária, sem retry criador.
-Retomar geração só aparece se o servidor comprovar a ação segura.
+2. Corrija a separação de pendências. Cadastro completo é obrigatório no bloco Olist: mostre campos faltantes e quem pode corrigir; não apresente cadastro como opcional nem esconda o bloqueio para habilitar envio. Essas pendências não entram no progresso de fechar o Pedido ou gerar PDF. Evite motivos duplicados; o resumo visual não substitui a validação do servidor.
 
-Valide teclado, foco, erro associado, ARIA sem anúncios excessivos, axe,
-claro/escuro, desktop e 320/390 px, duas abas, reconexão e revogação.
-Teste integração UI/API/banco local sintética, além de mocks de falha;
-não declare integração operacional com base apenas em mock.
+3. Mantenha subtotais e total somente calculado. Exiba peças, frete/origem e total, inclusive no pendente e em Gerar pedido. Só o vendedor responsável edita/aplica frete em pendente. A sugestão vem do servidor; cotação desatualizada/divergente exibe aviso. Confirmado mostra frete somente leitura; legado/loja preservam total e composição autorizada.
+
+4. Adapte o painel atual para Gerar no Olist com validação interna, sem diálogo/tela de prévia obrigatória. Reutilize o backend entregue nos blocos anteriores. Não crie novo menu, busca ou assistente para essa jornada. Não apague ferramentas administrativas/históricas existentes apenas porque não são entrada do vendedor.
+
+5. Mostre Aguardando processamento, Processando… com etapa e Gerado no Olist · Venda nº … com número CRM. Reload recupera o estado. Falha de consulta oferece Atualizar situação só de leitura; incerteza mostra Conferência necessária, sem retry criador. Retomar geração só aparece se o servidor comprovar segurança.
+
+Pode editar componentes/composables do Pedido, gestão/configuração necessária, CSS pelos tokens e E2E. Não remova FinanceView, refaça Dashboard, troque PRINT_TEMPLATE ou reescreva a ficha v8.
+
+Teste teclado, foco, ARIA, axe, temas, 320/390 px, desktop, duas abas e revogação. Confirme cadastro vazio/parcial permitindo fechar/gerar PDF e bloqueando exportação. Teste UI/API/banco local além de mocks. Entregue evidências e commit/push/PR; mock não comprova geração operacional.
 ```
 
 ## Bloco 5 Verificação e preparo de publicação
 
+**Tarefa:** OLC-T05. **Depende de:** OLC-T01 a OLC-T04. **Estado:** conferir o conjunto adaptado.
+
 ```text
-Execute OLC-T05 após OLC-T01–T04, cobrindo OLC-01–16. Leia spec, ADR 079,
-regras gerais, CONTRIBUTING.md e runbooks de integração/operação vigentes.
-Objetivo: verificar a entrega integrada e preparar alvo com escrita desligada.
+Execute OLC-T05 após conferir OLC-T01–T04.
+Leia AGENTS.md, RULES.md, spec OLC, ADRs 079/080/082 e CONTRIBUTING.md.
 
-Pode editar testes, evidências sanitizadas e runbook. Em achado de código,
-apresente a fronteira e coordene a correção antes de editar arquivos de outro
-dono. Preserve Financeiro, pagamentos, PDF, loja e alterações locais.
+Objetivo: validar a adequação integrada e preparar publicação sem confundir código, ativação e homologação.
 
-Execute cenários positivos/negativos/concorrentes da spec e regressão de
-confirmação/reabertura, correção da loja, billing e permissões. Rode
-git diff --check, npm run validate, npm run test:e2e,
-npm audit --audit-level=high e suítes live/gates pertinentes já existentes.
-Não invente nome de script nem substitua gate externo por mock.
+1. Reutilize testes e runbooks Olist existentes. Cubra cadastro obrigatório somente na exportação, frete e totais, confirmado/pendente, ACL, idempotência, concorrência, incerteza, reabertura/correção e filtros de cancelados. Testes de tokens/jobs antigos precisam impedir contorno do novo gate de cadastro.
 
-Prepare runbook de conta/credenciais, parâmetros fiscais/comerciais explícitos,
-quotas, retenção/PII, recovery, reconexão e rollback. Verifique migrations,
-compatibilidade, release/digest e health no alvo quando autorizado; criação
-deve permanecer desligada até o piloto autorizado do bloco 6.
+2. Execute git diff --check, npm run validate, npm run test:e2e, npm audit --audit-level=high e suítes live/gates pertinentes já existentes. Não invente scripts, remova assertions ou substitua gate real por mock.
 
-Entregue achados priorizados, evidências, riscos e pendências operacionais.
-Não exija remover Financeiro, implementar cancelamento, busca ou trocar ficha.
-Nenhuma venda real é criada neste bloco.
+3. Preserve regressão da ficha v8/Modelo, impressão selecionada e templates anteriores, métricas/permissões do Dashboard, billing ativado, envio financeiro e cotação Melhor Envio. Não execute teste de pagamento, mensagem ou venda real como probe.
+
+4. Leia os estados mais recentes em order-billing-activation.md, validation-manual-activation.md e melhor-envio.md. Billing está ativado para teste manual, sem homologação financeira registrada; a cotação não é frete incorporado ao total. Não desligue flags existentes para preparar Olist.
+
+5. Atualize runbook Olist por etapa, configuração/fiscal, quota, retenção/PII, cadastro, frete, reconexão, restore e rollback. Verifique migrations/digest/health no alvo quando autorizado. Preserve a configuração operacional e mantenha novas inclusões Olist protegidas pelos gates de piloto.
+
+Pode editar testes, evidências sanitizadas e runbook; coordene correções em código com o dono da fronteira. Não exija remoção Financeiro, restrição OLC-F03, busca ou troca de ficha como requisito de liberação.
+
+Entregue achados priorizados, resultados, riscos e pendências. Código local e flag ativa não comprovam efeito real. Registre commit/push/PR conforme AGENTS.md.
 ```
 
 ## Bloco 6 Piloto e aceite
 
+**Tarefa:** OLC-T06. **Depende de:** OLC-T05. **Estado:** verificar o ambiente atual antes de qualquer efeito.
+
 ```text
-Execute OLC-T06 somente após o gate OLC-T05. Requisitos
-OLC-02/08/11/12/15/16. Leia spec, ADR 079, regras gerais e runbook final.
+Execute OLC-T06 somente após o gate OLC-T05.
+Leia AGENTS.md, RULES.md, spec OLC, ADRs 079/080/082 e o runbook Olist final.
 
-Objetivo: comprovar Pedido confirmado → Gerar no Olist → venda conferida,
-com a operadora piloto e a conta ERP corretas. Pode atualizar configuração
-privada autorizada e evidências sanitizadas; não altere outros usuários,
-gatilhos comerciais, estoque, notas ou cobranças fora do caso aprovado.
+Objetivo: comprovar Confirmado → Gerar no Olist → venda conferida com a conta/operadora corretas.
 
-Primeiro prepare um caso concreto revisável: Pedido confirmado, identidade
-privada validada, conta, parâmetros, comprador/produtos, valores e efeitos
-esperados. Verifique se há venda manual anterior; nesse caso não crie outra
-nem improvise vínculo genérico. Obtenha autorização explícita para os efeitos
-reais se ela ainda não existir na sessão; este prompt não autoriza POST real.
+1. Reutilize OLIST_PILOT_USER_IDS e comandos administrativos de criação/recuperação já existentes. Confira estado real de conexão, parâmetros, recovery_required, checkbox, conta e versão antes de ativar ou reconfigurar. Não presuma que tudo está desligado ou que a ativação financeira habilita Olist.
 
-Após autorização, habilite somente a conta piloto prevista e execute pelo
-detalhe do CRM. Confira comprador, grade, quantidades, cada valor, o total do
-Pedido (soma dos subtotais mais o frete congelado na confirmação), o
-valorFrete, os totais da venda e o número remoto. O frete do caso é o que o
-vendedor responsável informou antes de confirmar; não altere frete de Pedido
-confirmado para montar o piloto. Observe reload/replay sem duplicidade e recuperação
-conforme runbook, sem injetar falha destrutiva em dados reais.
+2. Prepare um caso revisável: Pedido confirmado ainda não lançado, comprador com cadastro completo e válido, produtos/tamanhos, peças, frete congelado, total e efeitos esperados. Cadastro incompleto impede esse piloto, embora o Pedido e o PDF possam existir normalmente.
 
-Registre versão/digest, migrations, resultado sanitizado, suporte e aceite
-do PO/Operação. Se houver incerteza, pare novas inclusões, preserve IDs e
-reconcilie. Não apague cadastros nem cancele ERP como rollback técnico.
-Ampliação de usuários depende de decisão própria após o aceite.
+3. Verifique venda manual anterior para não duplicá-la. Se existir, escolha outro caso ou encaminhe ao contrato administrativo vigente; não improvise vínculo nem repita criação. Respeite efeitos/journals já existentes.
+
+4. Obtenha autorização explícita do caso real se ela ainda não existir na sessão. Este prompt não autoriza por si só POST real, checkout, mensagem, pagamento, nota ou estoque. Prepare tudo que for reversível antes de pedir a aprovação final.
+
+5. Após autorização, execute pelo detalhe do CRM e confira comprador, produtos, tamanhos, quantidades, subtotais, valorFrete e totais: produtos = soma das linhas; venda = produtos + frete. O frete foi informado pelo responsável antes da confirmação; não altere confirmado para montar o caso.
+
+6. Confira reload/replay sem duplicidade e recuperação prevista, sem injetar falha destrutiva em dados reais. Registre versão/digest, migrations, evidência sanitizada, suporte e aceite PO/Operação. Incerteza interrompe novas inclusões e exige reconciliação; rollback não apaga cadastro nem cancela ERP.
+
+Pode atualizar somente configuração privada autorizada e evidência/runbook. Preserve outros operadores, gatilhos e integrações. Ampliação de usuários tem decisão própria após o aceite. Entregue resultado e commit/push/PR da documentação pertinente.
 ```
 
 ## Bloco 7 Remoção independente do Financeiro
 
-Este bloco é FINQ-DEPREC-01, **aprovado pelo PO em 10/11/2026**. A execução é
-independente dos blocos 1 a 6 e tem cronograma próprio; não é requisito para
-nenhum deles. Remova o código e mantenha tabelas e dados. A decisão que
-supersede as ADRs 040/041/042 será registrada na execução.
+**Tarefa:** FINQ-DEPREC-01. **Estado:** aprovada; código a retirar, tabelas e dados a manter. **Independente dos blocos 1–6.**
 
 ```text
-Trabalhe somente em FINQ-DEPREC-01 de .specs/features/financeiro/tasks.md.
-Leia a emenda de separação, ADR 079, contratos de billing, AGENTS.md e regras
-gerais deste documento. Não implemente nem modifique a entrega Olist.
+Execute somente FINQ-DEPREC-01 de .specs/features/financeiro/tasks.md.
+Leia AGENTS.md, RULES.md, ADR 079, contratos de billing e os registros atuais BREL-10/T9 em order-billing-release e order-billing-activation.md. Não altere a entrega Olist.
 
-Objetivo: retirar a feature Financeiro (fila, check Nota criada, perfil
-Financeiro, rotas /api/v1/finance/* e código finance.*) mantendo as tabelas e
-os dados históricos (migrações 0042/0043, sem migração destrutiva), sem mexer em
-quitação (paid_on, finance_payment_review_required), cobranças InfinitePay nem
-Dashboard, e sem perder proteções contra reconfirmação com outro valor.
-Primeiro confirme a disponibilidade da quitação conciliada e todas as
-dependências reais, inclusive order-billing-runtime, repositório de pedidos,
-finance_payment_review_required e triggers. Código de cobrança local entregue
-não prova que o ambiente real já esteja habilitado.
+Objetivo: remover a feature manual Financeiro preservando tabelas, histórico, quitação, cobranças e Dashboard.
 
-Pode editar rota/menu/tela/CSS Financeiro, gestão de perfis, runtime/API,
-repositórios/exports respectivos, testes e runbook. Não crie migração
-destrutiva: preserve tabelas, dados históricos e identidades com autoria
-financeira; não apague migrations já publicadas. Não remova paidOn, confirmação de
-pagamento, InfinitePay ou regras comerciais apenas pelo nome Financeiro.
+1. Atualize o ponto de partida: emissão, recebimento e envio financeiros têm ativação registrada, mas teste manual/homologação de pagamento real seguem pendentes. Não refaça ativação nem conclua que flags ativas provam quitação conciliada. Verifique compatibilidade e lastro exigidos pela tarefa antes de retirar o módulo.
 
-Registre a decisão específica que supersede ADRs 040/041/042 no alcance
-necessário. Faça retirada em etapas compatíveis, trate sessões/contas e
-referências e preserve o histórico nas tabelas mantidas. Não altere a quitação
-nem o trigger e a coluna que a protegem.
+2. Inventarie dependências em order-billing-runtime, repositório de pedidos, perfis/sessões, finance_payment_review_required e triggers. Registre o ADR específico que supersede 040/041/042 no alcance da retirada. Preserve regras comerciais válidas mesmo se o nome técnico contiver finance.
 
-Se a quitação ou compatibilidade não estiver pronta, conclua o inventário
-e descreva o bloqueio desta trilha; Olist continua seguindo seus próprios gates.
-Valide PostgreSQL/migração/rollback, identidade, billing e reconfirmação,
-mais gates do projeto. Não confunda ocultar menu com concluir a remoção.
+3. Remova fila/check Nota criada, perfil Financeiro, menu/tela/CSS, rotas /api/v1/finance/*, runtimes/repositórios/exports finance.* exclusivos e testes exclusivos obsoletos. Preserve testes das invariantes de quitação, reconfirmação e autoria histórica.
+
+4. Mantenha tabelas e dados históricos das migrations 0042/0043, identidades com autoria, paid_on, finance_payment_review_required e invalidate_finance_amount. Não crie migration destrutiva, apague migrations publicadas ou altere InfinitePay, quitação e Dashboard nesta tarefa.
+
+5. Valide identidade/sessões, billing, reconfirmação com outro valor, histórico, compatibilidade e rollback, mais os gates pertinentes do projeto. Se a retirada estiver bloqueada, registre a dependência desta trilha; Olist continua seguindo seus próprios gates.
+
+Pode editar somente fronteiras exclusivas do Financeiro, referências necessárias e documentação/testes. Não confunda ocultar menu com retirada concluída. Entregue evidências, riscos e commit/push/PR, sem testes financeiros reais não autorizados.
 ```
 
 ## Bloco 8 Melhorias futuras por escolha explícita
 
-Este bloco serve para escolher e detalhar uma melhoria, sem expandir a entrega
-principal automaticamente. A ficha por item (FPI-T01–T04) já tem tarefas
-próprias e deve ser preservada.
+**Tarefas:** OLC-F01 a OLC-F04. **Estado:** diferidas; não executar automaticamente. A ficha por item já tem sua trilha FPI-T01–T04.
 
 ```text
-Trabalhe apenas na melhoria OLC-F01, OLC-F02, OLC-F03 ou OLC-F04 escolhida
-explicitamente pelo usuário em .specs/features/olist-confirmed/tasks.md.
-Se nenhuma foi escolhida, entregue a comparação e o escopo proposto, sem
-implementar todas. Leia spec OLC, ADR 079 e regras gerais deste documento.
+Trabalhe somente na melhoria OLC-F01, OLC-F02, OLC-F03 ou OLC-F04 escolhida explicitamente pelo usuário em .specs/features/olist-confirmed/tasks.md.
+Leia AGENTS.md, RULES.md, spec OLC e ADRs 079/080/082.
 
-OLC-F01: entrada/menu/busca exata e projeção mínima para operação centralizada,
-inclusive perfil restrito, com decisão de acesso e testes contra vazamento.
-OLC-F02: conferência administrativa e vínculo de venda manual antiga, sem
-criação. Não adie para esta melhoria a recuperação de incerteza de OLC-T03.
-OLC-F03: restringir o cancelamento local a Pedido não confirmado (decisão do PO
-de 10/11/2026, que supersede parcialmente a ADR 068), ajustando o já entregue
-(rota, UI, testes e métricas). É mudança de comportamento do código existente,
-feita só nesta tarefa. Mantém estado terminal e impactos em métricas/filas, sem
-estorno, exclusão histórica ou cancelamento ERP; nunca alterar exportados.
-OLC-F04: prévia detalhada e eventuais ampliações do modelo de preços além da
-soma dos subtotais por linha de tamanho mais o frete (contrato na ADR 080);
-preserve totais/snapshots antigos e valide a necessidade com produto.
+Se nenhuma melhoria foi escolhida, entregue comparação e escopo proposto; não implemente todas. Reutilize o runtime já existente em vez de tratar cada capacidade como ausente.
 
-Nesta etapa, pode editar somente contrato/tarefas/RFC/ADR da melhoria escolhida.
-Informe arquivos de código candidatos, critérios positivos/negativos,
-compatibilidade, migração/rollback e checks necessários antes da implementação.
-Só edite código se a solicitação vigente também autorizar a implementação
-da melhoria concreta. Nenhuma melhoria deve voltar a ser pré-requisito dos
-blocos 1 a 6 nem remover suas garantias já entregues.
+OLC-F01: avaliar/ampliar menu, busca exata e projeção para operação centralizada, conforme acesso aprovado. Parte da administração já existe; preserve a leitura mínima e evite vazamento.
+
+OLC-F02: avaliar vínculo administrativo de venda antiga já existente, respeitando ADRs 073/075 e evidências próprias. Não transforme a correção do novo envio ou a recuperação obrigatória de incerteza em dependência deste trabalho.
+
+OLC-F03: restringir cancelamento local a Pedido não confirmado, ajustando rota/UI/testes já existentes. Não introduza essa mudança silenciosamente nos blocos 1–6. Preserve estado terminal, história e filtros de cancelados, sem estorno ou cancelamento ERP; nunca alterar exportados.
+
+OLC-F04: avaliar prévia detalhada optativa e ampliações além do total peças + frete da ADR 080. O frete obrigatório da entrega principal e os subtotais já existentes não podem ser adiados para esta melhoria.
+
+Nesta etapa, edite somente contrato/tarefas/RFC/ADR da melhoria escolhida e informe fronteiras, aceite, compatibilidade, rollback e checks. Só altere código se a solicitação vigente também autorizar a melhoria concreta.
+
+Preserve ficha v8/Modelo, versões anteriores, billing ativado, Melhor Envio e Dashboard entregues. Nenhuma melhoria volta a ser pré-requisito dos blocos 1–6 ou dispensa o cadastro completo no novo envio. Entregue decisão/escopo e commit/push/PR quando houver mudança documental.
 ```

@@ -14,6 +14,14 @@ e o código puro de cálculo/conferência existentes são insumos reutilizáveis
 
 ## Decisões do PO em 10/11/2026
 
+Correção explícita na [ADR 082](../../../docs/adr/082-cadastro-obrigatorio-somente-no-envio-olist.md):
+o cadastro completo e válido é obrigatório para gerar no Olist, mas não para
+salvar/confirmar o Pedido ou gerar sua ficha/PDF. A ADR 081 fica supersedida
+para novos envios. O bypass por cadastro vazio/parcial do commit `865388f0`
+é uma regressão a corrigir em OLC-T01–T04, não uma entrega aceita do fluxo.
+OLC-04/07 devem aplicar essa separação também na API, revalidação e worker;
+comprador existente por nome/telefone não dispensa o cadastro completo.
+
 1. **Refatoração.** O Olist passa por refatoração conforme os blocos 1–6 do
    documento de prompts. Este pacote OLC é a direção vigente e prevalece sobre
    o que a master já tem de Olist onde houver divergência; o runtime existente

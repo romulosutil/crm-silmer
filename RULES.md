@@ -1,5 +1,15 @@
 # Regras do CRM Silmer
 
+## Cadastro do comprador e envio Olist em 10/11/2026
+
+Correção explícita do proprietário na [ADR 082](docs/adr/082-cadastro-obrigatorio-somente-no-envio-olist.md),
+supersedendo a ADR 081: cadastro completo e válido é obrigatório para **Gerar
+no Olist**, mas não para salvar/confirmar o Pedido ou gerar a ficha/PDF.
+Cadastro ausente/parcial bloqueia somente o envio ERP; nome/telefone ou
+referência remota não dispensam o cadastro nesse fluxo. Não acrescentar esse
+gate à confirmação/impressão. O runtime do commit `865388f0` ainda precisa
+ser corrigido; esta revisão documental não declara a correção implementada.
+
 ## Pagamentos mistos e conciliação, 08/11/2026
 
 A [ADR077](docs/adr/077-recebimentos-externos-e-conciliacao-de-cobrancas.md)
@@ -82,8 +92,9 @@ incompatíveis para o novo contrato; a implementação segue as fases e os
 gates registrados na RFC e no plano de tarefas.
 
 - Checkbox Habilitado Olist é ortogonal ao perfil e dono: usuário humano ativo
-  habilitado opera Olist em qualquer Pedido com ficha completa; o cadastro
-  completo é opcional ([ADR 081](docs/adr/081-cadastro-do-comprador-opcional-no-olist.md)).
+  habilitado opera Olist em Pedido confirmado com ficha e cadastro completos
+  para exportação ([ADR 082](docs/adr/082-cadastro-obrigatorio-somente-no-envio-olist.md));
+  completar o cadastro não é requisito para fechar a ficha ou gerar o PDF.
   Admin não herda envio; habilitação não concede Inbox, edição geral ou conexão.
 - Buscar e criar cliente comprador, produto pai e variações/tamanhos ausentes,
   com dados válidos, reservas por identidade, vínculos e reconciliação por etapa.

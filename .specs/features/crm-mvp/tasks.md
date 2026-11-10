@@ -1,5 +1,26 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## OLIST-PROMPTS-01 Entregas recentes e prompts copiáveis em 10/11/2026
+
+Requisitos OLC-04/07, OLC-T01–T06; orientação explícita do proprietário na
+[ADR 082](../../../docs/adr/082-cadastro-obrigatorio-somente-no-envio-olist.md).
+
+- [x] Conferir commits integrados à master nas 12 horas anteriores ao
+      levantamento das 13h54 de São Paulo, base `865388f0`, e confirmar as
+      fronteiras atuais no código, sem confundir registro de ativação com
+      homologação ou contrato de frete com implementação.
+- [x] Atualizar [prompts-pedido-confirmado.md](../../../docs/integrations/olist/prompts-pedido-confirmado.md)
+      com reaproveitamento do runtime existente, pendências e oito caixas
+      autossuficientes para copiar cada prompt sem juntar regras separadas.
+- [x] Registrar cadastro completo obrigatório exclusivamente no novo envio
+      Olist, preservando fechamento/PDF sem esse gate e ADR 081 como histórico.
+- Correção funcional do bypass cadastral de `865388f0` segue pendente em
+  OLC-T01–T04; nenhuma rota, worker ou interface foi corrigida nesta tarefa.
+- Evidência: 22 links novos/alterados e referências de commit conferidos, oito
+  prompts com contexto próprio, Prettier dos documentos de entrega e
+  `git diff --check` aprovados. Gate de decisões e seus 11 testes passaram em
+  Node 24.20.0/npm 11.19.0; revisão especializada sem achado bloqueante.
+
 ## OLIST-PLAN-03 Pedido confirmado e geração no detalhe em 10/11/2026
 
 [ADR 079](../../../docs/adr/079-olist-a-partir-do-pedido-confirmado.md) e revisão 3

@@ -1,5 +1,15 @@
 # TDD — CRM Silmer MVP
 
+## Cadastro do comprador no envio Olist em 10/11/2026
+
+[ADR 082](docs/adr/082-cadastro-obrigatorio-somente-no-envio-olist.md), OLC-04/07:
+cadastro completo e válido é gate exclusivo da geração ERP, não da confirmação
+ou do PDF. Corrigir preview/plano, aceitação, revalidação/dispatch e feedback
+para impedir o bypass por cadastro vazio/parcial do commit `865388f0`, inclusive
+com token/job antigo. Reutilização de comprador identificado não dispensa esse
+gate em novo envio. Nenhum novo cadastro obrigatório é introduzido nos comandos
+comerciais da ficha. Correção de runtime ainda pendente em OLC-T01–T04.
+
 ## OLIST-T17 — envio simples em aberto (09/11/2026)
 
 [ADR 072](docs/adr/072-envio-em-aberto-sem-duplicar-cadastros-do-erp.md) e

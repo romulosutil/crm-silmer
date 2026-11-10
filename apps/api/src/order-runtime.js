@@ -9,6 +9,9 @@ import {
 import {
   createOrderFileService,
   createOrderService,
+  orderAmounts,
+  parseFreightCents,
+  readFreightCommand,
   sizePricingSummary,
   createStoreOrderCorrectionService,
   ORDER_FILE_LIMITS,
@@ -23,6 +26,8 @@ import {
   STORE_ACTOR_ID,
   STORE_ACTOR_NAME,
 } from '@crm-silmer/orders';
+
+import { createFreightQuoteReader } from './shipping-runtime.js';
 
 /**
  * @typedef {{
@@ -65,6 +70,8 @@ import {
  *   idempotencyStore: {execute: (identity: any, operation: (transaction?: unknown) => Promise<unknown>, beforeExecute?: (transaction?: unknown) => Promise<unknown>) => Promise<unknown>},
  *   repository: any,
  *   files?: {repository: any, storage: any},
+ *   freightQuotes?: {resolve: Function, selected: Function, notice?: Function},
+ *   freightNoticeDatabase?: {query: Function},
  *   phoneDigestsFor?: (query: string) => string[],
  *   clock?: () => Date,
  *   idFactory?: () => string,
@@ -124,11 +131,40 @@ export function createOrderRuntime(options) {
     }
   }
 
+  /**
+   * ADR 080 item 3: the responsible seller alone informs the freight. This is
+   * deliberately not `ownConversation`/`ownManualOrder`: COMMERCIAL_ADMIN
+   * opens nothing here, so an admin passes only as the conversation's current
+   * owner or the manual order's owner. The repository repeats the check on
+   * the locked rows and re-reads that the user is still an active Vendedor.
+   *
+   * @param {{actor: OrderActor, conversationId: string|null, ownerId: string|null}} input
+   */
+  async function responsibleSeller({ actor, conversationId, ownerId }) {
+    if (actor.kind !== 'human' || !actor.id) throw new OrderForbiddenError();
+    let responsibleId = ownerId;
+    if (conversationId) {
+      const assignment = await conversations.readAssignment(conversationId);
+      if (!assignment) {
+        throw new OrderNotFoundError(
+          'Conversation was not found',
+          'CONVERSATION_NOT_FOUND',
+        );
+      }
+      responsibleId = assignment.assignedUserId;
+    }
+    if (!responsibleId || responsibleId !== actor.id) {
+      throw new OrderForbiddenError();
+    }
+  }
+
   const service = createOrderService({
     /** @param {{actor: OrderActor, conversationId: string}} input */
     async authorizeOwnership({ actor, conversationId }) {
       await ownConversation(actor, conversationId);
     },
+    authorizeResponsibility: responsibleSeller,
+    freightQuotes: /** @type {any} */ (options.freightQuotes),
     authorizeManualOwnership: async ({ actor, ownerId }) =>
       ownManualOrder(actor, ownerId),
     clock: options.clock,
@@ -208,6 +244,7 @@ export function createOrderRuntime(options) {
         order.fichaFirstPrintedBy,
         owners.get(order.conversationId),
         order.manualOwnerId,
+        order.freightSetBy,
       ]) {
         if (id && id !== STORE_ACTOR_ID) people.add(id);
       }
@@ -223,6 +260,9 @@ export function createOrderRuntime(options) {
       cancelledAt: order.cancelledAt ?? null,
       cancelledBy: person(order.cancelledBy),
       cancellationReason: order.cancellationReason ?? null,
+      // ADR 080: pieces, freight and the single total the order is charged,
+      // settled and counted by. `finalAmountCents` stays that same total.
+      amounts: orderAmounts(order),
       effectiveStatus: order.cancelledAt ? 'cancelado' : order.status,
       confirmedAt: order.confirmedAt,
       confirmedBy: person(order.confirmedBy),
@@ -244,6 +284,19 @@ export function createOrderRuntime(options) {
       fichaFirstPrintedAt: order.fichaFirstPrintedAt ?? null,
       fichaFirstPrintedBy: person(order.fichaFirstPrintedBy),
       finalAmountCents: order.finalAmountCents,
+      // ADR 080: the stored freight is the only source of the total; the
+      // origin names who informed it and, when applied, which estimate.
+      freight: {
+        cents: orderAmounts(order).freightCents,
+        pricingRule: order.pricingRule ?? 'pieces-v1',
+        quoteId: order.freightQuoteId ?? null,
+        quoteNotice: null,
+        quotedCents: order.freightQuotedCents ?? null,
+        serviceId: order.freightQuoteServiceId ?? null,
+        setAt: order.freightSetAt ?? null,
+        setBy: person(order.freightSetBy),
+        source: order.freightSource ?? null,
+      },
       firstContactAt: order.firstContactAt,
       gatewayPayment: order.gatewayPayment
         ? {
@@ -280,9 +333,40 @@ export function createOrderRuntime(options) {
     }));
   }
 
-  /** @param {any} order */
+  /**
+   * A single order also carries the estimate warning of ADR 080 item 6. It
+   * is best effort and never a block: without the shipping configuration, on
+   * a list or when it cannot be read, it stays null.
+   *
+   * @param {any} order
+   */
   async function presentOne(order) {
-    return (await present([order]))[0];
+    const [shown] = await present([order]);
+    const quotes = options.freightQuotes;
+    if (
+      typeof quotes?.notice === 'function' &&
+      options.freightNoticeDatabase &&
+      order.status === 'pendente' &&
+      !order.cancelledAt &&
+      order.origin !== 'loja' &&
+      order.ficha.sizePricing !== undefined
+    ) {
+      try {
+        shown.freight.quoteNotice = await quotes.notice(
+          options.freightNoticeDatabase,
+          {
+            freightCents: shown.freight.cents,
+            orderId: order.id,
+            orderVersion: order.version,
+            quoteId: shown.freight.quoteId,
+            source: shown.freight.source,
+          },
+        );
+      } catch {
+        shown.freight.quoteNotice = null;
+      }
+    }
+    return shown;
   }
 
   /**
@@ -528,6 +612,34 @@ export function createOrderRuntime(options) {
       );
     },
 
+    /**
+     * ADR 080 (OLC-05h/i): the responsible seller informs the freight or
+     * applies the selected estimate. The fingerprint carries the value or the
+     * estimate's identities, so a retry replays and another body is refused;
+     * the audit keeps ids, action and version only. Responsibility is checked
+     * before a replay too.
+     *
+     * @param {OrderCommand & {orderId: string, expectedVersion: number, freightCents?: unknown, quote?: unknown}} input
+     */
+    async setFreight(input) {
+      await service.assertFreightAccess(input);
+      const form = readFreightCommand(input);
+      // A value that is not exact integer cents is refused (422) before any
+      // idempotency record or audit exists; the service judges it again.
+      if ('freightCents' in form) parseFreightCents(form.freightCents);
+      return run(
+        input,
+        {
+          action: 'order.freight',
+          command: form,
+          expectedVersion: requireVersion(input.expectedVersion),
+          target: { id: input.orderId, type: 'order' },
+        },
+        async () => presentOne(await service.setFreight(input)),
+        async () => service.assertFreightAccess(input),
+      );
+    },
+
     /** @param {OrderCommand & {orderId: string, expectedVersion: number}} input */
     async reopen(input) {
       return run(
@@ -755,6 +867,11 @@ export function createOrderApiRuntime(database, options) {
     'N8N_INTEGRATION_ENVELOPE_KEY',
   );
   return createOrderRuntime({
+    // ADR 080: the shipping estimates the freight command may apply. Without
+    // the Melhor Envio configuration the reader refuses to apply an estimate
+    // and informing a value keeps working.
+    freightNoticeDatabase: database,
+    freightQuotes: createFreightQuoteReader(environment),
     // ACT-12: these declarations and their encrypted receipts share one
     // transaction. Replays revalidate live access before opening the receipt.
     withMilestoneTransaction:

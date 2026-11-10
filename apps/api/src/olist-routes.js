@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { OlistError } from '@crm-silmer/olist';
+import { OlistError, assertOlistOrderCommercialRead } from '@crm-silmer/olist';
 const CODES = new Set([
   'OLIST_LEGACY_REVIEW_REQUIRED',
   'ORDER_CANCELLED',
@@ -201,6 +201,9 @@ export function registerOlistRoutes(api, runtime, contextFor) {
       (request, reply) =>
         respond(reply, async () => {
           const input = await principal(request, runtime, true, 'olist.export');
+          // OLC-02: the checkbox plus the existing commercial read of the
+          // Order; the runtime repeats it under the locked current user.
+          assertOlistOrderCommercialRead(input.actor);
           const body = strictBody(
             request.body,
             /** @type {string[]} */ (fields),

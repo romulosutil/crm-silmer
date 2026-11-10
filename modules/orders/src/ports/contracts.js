@@ -20,6 +20,21 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  * Human writes include `actor`; only technical briefing projection omits it.
  * @typedef {{expectedVersion: number, correlationId: string, paymentReviewed?:boolean, actor?: {id: string, kind: string, capabilities?: readonly string[]}, agentTarget?: {conversationId: string, orderId: string, subjectId: string, automationEpoch: number, sourceRevision: number, eventId: string, eventType: string, expectedSubjectVersion: number, expectedOrderVersion: number, recovery: boolean}}} OrderWriteOptions
  *
+ * ADR 080: the freight command. `seller` is the value the responsible seller
+ * declared; `quote` carries only the identity of a persisted shipping estimate
+ * and of its selected service, never a price.
+ * @typedef {{source: 'seller', cents: number}|{source: 'quote', quoteId: string, serviceId: number}} FreightCommand
+ *
+ * The shipping side, read inside the order's own unit of work (the order row
+ * is already locked). `resolve` answers the price of the selected service of
+ * a current estimate of that order or refuses with a safe code; `selected`
+ * answers the order's currently selected, current estimate, or null.
+ * @typedef {{
+ *   resolve(transaction: unknown, input: {orderId: string, quoteId: string, serviceId: number, orderVersion: number}): Promise<{priceCents: number}>,
+ *   selected(transaction: unknown, input: {orderId: string, orderVersion: number}): Promise<{quoteId: string, serviceId: number, priceCents: number}|null>,
+ * }} FreightQuotePort
+ * @typedef {OrderWriteOptions & {freight: FreightCommand, quotes?: FreightQuotePort}} FreightWriteOptions
+ *
  * A search matches orders by exact number OR by conversation OR, for store
  * orders (ADRs 027 and 028), by the HMAC of the customer's phone or by the
  * shop's number (`LJ-…`); with none, every order matches. Customer and phone
@@ -120,6 +135,11 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  * - `saveMilestones` writes the days of the trail (`paidOn`, `deliveredOn`,
  *   `updatedAt`). For manual orders the service preserves delivery while
  *   editing payment, and records delivery only after explicit confirmation.
+ * - `saveFreight` (ADR 080) writes the freight of a pending order priced by
+ *   size, its origin and the recalculated `finalAmountCents` (pieces +
+ *   freight, null while the pieces are incomplete), for the responsible
+ *   seller only (no admin fallback), with an `order.freight_updated` event.
+ *   `saveStatus` never changes the freight: confirming freezes it.
  * - `recordFirstPrint` (ADR 031) records who printed a store order's ficha
  *   and when, only while nobody has: the first print bumps `version` and
  *   appends an `order.ficha_first_printed` event and the
@@ -142,6 +162,7 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  *   cancelOrder?(input: CancelOrderInput, transaction?: any): Promise<Order>,
  *   assertPriceBreakdownAccess?(input: any): Promise<void>,
  *   savePriceBreakdown?(input: any, transaction?: any): Promise<any>,
+ *   saveFreight?(order: Order, options: FreightWriteOptions): Promise<Order>,
  *   createPending(input: CreatePendingOrderInput): Promise<Order>,
  *   findById(orderId: string): Promise<Order|null>,
  *   findPendingByConversation(conversationId: string): Promise<Order|null>,

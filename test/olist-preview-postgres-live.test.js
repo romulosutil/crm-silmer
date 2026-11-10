@@ -28,8 +28,10 @@ import {
   reviewSizePricingSubtotal,
 } from '../modules/orders/src/index.js';
 import { encryptJson } from '../modules/orders/src/adapters/envelope.js';
+import { renderOrderFicha } from '../modules/orders/src/print/index.js';
 import {
   EMPTY_OLIST_SETTINGS,
+  captureOlistExistingBuyer,
   identityHash,
   olistConfiguration,
   open,
@@ -106,7 +108,7 @@ else
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
       await migrate(pool, { migrations: await loadMigrations() });
-      /** @param {{status?:string,subtotal?:number,legacy?:boolean,missingSeller?:boolean,expiredAccess?:boolean,perOrderDue?:boolean,manualFiscal?:boolean,minimalBuyer?:boolean,changeDuringFetch?:()=>Promise<void>}} [patch] */
+      /** @param {{status?:string,subtotal?:number,legacy?:boolean,missingSeller?:boolean,expiredAccess?:boolean,perOrderDue?:boolean,manualFiscal?:boolean,minimalBuyer?:boolean,erpOwned?:boolean,partialBuyer?:boolean,pilotRoles?:string[],changeDuringFetch?:()=>Promise<void>}} [patch] */
       async function fixture(patch = {}) {
         await pool.query('TRUNCATE crm.olist_accounts CASCADE');
         let accountSettings = patch.perOrderDue
@@ -117,7 +119,7 @@ else
             ...accountSettings,
             productFiscal: /** @type {any} */ (null),
           };
-        if (patch.minimalBuyer)
+        if (patch.minimalBuyer || patch.erpOwned)
           accountSettings = /** @type {any} */ ({
             ...settings,
             paymentDuePolicy: 'erp',
@@ -132,6 +134,9 @@ else
         const actors = {};
         for (const [role, functionName, enabled, admin] of [
           ['owner', 'Vendedor', false, false],
+          // OLC-02: an enabled seller that is not the owner operates the send.
+          ['seller', 'Vendedor', true, false],
+          // The checkbox never grants an enabled Financeiro a new send.
           ['finance', 'Financeiro', true, false],
           ['admin', 'Vendedor', false, true],
         ]) {
@@ -229,7 +234,12 @@ else
             patch.minimalBuyer
               ? null
               : JSON.stringify(
-                  encryptContactRegistration(registration, CONTACT_KEY),
+                  encryptContactRegistration(
+                    patch.partialBuyer
+                      ? { ...registration, postalCode: null, number: null }
+                      : registration,
+                    CONTACT_KEY,
+                  ),
                 ),
             NOW,
           ],
@@ -509,8 +519,17 @@ else
             ...(patch.expiredAccess ||
             patch.perOrderDue ||
             patch.manualFiscal ||
-            patch.minimalBuyer
-              ? { OLIST_PILOT_USER_IDS: actors.finance.actor.id }
+            patch.minimalBuyer ||
+            patch.erpOwned ||
+            patch.partialBuyer
+              ? { OLIST_PILOT_USER_IDS: actors.seller.actor.id }
+              : {}),
+            ...(patch.pilotRoles
+              ? {
+                  OLIST_PILOT_USER_IDS: patch.pilotRoles
+                    .map((role) => actors[role].actor.id)
+                    .join(','),
+                }
               : {}),
           },
           access: {
@@ -533,8 +552,41 @@ else
           setClock: (/** @type {Date} */ value) => {
             current = value;
           },
-          input: { ...actors.finance, orderId },
+          input: { ...actors.seller, orderId },
         };
+      }
+      /** Same derivation as the runtime's receipt entity (actor, session, order).
+       * @param {any} input */
+      function previewEntity(input) {
+        return identityHash(config.hmacKey, 'preview-entity', [
+          input.actor.id,
+          input.sessionBinding,
+          input.orderId,
+        ]);
+      }
+      /** Re-seal a real receipt after changing it, as a token issued under
+       * the previous rules would have been sealed by this same server.
+       * @param {any} input @param {string|null} token @param {(receipt:any)=>void} change @param {any} [target] */
+      function reseal(input, token, change, target = input) {
+        const receipt = open(
+          JSON.parse(Buffer.from(String(token), 'base64url').toString()),
+          config.envelopeKey,
+          'preview',
+          config.accountKey,
+          previewEntity(input),
+        );
+        change(receipt);
+        return Buffer.from(
+          JSON.stringify(
+            seal(
+              receipt,
+              config.envelopeKey,
+              'preview',
+              config.accountKey,
+              previewEntity(target),
+            ),
+          ),
+        ).toString('base64url');
       }
       async function counts() {
         const result = [];
@@ -647,33 +699,89 @@ else
         },
       );
       await t.test(
-        'T17 two-step preview freezes an existing ERP buyer, deferred fiscal and ERP-owned payment without importing registration',
+        'ADR 082 an empty or partial registration blocks the new send per field, with no ERP buyer lookup, while the Order still prints',
         async () => {
-          const f = await fixture({ minimalBuyer: true });
-          await pool.query(
-            "DELETE FROM crm.olist_resources WHERE account_key=$1 AND kind='customer'",
-            [config.accountKey],
-          );
+          const required = [
+            'personType',
+            'document',
+            'legalName',
+            'postalCode',
+            'city',
+            'state',
+            'street',
+            'district',
+            'number',
+          ];
+          for (const [patch, missing] of /** @type {[any, string[]][]} */ ([
+            [{ minimalBuyer: true }, required],
+            [{ erpOwned: true, partialBuyer: true }, ['postalCode', 'number']],
+          ])) {
+            const f = await fixture({ ...patch, status: 'confirmado' });
+            await pool.query(
+              'UPDATE crm.olist_accounts SET creation_enabled=true,recovery_required=false WHERE account_key=$1',
+              [config.accountKey],
+            );
+            const before = await counts();
+            const preview = await f.runtime.preview(f.input);
+            assert.equal(preview.eligible, false);
+            assert.equal(preview.previewToken, null);
+            assert.equal(preview.expiresAt, null);
+            assert.equal(preview.buyerSource, null);
+            assert.equal(preview.customer, null);
+            assert.equal(preview.registrations, null);
+            assert.deepEqual(
+              preview.issues
+                .map(
+                  (/** @type {any} */ entry) => entry.code + ':' + entry.field,
+                )
+                .sort(),
+              missing
+                .map((key) => 'OLIST_BUYER_REQUIRED:buyer.registration.' + key)
+                .sort(),
+            );
+            // Name and phone are present and an ERP contact would match them:
+            // the lookup is simply never attempted for a new send.
+            assert.equal(
+              f.calls.some((entry) =>
+                new URL(entry.url).pathname.includes('/contatos'),
+              ),
+              false,
+            );
+            assert.equal(
+              f.calls.some((entry) => entry.method !== 'GET'),
+              false,
+            );
+            assert.deepEqual(await counts(), before);
+            // The same confirmed Order keeps its ficha: no Olist gate there.
+            const order = await new PostgresOrderRepository({
+              database,
+              envelopeKey: ORDER_KEY,
+            }).findById(f.orderId);
+            assert.equal(order?.status, 'confirmado');
+            assert.ok(
+              renderOrderFicha(/** @type {any} */ (order)).length > 1000,
+            );
+          }
+        },
+      );
+      await t.test(
+        'ADR 082 a complete registration with ERP-owned payment and deferred fiscal freezes the fiscal customer and no ERP reference',
+        async () => {
+          const f = await fixture({ erpOwned: true });
           await pool.query(
             'UPDATE crm.olist_accounts SET creation_enabled=true,recovery_required=false WHERE account_key=$1',
             [config.accountKey],
           );
           const before = await counts();
-          const projected = await f.runtime.project(f.input);
-          assert.equal(projected.paymentDuePolicy, 'erp');
-          assert.equal(projected.productFiscalRequired, false);
           const preview = await f.runtime.preview(f.input);
           assert.equal(preview.eligible, true, JSON.stringify(preview.issues));
           assert.equal(preview.paymentDuePolicy, 'erp');
           assert.equal(preview.commercial.paymentDueOn, null);
           assert.equal(preview.productFiscal, null);
           assert.equal(preview.productFiscalDeferred, true);
-          assert.deepEqual(preview.buyerSource, {
-            mode: 'erp-existing-v1',
-            remoteId: '101',
-          });
+          assert.equal(preview.buyerSource, null);
           assert.equal(preview.registrations?.customer.action, 'reuse');
-          assert.equal(preview.customer?.documentSuffix, null);
+          assert.equal(preview.customer?.documentSuffix?.length, 4);
           assert.deepEqual(await counts(), before);
           assert.ok(f.calls.every((entry) => entry.method === 'GET'));
           assert.equal(
@@ -702,12 +810,10 @@ else
             config.accountKey,
             accepted.operationId,
           );
-          assert.deepEqual(Object.keys(frozen.customer).sort(), [
-            'celular',
-            'nome',
-          ]);
-          assert.equal(frozen.buyerSource.mode, 'erp-existing-v1');
-          assert.equal(frozen.buyerSource.documentHash, null);
+          assert.equal(frozen.buyerSource, null);
+          assert.equal(frozen.customer.situacao, 'B');
+          assert.equal(typeof frozen.customer.cpfCnpj, 'string');
+          assert.equal(typeof frozen.customer.endereco.cep, 'string');
           assert.equal(frozen.productFiscal, null);
           assert.equal(frozen.productFiscalDeferred, true);
           assert.equal(frozen.settings.paymentDuePolicy, 'erp');
@@ -715,7 +821,7 @@ else
           assert.equal(frozen.commercial.paymentDueOn, null);
           assert.deepEqual(await f.runtime.exportOrder(command), accepted);
           for (const extra of [
-            { buyerSource: frozen.buyerSource },
+            { buyerSource: { mode: 'erp-existing-v1', remoteId: '101' } },
             { productFiscalDeferred: false },
             { paymentDueOn: '2026-12-01' },
             { productFiscal: settings.productFiscal },
@@ -730,39 +836,108 @@ else
             );
           }
           assert.equal(
-            (
-              await pool.query(
-                'SELECT registration_envelope FROM crm.contacts WHERE id=$1',
-                [f.contactId],
-              )
-            ).rows[0].registration_envelope,
-            null,
-          );
-          assert.equal(
-            (
-              await pool.query(
-                "SELECT count(*)::int n FROM crm.olist_resources WHERE account_key=$1 AND kind='customer'",
-                [config.accountKey],
-              )
-            ).rows[0].n,
-            0,
-          );
-          assert.equal(
             (await f.runtime.status(f.actors.admin)).settings.productFiscal,
             null,
           );
         },
       );
       await t.test(
-        'T17 minimal ERP buyer, fiscal and payment policies remain fenced before the first export',
+        'ADR 082 a receipt issued under the previous rules is refused at acceptance with no reservation or job',
         async () => {
-          for (const change of [
-            'identity',
-            'registration',
-            'fiscal',
-            'payment',
-          ]) {
-            const f = await fixture({ minimalBuyer: true });
+          const captured = captureOlistExistingBuyer({
+            config,
+            buyer: { name: 'Comprador Sintético', phone: '5511999990000' },
+            contact: {
+              id: 101,
+              nome: 'Comprador Sintético',
+              celular: '5511999990000',
+              situacao: 'A',
+            },
+          });
+          const partial = JSON.stringify(
+            encryptContactRegistration(
+              { ...registration, postalCode: null, number: null },
+              CONTACT_KEY,
+            ),
+          );
+          /** @type {[string,(receipt:any)=>void,string|null|undefined][]} */
+          const cases = [
+            // ADR 072/081 receipt: ERP buyer by name and phone, empty registration.
+            [
+              'erp-reference-empty',
+              (receipt) => {
+                receipt.customer = captured.customer;
+                receipt.buyerSource = captured.buyerSource;
+                receipt.binding.buyerSourceDigest = captured.buyerSource.digest;
+              },
+              null,
+            ],
+            // ADR 081 receipt: the same reference over a partial registration.
+            [
+              'erp-reference-partial',
+              (receipt) => {
+                receipt.customer = captured.customer;
+                receipt.buyerSource = captured.buyerSource;
+                receipt.binding.buyerSourceDigest = captured.buyerSource.digest;
+              },
+              partial,
+            ],
+            // No reference, but a customer that is not the fiscal payload.
+            [
+              'minimal-customer',
+              (receipt) => {
+                receipt.customer = captured.customer;
+              },
+              undefined,
+            ],
+            // A real receipt whose CURRENT buyer is now empty or partial.
+            ['current-empty', () => undefined, null],
+            ['current-partial', () => undefined, partial],
+          ];
+          for (const [name, change, envelope] of cases) {
+            const f = await fixture({ erpOwned: true });
+            await pool.query(
+              'UPDATE crm.olist_accounts SET creation_enabled=true,recovery_required=false WHERE account_key=$1',
+              [config.accountKey],
+            );
+            const preview = await f.runtime.preview(f.input);
+            assert.equal(
+              preview.eligible,
+              true,
+              JSON.stringify(preview.issues),
+            );
+            if (envelope !== undefined)
+              await pool.query(
+                'UPDATE crm.contacts SET registration_envelope=$2::jsonb,version=version+1 WHERE id=$1',
+                [f.contactId, envelope],
+              );
+            const command = {
+              ...f.input,
+              previewToken: reseal(f.input, preview.previewToken, change),
+              idempotencyKey: 'previous-rules-' + name,
+            };
+            const before = await counts();
+            const calls = f.calls.length;
+            await assert.rejects(
+              f.runtime.checkPreview(command),
+              { code: 'OLIST_CUSTOMER_INVALID', statusCode: 409 },
+              name,
+            );
+            await assert.rejects(
+              f.runtime.exportOrder(command),
+              { code: 'OLIST_CUSTOMER_INVALID', statusCode: 409 },
+              name,
+            );
+            assert.deepEqual(await counts(), before, name);
+            assert.equal(f.calls.length, calls, name);
+          }
+        },
+      );
+      await t.test(
+        'T17 buyer identity, fiscal and payment policies remain fenced before the first export',
+        async () => {
+          for (const change of ['identity', 'fiscal', 'payment']) {
+            const f = await fixture({ erpOwned: true });
             await pool.query(
               'UPDATE crm.olist_accounts SET creation_enabled=true,recovery_required=false WHERE account_key=$1',
               [config.accountKey],
@@ -777,16 +952,6 @@ else
               await pool.query(
                 "UPDATE crm.contacts SET display_name='Outro comprador sintético',version=version+1 WHERE id=$1",
                 [f.contactId],
-              );
-            else if (change === 'registration')
-              await pool.query(
-                'UPDATE crm.contacts SET registration_envelope=$2::jsonb,version=version+1 WHERE id=$1',
-                [
-                  f.contactId,
-                  JSON.stringify(
-                    encryptContactRegistration(registration, CONTACT_KEY),
-                  ),
-                ],
               );
             else {
               const central = {
@@ -1062,7 +1227,7 @@ else
       );
 
       await t.test(
-        'complete pending and confirmed orders of another owner are previewed by enabled Financeiro without effects or private notes',
+        'complete pending and confirmed orders of another owner are previewed by an enabled seller without effects or private notes',
         async () => {
           for (const status of ['pendente', 'confirmado']) {
             const f = await fixture({ status });
@@ -1422,7 +1587,7 @@ else
           const frozen = async () =>
             (
               await pool.query(
-                "SELECT to_jsonb(orders)-'version'-'updated_at' AS frozen FROM crm.orders WHERE id=$1",
+                "SELECT to_jsonb(orders)-'version'-'commercial_revision'-'updated_at' AS frozen FROM crm.orders WHERE id=$1",
                 [saved.order.id],
               )
             ).rows[0].frozen;
@@ -1679,12 +1844,12 @@ else
             if (mutation === 'checkbox')
               await pool.query(
                 'UPDATE crm.users SET olist_enabled=false,olist_authorization_version=olist_authorization_version+1 WHERE id=$1',
-                [f.actors.finance.actor.id],
+                [f.actors.seller.actor.id],
               );
             if (mutation === 'disabled')
               await pool.query(
                 'UPDATE crm.users SET disabled_at=$2 WHERE id=$1',
-                [f.actors.finance.actor.id, NOW],
+                [f.actors.seller.actor.id, NOW],
               );
             if (mutation === 'session')
               await pool.query(
@@ -1707,6 +1872,52 @@ else
             f.runtime.preview({ ...f.actors.admin, orderId: f.orderId }),
             { code: 'FORBIDDEN' },
           );
+        },
+      );
+      await t.test(
+        'OLC-02: an enabled pilot Financeiro has no commercial read of the Order and cannot preview, check or export it',
+        async () => {
+          const f = await fixture({ pilotRoles: ['seller', 'finance'] });
+          await pool.query(
+            'UPDATE crm.olist_accounts SET creation_enabled=true,recovery_required=false WHERE account_key=$1',
+            [config.accountKey],
+          );
+          const finance = { ...f.actors.finance, orderId: f.orderId };
+          await assert.rejects(f.runtime.preview(finance), {
+            code: 'FORBIDDEN',
+            statusCode: 403,
+          });
+          assert.equal(f.calls.length, 0);
+          const valid = await f.runtime.preview(f.input);
+          assert.equal(valid.eligible, true, JSON.stringify(valid.issues));
+          // Even a receipt sealed for that same actor, session and order.
+          const previewToken = reseal(
+            f.input,
+            valid.previewToken,
+            () => undefined,
+            finance,
+          );
+          const before = await counts();
+          await assert.rejects(
+            f.runtime.checkPreview({ ...finance, previewToken }),
+            { code: 'FORBIDDEN', statusCode: 403 },
+          );
+          await assert.rejects(
+            f.runtime.exportOrder({
+              ...finance,
+              previewToken,
+              idempotencyKey: 'finance-without-commercial-read',
+            }),
+            { code: 'FORBIDDEN', statusCode: 403 },
+          );
+          assert.deepEqual(await counts(), before);
+          // Control: every other gate was open for the enabled seller.
+          const accepted = await f.runtime.exportOrder({
+            ...f.input,
+            previewToken: valid.previewToken,
+            idempotencyKey: 'seller-with-commercial-read',
+          });
+          assert.equal(accepted.state, 'queued');
         },
       );
       await t.test(
@@ -1782,7 +1993,7 @@ else
             },
           );
           const headers = {
-            cookie: `crm_session=${f.actors.finance.token}; crm_csrf=synthetic-csrf`,
+            cookie: `crm_session=${f.actors.seller.token}; crm_csrf=synthetic-csrf`,
             origin: environment.APP_ORIGIN,
             'x-csrf-token': 'synthetic-csrf',
           };
@@ -1955,7 +2166,7 @@ else
             [config.accountKey],
           );
           // Not the administrator: refused before any effect, for everybody else.
-          for (const who of ['owner', 'finance']) {
+          for (const who of ['owner', 'seller', 'finance']) {
             await assert.rejects(
               f.runtime.invalidate(command({ ...f.actors[who] })),
               { code: 'FORBIDDEN', statusCode: 403 },

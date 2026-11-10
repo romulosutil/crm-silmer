@@ -6,6 +6,12 @@ import {
 import { orderSourceFingerprint } from './order-source-fingerprint.js';
 import { sizePricingSummary } from '../domain/size-pricing-composition.js';
 import {
+  FREIGHT_PRICING_RULE,
+  orderFreightCents,
+  orderTotalCents,
+  parseFreightCents,
+} from '../domain/freight.js';
+import {
   OrderConflictError,
   OrderForbiddenError,
   OrderInputError,
@@ -28,7 +34,21 @@ import {
  * @typedef {{eventType: string, aggregateVersion: number, correlationId: string, occurredAt: string, payload: {orderId: string, conversationId: string|null}}} RecordedOrderEvent
  * @typedef {import('../ports/contracts.js').CreateStoreOrderInput['receipt'] & {orderId: string, receivedAt: string}} StoreReceipt
  * @typedef {{actor: string, action: string, target: {type: string, id: string}, version: string, reason: string, correlationId: string, occurredAt: string}} RecordedAudit
+ * @typedef {{orderId: string, orderVersion: number, kind: 'set'|'confirmed', piecesCents: number|null, freightCents: number, previousFreightCents: number|null, totalCents: number|null, source: 'seller'|'quote'|null, quoteId: string|null, serviceId: number|null, quotedCents: number|null, actorId: string, occurredAt: string}} RecordedFreightEvent
  */
+
+/** ADR 080: an order is born without freight, under the pieces-only rule. */
+const NO_FREIGHT = Object.freeze({
+  commercialRevision: 1,
+  freightCents: 0,
+  freightQuoteId: null,
+  freightQuoteServiceId: null,
+  freightQuotedCents: null,
+  freightSetAt: null,
+  freightSetBy: null,
+  freightSource: null,
+  pricingRule: /** @type {const} */ ('pieces-v1'),
+});
 
 /** @template T @param {T} value @returns {T} */
 function clone(value) {
@@ -57,6 +77,8 @@ export class InMemoryOrderRepository {
   #receipts = [];
   /** @type {RecordedAudit[]} */
   #audits = [];
+  /** @type {RecordedFreightEvent[]} */
+  #freightEvents = [];
   /** @type {Map<string, any[]>} */
   #sources = new Map();
   #sourceKey = randomBytes(32);
@@ -120,6 +142,7 @@ export class InMemoryOrderRepository {
       const at = input.now.toISOString();
       /** @type {Order} */
       const order = {
+        ...NO_FREIGHT,
         confirmedAt: null,
         confirmedBy: null,
         conversationId: input.conversationId,
@@ -221,6 +244,7 @@ export class InMemoryOrderRepository {
       const iso = now.toISOString();
       /** @type {Order} */
       const saved = {
+        ...NO_FREIGHT,
         ...clone(order),
         createdAt: iso,
         deliveredOn: null,
@@ -268,6 +292,7 @@ export class InMemoryOrderRepository {
       ).comprovanteUrl = input.receiptUrl;
       const next = {
         ...clone(current),
+        commercialRevision: (current.commercialRevision ?? 1) + 1,
         ficha,
         updatedAt: input.now.toISOString(),
         version: current.version + 1,
@@ -319,6 +344,7 @@ export class InMemoryOrderRepository {
       next.ficha.items[0].grade[0].quantidade = input.quantity;
       next.totalPieces = input.quantity;
       next.finalAmountCents = input.amountCents;
+      next.commercialRevision = (current.commercialRevision ?? 1) + 1;
       next.version += 1;
       next.updatedAt = input.now.toISOString();
       this.#orders.set(next.id, next);
@@ -697,7 +723,12 @@ export class InMemoryOrderRepository {
         updatedBy: input.actor.id,
         updatedAt: now,
       };
-      const updated = { ...order, version: order.version + 1, updatedAt: now };
+      const updated = {
+        ...order,
+        commercialRevision: (order.commercialRevision ?? 1) + 1,
+        version: order.version + 1,
+        updatedAt: now,
+      };
       this.#sources.set(order.id, [...history, clone(record)]);
       this.#orders.set(order.id, updated);
       this.#record(
@@ -728,10 +759,17 @@ export class InMemoryOrderRepository {
           'ORDER_STATUS_CONFLICT',
         );
       }
+      // ADR 080: pieces + the stored freight; this write never changes it.
       const finalAmountCents =
         order.ficha.sizePricing === undefined
           ? current.finalAmountCents
-          : sizePricingSummary(order.ficha).totalCents;
+          : orderTotalCents(
+              sizePricingSummary(order.ficha).totalCents,
+              orderFreightCents({
+                ...order,
+                freightCents: current.freightCents,
+              }),
+            );
       const amountChanged =
         current.finalAmountCents !== null &&
         current.finalAmountCents !== finalAmountCents;
@@ -750,6 +788,125 @@ export class InMemoryOrderRepository {
     });
   }
 
+  /**
+   * ADR 080: the freight of a pending order priced by size. The service has
+   * already checked the responsible seller; like the PostgreSQL adapter, the
+   * price of an applied estimate is read here, never taken from the caller.
+   *
+   * @param {Order} order
+   * @param {import('../ports/contracts.js').FreightWriteOptions} options
+   */
+  async saveFreight(order, options) {
+    const actor = options.actor;
+    if (actor?.kind !== 'human' || !actor.id) throw new OrderForbiddenError();
+    const stored = this.#orders.get(order.id);
+    // A store order answers ORDER_LOCKED below, like the PostgreSQL adapter.
+    if (
+      stored &&
+      stored.origin !== 'loja' &&
+      !stored.conversationId &&
+      stored.manualOwnerId !== actor.id
+    ) {
+      throw new OrderForbiddenError();
+    }
+    const command = options.freight;
+    if (command.source === 'quote' && !options.quotes) {
+      throw new OrderConflictError(
+        'Shipping estimates are unavailable',
+        'FREIGHT_QUOTE_UNAVAILABLE',
+      );
+    }
+    // The port is read before the exclusive section, as this adapter has no
+    // transaction; the version check below refuses a stale result.
+    const quoted =
+      command.source === 'quote'
+        ? await /** @type {import('../ports/contracts.js').FreightQuotePort} */ (
+            options.quotes
+          ).resolve(undefined, {
+            orderId: order.id,
+            orderVersion: options.expectedVersion,
+            quoteId: command.quoteId,
+            serviceId: command.serviceId,
+          })
+        : null;
+    const reference =
+      command.source === 'seller' && options.quotes
+        ? await options.quotes.selected(undefined, {
+            orderId: order.id,
+            orderVersion: options.expectedVersion,
+          })
+        : null;
+    return this.#write(
+      order.id,
+      options,
+      'order.freight_updated',
+      (current) => {
+        if (current.status !== 'pendente') {
+          throw new OrderConflictError(
+            'Only pending orders accept a freight',
+            'ORDER_STATUS_CONFLICT',
+          );
+        }
+        if (current.ficha.sizePricing === undefined) {
+          throw new OrderConflictError(
+            'Only orders priced by size carry a freight',
+            'SIZE_PRICING_NOT_INITIALIZED',
+          );
+        }
+        const cents = parseFreightCents(
+          command.source === 'quote' ? quoted?.priceCents : command.cents,
+        );
+        const piecesCents = sizePricingSummary(current.ficha).totalCents;
+        const totalCents = orderTotalCents(piecesCents, cents);
+        const amountChanged =
+          current.finalAmountCents !== null &&
+          current.finalAmountCents !== totalCents;
+        this.#freightEvents.push({
+          actorId: actor.id,
+          freightCents: cents,
+          kind: 'set',
+          occurredAt: order.updatedAt,
+          orderId: order.id,
+          orderVersion: current.version + 1,
+          piecesCents,
+          previousFreightCents: current.freightCents ?? 0,
+          quoteId:
+            command.source === 'quote'
+              ? command.quoteId
+              : (reference?.quoteId ?? null),
+          quotedCents:
+            command.source === 'quote'
+              ? cents
+              : (reference?.priceCents ?? null),
+          serviceId:
+            command.source === 'quote'
+              ? command.serviceId
+              : (reference?.serviceId ?? null),
+          source: command.source,
+          totalCents,
+        });
+        return {
+          ...current,
+          finalAmountCents: totalCents,
+          freightCents: cents,
+          freightQuoteId: command.source === 'quote' ? command.quoteId : null,
+          freightQuoteServiceId:
+            command.source === 'quote' ? command.serviceId : null,
+          freightQuotedCents: command.source === 'quote' ? cents : null,
+          freightSetAt: order.updatedAt,
+          freightSetBy: actor.id,
+          freightSource: command.source,
+          paidOn: amountChanged ? null : current.paidOn,
+          paymentReviewRequired: amountChanged
+            ? false
+            : current.paymentReviewRequired,
+          pricingRule: FREIGHT_PRICING_RULE,
+          updatedAt: order.updatedAt,
+        };
+      },
+    );
+  }
+
   /** @param {Order} order @param {OrderWriteOptions} options */
   async saveStatus(order, options) {
     return this.#write(
@@ -763,8 +920,37 @@ export class InMemoryOrderRepository {
             'ORDER_STATUS_CONFLICT',
           );
         }
+        // ADR 080: confirming freezes the stored freight with the total and
+        // never rewrites it; reopening keeps both.
+        const sized = order.ficha.sizePricing !== undefined;
+        if (order.status === 'confirmado') {
+          const frozen = sized ? (current.freightCents ?? 0) : 0;
+          if (sized && (order.freightCents ?? 0) !== frozen) {
+            throw new OrderConflictError('The order freight changed');
+          }
+          const totalCents = /** @type {number} */ (order.finalAmountCents);
+          this.#freightEvents.push({
+            actorId: /** @type {string} */ (order.confirmedBy),
+            freightCents: frozen,
+            kind: 'confirmed',
+            occurredAt: /** @type {string} */ (order.confirmedAt),
+            orderId: order.id,
+            orderVersion: current.version + 1,
+            piecesCents: totalCents - frozen,
+            previousFreightCents: null,
+            quoteId: sized ? (current.freightQuoteId ?? null) : null,
+            quotedCents: sized ? (current.freightQuotedCents ?? null) : null,
+            serviceId: sized ? (current.freightQuoteServiceId ?? null) : null,
+            source: sized ? (current.freightSource ?? null) : null,
+            totalCents,
+          });
+        }
         return {
           ...current,
+          pricingRule:
+            order.status === 'confirmado' && sized
+              ? FREIGHT_PRICING_RULE
+              : current.pricingRule,
           confirmedAt: order.confirmedAt,
           confirmedBy: order.confirmedBy,
           ficha: clone(order.legacySizePricing ? current.ficha : order.ficha),
@@ -833,7 +1019,14 @@ export class InMemoryOrderRepository {
           `Expected order version ${options.expectedVersion}, current version is ${current.version}`,
         );
       }
-      const next = { ...change(clone(current)), version: current.version + 1 };
+      const next = {
+        ...change(clone(current)),
+        // Payment and delivery days are not commercially exportable content.
+        commercialRevision:
+          (current.commercialRevision ?? 1) +
+          (eventType === 'order.milestones_saved' ? 0 : 1),
+        version: current.version + 1,
+      };
       this.#orders.set(orderId, next);
       this.#record(next, eventType, options.correlationId);
       return clone(next);
@@ -850,6 +1043,19 @@ export class InMemoryOrderRepository {
   eventsFor(orderId) {
     return this.#events
       .filter((event) => event.payload.orderId === orderId)
+      .map(clone);
+  }
+
+  /**
+   * ADR 080: the freight history the PostgreSQL adapter keeps in
+   * `crm.order_freight_events`, oldest first.
+   *
+   * @param {string} orderId
+   * @returns {RecordedFreightEvent[]}
+   */
+  freightEventsFor(orderId) {
+    return this.#freightEvents
+      .filter((event) => event.orderId === orderId)
       .map(clone);
   }
 }

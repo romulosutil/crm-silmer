@@ -38,7 +38,7 @@ só para Pedido não confirmado (OLC-F03); a remoção do Financeiro foi aprovad
 Requisitos OLC-01–06/09/10/14 (com OLC-05a–j). Dono Backend/Dados com
 revisão QA.
 
-- [ ] **Prioridade: corrigir a regressão do cadastro opcional** (commit
+- [x] **Prioridade: corrigir a regressão do cadastro opcional** (commit
       `865388f0`, ADR 081 supersedida pela ADR 082). Cadastro vazio/parcial
       permite fechar o Pedido e gerar ficha/PDF, mas bloqueia novo envio Olist
       antes de inclusões, também na API/revalidação/worker e com token/job
@@ -57,7 +57,7 @@ revisão QA.
       loja que só tem total: a soma deve igualar exatamente esse total
       existente (ADR 057 item 6). Sem rateio automático nem alteração de
       grade/atributo pelo enriquecimento.
-- [ ] **Implementar o contrato do frete no Pedido** (decisão do PO de
+- [x] **Implementar o contrato do frete no Pedido** (decisão do PO de
       10/11/2026, ADR 079 decisão 9; desenho fechado na
       [ADR 080](../../../docs/adr/080-valor-final-com-frete.md) /
       [RFC 062](../../../docs/rfc/062-valor-final-com-frete.md); critérios

@@ -8,6 +8,17 @@ export function assertOlistPilotActor(pilotUserIds, input) {
   if (pilotUserIds !== undefined && !pilotUserIds.includes(input.actor?.id))
     throw new OlistError('FORBIDDEN', 403);
 }
+/** OLC-02: generation also needs the actor's existing commercial read of the
+ * Order, i.e. the same `order.read` policy the order detail route enforces.
+ * The Olist checkbox alone never grants it (an enabled Financeiro is refused).
+ * @param {any} actor */
+export function assertOlistOrderCommercialRead(actor) {
+  try {
+    authorize(actor, 'order.read');
+  } catch {
+    throw new OlistError('FORBIDDEN', 403);
+  }
+}
 /** Lock the real current user/session; a supplied actor or old job is never authority.
  * @param {any} client @param {any} input @param {string} action @param {Date} now */
 export async function lockOlistActor(client, input, action, now) {

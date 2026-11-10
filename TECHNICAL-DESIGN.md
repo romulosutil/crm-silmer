@@ -344,8 +344,11 @@ nas fases anteriores segue como insumo reaproveitável.
   automático ou alteração de grade pelo comando de enriquecimento. Loja tem
   adapter próprio. Decisão do PO de 10/11/2026: o frete compõe o total (ADR 079,
   decisão 9; critérios OLC-05a–j), na venda ERP em `valorFrete` conferido em
-  centavos exatos. É funcionalidade nova, ainda não implementada: na master o
-  frete é estimativa separada do total (ADR 054; `modules/shipping`; migration 0050) e o Olist exige `valorFrete` ausente ou zero. Campo, migração,
+  centavos exatos. O frete no Pedido foi implementado em OLC-T01 (migration
+  0076, `POST /api/v1/orders/{orderId}/freight`, ação `order.freight`,
+  [runbook](docs/runbooks/order-freight.md)); a cotação segue estimativa separada
+  (ADR 054) e o Olist ainda exige `valorFrete` ausente ou zero até OLC-T02, de modo
+  que Pedido com frete positivo fica bloqueado para exportação. Campo, migração,
   versionamento, recálculo e relação com a cotação estão fechados na ADR 080 /
   RFC 062 e são implementados em OLC-T01: frete em centavos inteiros, aditivo,
   default zero, versionado e auditado com origem; comando só do vendedor
@@ -353,8 +356,7 @@ nas fases anteriores segue como insumo reaproveitável.
   herança); cotação persistida só como sugestão, com preço lido no servidor;
   `finalAmountCents` = soma dos subtotais + frete calculado na confirmação, que
   congela o frete; cobrança, quitação e Dashboard leem o total único; loja e
-  legado com frete zero; ficha/PDF sem frete nesta entrega. Nomes de campo,
-  coluna e rota: a definir na implementação.
+  legado com frete zero; ficha/PDF sem frete nesta entrega.
 - Conexão: credenciais cifradas, renovação serializada, conta esperada e
   configuração central versionada. API oficial no monólito/worker/PostgreSQL.
 - Processamento: validação interna antes de qualquer inclusão, snapshot/reserva/
@@ -384,8 +386,8 @@ Olist da master onde divergirem. Publicação GitHub → EasyPanel permanece vig
 
 Contrato da ADR 057 já adotado; permanece vigente, sem enfraquecimento, nos pontos
 em que OLC-01–16 não o supersede expressamente. Pelas decisões do PO de
-10/11/2026, o total derivado dos subtotais, agora mais o frete (ainda não
-implementado; ADR 080), segue valendo e o texto de 04/11 sobre cancelar Pedido pago ou confirmado foi
+10/11/2026, o total derivado dos subtotais, agora mais o frete (ADR 080,
+implementado em OLC-T01), segue valendo e o texto de 04/11 sobre cancelar Pedido pago ou confirmado foi
 superado: o cancelamento local vale só para Pedido não confirmado (ADR 079).
 
 - Identidade/acesso: checkbox default false gerido por Admin, autorização
@@ -456,7 +458,7 @@ Migration expand 0049 adiciona conexão cifrada e estado OAuth de uso único
 por usuário/sessão, com reserva durável e fencing para renovação. A UI Vue
 `/melhor-envio` remove o callback da URL e cota uma embalagem com medidas/peso
 explícitos. Nenhum dado do destinatário, frete ou preço é gravado no pedido
-nessa entrega; o frete do Pedido vem pela ADR 080, ainda não implementada.
+nessa entrega; o frete do Pedido vem pela ADR 080 (OLC-T01), informado pelo vendedor.
 Configuração/rollback e evidências no [runbook](docs/runbooks/melhor-envio.md).
 
 ## Transporte aprovado — Evolution/Baileys (29/10/2026)

@@ -9,7 +9,7 @@ import {
 } from '@crm-silmer/orders';
 import {
   buildOlistPreviewPlan,
-  withoutOptionalBuyerIssues,
+  olistBuyerRegistrationIssues,
 } from '../apps/api/src/olist-preview-plan.js';
 import { captureOlistExistingBuyer } from '../modules/olist/src/existing-buyer.js';
 
@@ -285,22 +285,78 @@ test('T06 buyer CPF/CNPJ DV, fiscal address, explicit IE and contact data are re
   assert.equal(plan.customer.inscricaoEstadual, 'ISENTO');
 });
 
-test('ADR 081 optional registration fields are not listed beside a real blocker and never clear the last one', () => {
-  const field = 'buyer.registration.document';
-  const optional = { code: 'OLIST_BUYER_REQUIRED', field };
-  const real = { code: 'OLIST_SOURCE_INCOMPLETE', field: 'source' };
-  const phone = { code: 'OLIST_BUYER_REQUIRED', field: 'buyer.phone' };
-  const buyer = { registration: null };
-  assert.deepEqual(withoutOptionalBuyerIssues([optional, real], buyer), [real]);
-  assert.deepEqual(withoutOptionalBuyerIssues([optional, phone], buyer), [
-    phone,
-  ]);
-  assert.deepEqual(withoutOptionalBuyerIssues([optional], buyer), [optional]);
-  const complete = { registration: fixture().buyer.registration };
-  assert.deepEqual(withoutOptionalBuyerIssues([optional, real], complete), [
-    optional,
-    real,
-  ]);
+const REGISTRATION_FIELDS = [
+  'personType',
+  'document',
+  'legalName',
+  'postalCode',
+  'city',
+  'state',
+  'street',
+  'district',
+  'number',
+];
+
+test('ADR 082 new send: empty, partial, invalid and complete registration', () => {
+  /** @param {any} plan */
+  const registrationIssues = (plan) =>
+    plan.issues
+      .filter((/** @type {any} */ entry) =>
+        entry.field.startsWith('buyer.registration.'),
+      )
+      .map((/** @type {any} */ entry) => entry.code + ':' + entry.field)
+      .sort();
+  for (const registration of [null, undefined, {}, { legalName: ' ' }]) {
+    const input = fixture();
+    input.buyer.registration = /** @type {any} */ (registration);
+    const plan = buildOlistPreviewPlan(input);
+    assert.equal(plan.eligible, false);
+    assert.equal(plan.customer, null);
+    assert.equal(plan.buyerSource, undefined);
+    assert.deepEqual(
+      registrationIssues(plan),
+      REGISTRATION_FIELDS.map(
+        (key) => 'OLIST_BUYER_REQUIRED:buyer.registration.' + key,
+      ).sort(),
+    );
+    assert.deepEqual(
+      olistBuyerRegistrationIssues(input.buyer),
+      plan.issues.filter((/** @type {any} */ entry) =>
+        entry.field.startsWith('buyer.registration.'),
+      ),
+    );
+  }
+  for (const missing of REGISTRATION_FIELDS) {
+    const input = fixture();
+    input.buyer.registration = { ...input.buyer.registration, [missing]: null };
+    const plan = buildOlistPreviewPlan(input);
+    assert.equal(plan.eligible, false, missing);
+    assert.equal(plan.customer, null, missing);
+    assert.ok(
+      registrationIssues(plan).includes(
+        'OLIST_BUYER_REQUIRED:buyer.registration.' + missing,
+      ),
+      missing,
+    );
+  }
+  const invalid = fixture();
+  invalid.buyer.registration.document = '11111111111';
+  const refused = buildOlistPreviewPlan(invalid);
+  assert.equal(refused.eligible, false);
+  assert.equal(refused.customer, null);
+  assert.ok(
+    registrationIssues(refused).includes(
+      'OLIST_BUYER_INVALID:buyer.registration.document',
+    ),
+  );
+  assert.ok(olistBuyerRegistrationIssues(invalid.buyer).length > 0);
+  const complete = fixture();
+  const accepted = buildOlistPreviewPlan(complete);
+  assert.equal(accepted.eligible, true, JSON.stringify(accepted.issues));
+  assert.equal(accepted.customer.cpfCnpj, '52998224725');
+  assert.equal(accepted.customer.situacao, 'B');
+  assert.equal(accepted.buyerSource, undefined);
+  assert.deepEqual(olistBuyerRegistrationIssues(complete.buyer), []);
 });
 
 test('T06 buyer null or malformed optional email cannot produce a customer payload', () => {
@@ -456,7 +512,7 @@ test('T17 per-order due day is explicit, calendar-valid and independent of payme
   );
 });
 
-test('T17 ERP-owned payment needs no due or payment IDs; a minimal buyer needs exact server-captured ERP identity', () => {
+test('T17 ERP-owned payment needs no due or payment IDs; only the administrative link accepts a server-captured ERP buyer', () => {
   const input = fixture();
   const settings = {
     ...input.settings,
@@ -475,44 +531,70 @@ test('T17 ERP-owned payment needs no due or payment IDs; a minimal buyer needs e
     buyer,
     contact: { id: 101, nome: buyer.name, celular: buyer.phone, situacao: 'A' },
   });
+  // ADR 073: only the administrative historical link may use the reference.
   const plan = buildOlistPreviewPlan({
     ...input,
     settings,
     buyer,
     buyerSource: captured.buyerSource,
+    historicalLink: true,
   });
   assert.equal(plan.eligible, true, JSON.stringify(plan.issues));
   assert.deepEqual(plan.customer, captured.customer);
   assert.equal(plan.commercial.paymentDueOn, null);
   assert.equal('endereco' in plan.customer, false);
   assert.equal('cpfCnpj' in plan.customer, false);
-  hasIssue(
-    buildOlistPreviewPlan({
-      ...input,
-      settings,
-      buyer: { ...buyer, registration: input.buyer.registration },
-      buyerSource: captured.buyerSource,
-    }),
-    'OLIST_BUYER_INVALID',
-  );
-  // ADR 081: a partial CRM registration is ignored, never merged nor required.
-  const partial = buildOlistPreviewPlan({
-    ...input,
-    settings,
-    buyer: { ...buyer, registration: { personType: 'individual' } },
-    buyerSource: captured.buyerSource,
-  });
-  assert.equal(partial.eligible, true, JSON.stringify(partial.issues));
-  assert.deepEqual(partial.customer, captured.customer);
+  for (const registration of [
+    input.buyer.registration,
+    { personType: 'individual' },
+  ])
+    hasIssue(
+      buildOlistPreviewPlan({
+        ...input,
+        settings,
+        buyer: { ...buyer, registration },
+        buyerSource: captured.buyerSource,
+        historicalLink: true,
+      }),
+      'OLIST_BUYER_INVALID',
+    );
   hasIssue(
     buildOlistPreviewPlan({
       ...input,
       settings,
       buyer,
       buyerSource: { ...captured.buyerSource, remoteId: '0' },
+      historicalLink: true,
     }),
     'OLIST_BUYER_INVALID',
   );
+  // ADR 082: in a new send the reference never dispenses the registration,
+  // whether it is empty or partial, and never becomes the customer.
+  for (const registration of [null, { personType: 'individual' }]) {
+    const refused = buildOlistPreviewPlan({
+      ...input,
+      settings,
+      buyer: { ...buyer, email: null, registration },
+      buyerSource: captured.buyerSource,
+    });
+    assert.equal(refused.eligible, false);
+    assert.equal(refused.customer, null);
+    assert.equal(refused.buyerSource, undefined);
+    assert.ok(
+      refused.issues.some(
+        (entry) =>
+          entry.code === 'OLIST_BUYER_INVALID' &&
+          entry.field === 'buyer.source',
+      ),
+    );
+    assert.ok(
+      refused.issues.some(
+        (entry) =>
+          entry.code === 'OLIST_BUYER_REQUIRED' &&
+          entry.field === 'buyer.registration.document',
+      ),
+    );
+  }
   hasIssue(
     buildOlistPreviewPlan({ ...input, settings, paymentDueOn: '2026-11-30' }),
     'OLIST_SETTINGS_INVALID',

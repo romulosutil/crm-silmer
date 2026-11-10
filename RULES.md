@@ -7,8 +7,8 @@ supersedendo a ADR 081: cadastro completo e válido é obrigatório para **Gerar
 no Olist**, mas não para salvar/confirmar o Pedido ou gerar a ficha/PDF.
 Cadastro ausente/parcial bloqueia somente o envio ERP; nome/telefone ou
 referência remota não dispensam o cadastro nesse fluxo. Não acrescentar esse
-gate à confirmação/impressão. O runtime do commit `865388f0` ainda precisa
-ser corrigido; esta revisão documental não declara a correção implementada.
+gate à confirmação/impressão. OLC-T01 corrige o runtime do commit `865388f0`
+na validação, no aceite e no worker; a interface segue em OLC-T04.
 
 ## Pagamentos mistos e conciliação, 08/11/2026
 

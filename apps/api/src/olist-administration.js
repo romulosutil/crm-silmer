@@ -608,6 +608,8 @@ export function createOlistAdministration(database, options) {
         now: clock(),
         paymentDueOn: input.paymentDueOn,
         buyerSource: before.buyerSource,
+        // ADR 073/082: only this administrative link may use an ERP reference.
+        historicalLink: true,
       });
       if (!plan.eligible) throw new OlistError('OLIST_ORDER_INCOMPLETE', 422);
       const snapshot = {

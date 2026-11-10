@@ -396,7 +396,10 @@ paths:
       summary: Reservar uma operação Olist com snapshot e job locais
       description: >-
         OLIST-T07 / OLIST-01–02,13–15,30,33. Humano ativo com checkbox Olist,
-        incluindo Financeiro e Pedido de outro responsável/origem/status. Sessão,
+        leitura comercial do Pedido (order.read) e piloto; Financeiro não inicia
+        novo envio (OLC-02). Pedido de outro responsável/origem é aceito. Cadastro
+        incompleto do comprador devolve 409 OLIST_CUSTOMER_INVALID sem reserva
+        nem job, inclusive com recibo antigo (ADR 082). Sessão,
         CSRF, Origin e Idempotency-Key obrigatórios. Recebe somente o recibo cifrado
         da prévia; nenhum preço, total, conta, vendedor, payload ou versão do navegador.
         Primeira inclusão revalida a prévia/fonte/configuração sob os mesmos locks
@@ -448,8 +451,12 @@ paths:
       operationId: previewOlistOrder
       summary: Conferir fonte comercial e plano de cadastros sem escrita ERP
       description: >-
-        OLIST-T06 / OLIST-06–12,34–44. Humano ativo com checkbox Olist,
-        inclusive Financeiro e pedido de outro responsável, com sessão/CSRF/Origin.
+        OLIST-T06 / OLIST-06–12,34–44. Humano ativo com checkbox Olist e
+        leitura comercial do Pedido (order.read), inclusive pedido de outro
+        responsável, com sessão/CSRF/Origin; Financeiro recebe 403 (OLC-02).
+        Cadastro completo e válido do comprador é obrigatório: vazio, parcial ou
+        inválido gera pendência por campo e buyerSource é sempre nulo no novo
+        envio (ADR 082).
         Não concede edição comercial. Verifica ficha independentemente de status,
         cadastro fiscal, fontes, parâmetros centrais e centavos exatos por linha.
         GETs oficiais limitados a 64 por prévia, sem HTTP sob transação SQL.
@@ -3293,6 +3300,11 @@ paths:
         e o snapshot Olist permanecem intactos. Divergência recebe 409
         ORDER_OLIST_SNAPSHOT_MISMATCH; operação ainda em curso/incerta recebe
         ORDER_OLIST_LOCKED. Confirmação não declara quitação nem inicia exportação Olist.
+        ADR 080: em Pedido precificado por tamanho o total calculado é a soma
+        dos subtotais mais o frete do Pedido (Order.amounts); a confirmação
+        congela esse frete com o total e nunca o altera, inclusive quando
+        feita por COMMERCIAL_ADMIN. Cotação de origem desatualizada não
+        bloqueia a confirmação.
       security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderId'
@@ -3305,6 +3317,51 @@ paths:
       responses:
         '200':
           description: Pedido confirmado ou replay idempotente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '409': { $ref: '#/components/responses/OrderConflict' }
+        '422': { $ref: '#/components/responses/OrderUnprocessable' }
+  /orders/{orderId}/freight:
+    post:
+      operationId: setOrderFreight
+      summary: Informa o frete do Pedido pendente ou aplica a cotação selecionada
+      description: >-
+        ADR 080 / OLC-05h-i. Ação order.freight, restrita ao vendedor
+        responsável pelo Pedido: dono atual da conversa ou, em Pedido manual
+        sem conversa, seu responsável; humano ativo com função Vendedor.
+        COMMERCIAL_ADMIN não recebe o comando por herança (403 FORBIDDEN), só
+        o usa quando é o próprio responsável; outro vendedor, automação e
+        agente são negados. Só em Pedido pendente precificado por tamanho:
+        confirmado recebe 409 ORDER_STATUS_CONFLICT, Pedido da loja 409
+        ORDER_LOCKED, cancelado 409 ORDER_CANCELLED e Pedido sem composição por
+        tamanho 409 SIZE_PRICING_NOT_INITIALIZED. O corpo leva exatamente uma
+        forma: freightCents (declaração do vendedor em centavos inteiros; zero
+        é sem frete) ou quote (somente a identidade da cotação persistida e do
+        serviço). O navegador nunca envia preço de cotação: o servidor lê o
+        preço da cotação, exige o mesmo Pedido, o serviço selecionado e cotação
+        não desatualizada pela regra da ADR 054. Grava o frete, sua origem e
+        o total recalculado (subtotais + frete; nulo enquanto os subtotais
+        estiverem incompletos), incrementa a versão e registra evento e
+        auditoria sem PII. Cotação nova, nova seleção ou desatualização
+        posterior não alteram o frete gravado. Mesma chave e corpo repetem a
+        resposta; corpo divergente recebe 409 IDEMPOTENCY_KEY_REUSED; versão
+        obsoleta recebe 409 VERSION_CONFLICT sem gravar nada.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrderFreightRequest' }
+      responses:
+        '200':
+          description: Frete gravado ou replay idempotente
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OrderResponse' }
@@ -7065,10 +7122,14 @@ components:
           gatewayPayment,
           fichaFirstPrintedAt,
           fichaFirstPrintedBy,
+          amounts,
+          freight,
         ]
       properties:
         id: { type: string }
         number: { type: string, pattern: '^[0-9]{2,}-CRM$' }
+        amounts: { $ref: '#/components/schemas/OrderAmounts' }
+        freight: { $ref: '#/components/schemas/OrderFreight' }
         conversationId:
           type: [string, 'null']
           description: Nulo em pedidos manuais de atendimento e da loja do site.
@@ -7844,6 +7905,119 @@ components:
                     - { $ref: '#/components/schemas/ContactRegistration' }
                     - { type: 'null' }
             - { type: 'null' }
+    OrderAmounts:
+      type: object
+      additionalProperties: false
+      readOnly: true
+      required: [piecesCents, freightCents, totalCents]
+      description: >-
+        ADR 080: composição do valor do Pedido. Em Pedido precificado por
+        tamanho, piecesCents é a soma dos subtotais revisados (nulo enquanto
+        incompleta), freightCents o frete gravado e totalCents a soma dos
+        dois (nulo enquanto as peças estiverem incompletas), igual a
+        finalAmountCents. Pedido legado ou da loja mostra o total existente
+        como peças, com frete zero. Cobrança, quitação e Dashboard usam o
+        total único, sem separar peças e frete.
+      properties:
+        piecesCents: { type: [integer, 'null'], minimum: 1 }
+        freightCents: { type: integer, minimum: 0 }
+        totalCents: { type: [integer, 'null'], minimum: 1 }
+    OrderFreight:
+      type: object
+      additionalProperties: false
+      readOnly: true
+      required:
+        [
+          cents,
+          source,
+          quoteId,
+          serviceId,
+          quotedCents,
+          setBy,
+          setAt,
+          pricingRule,
+          quoteNotice,
+        ]
+      description: >-
+        ADR 080: frete do Pedido e sua origem. Zero com source nulo é sem
+        frete, nunca pendência. O frete gravado é a única fonte do total.
+      properties:
+        cents: { type: integer, minimum: 0 }
+        source:
+          type: [string, 'null']
+          enum: [seller, quote, null]
+          description: >-
+            seller: valor declarado pelo vendedor responsável; quote: preço
+            lido pelo servidor da cotação selecionada; nulo: nunca informado.
+        quoteId:
+          type: [string, 'null']
+          description: Cotação aplicada, quando source é quote.
+        serviceId:
+          type: [integer, 'null']
+          minimum: 1
+          description: Serviço aplicado, quando source é quote.
+        quotedCents:
+          type: [integer, 'null']
+          minimum: 0
+          description: Valor cotado aplicado, quando source é quote.
+        setBy:
+          description: Quem informou o frete.
+          oneOf:
+            - { $ref: '#/components/schemas/OrderActorRef' }
+            - { type: 'null' }
+        setAt: { type: [string, 'null'], format: date-time }
+        pricingRule:
+          type: string
+          enum: [pieces-v1, pieces-freight-v1]
+          description: >-
+            Regra de cálculo sob a qual o total foi gravado por último:
+            pieces-v1 (só subtotais, todo Pedido anterior à ADR 080) ou
+            pieces-freight-v1 (subtotais + frete). Histórico não é recalculado.
+        quoteNotice:
+          type: [string, 'null']
+          enum: [stale, divergent, null]
+          description: >-
+            Aviso, nunca bloqueio; calculado só na leitura de um Pedido
+            pendente (nulo em listas, em Pedido confirmado e sem Melhor Envio
+            configurado). divergent: a cotação selecionada atual tem preço
+            diferente do frete gravado; stale: a cotação de origem foi
+            substituída ou o Pedido mudou depois de aplicada.
+    OrderFreightRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      description: >-
+        Exatamente um entre freightCents e quote. Os dois juntos, nenhum deles
+        ou qualquer outro campo (inclusive preço ao lado de quote) recebem 400.
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          description: Versão atual do pedido.
+        freightCents:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            Centavos inteiros não negativos. Negativo, fração, texto (mesmo
+            numérico) e nulo recebem 422 FREIGHT_INVALID; acima do limite
+            monetário, 422 FREIGHT_OVERFLOW. Nada é arredondado.
+        quote:
+          type: object
+          additionalProperties: false
+          required: [quoteId, serviceId]
+          description: >-
+            Identidade da cotação persistida e do serviço selecionado. Cotação
+            inexistente ou de outro Pedido: 404 SHIPPING_QUOTE_NOT_FOUND;
+            desatualizada: 409 SHIPPING_QUOTE_STALE; serviço não selecionado:
+            422 INVALID_SHIPPING_SERVICE; Melhor Envio não configurado: 409
+            FREIGHT_QUOTE_UNAVAILABLE.
+          properties:
+            quoteId: { type: string, pattern: '^[A-Za-z0-9_-]{1,200}$' }
+            serviceId: { type: integer, minimum: 1 }
+      oneOf:
+        - required: [freightCents]
+        - required: [quote]
     OrderConfirmRequest:
       type: object
       additionalProperties: false
@@ -7860,7 +8034,8 @@ components:
           description: >-
             Compatibilidade com cliente antigo: declaração opcional em reais
             no formato brasileiro (ex.: 4.820,00), aceita somente se igual ao
-            total calculado com todos os subtotais revisados. Omitir usa a soma.
+            total calculado com todos os subtotais revisados mais o frete do
+            Pedido (ADR 080). Omitir usa a soma.
             Divergência retorna 422 SIZE_PRICING_AMOUNT_MISMATCH; não há fallback
             de preço livre. Sem composição completa retorna ORDER_NOT_CONFIRMABLE.
         paymentCondition: { $ref: '#/components/schemas/PaymentCondition' }
@@ -8110,6 +8285,12 @@ components:
                   SIZE_PRICING_LEGACY_REQUIRES_ADAPTER,
                   SIZE_PRICING_ITEMS_MANAGED,
                   SIZE_PRICING_AMOUNT_MISMATCH,
+                  FREIGHT_INVALID,
+                  FREIGHT_OVERFLOW,
+                  FREIGHT_QUOTE_UNAVAILABLE,
+                  SHIPPING_QUOTE_NOT_FOUND,
+                  SHIPPING_QUOTE_STALE,
+                  INVALID_SHIPPING_SERVICE,
                   INVALID_DATE,
                   ORDER_STATUS_CONFLICT,
                   ORDER_CANCELLED,

@@ -4,6 +4,12 @@ import {
 } from '../domain/order-source.js';
 import { orderSourceFingerprint } from './order-source-fingerprint.js';
 import { sizePricingSummary } from '../domain/size-pricing-composition.js';
+import {
+  FREIGHT_PRICING_RULE,
+  orderFreightCents,
+  orderTotalCents,
+  parseFreightCents,
+} from '../domain/freight.js';
 import { randomUUID } from 'node:crypto';
 import {
   assertOlistCommercialWrite,
@@ -45,7 +51,15 @@ const ORDER_COLUMNS = `id, number_sequence, number, conversation_id,
   paid_amount_cents, payment_transaction_nsu, payment_invoice_slug,
   ficha_first_printed_at, ficha_first_printed_by,
   cancelled_at, cancelled_by, cancellation_reason_envelope,
+  freight_cents, freight_source, freight_quote_id, freight_quote_service_id,
+  freight_quoted_cents, freight_set_by, freight_set_at, pricing_rule,
+  commercial_revision,
   version, created_at, updated_at`;
+
+// ADR 080 item 14: the freight-aware writer names its calculation rule in the
+// transaction. The guard of migration 0076 refuses any other writer that would
+// change the total, the status or the freight of an order that has freight.
+const DECLARE_PRICING_RULE = `SELECT set_config('crm.order_pricing_rule', '${FREIGHT_PRICING_RULE}', true)`;
 
 /** @param {string} orderId */
 function fichaAad(orderId) {
@@ -177,6 +191,77 @@ export async function assertWriteOwner(
   if (!grant.rows[0]) throw new OrderForbiddenError();
 }
 
+/**
+ * ADR 080 item 3: the freight belongs to the responsible seller, read again
+ * inside the write. Unlike `assertWriteOwner` there is no COMMERCIAL_ADMIN
+ * fallback: an admin passes only as that seller. The user must still be
+ * active and a Vendedor, held against a concurrent deactivation.
+ *
+ * @param {Queryable} transaction
+ * @param {{id: string, kind: string}|undefined} actor
+ */
+export async function assertActiveSeller(transaction, actor) {
+  if (actor?.kind !== 'human' || !actor.id) throw new OrderForbiddenError();
+  const active = await transaction.query(
+    `SELECT profile.function_name
+     FROM crm.users AS users
+     JOIN crm.user_functions AS profile ON profile.user_id = users.id
+     WHERE users.id = $1 AND users.disabled_at IS NULL
+     FOR SHARE OF users, profile`,
+    [actor.id],
+  );
+  if (active.rows[0]?.function_name !== 'Vendedor') {
+    throw new OrderForbiddenError();
+  }
+}
+
+/**
+ * @param {{id: string, kind: string}|undefined} actor
+ * @param {{assigned_user_id: string|null}} responsible
+ */
+export function assertResponsibleSeller(actor, responsible) {
+  if (
+    actor?.kind !== 'human' ||
+    !actor.id ||
+    responsible.assigned_user_id !== actor.id
+  ) {
+    throw new OrderForbiddenError();
+  }
+}
+
+/**
+ * ADR 080 items 2 and 7 (RULES 10): the append-only freight history. Cents,
+ * identifiers, origin and instant only.
+ *
+ * @param {Queryable} transaction
+ * @param {{orderId: string, orderVersion: number, kind: 'set'|'confirmed', piecesCents: number|null, freightCents: number, previousFreightCents: number|null, totalCents: number|null, source: string|null, quoteId: string|null, serviceId: number|null, quotedCents: number|null, actorId: string, occurredAt: string}} event
+ */
+async function appendFreightEvent(transaction, event) {
+  await transaction.query(
+    `INSERT INTO crm.order_freight_events
+       (id, order_id, order_version, kind, pieces_cents, freight_cents,
+        previous_freight_cents, total_cents, source, quote_id,
+        quote_service_id, quoted_cents, actor_id, occurred_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+    [
+      `freight-${randomUUID()}`,
+      event.orderId,
+      event.orderVersion,
+      event.kind,
+      event.piecesCents,
+      event.freightCents,
+      event.previousFreightCents,
+      event.totalCents,
+      event.source,
+      event.quoteId,
+      event.serviceId,
+      event.quotedCents,
+      event.actorId,
+      event.occurredAt,
+    ],
+  );
+}
+
 export class PostgresOrderRepository {
   /** @type {TransactionalDatabase} */
   #database;
@@ -234,6 +319,25 @@ export class PostgresOrderRepository {
       ),
       finalAmountCents:
         row.final_amount_cents === null ? null : Number(row.final_amount_cents),
+      // ADR 080: the freight, its origin and the rule the total was last
+      // calculated under. Rows read before migration 0076 have none.
+      commercialRevision: Number(row.commercial_revision ?? 1),
+      freightCents: Number(row.freight_cents ?? 0),
+      freightQuoteId: row.freight_quote_id ?? null,
+      freightQuoteServiceId:
+        row.freight_quote_service_id === null ||
+        row.freight_quote_service_id === undefined
+          ? null
+          : Number(row.freight_quote_service_id),
+      freightQuotedCents:
+        row.freight_quoted_cents === null ||
+        row.freight_quoted_cents === undefined
+          ? null
+          : Number(row.freight_quoted_cents),
+      freightSetAt: isoOrNull(row.freight_set_at ?? null),
+      freightSetBy: row.freight_set_by ?? null,
+      freightSource: row.freight_source ?? null,
+      pricingRule: row.pricing_rule ?? 'pieces-v1',
       // ADR 031: the first print of a store order's ficha.
       fichaFirstPrintedAt: isoOrNull(row.ficha_first_printed_at ?? null),
       fichaFirstPrintedBy: row.ficha_first_printed_by ?? null,
@@ -609,6 +713,7 @@ export class PostgresOrderRepository {
       const updated = await transaction.query(
         `UPDATE crm.orders
          SET ficha_envelope = $2::jsonb, version = version + 1,
+             commercial_revision = commercial_revision + 1,
              updated_at = $3
          WHERE id = $1
          RETURNING ${ORDER_COLUMNS}`,
@@ -684,7 +789,8 @@ export class PostgresOrderRepository {
       ficha.items[0].grade[0].quantidade = input.quantity;
       const updated = await transaction.query(
         `UPDATE crm.orders SET ficha_envelope = $2::jsonb, total_pieces = $3,
-         final_amount_cents = $4, version = version + 1, updated_at = $5
+         final_amount_cents = $4, version = version + 1,
+         commercial_revision = commercial_revision + 1, updated_at = $5
          WHERE id = $1 RETURNING ${ORDER_COLUMNS}`,
         [
           current.id,
@@ -1300,10 +1406,15 @@ export class PostgresOrderRepository {
         ],
       );
       await tx.query(
-        'UPDATE crm.orders SET version=version+1,updated_at=$2 WHERE id=$1',
+        'UPDATE crm.orders SET version=version+1,commercial_revision=commercial_revision+1,updated_at=$2 WHERE id=$1',
         [order.id, now],
       );
-      const updated = { ...order, version: order.version + 1, updatedAt: now };
+      const updated = {
+        ...order,
+        commercialRevision: (order.commercialRevision ?? 1) + 1,
+        version: order.version + 1,
+        updatedAt: now,
+      };
       await appendOrderEvent(
         tx,
         updated,
@@ -1346,7 +1457,8 @@ export class PostgresOrderRepository {
          SET ficha_envelope = $2::jsonb, total_pieces = $3,
              missing_fields = $4::text[], updated_at = $5,
              final_amount_cents = CASE WHEN $7::boolean THEN $6::bigint ELSE final_amount_cents END,
-             version = version + 1
+             version = version + 1,
+             commercial_revision = commercial_revision + 1
          WHERE id = $1
          RETURNING ${ORDER_COLUMNS}`,
         [
@@ -1357,13 +1469,140 @@ export class PostgresOrderRepository {
           order.totalPieces,
           order.missingFields,
           order.updatedAt,
+          // ADR 080: pieces + the freight of the locked row. A subtotal or
+          // quantity command recalculates the total and never the freight.
           order.ficha.sizePricing === undefined
             ? null
-            : sizePricingSummary(order.ficha).totalCents,
+            : orderTotalCents(
+                sizePricingSummary(order.ficha).totalCents,
+                orderFreightCents({
+                  ...order,
+                  freightCents: Number(current.freight_cents ?? 0),
+                }),
+              ),
           order.ficha.sizePricing !== undefined,
         ],
       );
     });
+  }
+
+  /**
+   * ADR 080 (OLC-05h/i): the freight of a pending order priced by size, with
+   * its origin, the recalculated total and its history, in the same locked
+   * write as every other commercial command. Only the responsible seller
+   * reaches the row (`responsibleOnly`).
+   *
+   * @param {Order} order
+   * @param {import('../ports/contracts.js').FreightWriteOptions} options
+   */
+  async saveFreight(order, options) {
+    return this.#write(
+      order,
+      { ...options, responsibleOnly: true },
+      'order.freight_updated',
+      async (current, tx) => {
+        if (current.status !== 'pendente') {
+          throw new OrderConflictError(
+            'Only pending orders accept a freight',
+            'ORDER_STATUS_CONFLICT',
+          );
+        }
+        // The pieces are read from the locked row, never from the caller.
+        const { ficha } = this.#map(current);
+        if (ficha.sizePricing === undefined) {
+          throw new OrderConflictError(
+            'Only orders priced by size carry a freight',
+            'SIZE_PRICING_NOT_INITIALIZED',
+          );
+        }
+        const command = options.freight;
+        const orderVersion = Number(current.version);
+        /** @type {{cents: number, source: 'seller'|'quote', quoteId: string|null, serviceId: number|null, quotedCents: number|null, reference: {quoteId: string, serviceId: number, priceCents: number}|null}} */
+        let freight;
+        if (command.source === 'quote') {
+          if (!options.quotes) {
+            throw new OrderConflictError(
+              'Shipping estimates are unavailable',
+              'FREIGHT_QUOTE_UNAVAILABLE',
+            );
+          }
+          // The browser sent identities only: the price is read here.
+          const { priceCents } = await options.quotes.resolve(tx, {
+            orderId: order.id,
+            orderVersion,
+            quoteId: command.quoteId,
+            serviceId: command.serviceId,
+          });
+          const cents = parseFreightCents(priceCents);
+          freight = {
+            cents,
+            quoteId: command.quoteId,
+            quotedCents: cents,
+            reference: null,
+            serviceId: command.serviceId,
+            source: 'quote',
+          };
+        } else {
+          freight = {
+            cents: parseFreightCents(command.cents),
+            quoteId: null,
+            quotedCents: null,
+            // P1: the history keeps what the selected estimate quoted next
+            // to what the seller informed, when there is one.
+            reference: options.quotes
+              ? await options.quotes.selected(tx, {
+                  orderId: order.id,
+                  orderVersion,
+                })
+              : null,
+            serviceId: null,
+            source: 'seller',
+          };
+        }
+        const piecesCents = sizePricingSummary(ficha).totalCents;
+        const totalCents = orderTotalCents(piecesCents, freight.cents);
+        const updated = await tx.query(
+          `UPDATE crm.orders
+           SET freight_cents = $2, freight_source = $3, freight_quote_id = $4,
+               freight_quote_service_id = $5, freight_quoted_cents = $6,
+               freight_set_by = $7, freight_set_at = $8,
+               pricing_rule = $9, final_amount_cents = $10::bigint,
+               updated_at = $8, version = version + 1,
+               commercial_revision = commercial_revision + 1
+           WHERE id = $1
+           RETURNING ${ORDER_COLUMNS}`,
+          [
+            order.id,
+            freight.cents,
+            freight.source,
+            freight.quoteId,
+            freight.serviceId,
+            freight.quotedCents,
+            /** @type {{id: string}} */ (options.actor).id,
+            order.updatedAt,
+            FREIGHT_PRICING_RULE,
+            totalCents,
+          ],
+        );
+        await appendFreightEvent(tx, {
+          actorId: /** @type {{id: string}} */ (options.actor).id,
+          freightCents: freight.cents,
+          kind: 'set',
+          occurredAt: order.updatedAt,
+          orderId: order.id,
+          orderVersion: orderVersion + 1,
+          piecesCents,
+          previousFreightCents: Number(current.freight_cents ?? 0),
+          quoteId: freight.quoteId ?? freight.reference?.quoteId ?? null,
+          quotedCents:
+            freight.quotedCents ?? freight.reference?.priceCents ?? null,
+          serviceId: freight.serviceId ?? freight.reference?.serviceId ?? null,
+          source: freight.source,
+          totalCents,
+        });
+        return updated;
+      },
+    );
   }
 
   /**
@@ -1384,14 +1623,24 @@ export class PostgresOrderRepository {
             'ORDER_STATUS_CONFLICT',
           );
         }
-        return tx.query(
+        // ADR 080: confirming freezes the freight of the locked row with the
+        // total; neither confirming nor reopening writes the freight.
+        const confirming = order.status === 'confirmado';
+        const freightCents = Number(current.freight_cents ?? 0);
+        const sized = order.ficha.sizePricing !== undefined;
+        if (confirming && sized && (order.freightCents ?? 0) !== freightCents) {
+          throw new OrderConflictError('The order freight changed');
+        }
+        const updated = await tx.query(
           `UPDATE crm.orders
            SET status = $2, final_amount_cents = $3, payment_condition = $4,
                order_date = $5::date, confirmed_at = $6, confirmed_by = $7,
                reopened_at = $8, reopened_by = $9,
                missing_fields = $10::text[], updated_at = $11,
                ficha_envelope = CASE WHEN $13::boolean THEN ficha_envelope ELSE $12::jsonb END,
-               version = version + 1
+               pricing_rule = CASE WHEN $14::boolean THEN $15 ELSE pricing_rule END,
+               version = version + 1,
+               commercial_revision = commercial_revision + 1
            WHERE id = $1
            RETURNING ${ORDER_COLUMNS}`,
           [
@@ -1411,8 +1660,32 @@ export class PostgresOrderRepository {
             ),
             order.legacySizePricing !== undefined ||
               current.olistLocked === true,
+            confirming && sized,
+            FREIGHT_PRICING_RULE,
           ],
         );
+        if (confirming) {
+          const totalCents = /** @type {number} */ (order.finalAmountCents);
+          const frozen = sized ? freightCents : 0;
+          await appendFreightEvent(tx, {
+            actorId: /** @type {string} */ (order.confirmedBy),
+            freightCents: frozen,
+            kind: 'confirmed',
+            occurredAt: /** @type {string} */ (order.confirmedAt),
+            orderId: order.id,
+            orderVersion: Number(current.version) + 1,
+            piecesCents: totalCents - frozen,
+            previousFreightCents: null,
+            quoteId: sized ? (current.freight_quote_id ?? null) : null,
+            quotedCents: sized ? (current.freight_quoted_cents ?? null) : null,
+            serviceId: sized
+              ? (current.freight_quote_service_id ?? null)
+              : null,
+            source: sized ? (current.freight_source ?? null) : null,
+            totalCents,
+          });
+        }
+        return updated;
       },
     );
   }
@@ -1447,10 +1720,13 @@ export class PostgresOrderRepository {
    * version, applies the change and appends its event in one transaction.
    * A transfer or another writer waits and sees the resulting state.
    *
+   * `responsibleOnly` (ADR 080) replaces the owner-or-admin rule by the
+   * responsible seller alone, active and re-read before any lock.
+   *
    * @param {Order} order
-   * @param {OrderWriteOptions} options
+   * @param {OrderWriteOptions & {responsibleOnly?: boolean}} options
    * @param {string} eventType
-   * @param {(current: {status: string, olistLocked?: boolean}, transaction: Queryable) => Promise<{rows: any[]}>} change
+   * @param {(current: Record<string, any> & {status: string, olistLocked?: boolean}, transaction: Queryable) => Promise<{rows: any[]}>} change
    */
   async #write(order, options, eventType, change) {
     // ADR 027: store orders are locked. Manual attendance orders have their
@@ -1463,6 +1739,10 @@ export class PostgresOrderRepository {
       throw new OrderConflictError('Store orders are locked', 'ORDER_LOCKED');
     }
     return this.#database.transaction(async (transaction) => {
+      if (options.responsibleOnly) {
+        if (options.agentTarget) throw new OrderForbiddenError();
+        await assertActiveSeller(transaction, options.actor);
+      }
       if (options.agentTarget) {
         const completed = await transaction.query(
           `SELECT order_id, subject_id FROM crm.agent_briefing_projections
@@ -1651,12 +1931,20 @@ export class PostgresOrderRepository {
           conversationId,
         );
         if (!conversation) throw new OrderNotFoundError();
-        await assertWriteOwner(
-          transaction,
-          options.actor,
-          conversation,
-          eventType === 'order.briefing_projected',
-        );
+        if (options.responsibleOnly) {
+          assertResponsibleSeller(options.actor, conversation);
+        } else {
+          await assertWriteOwner(
+            transaction,
+            options.actor,
+            conversation,
+            eventType === 'order.briefing_projected',
+          );
+        }
+      } else if (options.responsibleOnly) {
+        assertResponsibleSeller(options.actor, {
+          assigned_user_id: order.manualOwnerId ?? null,
+        });
       } else {
         await assertWriteOwner(
           transaction,
@@ -1719,6 +2007,7 @@ export class PostgresOrderRepository {
         order,
         eventType,
       );
+      await transaction.query(DECLARE_PRICING_RULE);
       const updated = await change(current, transaction);
       const saved = this.#map(updated.rows[0]);
       if (options.agentTarget) {

@@ -83,7 +83,7 @@ if (!url) {
         exportId,
       );
       const upgraded = await migrate(pool, { migrations });
-      assert.deepEqual(upgraded.applied, ['0073', '0074', '0075']);
+      assert.deepEqual(upgraded.applied, ['0073', '0074', '0075', '0076']);
       assert.deepEqual(
         (
           await pool.query(

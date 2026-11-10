@@ -48,6 +48,13 @@ const PUBLIC_CODES = new Set([
   'FILE_TOO_LARGE',
   'FILE_TYPE_NOT_ALLOWED',
   'FORBIDDEN',
+  // ADR 080: the order's freight and the estimate it may come from.
+  'FREIGHT_INVALID',
+  'FREIGHT_OVERFLOW',
+  'FREIGHT_QUOTE_UNAVAILABLE',
+  'INVALID_SHIPPING_SERVICE',
+  'SHIPPING_QUOTE_NOT_FOUND',
+  'SHIPPING_QUOTE_STALE',
   'IDEMPOTENCY_KEY_REUSED',
   'INVALID_AMOUNT',
   'INVALID_GRADE',
@@ -468,6 +475,60 @@ export function registerOrderRoutes(
         paymentCondition: body.paymentCondition,
       });
       return reply.code(200).send({ order });
+    }),
+  );
+
+  /**
+   * ADR 080 (OLC-05h/i): the responsible seller informs the freight of a
+   * pending order, as a value in integer cents or by applying the selected
+   * shipping estimate. The estimate travels as identities only: a price next
+   * to it, or both forms at once, is a malformed request.
+   */
+  api.post('/api/v1/orders/:orderId/freight', async (request, reply) =>
+    respond(reply, async () => {
+      const params = requireObject(request.params);
+      const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, ['expectedVersion', 'freightCents', 'quote']);
+      const expectedVersion = requireVersion(body.expectedVersion);
+      const byValue = Object.hasOwn(body, 'freightCents');
+      const byQuote = Object.hasOwn(body, 'quote');
+      if (byValue === byQuote) {
+        throw new OrderRequestError(400, 'INVALID_REQUEST');
+      }
+      /** @type {{quoteId: string, serviceId: number}|undefined} */
+      let quote;
+      if (byQuote) {
+        const supplied = requireObject(body.quote);
+        rejectUnknownKeys(supplied, ['quoteId', 'serviceId']);
+        if (
+          typeof supplied.quoteId !== 'string' ||
+          !/^[A-Za-z0-9_-]{1,200}$/u.test(supplied.quoteId) ||
+          !Number.isSafeInteger(supplied.serviceId) ||
+          supplied.serviceId < 1
+        ) {
+          throw new OrderRequestError(400, 'INVALID_REQUEST');
+        }
+        quote = { quoteId: supplied.quoteId, serviceId: supplied.serviceId };
+      }
+      const command = await authorizeCommand(
+        request,
+        orders,
+        contextFor,
+        'order.freight',
+      );
+      const order = await orders.setFreight({
+        ...command,
+        expectedVersion,
+        orderId,
+        // The value is judged by the domain: 422 FREIGHT_INVALID or
+        // FREIGHT_OVERFLOW, never rounded.
+        ...(byQuote ? { quote } : { freightCents: body.freightCents }),
+      });
+      return reply
+        .header('cache-control', 'no-store')
+        .code(200)
+        .send({ order });
     }),
   );
 

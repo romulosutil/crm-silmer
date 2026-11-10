@@ -52,6 +52,10 @@ export const OPERATIONAL_ACTIONS = Object.freeze(
     'order.cancel',
     'order.create',
     'order.edit',
+    // ADR 080: the allowlist admits any seller; the orders runtime and the
+    // repository then admit only the order's responsible seller, with no
+    // COMMERCIAL_ADMIN fallback.
+    'order.freight',
     // ADR 008: the paid and delivered days, recorded in either status.
     'order.milestones',
     'order.print',

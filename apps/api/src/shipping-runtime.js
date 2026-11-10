@@ -4,7 +4,10 @@ import {
   createHash,
   randomBytes,
 } from 'node:crypto';
-import { createConversationShippingRuntime } from './conversation-shipping-runtime.js';
+import {
+  createConversationShippingRuntime,
+  createShippingQuoteReader,
+} from './conversation-shipping-runtime.js';
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import { authorize } from '@crm-silmer/identity-access';
 import {
@@ -271,6 +274,21 @@ export function quoteProjection(input) {
     });
   }
   return { services, unavailable };
+}
+
+/**
+ * ADR 080: the estimate reader of the order's freight command, bound to the
+ * same key and provider context as the estimates themselves.
+ *
+ * @param {Record<string,string|undefined>} [environment]
+ */
+export function createFreightQuoteReader(environment = process.env) {
+  const config = configuration(environment);
+  return createShippingQuoteReader({
+    configured: config.configured,
+    contextKey: config.contextKey,
+    key: config.key,
+  });
 }
 
 /** @param {any} database @param {{access:any,environment?:Record<string,string|undefined>,clock?:()=>Date,fetch?:any,timeoutMs?:number}} options */

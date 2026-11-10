@@ -7,6 +7,7 @@ import {
   assertOlistExistingBuyerSource,
   olistBuyerRegistrationEmpty,
   olistBuyerRegistrationIncomplete,
+  olistNewSendBuyerBlocked,
 } from '../modules/olist/src/existing-buyer.js';
 
 const completeRegistration = {
@@ -83,22 +84,14 @@ test('existing ERP buyer captures only name/phone plus account-bound private has
     );
   assert.equal(reads, 2);
 });
-test('ADR 081: an empty or partial CRM registration triggers lookup; malformed or complete ones do not', async () => {
+test('ADR 082: only an entirely empty registration reaches the administrative ERP lookup; partial, malformed or complete never do', async () => {
   for (const registration of [
     null,
     undefined,
     {},
     { personType: null, legalName: ' ' },
-  ])
-    assert.equal(olistBuyerRegistrationEmpty(registration), true);
-  for (const registration of [
-    null,
-    {},
-    { personType: 'company' },
-    { instagram: 'synthetic' },
-    { ...completeRegistration, number: ' ' },
-    { ...completeRegistration, personType: 'company' },
   ]) {
+    assert.equal(olistBuyerRegistrationEmpty(registration), true);
     assert.equal(olistBuyerRegistrationIncomplete(registration), true);
     const found = await resolveOlistExistingBuyer({
       config,
@@ -114,13 +107,25 @@ test('ADR 081: an empty or partial CRM registration triggers lookup; malformed o
     });
     assert.deepEqual(Object.keys(found.customer).sort(), ['celular', 'nome']);
   }
-  for (const registration of [
-    completeRegistration,
-    { ...completeRegistration, personType: 'company', stateRegistration: 'X' },
-    [],
-    '',
-  ]) {
-    assert.equal(olistBuyerRegistrationIncomplete(registration), false);
+  for (const [registration, incomplete] of /** @type {[any, boolean][]} */ ([
+    [{ personType: 'company' }, true],
+    [{ instagram: 'synthetic' }, true],
+    [{ ...completeRegistration, number: ' ' }, true],
+    [{ ...completeRegistration, personType: 'company' }, true],
+    [completeRegistration, false],
+    [
+      {
+        ...completeRegistration,
+        personType: 'company',
+        stateRegistration: 'X',
+      },
+      false,
+    ],
+    [[], false],
+    ['', false],
+  ])) {
+    assert.equal(olistBuyerRegistrationEmpty(registration), false);
+    assert.equal(olistBuyerRegistrationIncomplete(registration), incomplete);
     await assert.rejects(
       resolveOlistExistingBuyer({
         config,
@@ -130,6 +135,45 @@ test('ADR 081: an empty or partial CRM registration triggers lookup; malformed o
       error('OLIST_CUSTOMER_DIVERGENT'),
     );
   }
+});
+test('ADR 082: a frozen new-send snapshot is blocked by an ERP reference or by any incomplete fiscal customer', () => {
+  const customer = {
+    tipoPessoa: 'F',
+    cpfCnpj: completeRegistration.document,
+    nome: completeRegistration.legalName,
+    celular: buyer.phone,
+    situacao: 'B',
+    endereco: {
+      cep: completeRegistration.postalCode,
+      municipio: completeRegistration.city,
+      uf: completeRegistration.state,
+      endereco: completeRegistration.street,
+      bairro: completeRegistration.district,
+      numero: completeRegistration.number,
+    },
+  };
+  assert.equal(olistNewSendBuyerBlocked({ customer }), false);
+  assert.equal(
+    olistNewSendBuyerBlocked({ customer, buyerSource: null }),
+    false,
+  );
+  const captured = captureOlistExistingBuyer({
+    config,
+    buyer,
+    contact: { id: 101, nome: buyer.name, celular: buyer.phone, situacao: 'A' },
+  });
+  for (const snapshot of [
+    captured,
+    { customer, buyerSource: captured.buyerSource },
+    { customer: captured.customer },
+    { customer: { ...customer, cpfCnpj: '11111111111' } },
+    { customer: { ...customer, endereco: { ...customer.endereco, cep: '' } } },
+    { customer: { ...customer, tipoPessoa: 'J' } },
+    { customer: null },
+    {},
+    null,
+  ])
+    assert.equal(olistNewSendBuyerBlocked(snapshot), true);
 });
 test('ERP reuse accepts documented active states only and exact normalized name and phone', () => {
   for (const situacao of ['A', 'B'])

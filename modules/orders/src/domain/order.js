@@ -1,4 +1,5 @@
 import { sizePricingSummary } from './size-pricing-composition.js';
+import { orderFreightCents, orderTotalCents } from './freight.js';
 import {
   OrderConflictError,
   OrderInputError,
@@ -60,9 +61,19 @@ const orderDateFormat = new Intl.DateTimeFormat('en-CA', {
  *   reopenedAt: string|null, reopenedBy: string|null,
  *   firstContactAt: string|null, paidOn: string|null, deliveredOn: string|null,
  *   paymentReviewRequired?: boolean,
+ *   freightCents?: number, freightSource?: 'seller'|'quote'|null,
+ *   freightQuoteId?: string|null, freightQuoteServiceId?: number|null,
+ *   freightQuotedCents?: number|null, freightSetBy?: string|null,
+ *   freightSetAt?: string|null,
+ *   pricingRule?: 'pieces-v1'|'pieces-freight-v1',
+ *   commercialRevision?: number,
  *   createdByKind: 'automation'|'user', createdBy: string|null,
  *   version: number, createdAt: string, updatedAt: string,
  * }} Order
+ *
+ * ADR 080: what the amount of an order priced by size needs besides its
+ * ficha. A draft that is not stored yet has neither.
+ * @typedef {{freightCents?: number, origin?: 'atendimento'|'loja'}} FreightBasis
  */
 
 /**
@@ -222,6 +233,7 @@ function isCalendarDay(value) {
  * stay as the seller leaves them. Confirmation and settlement are separate;
  * the paid day never blocks confirmation. OLIST-T21 additionally requires
  * complete reviewed size subtotals; no caller-supplied total is authoritative.
+ * ADR 080: the amount is those subtotals plus the order's freight.
  *
  * @param {{ficha: {items: readonly Record<string, any>[], summary: Record<string, unknown>, artwork?: Record<string, unknown>}}} order
  * @param {unknown} amountCents
@@ -260,7 +272,7 @@ function confirmationBlockers(order, amountCents, paymentCondition) {
  * PFI-09: what still keeps a pending order from being generated. A
  * confirmed order lacks nothing.
  *
- * @param {Pick<Order, 'status'|'ficha'|'finalAmountCents'|'paymentCondition'|'legacySizePricing'>} order
+ * @param {Pick<Order, 'status'|'ficha'|'finalAmountCents'|'paymentCondition'|'legacySizePricing'> & FreightBasis} order
  * @returns {string[]}
  */
 export function missingForConfirmation(order) {
@@ -276,7 +288,18 @@ function pricingFicha(order) {
     : order.ficha;
 }
 
-/** @param {Pick<Order, 'ficha'|'finalAmountCents'|'legacySizePricing'>} order @param {unknown} condition */
+/**
+ * ADR 080: pieces + freight for an order priced by size. A legacy
+ * composition has no freight and must equal the stored total.
+ *
+ * @param {Pick<Order, 'ficha'> & FreightBasis} order
+ * @param {number|null} piecesCents
+ */
+function totalWithFreight(order, piecesCents) {
+  return orderTotalCents(piecesCents, orderFreightCents(order));
+}
+
+/** @param {Pick<Order, 'ficha'|'finalAmountCents'|'legacySizePricing'> & FreightBasis} order @param {unknown} condition */
 function pricingConfirmationBlockers(order, condition) {
   const ficha = pricingFicha(order);
   const pricing =
@@ -295,7 +318,7 @@ function pricingConfirmationBlockers(order, condition) {
   }
   const fields = confirmationBlockers(
     order,
-    pricing?.totalCents ?? null,
+    pricing ? totalWithFreight(order, pricing.totalCents) : null,
     condition,
   );
   if (!pricing) fields.push('sizePricing');
@@ -324,12 +347,14 @@ export function confirmOrder(order, input) {
       blockers,
     );
   }
+  // ADR 080: the frozen total is pieces + the freight the seller informed;
+  // confirming never changes that freight.
   const amountCents = /** @type {number} */ (
-    sizePricingSummary(pricingFicha(order)).totalCents
+    totalWithFreight(order, sizePricingSummary(pricingFicha(order)).totalCents)
   );
   if (input.amountCents !== undefined && input.amountCents !== amountCents) {
     throw new OrderValidationError(
-      'O valor declarado difere da soma dos subtotais.',
+      'O valor declarado difere da soma dos subtotais com o frete.',
       'SIZE_PRICING_AMOUNT_MISMATCH',
       ['finalAmount'],
     );

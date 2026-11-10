@@ -241,7 +241,7 @@ else
     const frozenStore = async (id) =>
       (
         await pool.query(
-          "SELECT to_jsonb(orders)-'version'-'updated_at' AS row FROM crm.orders WHERE id=$1",
+          "SELECT to_jsonb(orders)-'version'-'commercial_revision'-'updated_at' AS row FROM crm.orders WHERE id=$1",
           [id],
         )
       ).rows[0].row;

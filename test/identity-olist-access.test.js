@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {
+  assertOlistOrderCommercialRead,
+  assertOlistPilotActor,
+} from '../modules/olist/src/access.js';
 import Fastify from 'fastify';
 import { registerIdentityRoutes } from '../apps/api/src/identity-routes.js';
 import { createIdentityApiRuntime } from '../apps/api/src/identity-runtime.js';
@@ -86,6 +90,65 @@ test('OLIST-T19: checkbox is independent of role and never grants commercial or 
       }
     }
   }
+});
+
+test('OLC-02: a new send needs the checkbox, the commercial read of the Order and the private pilot; Admin never inherits it', () => {
+  const seller = {
+    id: 'seller',
+    kind: /** @type {const} */ ('human'),
+    functionName: /** @type {const} */ ('Vendedor'),
+    capabilities: /** @type {Array<'COMMERCIAL_ADMIN'>} */ ([]),
+    olistEnabled: true,
+  };
+  const admin = {
+    ...seller,
+    id: 'admin',
+    capabilities: /** @type {Array<'COMMERCIAL_ADMIN'>} */ ([
+      'COMMERCIAL_ADMIN',
+    ]),
+  };
+  const finance = {
+    ...seller,
+    id: 'finance',
+    functionName: /** @type {const} */ ('Financeiro'),
+  };
+  /** The three independent gates of a new send, in the order the API applies.
+   * @param {any} actor @param {readonly string[]} pilot */
+  const send = (actor, pilot) => {
+    assertOlistPilotActor(pilot, { actor });
+    authorize(actor, 'olist.export');
+    assertOlistOrderCommercialRead(actor);
+  };
+  const pilot = ['seller', 'admin', 'finance'];
+  assert.doesNotThrow(() => send(seller, pilot));
+  assert.doesNotThrow(() => send(admin, pilot));
+  const forbidden = { code: 'FORBIDDEN', statusCode: 403 };
+  // Enabled and in the pilot, but without the commercial read of the Order.
+  assert.doesNotThrow(() => authorize(finance, 'olist.export'));
+  assert.throws(() => assertOlistOrderCommercialRead(finance), forbidden);
+  assert.throws(() => send(finance, pilot), forbidden);
+  // Admin and seller without the checkbox: commercial read alone is not enough.
+  for (const actor of [admin, seller]) {
+    assert.doesNotThrow(() =>
+      assertOlistOrderCommercialRead({ ...actor, olistEnabled: false }),
+    );
+    assert.throws(
+      () => send({ ...actor, olistEnabled: false }, pilot),
+      forbidden,
+    );
+  }
+  // Outside the private pilot, including the deny-all empty list.
+  assert.throws(() => send(seller, ['admin']), forbidden);
+  assert.throws(() => send(admin, []), forbidden);
+  // Disabled humans and assistants never pass the commercial read.
+  for (const patch of [
+    { disabledAt: '2026-11-10T12:00:00Z' },
+    { kind: /** @type {const} */ ('assistant') },
+  ])
+    assert.throws(
+      () => assertOlistOrderCommercialRead({ ...seller, ...patch }),
+      forbidden,
+    );
 });
 
 async function domainHarness() {

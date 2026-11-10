@@ -64,6 +64,156 @@ function decrypt(row, key) {
   }
 }
 
+/**
+ * ADR 054, unchanged: an estimate is current only while it was not replaced,
+ * belongs to the configured provider context and was calculated for the
+ * order version that is current now.
+ *
+ * @param {any} row @param {{providerContext?: unknown}} payload
+ * @param {string|undefined} contextKey @param {unknown} currentOrderVersion
+ */
+export function shippingQuoteStale(
+  row,
+  payload,
+  contextKey,
+  currentOrderVersion,
+) {
+  return (
+    Boolean(row.superseded_at) ||
+    payload.providerContext !== contextKey ||
+    Number(currentOrderVersion) !== Number(row.order_version)
+  );
+}
+
+/** @param {any} payload @param {unknown} serviceId @returns {number|null} */
+function servicePriceCents(payload, serviceId) {
+  const service = Array.isArray(payload?.services)
+    ? payload.services.find(
+        (/** @type {any} */ candidate) => candidate?.id === serviceId,
+      )
+    : undefined;
+  const price = service?.priceCents;
+  return Number.isSafeInteger(price) && price >= 0 ? price : null;
+}
+
+/**
+ * ADR 080 (OLC-05h): the read side the order's freight command uses inside
+ * its own transaction, where the order row is already locked (quoting and
+ * selecting lock that same row, so the estimate cannot move meanwhile). The
+ * browser sends identities only; the price always comes from the persisted,
+ * authenticated envelope. Nothing here writes an estimate or changes how one
+ * is quoted, selected or presented.
+ *
+ * @param {{key: Buffer, contextKey?: string, configured: boolean}} options
+ */
+export function createShippingQuoteReader(options) {
+  const { key, contextKey } = options;
+  const reader = Object.freeze({
+    /**
+     * The price of the selected service of a current estimate of this order.
+     *
+     * @param {any} client
+     * @param {{orderId: string, quoteId: string, serviceId: number, orderVersion: number}} input
+     * @returns {Promise<{priceCents: number}>}
+     */
+    async resolve(client, input) {
+      // Without the provider configuration there is no estimate to trust;
+      // informing a value still works.
+      if (!options.configured)
+        throw new ConversationShippingError(409, 'FREIGHT_QUOTE_UNAVAILABLE');
+      const { rows } = await client.query(
+        'SELECT * FROM crm.shipping_quotes WHERE id=$1',
+        [identifier(input.quoteId)],
+      );
+      const row = rows[0];
+      // Another order's estimate answers like a missing one.
+      if (!row || row.order_id !== input.orderId)
+        throw new ConversationShippingError(404, 'SHIPPING_QUOTE_NOT_FOUND');
+      const payload = decrypt(row, key);
+      if (shippingQuoteStale(row, payload, contextKey, input.orderVersion))
+        throw new ConversationShippingError(409, 'SHIPPING_QUOTE_STALE');
+      const priceCents =
+        row.selected_service_id === input.serviceId
+          ? servicePriceCents(payload, input.serviceId)
+          : null;
+      if (priceCents === null)
+        throw new ConversationShippingError(422, 'INVALID_SHIPPING_SERVICE');
+      return { priceCents };
+    },
+    /**
+     * The order's currently selected, current estimate, or null. Best
+     * effort: an unreadable envelope is "none", never an error.
+     *
+     * @param {any} client @param {{orderId: string, orderVersion: number}} input
+     * @returns {Promise<{quoteId: string, serviceId: number, priceCents: number}|null>}
+     */
+    async selected(client, input) {
+      if (!options.configured) return null;
+      const { rows } = await client.query(
+        `SELECT * FROM crm.shipping_quotes
+         WHERE order_id=$1 AND selected_service_id IS NOT NULL
+           AND superseded_at IS NULL
+         ORDER BY selected_at DESC,id DESC LIMIT 1`,
+        [input.orderId],
+      );
+      const row = rows[0];
+      if (!row) return null;
+      try {
+        const payload = decrypt(row, key);
+        if (shippingQuoteStale(row, payload, contextKey, input.orderVersion))
+          return null;
+        const priceCents = servicePriceCents(payload, row.selected_service_id);
+        return priceCents === null
+          ? null
+          : {
+              priceCents,
+              quoteId: row.id,
+              serviceId: Number(row.selected_service_id),
+            };
+      } catch {
+        return null;
+      }
+    },
+    /**
+     * A warning for the pending order's screen, never a block (ADR 080
+     * item 6, P2): `divergent` when the selected current estimate prices
+     * differently from the stored freight; `stale` when the estimate the
+     * freight came from was replaced or the order changed after it was
+     * applied (applying moves the order one version past the estimate).
+     *
+     * @param {any} client
+     * @param {{orderId: string, orderVersion: number, freightCents: number, source: string|null, quoteId: string|null}} input
+     * @returns {Promise<'stale'|'divergent'|null>}
+     */
+    async notice(client, input) {
+      if (!options.configured) return null;
+      const current = await reader.selected(client, input);
+      if (current && current.priceCents !== input.freightCents)
+        return 'divergent';
+      if (input.source !== 'quote' || !input.quoteId) return null;
+      const { rows } = await client.query(
+        'SELECT * FROM crm.shipping_quotes WHERE id=$1',
+        [input.quoteId],
+      );
+      const row = rows[0];
+      if (!row) return 'stale';
+      try {
+        return shippingQuoteStale(
+          row,
+          decrypt(row, key),
+          contextKey,
+          input.orderVersion - 1,
+        )
+          ? 'stale'
+          : null;
+      } catch {
+        return 'stale';
+      }
+    },
+  });
+  return reader;
+}
+
 /** @param {any} client @param {any} supplied @param {string} action */
 async function actorFor(client, supplied, action) {
   if (supplied?.kind !== 'human')
@@ -175,10 +325,12 @@ export function createConversationShippingRuntime(database, options) {
         : null,
       createdAt: new Date(row.created_at).toISOString(),
       createdBy: { id: row.created_by, name: row.creator_name },
-      stale:
-        Boolean(row.superseded_at) ||
-        providerContext !== options.contextKey ||
-        Number(row.current_order_version) !== Number(row.order_version),
+      stale: shippingQuoteStale(
+        row,
+        { providerContext },
+        options.contextKey,
+        row.current_order_version,
+      ),
     };
   }
 

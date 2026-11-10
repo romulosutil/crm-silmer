@@ -14,7 +14,7 @@ import {
 } from '@crm-silmer/contacts';
 import {
   OLIST_BUYER_REQUIRED_REGISTRATION,
-  olistBuyerRegistrationIncomplete,
+  olistBuyerRegistrationEmpty,
 } from '@crm-silmer/olist';
 
 const REQUIRED_SETTINGS = [
@@ -47,21 +47,18 @@ function calendarDay(value) {
 }
 
 /**
- * ADR 081: an optional CRM registration is never a pending item. The fields go
- * only when another issue remains, so the preview can never turn eligible here.
- * @param {{code:string,field:string}[]} issues @param {any} buyer
+ * ADR 082: the registration pendencies of a new send alone, one per field,
+ * for the acceptance re-check of the CURRENT buyer. Every other change of the
+ * buyer keeps its own receipt fence (`OLIST_PREVIEW_STALE`).
+ * @param {any} buyer @returns {{code:string,field:string}[]}
  */
-export function withoutOptionalBuyerIssues(issues, buyer) {
-  if (!olistBuyerRegistrationIncomplete(buyer?.registration)) return issues;
-  const blocking = issues.filter(
-    (entry) =>
-      !(
-        ['OLIST_BUYER_REQUIRED', 'OLIST_BUYER_INVALID'].includes(entry.code) &&
-        (entry.field.startsWith('buyer.registration.') ||
-          entry.field === 'buyer.email')
-      ),
-  );
-  return blocking.length ? blocking : issues;
+export function olistBuyerRegistrationIssues(buyer) {
+  return buildOlistPreviewPlan({
+    source: { order: null, sourceRevision: 0, issues: [] },
+    buyer,
+    settings: null,
+    now: new Date(0),
+  }).issues.filter((entry) => entry.field.startsWith('buyer.registration.'));
 }
 
 /**
@@ -71,9 +68,14 @@ export function withoutOptionalBuyerIssues(issues, buyer) {
  * service notes, artwork, attachments or caller-supplied total leaves here.
  * The caller fences the source, buyer, configuration and account revisions.
  *
+ * ADR 082: a new send requires the complete and valid buyer registration, one
+ * issue per field; name/phone or an ERP reference never replace it. Only the
+ * administrative historical link (ADR 072/073) sets `historicalLink` and may
+ * then carry an `erp-existing-v1` reference for an entirely empty registration.
+ *
  * @param {{source:{order:any,sourceRevision:number,issues:{code:string,field:string}[]},
  * buyer:{name:string,phone:string|null,email?:string|null,registration:any}|null,
- * settings:any,now:Date,paymentDueOn?:unknown,buyerSource?:any}} input
+ * settings:any,now:Date,paymentDueOn?:unknown,buyerSource?:any,historicalLink?:boolean}} input
  * @returns {{eligible:boolean,issues:{code:string,field:string}[],commercial:any,customer:any,productFiscal?:any,productFiscalDeferred?:boolean,buyerSource?:any}}
  */
 export function buildOlistPreviewPlan(input) {
@@ -138,8 +140,9 @@ export function buildOlistPreviewPlan(input) {
   const buyer = input.buyer;
   const source = input.buyerSource;
   const existingBuyer =
+    input.historicalLink === true &&
     source?.mode === 'erp-existing-v1' &&
-    olistBuyerRegistrationIncomplete(buyer?.registration) &&
+    olistBuyerRegistrationEmpty(buyer?.registration) &&
     typeof source.remoteId === 'string' &&
     /^[1-9][0-9]{0,15}$/u.test(source.remoteId) &&
     Number.isSafeInteger(Number(source.remoteId)) &&

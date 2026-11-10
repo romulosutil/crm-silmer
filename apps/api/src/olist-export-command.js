@@ -5,6 +5,7 @@ import {
 import {
   createOlistRepository,
   assertOlistPilotActor,
+  assertOlistOrderCommercialRead,
   lockOlistActor,
   identityHash,
   OlistError,
@@ -120,6 +121,8 @@ export function createOlistExportCommand(
               'olist.export',
               clock(),
             );
+            // OLC-02: checkbox plus the existing commercial read of the Order.
+            assertOlistOrderCommercialRead(actor);
             // Orders mutations lock conversation before order. Prelock it here
             // so snapshot reads never invert that order or upgrade a shared lock.
             const order = (

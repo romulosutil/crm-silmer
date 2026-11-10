@@ -55,6 +55,7 @@ export async function assertOlistCommercialWrite(
   }
   if (
     candidate.finalAmountCents !== current.finalAmountCents ||
+    (candidate.freightCents ?? 0) !== (current.freightCents ?? 0) ||
     candidate.paymentCondition !== current.paymentCondition ||
     candidate.totalPieces !== current.totalPieces ||
     !isDeepStrictEqual(

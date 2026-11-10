@@ -156,6 +156,8 @@ function details(source, override = {}) {
 function commercialSnapshot(order) {
   const copy = structuredClone(order);
   delete copy.version;
+  // ADR 080: a counter like the version; the enrichment moves both.
+  delete copy.commercialRevision;
   delete copy.updatedAt;
   return copy;
 }

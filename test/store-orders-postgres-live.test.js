@@ -119,6 +119,46 @@ if (connectionString) {
     const row = (
       await pool.query('SELECT * FROM crm.orders WHERE id = $1', [order.id])
     ).rows[0];
+    // ADR 080 item 9 (OLC-05d): the store order's total is the price paid,
+    // with freight zero under the pieces-only rule, and no writer can give
+    // it freight; the checkout is untouched.
+    assert.equal(order.freightCents, 0);
+    assert.equal(order.freightSource, null);
+    assert.equal(order.pricingRule, 'pieces-v1');
+    assert.equal(row.freight_cents, '0');
+    assert.equal(row.freight_source, null);
+    assert.equal(row.pricing_rule, 'pieces-v1');
+    assert.equal(row.commercial_revision, 1);
+    assert.equal(Number(row.final_amount_cents), 18000);
+    assert.equal(Number(row.paid_amount_cents), 18000);
+    await assert.rejects(
+      repository.saveFreight(order, {
+        actor: { capabilities: [], id: 'seller-store', kind: 'human' },
+        correlationId: 'correlation-store-freight',
+        expectedVersion: order.version,
+        freight: { cents: 1500, source: 'seller' },
+      }),
+      { code: 'ORDER_LOCKED', statusCode: 409 },
+    );
+    await assert.rejects(
+      pool.query(
+        `UPDATE crm.orders SET freight_cents = 1500, freight_source = 'seller',
+           freight_set_by = confirmed_by, freight_set_at = now(),
+           pricing_rule = 'pieces-freight-v1'
+         WHERE id = $1`,
+        [order.id],
+      ),
+      { code: '23514' },
+    );
+    assert.equal(
+      (
+        await pool.query(
+          'SELECT count(*)::integer AS total FROM crm.order_freight_events WHERE order_id = $1',
+          [order.id],
+        )
+      ).rows[0].total,
+      0,
+    );
     const receipt = (
       await pool.query(
         'SELECT * FROM crm.store_order_receipts WHERE order_id = $1',

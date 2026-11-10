@@ -112,6 +112,17 @@ export { AUDIENCES, parseAudiences } from './domain/audiences.js';
 export { parseSizes } from './domain/sizes.js';
 export { formatBrlAmount, parseBrlAmount } from './domain/money.js';
 export {
+  FREIGHT_PRICING_RULE,
+  FREIGHT_SOURCES,
+  MAX_FREIGHT_CENTS,
+  PRICING_RULES,
+  orderAmounts,
+  orderFreightCents,
+  orderTotalCents,
+  parseFreightCents,
+  readFreightCommand,
+} from './domain/freight.js';
+export {
   ORDER_STATUSES,
   PAYMENT_CONDITIONS,
   SUMMARY_PERIODS,

@@ -725,6 +725,8 @@ export function createOlistRepository(database, options) {
         'OLIST_EXACT_CENT_READBACK_MISMATCH',
         'OLIST_EXPORT_UNAVAILABLE',
         'OLIST_PAYMENT_DUE_REQUIRED',
+        // ADR 082: a pre-effect stop for an incomplete buyer registration.
+        'OLIST_CUSTOMER_INVALID',
         'OLIST_SALE_PLAN_INVALID',
         'OLIST_SALE_EXACT_CENT_REQUIRED',
         'OLIST_SALE_ALREADY_EXISTS',

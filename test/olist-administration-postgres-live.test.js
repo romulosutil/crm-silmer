@@ -111,6 +111,8 @@ else
         const actors = {};
         for (const [role, functionName, enabled, admin] of [
           ['owner', 'Vendedor', false, false],
+          // OLC-02: only a seller with the checkbox previews a new send.
+          ['seller', 'Vendedor', true, false],
           ['finance', 'Financeiro', true, false],
           ['admin', 'Vendedor', false, true],
         ]) {
@@ -1104,7 +1106,7 @@ else
           const active = f.runtimeFor(database, {
             environment: {
               ...environment,
-              OLIST_PILOT_USER_IDS: f.actors.finance.actor.id,
+              OLIST_PILOT_USER_IDS: f.actors.seller.actor.id,
             },
           });
           const recovered = await active.recovery({
@@ -1132,7 +1134,7 @@ else
           assert.equal(view.operation.state, 'legacy_review_required');
           assert.equal(view.creationEnabled, false);
           await assert.rejects(
-            active.preview({ ...f.actors.finance, orderId: f.orderId }),
+            active.preview({ ...f.actors.seller, orderId: f.orderId }),
             { code: 'OLIST_LEGACY_REVIEW_REQUIRED' },
           );
           for (const query of [

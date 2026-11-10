@@ -10,7 +10,12 @@ import {
 } from '../modules/database/src/index.js';
 import { encryptJson } from '../modules/orders/src/adapters/envelope.js';
 import { PostgresOrderRepository } from '../modules/orders/src/adapters/postgres-order-repository.js';
-import { reopenOrder } from '../modules/orders/src/domain/order.js';
+import {
+  confirmOrder,
+  reopenOrder,
+} from '../modules/orders/src/domain/order.js';
+import { syntheticItems } from './fixtures/order-items.js';
+import { fixturePricing } from './fixtures/size-pricing.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 const KEY = Buffer.alloc(32, 91);
@@ -799,5 +804,175 @@ if (!connectionString) {
       await reserve(runtime, opaque);
       await payment(runtime, opaque, { transactionNsu });
     }
+  });
+  // OLC-T01 / ADR 080 item 10 (OLC-05i/j): no new billing rule. The charge,
+  // the plan and the settlement read the final amount, which includes the
+  // freight; a reopened order whose freight changes meets the protections a
+  // changed subtotal already meets.
+  test('OLC-05j: a charged and settled order with freight is reviewed when it is reopened and reconfirmed with another freight', async () => {
+    const orderId = await seed(pool, { amount: 8000, status: 'pendente' });
+    const repository = new PostgresOrderRepository({
+      database: databaseFor(pool),
+      envelopeKey: KEY,
+    });
+    // A complete ficha priced by size: pieces 80,00.
+    await pool.query(
+      'UPDATE crm.orders SET ficha_envelope=$2::jsonb,total_pieces=32 WHERE id=$1',
+      [
+        orderId,
+        JSON.stringify(
+          encryptJson(
+            fixturePricing(
+              {
+                artwork: {
+                  feito_pela_silmer: false,
+                  feito_pelo_cliente: true,
+                  files: [],
+                  sem_estampa: false,
+                },
+                items: syntheticItems(),
+                observations: [],
+                serviceData: {},
+                summary: {
+                  aplicacao: null,
+                  cliente: 'Cliente sintético',
+                  data_entrega_confirmada: '2026-12-01',
+                  nome: null,
+                },
+              },
+              8000,
+            ),
+            `order-ficha:${orderId}`,
+            KEY,
+          ),
+        ),
+      ],
+    );
+    /** @param {number} cents */
+    const inform = async (cents) => {
+      const order = await repository.findById(orderId);
+      assert.ok(order);
+      return repository.saveFreight(
+        { ...order, updatedAt: current.toISOString() },
+        {
+          actor: SELLER,
+          correlationId: randomUUID(),
+          expectedVersion: order.version,
+          freight: { cents, source: 'seller' },
+        },
+      );
+    };
+    const confirm = async () => {
+      const order = await repository.findById(orderId);
+      assert.ok(order);
+      return repository.saveStatus(
+        confirmOrder(order, {
+          actorId: SELLER.id,
+          now: current,
+          paymentCondition: 'pix',
+        }),
+        {
+          actor: SELLER,
+          correlationId: randomUUID(),
+          expectedVersion: order.version,
+        },
+      );
+    };
+    const row = async () =>
+      (
+        await pool.query(
+          'SELECT status,final_amount_cents,freight_cents,paid_on,finance_payment_review_required FROM crm.orders WHERE id=$1',
+          [orderId],
+        )
+      ).rows[0];
+
+    assert.equal((await inform(2000)).finalAmountCents, 10000);
+    assert.equal((await confirm()).finalAmountCents, 10000);
+
+    // The charge is the single total, freight included, and it settles.
+    const c = await charge(runtime, orderId);
+    assert.equal(c.amountCents, 10000);
+    await reserve(runtime, c);
+    await payment(runtime, c);
+    const settled = (await runtime.get({ actor: SELLER, orderId })).billing;
+    assert.equal(settled.receivedAmountCents, 10000);
+    assert.equal(settled.balanceAmountCents, 0);
+    assert.ok((await row()).paid_on);
+
+    // Reopened: the agreement changed, so the plan goes to review and the
+    // settlement is no longer proof, with the freight and total kept.
+    const confirmed = await repository.findById(orderId);
+    assert.ok(confirmed);
+    await repository.saveStatus(
+      reopenOrder(confirmed, { actorId: SELLER.id, now: current }),
+      {
+        actor: SELLER,
+        correlationId: randomUUID(),
+        expectedVersion: confirmed.version,
+      },
+    );
+    let state = await row();
+    assert.equal(state.status, 'pendente');
+    assert.equal(Number(state.freight_cents), 2000);
+    assert.equal(Number(state.final_amount_cents), 10000);
+    assert.equal(state.paid_on, null);
+    assert.equal(state.finance_payment_review_required, true);
+
+    // The seller changes the freight and the order is generated again: the
+    // new total is pieces + the new freight and the money already received
+    // is not silently applied to it.
+    assert.equal((await inform(3000)).finalAmountCents, 11000);
+    assert.equal((await confirm()).finalAmountCents, 11000);
+    state = await row();
+    assert.equal(state.status, 'confirmado');
+    assert.equal(Number(state.final_amount_cents), 11000);
+    assert.equal(Number(state.freight_cents), 3000);
+    assert.equal(state.paid_on, null);
+    let billing = (await runtime.get({ actor: SELLER, orderId })).billing;
+    assert.equal(billing.reviewRequired, true);
+    assert.equal(billing.receivedAmountCents, 0);
+    assert.deepEqual(
+      (
+        await pool.query(
+          'SELECT p.application_valid FROM crm.order_billing_payments p WHERE p.charge_id=$1',
+          [c.id],
+        )
+      ).rows,
+      [{ application_valid: false }],
+    );
+    await assert.rejects(runtime.issue(await command(runtime, orderId)), {
+      code: 'BILLING_REVIEW_REQUIRED',
+    });
+    // The explicit, audited reconciliation reuses the money: the balance is
+    // exactly the freight difference.
+    billing = (
+      await runtime.reconcile(
+        await command(runtime, orderId, {
+          decision: 'apply_current',
+          confirmedProviderReview: true,
+        }),
+      )
+    ).billing;
+    assert.equal(billing.reviewRequired, false);
+    assert.equal(billing.receivedAmountCents, 10000);
+    assert.equal(billing.balanceAmountCents, 1000);
+    assert.equal((await row()).paid_on, null);
+
+    // A billing write on an order with freight is not a commercial write:
+    // the rollback guard of migration 0076 lets it through.
+    assert.deepEqual(
+      (
+        await pool.query(
+          'SELECT kind,freight_cents::integer,total_cents::integer FROM crm.order_freight_events WHERE order_id=$1 ORDER BY order_version',
+          [orderId],
+        )
+      ).rows,
+      [
+        { freight_cents: 2000, kind: 'set', total_cents: 10000 },
+        { freight_cents: 2000, kind: 'confirmed', total_cents: 10000 },
+        { freight_cents: 3000, kind: 'set', total_cents: 11000 },
+        { freight_cents: 3000, kind: 'confirmed', total_cents: 11000 },
+      ],
+    );
   });
 }

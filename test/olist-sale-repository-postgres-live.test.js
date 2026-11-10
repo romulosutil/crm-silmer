@@ -209,6 +209,12 @@ else
           snapshot.productFiscalDeferred = true;
         }
       }
+      // ADR 081 shape without any ERP reference: name and phone only.
+      if (behavior.minimalCustomer)
+        snapshot.customer = {
+          nome: snapshot.customer.nome,
+          celular: snapshot.customer.celular,
+        };
       const repo = repoFor();
       const operation = await repo.prepareExport({
         ...base,
@@ -530,40 +536,57 @@ else
         },
       );
       await t.test(
-        'real dispatcher reuses ERP buyer and defers product fiscal without POSTcustomer; changed buyer blocks sale reservation',
+        'ADR 082 real dispatcher: an operation queued before the fix with an ERP buyer or an incomplete registration stops with no ERP call and keeps what already exists',
         async () => {
-          for (const changed of [false, true]) {
-            const f = await fixture({
-                fresh: true,
-                existingBuyer: true,
-                deferredFiscal: true,
-              }),
-              contact = f.erpBuyer;
-            const remote = remoteFor(f, {
-              existingBuyer: contact,
-              ...(changed
-                ? {
-                    afterProduct: (/** @type {Map<number,any>} */ contacts) => {
-                      contacts.get(101).situacao = 'I';
-                    },
-                  }
-                : {}),
+          const exportRow = async (/** @type {string} */ id) =>
+            (
+              await pool.query(
+                'SELECT state,stage,last_error_code,remote_id,observed_sale_id FROM crm.olist_exports WHERE id=$1',
+                [id],
+              )
+            ).rows[0];
+          const resources = async (/** @type {string} */ id) =>
+            (
+              await pool.query(
+                'SELECT r.kind,r.state,r.remote_id FROM crm.olist_export_resources x JOIN crm.olist_resources r ON r.id=x.resource_id AND r.account_key=x.account_key WHERE x.export_id=$1 ORDER BY r.kind,r.remote_id',
+                [id],
+              )
+            ).rows;
+          // 1. Nothing started: neither a binding nor a remote call.
+          // 2. Products and variations already confirmed for this operation:
+          //    they are kept as they are and nothing else is created.
+          for (const behavior of [
+            { fresh: true, existingBuyer: true, deferredFiscal: true },
+            { existingBuyer: true },
+          ]) {
+            const f = await fixture(behavior);
+            const before = await resources(f.input.exportId);
+            assert.equal(before.length, behavior.fresh ? 0 : 3);
+            const remote = remoteFor(f, { existingBuyer: f.erpBuyer });
+            for (let attempt = 0; attempt < 2; attempt++) {
+              const result = await remote.dispatcher.dispatch(f.input);
+              assert.deepEqual(result, {
+                outcome: 'failed',
+                errorCode: 'OLIST_CUSTOMER_INVALID',
+                retryable: false,
+                retrySafe: false,
+              });
+            }
+            assert.deepEqual(remote.writes, []);
+            assert.deepEqual(remote.reads, []);
+            assert.equal(await attemptCount(f.input.exportId), 0);
+            assert.deepEqual(await resources(f.input.exportId), before);
+            assert.deepEqual(await exportRow(f.input.exportId), {
+              state: 'queued',
+              stage: 'customer',
+              last_error_code: 'OLIST_CUSTOMER_INVALID',
+              remote_id: null,
+              observed_sale_id: null,
             });
-            const result = await remote.dispatcher.dispatch(f.input);
-            assert.deepEqual(
-              remote.writes.map((row) => row.kind),
-              changed ? ['product'] : ['product', 'sale'],
-            );
-            assert.equal(await attemptCount(f.input.exportId), changed ? 0 : 1);
-            assert.ok(
-              remote.writes
-                .filter((row) => row.kind === 'product')
-                .every(
-                  (row) =>
-                    !Object.hasOwn(row.payload, 'ncm') &&
-                    !Object.hasOwn(row.payload, 'origem') &&
-                    !Object.hasOwn(row.payload, 'unidade'),
-                ),
+            // Visible to the existing administrative recovery: no open effect.
+            assert.equal(
+              await f.repo.assertRetrySafe({ ...f.input, accountKey }),
+              true,
             );
             assert.equal(
               (
@@ -574,10 +597,72 @@ else
               ).rows[0].n,
               0,
             );
-            assert.equal(result.outcome, changed ? 'outcome_unknown' : 'sent');
-            if (changed)
-              assert.equal(result.errorCode, 'OLIST_CUSTOMER_DIVERGENT');
           }
+          // 3. An incomplete fiscal customer frozen without any ERP reference.
+          const partial = await fixture({ fresh: true, minimalCustomer: true });
+          const partialRemote = remoteFor(partial);
+          assert.deepEqual(
+            await partialRemote.dispatcher.dispatch(partial.input),
+            {
+              outcome: 'failed',
+              errorCode: 'OLIST_CUSTOMER_INVALID',
+              retryable: false,
+              retrySafe: false,
+            },
+          );
+          assert.deepEqual(partialRemote.writes, []);
+          assert.deepEqual(partialRemote.reads, []);
+          // 4. A resource effect already reserved for this operation: it is
+          //    neither deleted nor repeated, and nothing new is created.
+          const pending = await fixture({ fresh: true, existingBuyer: true });
+          const parent = await pending.repo.bindResource({
+            ...pending.input,
+            kind: 'product',
+            identity: ATTR,
+            payload: {
+              attributes: ATTR,
+              fiscal: { ncm: '61091000', origin: 0, unit: 'UN' },
+            },
+          });
+          const child = await pending.repo.bindResource({
+            ...pending.input,
+            kind: 'variation',
+            parentId: parent.id,
+            identity: 'M',
+            payload: { size: 'M' },
+          });
+          await pending.repo.reserveResourceEffect({
+            ...pending.input,
+            resourceId: parent.id,
+            expectedVersion: 0,
+            dependentResourceIds: [child.id],
+            requestPayload: { synthetic: true },
+          });
+          const openBefore = await resources(pending.input.exportId);
+          assert.deepEqual(
+            openBefore.map((row) => row.state),
+            ['reserved', 'reserved'],
+          );
+          const openRemote = remoteFor(pending, {
+            existingBuyer: pending.erpBuyer,
+          });
+          const stopped = await openRemote.dispatcher.dispatch(pending.input);
+          assert.deepEqual(stopped, {
+            outcome: 'outcome_unknown',
+            errorCode: 'OLIST_RESOURCE_RECONCILIATION_REQUIRED',
+            retryable: false,
+            retrySafe: false,
+          });
+          assert.deepEqual(openRemote.writes, []);
+          assert.deepEqual(openRemote.reads, []);
+          assert.deepEqual(await resources(pending.input.exportId), openBefore);
+          assert.equal(await attemptCount(pending.input.exportId), 0);
+          assert.equal(
+            (await exportRow(pending.input.exportId)).last_error_code,
+            'OLIST_RESOURCE_RECONCILIATION_REQUIRED',
+          );
+          // The complete fiscal snapshot is unaffected: the real dispatcher
+          // tests below still create the customer, products and the sale.
         },
       );
       await t.test(

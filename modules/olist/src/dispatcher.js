@@ -1,6 +1,9 @@
 import { OlistError } from './errors.js';
 import { buildOlistSalePayload, reconcileOlistSale } from './sale-payload.js';
-import { verifyOlistExistingBuyer } from './existing-buyer.js';
+import {
+  olistNewSendBuyerBlocked,
+  verifyOlistExistingBuyer,
+} from './existing-buyer.js';
 
 const STOP = new Set([
   'OLIST_LEGACY_REVIEW_REQUIRED',
@@ -205,6 +208,30 @@ export function createOlistDispatcher({
             proof,
           });
           return result('sent', undefined, String(id));
+        }
+        // ADR 082: a frozen snapshot accepted under ADR 072/081 (ERP buyer by
+        // name/phone, or an incomplete registration) creates nothing more. No
+        // sale attempt exists here (handled above). When nothing of this
+        // operation can have left the process it is a plain terminal refusal,
+        // visible to the administrative invalidation. Otherwise a resource
+        // effect is open: it is neither deleted nor repeated, and only the
+        // existing administrative reconciliation may settle it.
+        if (olistNewSendBuyerBlocked(operation.snapshot)) {
+          const untouched = await retrySafe(operation);
+          const code = untouched
+            ? 'OLIST_CUSTOMER_INVALID'
+            : 'OLIST_RESOURCE_RECONCILIATION_REQUIRED';
+          let stored = code;
+          try {
+            await repository.recordDispatchStop({ ...base, code });
+          } catch {
+            stored = 'OLIST_PERSISTENCE_FAILED';
+          }
+          return result(
+            untouched && stored === code ? 'failed' : 'outcome_unknown',
+            stored,
+            undefined,
+          );
         }
         // Renew an expired access token first: the local guard below requires
         // `expires_at > now` and would otherwise end the job as a terminal

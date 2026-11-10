@@ -33,6 +33,9 @@ const readHeaders = Object.freeze({
 });
 
 const ORDER_KEYS = [
+  // ADR 080: pieces, freight and total, and the freight's origin.
+  'amounts',
+  'freight',
   'cancelledAt',
   'cancelledBy',
   'cancellationReason',
@@ -2455,4 +2458,231 @@ test('OLIST-T23 Financeiro habilitado Olist cannot cancel and inactive humans st
       ),
     { code: 'FORBIDDEN' },
   );
+});
+
+// ---------------------------------------------------------------- ADR 080
+
+test('POST /orders/:id/freight informs the freight through order.freight and answers the Order contract', async (t) => {
+  const { api, guards, runtime } = orderHarness();
+  t.after(() => api.close());
+  const ready = await createReady(runtime, 'conversation-1');
+  const response = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'freight-1' },
+    method: 'POST',
+    payload: { expectedVersion: ready.version, freightCents: 3750 },
+    url: `/api/v1/orders/${ready.id}/freight`,
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.headers['cache-control'], 'no-store');
+  assert.deepEqual(Object.keys(response.json()), ['order']);
+  const { order } = response.json();
+  assert.deepEqual(Object.keys(order).sort(), orderKeys(order));
+  assert.equal(guards.at(-1)?.method, 'authorizeWrite');
+  assert.equal(guards.at(-1)?.input.action, 'order.freight');
+  assert.equal(guards.at(-1)?.input.csrfToken, 'csrf-synthetic');
+  assert.equal(order.version, ready.version + 1);
+  assert.equal(order.finalAmountCents, 482000 + 3750);
+  assert.deepEqual(order.amounts, {
+    freightCents: 3750,
+    piecesCents: 482000,
+    totalCents: 485750,
+  });
+  assert.deepEqual(order.freight, {
+    cents: 3750,
+    pricingRule: 'pieces-freight-v1',
+    quoteId: null,
+    quoteNotice: null,
+    quotedCents: null,
+    serviceId: null,
+    setAt: order.updatedAt,
+    setBy: { id: 'seller-1', name: 'Vendedora Um' },
+    source: 'seller',
+  });
+
+  // The same key and body replay; another body under that key is refused.
+  const replay = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'freight-1' },
+    method: 'POST',
+    payload: { expectedVersion: ready.version, freightCents: 3750 },
+    url: `/api/v1/orders/${ready.id}/freight`,
+  });
+  assert.deepEqual(replay.json(), response.json());
+  const reused = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'freight-1' },
+    method: 'POST',
+    payload: { expectedVersion: ready.version, freightCents: 3751 },
+    url: `/api/v1/orders/${ready.id}/freight`,
+  });
+  assert.equal(reused.statusCode, 409);
+  assert.deepEqual(reused.json(), {
+    error: { code: 'IDEMPOTENCY_KEY_REUSED' },
+  });
+  const stale = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'freight-stale' },
+    method: 'POST',
+    payload: { expectedVersion: ready.version, freightCents: 100 },
+    url: `/api/v1/orders/${ready.id}/freight`,
+  });
+  assert.equal(stale.statusCode, 409);
+  assert.deepEqual(stale.json(), { error: { code: 'VERSION_CONFLICT' } });
+
+  // The confirmation then refuses the pieces alone and freezes the total.
+  const mismatch = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'freight-confirm-1' },
+    method: 'POST',
+    payload: {
+      amountText: '4.820,00',
+      expectedVersion: order.version,
+      paymentCondition: 'pix',
+    },
+    url: `/api/v1/orders/${ready.id}/confirm`,
+  });
+  assert.equal(mismatch.statusCode, 422);
+  assert.deepEqual(mismatch.json(), {
+    error: { code: 'SIZE_PRICING_AMOUNT_MISMATCH', fields: ['finalAmount'] },
+  });
+  const confirmed = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'freight-confirm-2' },
+    method: 'POST',
+    payload: {
+      amountText: '4.857,50',
+      expectedVersion: order.version,
+      paymentCondition: 'pix',
+    },
+    url: `/api/v1/orders/${ready.id}/confirm`,
+  });
+  assert.equal(confirmed.statusCode, 200);
+  assert.equal(confirmed.json().order.finalAmountCents, 485750);
+  const frozen = await api.inject({
+    headers: { ...writeHeaders, 'idempotency-key': 'freight-frozen' },
+    method: 'POST',
+    payload: {
+      expectedVersion: confirmed.json().order.version,
+      freightCents: 0,
+    },
+    url: `/api/v1/orders/${ready.id}/freight`,
+  });
+  assert.equal(frozen.statusCode, 409);
+  assert.deepEqual(frozen.json(), {
+    error: { code: 'ORDER_STATUS_CONFLICT' },
+  });
+
+  // OLC-05j: the ficha does not show the freight.
+  const print = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: `/api/v1/orders/${ready.id}/print`,
+  });
+  assert.equal(print.statusCode, 200);
+  assert.doesNotMatch(print.body, /frete/iu);
+  assert.doesNotMatch(print.body, /37,50/u);
+});
+
+test('POST /orders/:id/freight refuses malformed bodies, a browser price and invalid cents', async (t) => {
+  const { api, repository, runtime } = orderHarness();
+  t.after(() => api.close());
+  const ready = await createReady(runtime, 'conversation-1');
+  let key = 0;
+  const post = (/** @type {unknown} */ payload) =>
+    api.inject({
+      headers: {
+        ...writeHeaders,
+        'idempotency-key': `freight-bad-${(key += 1)}`,
+      },
+      method: 'POST',
+      payload: /** @type {any} */ (payload),
+      url: `/api/v1/orders/${ready.id}/freight`,
+    });
+  const quote = { quoteId: 'quote-synthetic', serviceId: 2 };
+  for (const payload of [
+    { expectedVersion: ready.version },
+    { freightCents: 100 },
+    { expectedVersion: 0, freightCents: 100 },
+    { expectedVersion: ready.version, freightCents: 100, quote },
+    { expectedVersion: ready.version, freightCents: 100, amountCents: 100 },
+    // The browser never sends an estimate price, in any spelling.
+    { expectedVersion: ready.version, quote: { ...quote, priceCents: 2590 } },
+    { expectedVersion: ready.version, quote: { ...quote, price: '25.90' } },
+    { expectedVersion: ready.version, quote, priceCents: 2590 },
+    { expectedVersion: ready.version, quote, quotedCents: 2590 },
+    { expectedVersion: ready.version, quote: { quoteId: 'quote-synthetic' } },
+    { expectedVersion: ready.version, quote: { ...quote, serviceId: '2' } },
+    { expectedVersion: ready.version, quote: { ...quote, serviceId: 0 } },
+    { expectedVersion: ready.version, quote: { ...quote, quoteId: 'a b' } },
+    { expectedVersion: ready.version, quote: null },
+    { expectedVersion: ready.version, quote: [] },
+  ]) {
+    const response = await post(payload);
+    assert.equal(response.statusCode, 400, JSON.stringify(payload));
+    assert.match(response.json().error.code, /^INVALID_/u);
+  }
+  for (const [freightCents, code] of /** @type {[unknown, string][]} */ ([
+    [-1, 'FREIGHT_INVALID'],
+    [37.5, 'FREIGHT_INVALID'],
+    ['3750', 'FREIGHT_INVALID'],
+    ['37,50', 'FREIGHT_INVALID'],
+    [null, 'FREIGHT_INVALID'],
+    [true, 'FREIGHT_INVALID'],
+    [9007199254740992, 'FREIGHT_OVERFLOW'],
+    [1e21, 'FREIGHT_OVERFLOW'],
+  ])) {
+    const response = await post({
+      expectedVersion: ready.version,
+      freightCents,
+    });
+    assert.equal(response.statusCode, 422, String(freightCents));
+    assert.deepEqual(response.json(), {
+      error: { code, fields: ['freightCents'] },
+    });
+  }
+  // This harness has no shipping configuration: applying fails safely.
+  const unavailable = await post({ expectedVersion: ready.version, quote });
+  assert.equal(unavailable.statusCode, 409);
+  assert.deepEqual(unavailable.json(), {
+    error: { code: 'FREIGHT_QUOTE_UNAVAILABLE' },
+  });
+  const stored = await repository.findById(ready.id);
+  assert.equal(stored?.version, ready.version);
+  assert.equal(stored?.freightCents, 0);
+});
+
+test('POST /orders/:id/freight denies an admin who is not the responsible seller', async (t) => {
+  const admin = Object.freeze({
+    ...SELLER,
+    capabilities: ['COMMERCIAL_ADMIN'],
+    id: 'admin-1',
+  });
+  const { api, assignments, repository, runtime } = orderHarness({
+    writeActor: admin,
+  });
+  t.after(() => api.close());
+  const ready = await createReady(runtime, 'conversation-1');
+  const post = (/** @type {string} */ key, /** @type {number} */ version) =>
+    api.inject({
+      headers: { ...writeHeaders, 'idempotency-key': key },
+      method: 'POST',
+      payload: { expectedVersion: version, freightCents: 3750 },
+      url: `/api/v1/orders/${ready.id}/freight`,
+    });
+  const denied = await post('freight-admin-1', ready.version);
+  assert.equal(denied.statusCode, 403);
+  assert.deepEqual(denied.json(), { error: { code: 'FORBIDDEN' } });
+  assert.equal((await repository.findById(ready.id))?.freightCents, 0);
+  // The same admin still confirms nothing here but edits by the current rule.
+  const edited = await runtime.patchSection(
+    seed({
+      actor: admin,
+      expectedVersion: ready.version,
+      orderId: ready.id,
+      section: 'observations',
+      value: ['Conferir arte'],
+    }),
+  );
+  assert.equal(edited.version, ready.version + 1);
+  // As the responsible seller the admin informs it.
+  assignments['conversation-1'] = 'admin-1';
+  const allowed = await post('freight-admin-2', edited.version);
+  assert.equal(allowed.statusCode, 200);
+  assert.equal(allowed.json().order.freight.cents, 3750);
+  assert.equal(allowed.json().order.freight.setBy.id, 'admin-1');
 });

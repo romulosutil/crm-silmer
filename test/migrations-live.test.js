@@ -548,3 +548,383 @@ if (connectionString) {
     }
   });
 }
+
+if (connectionString) {
+  // OLC-T01 / ADR 080 (OLC-05d, item 14): synthetic rows only.
+  test('PostgreSQL live: 0076 adds the order freight without touching existing orders and guards a code rollback', async () => {
+    assert.equal(
+      new URL(connectionString).pathname.slice(1),
+      'crm_silmer_test',
+    );
+    const pool = new Pool({ connectionString, max: 2 });
+    const migrations = (await loadMigrations()).filter(
+      ({ version }) => version <= '0076',
+    );
+    const at = new Date('2026-11-01T14:00:00.000Z');
+    const NEW_COLUMNS = [
+      'freight_cents',
+      'freight_source',
+      'freight_quote_id',
+      'freight_quote_service_id',
+      'freight_quoted_cents',
+      'freight_set_by',
+      'freight_set_at',
+      'pricing_rule',
+      'commercial_revision',
+    ];
+    const snapshot = async () =>
+      (
+        await pool.query(
+          `SELECT to_jsonb(orders) - $1::text[] AS row FROM crm.orders ORDER BY id`,
+          [NEW_COLUMNS],
+        )
+      ).rows.map((row) => row.row);
+    /**
+     * A statement the database must refuse by this constraint.
+     *
+     * @param {string} sql @param {string} constraint @param {unknown[]} [values]
+     */
+    const refused = (sql, constraint, values = []) =>
+      assert.rejects(
+        pool.query(sql, values),
+        (/** @type {any} */ error) => {
+          assert.equal(error.code, '23514', `${sql}: ${error.message}`);
+          assert.equal(error.constraint, constraint, sql);
+          return true;
+        },
+        sql,
+      );
+    /**
+     * The same statement as the freight-aware writer runs it: with the
+     * calculation rule declared in its transaction.
+     *
+     * @param {string} sql @param {unknown[]} [values]
+     */
+    async function aware(sql, values = []) {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query(
+          "SELECT set_config('crm.order_pricing_rule','pieces-freight-v1',true)",
+        );
+        const result = await client.query(sql, values);
+        await client.query('COMMIT');
+        return result;
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    }
+    try {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await migrate(pool, {
+        migrations: migrations.filter(({ version }) => version < '0076'),
+      });
+      await seedLiveConversation(pool, 'freight-old', 1, at);
+      await seedLiveConversation(pool, 'freight-other', 2, at);
+      await seedLiveConversation(pool, 'freight-legacy', 3, at);
+      await pool.query(`INSERT INTO crm.users (id, email, password_hash, name)
+        VALUES ('freight-seller', 'freight-seller@example.test', '$argon2id$synthetic', 'Vendedor Sintetico')`);
+      // A populated previous schema: a pending draft, a confirmed order with
+      // its frozen total and settlement, and an untouched second draft.
+      await pool.query(
+        `INSERT INTO crm.orders
+           (id, number_sequence, number, conversation_id, contact_id, status,
+            fab_code, ficha_envelope, total_pieces, created_by_kind, created_at,
+            updated_at, version)
+         VALUES ('freight-pending', 1, '01-CRM', 'freight-old',
+                 'contact-freight-old', 'pendente', '01',
+                 '{"snapshot":"pending"}'::jsonb, 4, 'automation', $1, $1, 3),
+                ('freight-plain', 3, '03-CRM', 'freight-other',
+                 'contact-freight-other', 'pendente', '01',
+                 '{"snapshot":"plain"}'::jsonb, 2, 'automation', $1, $1, 1)`,
+        [at],
+      );
+      await pool.query(
+        `INSERT INTO crm.orders
+           (id, number_sequence, number, conversation_id, contact_id, status,
+            fab_code, ficha_envelope, total_pieces, final_amount_cents,
+            payment_condition, order_date, confirmed_at, confirmed_by, paid_on,
+            created_by_kind, created_at, updated_at, version)
+         VALUES ('freight-confirmed', 2, '02-CRM', 'freight-legacy',
+                 'contact-freight-legacy', 'confirmado', '01',
+                 '{"snapshot":"confirmed"}'::jsonb, 10, 50000, 'pix',
+                 '2026-11-01', $1, 'freight-seller', '2026-11-01',
+                 'automation', $1, $1, 7)`,
+        [at],
+      );
+      const before = await snapshot();
+
+      assert.deepEqual(await migrate(pool, { migrations }), {
+        applied: ['0076'],
+        phase: 'expand',
+      });
+      // Nothing an existing order had moved: total, ficha, settlement,
+      // version and updated_at included. No freight was inferred.
+      assert.deepEqual(await snapshot(), before);
+      const added = await pool.query(
+        `SELECT id, freight_cents, freight_source, freight_quote_id,
+                freight_quote_service_id, freight_quoted_cents, freight_set_by,
+                freight_set_at, pricing_rule, commercial_revision
+         FROM crm.orders ORDER BY id`,
+      );
+      assert.deepEqual(
+        added.rows,
+        ['freight-confirmed', 'freight-pending', 'freight-plain'].map((id) => ({
+          commercial_revision: 1,
+          freight_cents: '0',
+          freight_quote_id: null,
+          freight_quote_service_id: null,
+          freight_quoted_cents: null,
+          freight_set_at: null,
+          freight_set_by: null,
+          freight_source: null,
+          id,
+          pricing_rule: 'pieces-v1',
+        })),
+      );
+      assert.equal(
+        (
+          await pool.query(
+            'SELECT count(*)::integer AS total FROM crm.order_freight_events',
+          )
+        ).rows[0].total,
+        0,
+      );
+      assert.deepEqual(await migrate(pool, { migrations }), {
+        applied: [],
+        phase: 'expand',
+      });
+
+      // Without freight, a writer from before this migration behaves as it
+      // always did: nothing is blocked.
+      await pool.query(
+        `UPDATE crm.orders SET final_amount_cents = 12000, version = version + 1
+         WHERE id = 'freight-plain'`,
+      );
+      await pool.query(
+        `UPDATE crm.orders SET final_amount_cents = NULL, version = version + 1
+         WHERE id = 'freight-plain'`,
+      );
+
+      // Constraints of the datum.
+      const SET = `freight_source = 'seller', freight_set_by = 'freight-seller',
+        freight_set_at = now(), pricing_rule = 'pieces-freight-v1'`;
+      await assert.rejects(
+        aware(
+          `UPDATE crm.orders SET freight_cents = -1, ${SET} WHERE id = 'freight-pending'`,
+        ),
+        { code: '23514', constraint: 'orders_freight_cents_bounds' },
+      );
+      await assert.rejects(
+        aware(
+          `UPDATE crm.orders SET freight_cents = 9007199254740992, ${SET} WHERE id = 'freight-pending'`,
+        ),
+        { code: '23514', constraint: 'orders_freight_cents_bounds' },
+      );
+      await assert.rejects(
+        aware(
+          `UPDATE crm.orders SET freight_cents = 100 WHERE id = 'freight-pending'`,
+        ),
+        { code: '23514' },
+      );
+      await assert.rejects(
+        aware(
+          `UPDATE crm.orders SET freight_cents = 100, freight_source = 'seller',
+             freight_set_by = 'freight-seller', freight_set_at = now()
+           WHERE id = 'freight-pending'`,
+        ),
+        { code: '23514', constraint: 'orders_freight_needs_rule' },
+      );
+      await assert.rejects(
+        aware(
+          `UPDATE crm.orders SET freight_cents = 100, freight_source = 'quote',
+             freight_quote_id = 'quote-synthetic', freight_quote_service_id = 1,
+             freight_quoted_cents = 99, freight_set_by = 'freight-seller',
+             freight_set_at = now(), pricing_rule = 'pieces-freight-v1'
+           WHERE id = 'freight-pending'`,
+        ),
+        { code: '23514', constraint: 'orders_freight_origin_coherent' },
+      );
+      await assert.rejects(
+        aware(
+          `UPDATE crm.orders SET freight_cents = 100, freight_source = 'other',
+             freight_set_by = 'freight-seller', freight_set_at = now(),
+             pricing_rule = 'pieces-freight-v1'
+           WHERE id = 'freight-pending'`,
+        ),
+        { code: '23514' },
+      );
+      await assert.rejects(
+        aware(
+          `UPDATE crm.orders SET pricing_rule = 'pieces-v2' WHERE id = 'freight-pending'`,
+        ),
+        { code: '23514', constraint: 'orders_pricing_rule' },
+      );
+
+      // A writer that does not declare the rule cannot give an order freight.
+      await refused(
+        `UPDATE crm.orders SET freight_cents = 3750, ${SET} WHERE id = 'freight-pending'`,
+        'order_freight_rule_required',
+      );
+      // The freight-aware writer can: pieces 20000 + freight 3750.
+      await aware(
+        `UPDATE crm.orders SET freight_cents = 3750, ${SET},
+           final_amount_cents = 23750, version = version + 1
+         WHERE id = 'freight-pending'`,
+      );
+
+      // Rollback guard: code from before this delivery would recalculate the
+      // total without the freight, or confirm it. Each is refused, closed.
+      await refused(
+        `UPDATE crm.orders SET final_amount_cents = 20000, version = version + 1
+         WHERE id = 'freight-pending'`,
+        'order_freight_rule_required',
+      );
+      await refused(
+        `UPDATE crm.orders SET final_amount_cents = NULL WHERE id = 'freight-pending'`,
+        'order_freight_rule_required',
+      );
+      await refused(
+        `UPDATE crm.orders SET freight_cents = 0, freight_source = NULL,
+           freight_set_by = NULL, freight_set_at = NULL
+         WHERE id = 'freight-pending'`,
+        'order_freight_rule_required',
+      );
+      await refused(
+        `UPDATE crm.orders SET status = 'confirmado', payment_condition = 'pix',
+           order_date = '2026-11-02', confirmed_at = $1,
+           confirmed_by = 'freight-seller', version = version + 1
+         WHERE id = 'freight-pending'`,
+        'order_freight_rule_required',
+        [at],
+      );
+      assert.deepEqual(
+        (
+          await pool.query(
+            `SELECT status, final_amount_cents, freight_cents FROM crm.orders
+             WHERE id = 'freight-pending'`,
+          )
+        ).rows,
+        [
+          {
+            final_amount_cents: '23750',
+            freight_cents: '3750',
+            status: 'pendente',
+          },
+        ],
+      );
+      // What does not touch total, status or freight still passes for that
+      // older code: days of the trail, the ficha, the version, a review flag.
+      await pool.query(
+        `UPDATE crm.orders SET paid_on = '2026-11-02', delivered_on = '2026-11-02',
+           ficha_envelope = '{"snapshot":"edited"}'::jsonb,
+           finance_payment_review_required = false,
+           version = version + 1, updated_at = $1
+         WHERE id = 'freight-pending'`,
+        [at],
+      );
+
+      // The freight-aware writer confirms it, and then the freight is frozen
+      // for every writer, aware or not, until the order is pending again.
+      await aware(
+        `UPDATE crm.orders SET status = 'confirmado', payment_condition = 'pix',
+           order_date = '2026-11-02', confirmed_at = $1,
+           confirmed_by = 'freight-seller', version = version + 1
+         WHERE id = 'freight-pending'`,
+        [at],
+      );
+      await assert.rejects(
+        aware(
+          `UPDATE crm.orders SET freight_cents = 100, freight_quoted_cents = NULL
+           WHERE id = 'freight-pending'`,
+        ),
+        { code: '23514', constraint: 'order_freight_frozen' },
+      );
+      await assert.rejects(
+        aware(
+          `UPDATE crm.orders SET status = 'pendente', freight_cents = 0
+           WHERE id = 'freight-pending'`,
+        ),
+        { code: '23514', constraint: 'order_freight_frozen' },
+      );
+      // Older code cannot reopen it either; milestones still pass.
+      await refused(
+        `UPDATE crm.orders SET status = 'pendente', reopened_at = $1,
+           reopened_by = 'freight-seller' WHERE id = 'freight-pending'`,
+        'order_freight_rule_required',
+        [at],
+      );
+      await pool.query(
+        `UPDATE crm.orders SET delivered_on = '2026-11-03', version = version + 1
+         WHERE id = 'freight-pending'`,
+      );
+      await aware(
+        `UPDATE crm.orders SET status = 'pendente', reopened_at = $1,
+           reopened_by = 'freight-seller', version = version + 1
+         WHERE id = 'freight-pending'`,
+        [at],
+      );
+      // A confirmed legacy order is untouched by the guard: no freight.
+      await pool.query(
+        `UPDATE crm.orders SET status = 'pendente', reopened_at = $1,
+           reopened_by = 'freight-seller', version = version + 1
+         WHERE id = 'freight-confirmed'`,
+        [at],
+      );
+
+      // The freight history is append-only and carries no free text.
+      await pool.query(
+        `INSERT INTO crm.order_freight_events
+           (id, order_id, order_version, kind, freight_cents,
+            previous_freight_cents, source, actor_id, occurred_at)
+         VALUES ('freight-event-1', 'freight-pending', 4, 'set', 3750, 0,
+                 'seller', 'freight-seller', $1)`,
+        [at],
+      );
+      await assert.rejects(
+        pool.query(
+          "UPDATE crm.order_freight_events SET freight_cents = 1 WHERE id = 'freight-event-1'",
+        ),
+      );
+      await assert.rejects(
+        pool.query(
+          "DELETE FROM crm.order_freight_events WHERE id = 'freight-event-1'",
+        ),
+      );
+      await assert.rejects(
+        pool.query(
+          `INSERT INTO crm.order_freight_events
+             (id, order_id, order_version, kind, pieces_cents, freight_cents,
+              total_cents, actor_id, occurred_at)
+           VALUES ('freight-event-2', 'freight-pending', 5, 'confirmed', 20000,
+                   3750, 20000, 'freight-seller', $1)`,
+          [at],
+        ),
+        { code: '23514', constraint: 'order_freight_events_shape' },
+      );
+      const columns = (
+        await pool.query(
+          `SELECT column_name, data_type FROM information_schema.columns
+           WHERE table_schema = 'crm' AND table_name = 'order_freight_events'
+           ORDER BY column_name`,
+        )
+      ).rows;
+      assert.deepEqual(
+        columns
+          .filter(
+            ({ data_type }) => data_type === 'text' || data_type === 'jsonb',
+          )
+          .map(({ column_name }) => column_name),
+        ['actor_id', 'id', 'kind', 'order_id', 'quote_id', 'source'],
+      );
+    } finally {
+      await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
+      await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
+      await pool.end();
+    }
+  });
+}

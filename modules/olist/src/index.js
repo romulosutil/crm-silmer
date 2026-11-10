@@ -7,7 +7,11 @@ export {
   EMPTY_OLIST_SETTINGS,
   normalizeDocument,
 } from './configuration.js';
-export { lockOlistActor, assertOlistPilotActor } from './access.js';
+export {
+  lockOlistActor,
+  assertOlistPilotActor,
+  assertOlistOrderCommercialRead,
+} from './access.js';
 export { createOlistConnection } from './connection.js';
 export {
   createOlistQuota,
@@ -26,6 +30,7 @@ export {
   olistExistingBuyerDocumentHash,
   olistBuyerRegistrationEmpty,
   olistBuyerRegistrationIncomplete,
+  olistNewSendBuyerBlocked,
   OLIST_BUYER_REQUIRED_REGISTRATION,
 } from './existing-buyer.js';
 export {

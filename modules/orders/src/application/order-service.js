@@ -22,6 +22,12 @@ import {
   applySizePricingCommand,
   sizePricingSummary,
 } from '../domain/size-pricing-composition.js';
+import {
+  orderFreightCents,
+  orderTotalCents,
+  parseFreightCents,
+  readFreightCommand,
+} from '../domain/freight.js';
 import { parseBrlAmount } from '../domain/money.js';
 import {
   confirmOrder,
@@ -57,6 +63,8 @@ import {
  *   },
  *   authorizeOwnership(input: {actor: OrderActor, conversationId: string}): Promise<void>,
  *   authorizeManualOwnership?(input: {actor: OrderActor, ownerId: string}): Promise<void>,
+ *   authorizeResponsibility?(input: {actor: OrderActor, conversationId: string|null, ownerId: string|null}): Promise<void>,
+ *   freightQuotes?: import('../ports/contracts.js').FreightQuotePort,
  *   fabCode: string,
  *   phoneDigestsFor?: (query: string) => string[],
  *   clock?: () => Date,
@@ -107,7 +115,9 @@ const STORE_NUMBER_QUERY = /^#?lj-?([0-9a-f]{8})$/iu;
 /**
  * Keeps the columns the list reads without decrypting in step with the ficha.
  *
- * @template {Pick<Order, 'ficha'|'status'|'finalAmountCents'|'paymentCondition'|'legacySizePricing'>} T
+ * ADR 080: an order priced by size reads pieces + freight as its amount.
+ *
+ * @template {Pick<Order, 'ficha'|'status'|'finalAmountCents'|'paymentCondition'|'legacySizePricing'> & import('../domain/order.js').FreightBasis} T
  * @param {T} order
  * @returns {T & {totalPieces: number, missingFields: string[]}}
  */
@@ -117,7 +127,10 @@ function withDerivedFields(order) {
     finalAmountCents:
       order.ficha.sizePricing === undefined
         ? order.finalAmountCents
-        : sizePricingSummary(order.ficha).totalCents,
+        : orderTotalCents(
+            sizePricingSummary(order.ficha).totalCents,
+            orderFreightCents(order),
+          ),
   };
   return {
     ...next,
@@ -297,14 +310,42 @@ export function createOrderService(options) {
   }
 
   /**
+   * ADR 080 item 3: the freight belongs to the responsible seller alone, the
+   * conversation's current owner or the manual order's owner. There is no
+   * COMMERCIAL_ADMIN fallback here: an admin informs freight only when the
+   * admin is that responsible seller.
+   *
+   * @param {OrderActor} actor @param {Order} order
+   */
+  async function requireResponsible(actor, order) {
+    if (
+      actor?.kind !== 'human' ||
+      typeof actor.id !== 'string' ||
+      actor.id === '' ||
+      typeof options.authorizeResponsibility !== 'function' ||
+      (!order.conversationId && !order.manualOwnerId)
+    ) {
+      throw new OrderForbiddenError(
+        'Only the responsible seller informs the freight',
+      );
+    }
+    await options.authorizeResponsibility({
+      actor,
+      conversationId: order.conversationId,
+      ownerId: order.manualOwnerId ?? null,
+    });
+  }
+
+  /**
    * Resolves and authorizes a human command on an existing order. Ownership
    * is checked before the version so a non-owner learns nothing about it; the
    * early version check keeps a stale screen from seeing a rule error that no
    * longer applies. The repository re-checks the version atomically.
    *
    * @param {{orderId: string, expectedVersion: number, actor: OrderActor, correlationId: string}} input
+   * @param {(actor: OrderActor, order: Order) => Promise<void>} [authorize]
    */
-  async function loadForCommand(input) {
+  async function loadForCommand(input, authorize = requireOwner) {
     const orderId = requireId(input.orderId, 'orderId');
     requireId(input.correlationId, 'correlationId');
     if (!Number.isSafeInteger(input.expectedVersion)) {
@@ -316,7 +357,7 @@ export function createOrderService(options) {
     if (!order) throw new OrderNotFoundError();
     // ADR 027: a store order is locked for everyone, owner or not.
     requireUnlocked(order);
-    await requireOwner(input.actor, order);
+    await authorize(input.actor, order);
     if (order.version !== input.expectedVersion) {
       throw new OrderConflictError(
         `Expected order version ${input.expectedVersion}, current version is ${order.version}`,
@@ -942,6 +983,75 @@ export function createOrderService(options) {
             actor: input.actor,
             correlationId: input.correlationId,
             expectedVersion: order.version,
+          },
+        ),
+      );
+    },
+
+    /**
+     * ADR 080: who may inform the freight of this order now. The runtime
+     * calls it before replaying an idempotent answer too.
+     *
+     * @param {{orderId: string, actor: OrderActor}} input
+     */
+    async assertFreightAccess(input) {
+      const order = await repository.findById(
+        requireId(input.orderId, 'orderId'),
+      );
+      if (!order) throw new OrderNotFoundError();
+      requireUnlocked(order);
+      await requireResponsible(input.actor, order);
+    },
+
+    /**
+     * ADR 080 (OLC-05h/i): the responsible seller informs the freight of a
+     * pending order priced by size, either as a value (`freightCents`, the
+     * seller's own declaration) or by applying the selected shipping estimate
+     * (`quote`: identities only, the server reads the price). The stored
+     * freight is the only source of the total: a later estimate never
+     * changes it. Quantity and subtotal commands never touch it.
+     *
+     * @param {{orderId: string, freightCents?: unknown, quote?: unknown, expectedVersion: number, actor: OrderActor, correlationId: string}} input
+     */
+    async setFreight(input) {
+      const form = readFreightCommand(input);
+      const order = await loadForCommand(input, requireResponsible);
+      if (order.status !== 'pendente') {
+        throw new OrderConflictError(
+          'Only pending orders accept a freight',
+          'ORDER_STATUS_CONFLICT',
+        );
+      }
+      if (order.ficha.sizePricing === undefined) {
+        throw new OrderConflictError(
+          'Only orders priced by size carry a freight',
+          'SIZE_PRICING_NOT_INITIALIZED',
+        );
+      }
+      if (typeof repository.saveFreight !== 'function') {
+        throw new OrderInputError('Freight repository unavailable');
+      }
+      /** @type {import('../ports/contracts.js').FreightCommand} */
+      const freight =
+        'quote' in form
+          ? { ...form.quote, source: 'quote' }
+          : { cents: parseFreightCents(form.freightCents), source: 'seller' };
+      // The total is checked here so an overflow is refused before any write.
+      if (freight.source === 'seller') {
+        orderTotalCents(
+          sizePricingSummary(order.ficha).totalCents,
+          freight.cents,
+        );
+      }
+      return readOne(
+        await repository.saveFreight(
+          { ...order, updatedAt: clock().toISOString() },
+          {
+            actor: input.actor,
+            correlationId: input.correlationId,
+            expectedVersion: order.version,
+            freight,
+            quotes: options.freightQuotes,
           },
         ),
       );

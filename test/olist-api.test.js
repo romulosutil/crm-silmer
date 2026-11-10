@@ -601,25 +601,36 @@ test('OAuth callback inputs reach the runtime without leaking into errors, logs 
   );
 });
 
-test('missing ERP buyer is an actionable bounded refusal without leaking provider details', async (t) => {
+test('ADR 082 an incomplete buyer registration at acceptance is a stable bounded 409 without leaking details', async (t) => {
   const { api, runtime, logs } = fixture({ olistEnabled: true });
   t.after(() => api.close());
-  runtime.preview = async () => {
-    throw Object.assign(new Error('PRIVATE_BUYER_LOOKUP'), {
-      code: 'OLIST_CUSTOMER_NOT_FOUND',
-      statusCode: 422,
-      details: 'PRIVATE_BUYER_LOOKUP',
+  for (const method of ['checkPreview', 'exportOrder'])
+    runtime[method] = async () => {
+      throw Object.assign(new Error('PRIVATE_BUYER_REGISTRATION'), {
+        code: 'OLIST_CUSTOMER_INVALID',
+        statusCode: 409,
+        details: 'PRIVATE_BUYER_REGISTRATION',
+      });
+    };
+  for (const path of ['preview/check', 'export']) {
+    const response = await api.inject({
+      method: 'POST',
+      url: '/api/v1/orders/synthetic-order/olist/' + path,
+      headers,
+      payload: { previewToken: 'encrypted-preview-receipt' },
     });
-  };
-  const response = await api.inject({
-    method: 'POST',
-    url: '/api/v1/orders/synthetic-order/olist/preview',
-    headers,
-    payload: {},
-  });
-  assert.equal(response.statusCode, 422);
-  assert.equal(response.json().code, 'OLIST_CUSTOMER_NOT_FOUND');
-  assert.doesNotMatch(response.body + logs.join(''), /PRIVATE_BUYER_LOOKUP/u);
+    assert.equal(response.statusCode, 409, path);
+    assert.deepEqual(response.json(), {
+      type: 'about:blank',
+      title: 'OLIST_CUSTOMER_INVALID',
+      status: 409,
+      code: 'OLIST_CUSTOMER_INVALID',
+    });
+    assert.doesNotMatch(
+      response.body + logs.join(''),
+      /PRIVATE_BUYER_REGISTRATION|encrypted-preview-receipt/u,
+    );
+  }
 });
 
 test('unexpected Olist runtime exceptions become bounded service errors', async (t) => {
@@ -668,9 +679,36 @@ test('phase two publishes no route to create remote customer, product, variation
   assert.deepEqual(calls, []);
 });
 
+test('OLC-02 new-send routes need the checkbox and the commercial read of the Order: enabled Financeiro and Admin without checkbox are refused', async (t) => {
+  for (const [patch, routeCalls] of /** @type {[any, number][]} */ ([
+    [{ functionName: 'Financeiro', capabilities: [], olistEnabled: true }, 0],
+    [{ olistEnabled: false }, 0],
+    [{ capabilities: [], olistEnabled: true }, 3],
+    [{ olistEnabled: true }, 3],
+  ])) {
+    const f = fixture(patch);
+    t.after(() => f.api.close());
+    for (const [path, payload] of /** @type {[string, any][]} */ ([
+      ['preview', {}],
+      ['preview/check', { previewToken: 'encrypted-preview-receipt' }],
+      ['export', { previewToken: 'encrypted-preview-receipt' }],
+    ])) {
+      const response = await f.api.inject({
+        method: 'POST',
+        url: '/api/v1/orders/order-of-another-owner/olist/' + path,
+        headers,
+        payload,
+      });
+      if (routeCalls === 0) {
+        assert.equal(response.statusCode, 403, path);
+        assert.equal(response.json().code, 'FORBIDDEN');
+      } else assert.ok(response.statusCode < 300, path + response.body);
+    }
+    assert.equal(f.calls.length, routeCalls, JSON.stringify(patch));
+  }
+});
 test('T07 export command forwards only the encrypted preview under current Olist permission and returns 202', async (t) => {
   const { api, calls, authCalls, logs } = fixture({
-    functionName: 'Financeiro',
     capabilities: [],
     olistEnabled: true,
   });

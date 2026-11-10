@@ -577,6 +577,161 @@ export function defineOrderRepositoryContract(name, setup) {
       });
     });
 
+    test('ADR 080: writes the freight of a pending order priced by size and freezes it with the total', async () => {
+      const { repository } = harness;
+      const conversationId = await harness.newConversationId();
+      const created = await repository.createPending(
+        pendingInput(conversationId),
+      );
+      assert.equal(created.freightCents, 0);
+      assert.equal(created.freightSource, null);
+      assert.equal(created.pricingRule, 'pieces-v1');
+      assert.equal(created.commercialRevision, 1);
+      /** @param {any} order @param {Record<string, unknown>} [extra] */
+      const options = (order, extra = {}) => ({
+        actor: CONTRACT_ACTOR,
+        correlationId: `correlation-${randomUUID()}`,
+        expectedVersion: order.version,
+        ...extra,
+      });
+      /** @param {any} order */
+      const touched = (order) => ({
+        ...order,
+        updatedAt: nextNow().toISOString(),
+      });
+      const seller = { freight: { cents: 3750, source: 'seller' } };
+
+      // Only an order priced by size carries a freight.
+      await assert.rejects(
+        repository.saveFreight(touched(created), options(created, seller)),
+        { code: 'SIZE_PRICING_NOT_INITIALIZED', statusCode: 409 },
+      );
+      const priced = await repository.saveSection(
+        touched({ ...created, ficha: fixturePricing(created.ficha, 150000) }),
+        options(created),
+      );
+      assert.equal(priced.finalAmountCents, 150000);
+      assert.equal(priced.commercialRevision, 2);
+
+      await assert.rejects(
+        repository.saveFreight(
+          touched(priced),
+          options(priced, { ...seller, expectedVersion: priced.version - 1 }),
+        ),
+        { code: 'VERSION_CONFLICT', statusCode: 409 },
+      );
+      assert.equal((await repository.findById(created.id)).freightCents, 0);
+
+      const informedAt = touched(priced);
+      const informed = await repository.saveFreight(
+        informedAt,
+        options(priced, seller),
+      );
+      assert.equal(informed.version, priced.version + 1);
+      assert.equal(informed.commercialRevision, 3);
+      assert.equal(informed.freightCents, 3750);
+      assert.equal(informed.finalAmountCents, 153750);
+      assert.equal(informed.freightSource, 'seller');
+      assert.equal(informed.freightSetBy, CONTRACT_ACTOR.id);
+      assert.equal(informed.freightSetAt, informedAt.updatedAt);
+      assert.equal(informed.freightQuoteId, null);
+      assert.equal(informed.freightQuoteServiceId, null);
+      assert.equal(informed.freightQuotedCents, null);
+      assert.equal(informed.pricingRule, 'pieces-freight-v1');
+      assert.equal(informed.status, 'pendente');
+
+      // Another section write recalculates pieces + the stored freight.
+      const edited = await repository.saveSection(
+        touched({
+          ...informed,
+          ficha: { ...informed.ficha, observations: ['Conferir arte'] },
+        }),
+        options(informed),
+      );
+      assert.equal(edited.freightCents, 3750);
+      assert.equal(edited.finalAmountCents, 153750);
+
+      // An estimate travels as identities; the adapter reads its price.
+      const quote = { quoteId: 'quote-contract', serviceId: 2 };
+      await assert.rejects(
+        repository.saveFreight(
+          touched(edited),
+          options(edited, { freight: { ...quote, source: 'quote' } }),
+        ),
+        { code: 'FREIGHT_QUOTE_UNAVAILABLE', statusCode: 409 },
+      );
+      /** @type {any[]} */
+      const asked = [];
+      const applied = await repository.saveFreight(
+        touched(edited),
+        options(edited, {
+          freight: { ...quote, source: 'quote' },
+          quotes: {
+            resolve: async (
+              /** @type {unknown} */ _transaction,
+              /** @type {any} */ input,
+            ) => {
+              asked.push(input);
+              return { priceCents: 2590 };
+            },
+            selected: async () => null,
+          },
+        }),
+      );
+      assert.deepEqual(asked, [
+        { ...quote, orderId: created.id, orderVersion: edited.version },
+      ]);
+      assert.equal(applied.freightCents, 2590);
+      assert.equal(applied.finalAmountCents, 152590);
+      assert.equal(applied.freightSource, 'quote');
+      assert.equal(applied.freightQuoteId, 'quote-contract');
+      assert.equal(applied.freightQuoteServiceId, 2);
+      assert.equal(applied.freightQuotedCents, 2590);
+
+      // Confirming freezes total and freight; then nothing changes it.
+      const confirmed = await repository.saveStatus(
+        confirmOrder(applied, {
+          actorId: CONTRACT_ACTOR.id,
+          now: nextNow(),
+          paymentCondition: 'pix',
+        }),
+        options(applied),
+      );
+      assert.equal(confirmed.status, 'confirmado');
+      assert.equal(confirmed.finalAmountCents, 152590);
+      assert.equal(confirmed.freightCents, 2590);
+      assert.equal(confirmed.freightSource, 'quote');
+      await assert.rejects(
+        repository.saveFreight(touched(confirmed), options(confirmed, seller)),
+        { code: 'ORDER_STATUS_CONFLICT', statusCode: 409 },
+      );
+      // A paid day is not commercially exportable content.
+      const paid = await repository.saveMilestones(
+        touched({ ...confirmed, paidOn: '2026-09-10' }),
+        options(confirmed),
+      );
+      assert.equal(paid.version, confirmed.version + 1);
+      assert.equal(paid.commercialRevision, confirmed.commercialRevision);
+      const reopened = await repository.saveStatus(
+        reopenOrder(paid, { actorId: CONTRACT_ACTOR.id, now: nextNow() }),
+        options(paid),
+      );
+      assert.equal(reopened.freightCents, 2590);
+      assert.equal(reopened.finalAmountCents, 152590);
+      assert.equal(reopened.commercialRevision, paid.commercialRevision + 1);
+
+      const events = await harness.readEvents(created.id);
+      assert.deepEqual(
+        events
+          .filter((event) => event.eventType === 'order.freight_updated')
+          .map((event) => [event.aggregateVersion, event.payload]),
+        [informed, applied].map((order) => [
+          order.version,
+          { conversationId, orderId: created.id },
+        ]),
+      );
+    });
+
     test('appends an identifier-only order event for every write', async () => {
       const { repository } = harness;
       const conversationId = await harness.newConversationId();

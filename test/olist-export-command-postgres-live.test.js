@@ -105,6 +105,9 @@ else
         const actors = {};
         for (const [role, functionName, enabled, admin] of [
           ['owner', 'Vendedor', false, false],
+          // OLC-02: an enabled seller that is not the owner commands the send;
+          // an enabled Financeiro has no commercial read of the Order.
+          ['seller', 'Vendedor', true, false],
           ['finance', 'Financeiro', true, false],
           ['admin', 'Vendedor', false, true],
         ]) {
@@ -451,7 +454,9 @@ else
           createOlistApiRuntime(targetDatabase, {
             environment: {
               ...environment,
-              OLIST_PILOT_USER_IDS: actors.finance.actor.id,
+              OLIST_PILOT_USER_IDS: [actors.seller, actors.finance]
+                .map((entry) => entry.actor.id)
+                .join(','),
             },
             access: {
               authorizeRead: async (/** @type {any} */ input) =>
@@ -464,7 +469,7 @@ else
             ...overrides,
           });
         const runtime = runtimeFor();
-        fixtureActorId = actors.finance.actor.id;
+        fixtureActorId = actors.seller.actor.id;
         return {
           actors,
           runtime,
@@ -477,7 +482,7 @@ else
           setClock: (/** @type {Date} */ value) => {
             current = value;
           },
-          input: { ...actors.finance, orderId },
+          input: { ...actors.seller, orderId },
         };
       }
       async function counts() {
@@ -533,7 +538,7 @@ else
         },
       );
       await t.test(
-        'enabled Financeiro accepts another owner pending order without ERP HTTP or changing the CRM order',
+        'an enabled seller accepts another owner pending order without ERP HTTP or changing the CRM order; an enabled pilot Financeiro is refused',
         async () => {
           const f = await fixture();
           const input = await command(f);
@@ -543,6 +548,19 @@ else
             ])
           ).rows[0];
           const calls = f.calls.length;
+          // OLC-02: checkbox and pilot, but no commercial read of the Order.
+          const totals = await counts();
+          const finance = { ...f.actors.finance, orderId: f.orderId };
+          await assert.rejects(f.runtime.preview(finance), {
+            code: 'FORBIDDEN',
+            statusCode: 403,
+          });
+          await assert.rejects(
+            f.runtime.exportOrder({ ...input, ...finance }),
+            { code: 'FORBIDDEN', statusCode: 403 },
+          );
+          assert.deepEqual(await counts(), totals);
+          assert.equal(f.calls.length, calls);
           const result = await f.runtime.exportOrder(input);
           assert.deepEqual(Object.keys(result).sort(), [
             'creationEnabled',
@@ -970,7 +988,7 @@ else
             },
           );
           const headers = {
-            cookie: 'crm_session=' + f.actors.finance.token,
+            cookie: 'crm_session=' + f.actors.seller.token,
             origin: environment.APP_ORIGIN,
             'x-csrf-token': 'synthetic-csrf',
             'idempotency-key': input.idempotencyKey,

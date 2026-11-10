@@ -4,6 +4,11 @@ import { after, before, test } from 'node:test';
 
 import { Pool } from 'pg';
 
+import {
+  createConversationShippingRuntime,
+  createShippingQuoteReader,
+} from '../apps/api/src/conversation-shipping-runtime.js';
+import { readDashboardPerformance } from '../apps/api/src/dashboard-runtime.js';
 import { createOrderRuntime } from '../apps/api/src/order-runtime.js';
 import { PostgresAuditTrail } from '../modules/audit-privacy/src/index.js';
 import { PostgresIdempotencyRecordStore } from '../modules/integration-reliability/src/index.js';
@@ -147,6 +152,11 @@ if (connectionString) {
       `INSERT INTO crm.users (id, email, password_hash, name)
        VALUES ('seller-contract', 'seller-contract@example.test',
                '$argon2id$synthetic', 'Vendedor Contrato')`,
+    );
+    // ADR 080: the freight write re-reads that its actor is an active Vendedor.
+    await pool.query(
+      `INSERT INTO crm.user_functions (user_id, function_name)
+       VALUES ('seller-contract', 'Vendedor')`,
     );
   });
   after(async () => {
@@ -2053,5 +2063,973 @@ if (connectionString) {
       persisted.finalAmountCents,
       persisted.status === 'confirmado' ? 50000 : 48000,
     );
+  });
+
+  // ------------------------------------------------------------------
+  // OLC-T01 / ADR 080 (OLC-05a-j): the order's freight. Synthetic data.
+  const FREIGHT_KEY = Buffer.alloc(32, 71);
+  const FREIGHT_CONTEXT = 'synthetic-freight-context';
+  const FREIGHT_PACKAGE = Object.freeze({
+    fromPostalCode: '01001000',
+    heightCm: 10,
+    insuranceValueCents: 10000,
+    lengthCm: 20,
+    toPostalCode: '20040020',
+    weightGrams: 800,
+    widthCm: 15,
+  });
+  const PIECES_CENTS = 50000;
+
+  /**
+   * A conversation in human hands owned by a seller, next to another seller
+   * and an admin who is not its responsible; a pending order priced by size
+   * and its subject; the orders runtime with the estimate reader the API
+   * wires; and the conversation shipping runtime with a synthetic provider.
+   */
+  async function freightHarness() {
+    const tag = randomUUID().replaceAll('-', '').slice(0, 10);
+    const database = databaseFor(pool);
+    const seller = {
+      capabilities: [],
+      id: `freight-seller-${tag}`,
+      kind: 'human',
+    };
+    const other = {
+      capabilities: [],
+      id: `freight-other-${tag}`,
+      kind: 'human',
+    };
+    const admin = {
+      capabilities: ['COMMERCIAL_ADMIN'],
+      id: `freight-admin-${tag}`,
+      kind: 'human',
+    };
+    for (const person of [seller, other, admin]) {
+      await pool.query(
+        `INSERT INTO crm.users (id, email, password_hash, name)
+         VALUES ($1, $2, '$argon2id$synthetic', $3)`,
+        [person.id, `${person.id}@example.test`, `Pessoa ${person.id}`],
+      );
+      await pool.query(
+        `INSERT INTO crm.user_functions (user_id, function_name)
+         VALUES ($1, 'Vendedor')`,
+        [person.id],
+      );
+    }
+    await pool.query(
+      `INSERT INTO crm.user_capabilities (user_id, capability, granted_by)
+       VALUES ($1, 'COMMERCIAL_ADMIN', $2)`,
+      [admin.id, seller.id],
+    );
+    const conversationId = await seedConversation(pool);
+    await pool.query(
+      `UPDATE crm.conversations
+       SET assigned_user_id = $2, automation_state = 'human' WHERE id = $1`,
+      [conversationId, seller.id],
+    );
+    const conversationVersion = Number(
+      (
+        await pool.query(
+          'SELECT version FROM crm.conversations WHERE id = $1',
+          [conversationId],
+        )
+      ).rows[0].version,
+    );
+    const quotes = createShippingQuoteReader({
+      configured: true,
+      contextKey: FREIGHT_CONTEXT,
+      key: FREIGHT_KEY,
+    });
+    const runtime = createOrderRuntime({
+      access: {
+        authorizeRead: async () => ({ actor: null }),
+        authorizeWrite: async () => ({ actor: null }),
+      },
+      auditTrail: new PostgresAuditTrail(database),
+      clock: () => NOW,
+      conversations: new PostgresOrderConversationPort({
+        contactEnvelopeKey: CONTACT_KEY,
+        contactLookupKey: Buffer.alloc(32, 66),
+        database,
+        envelopeKey: ENVELOPE_KEY,
+      }),
+      fabCode: '01',
+      freightNoticeDatabase: database,
+      freightQuotes: quotes,
+      idempotencyStore: new PostgresIdempotencyRecordStore({
+        database,
+        envelopeKey: Buffer.alloc(32, 66),
+      }),
+      repository,
+    });
+    const provider = { priceCents: 2590 };
+    const shipping = createConversationShippingRuntime(database, {
+      calculate: async () => ({
+        services: [
+          {
+            company: 'Correios',
+            deliveryDays: 5,
+            id: 1,
+            name: 'PAC',
+            priceCents: provider.priceCents,
+          },
+          {
+            company: 'Correios',
+            deliveryDays: 2,
+            id: 2,
+            name: 'SEDEX',
+            priceCents: provider.priceCents + 2000,
+          },
+        ],
+        unavailable: [],
+      }),
+      clock: () => NOW,
+      contextKey: FREIGHT_CONTEXT,
+      environment: 'sandbox',
+      key: FREIGHT_KEY,
+      requireConfigured: () => {},
+    });
+    let keys = 0;
+    /** @param {any} actor @param {Record<string, unknown>} extra @returns {any} */
+    const command = (actor, extra) => ({
+      actor,
+      correlationId: `correlation-freight-${tag}`,
+      idempotencyKey: `freight-${tag}-${(keys += 1)}`,
+      ...extra,
+    });
+    /** @param {any} [actor] @param {string} [conversation] */
+    async function pricedOrder(actor = seller, conversation = conversationId) {
+      let order = (
+        await runtime.createManual(
+          command(actor, {
+            conversationId: conversation,
+            expectedVersion: conversationVersion,
+          }),
+        )
+      ).order;
+      for (const [section, value] of Object.entries({
+        summary: {
+          aplicacao: null,
+          data_entrega_confirmada: '2026-10-24',
+          nome: null,
+        },
+        items: syntheticItems(),
+        artwork: { feito_pela_silmer: false, feito_pelo_cliente: true },
+      })) {
+        order = await runtime.patchSection(
+          command(actor, {
+            expectedVersion: order.version,
+            orderId: order.id,
+            section,
+            value,
+          }),
+        );
+      }
+      return priceDraft(runtime, order, PIECES_CENTS, actor);
+    }
+    /** @param {any} order */
+    async function subjectFor(order) {
+      const subjectId = `subject-${tag}-${order.id}`;
+      await pool.query(
+        `INSERT INTO crm.conversation_subjects
+           (id, conversation_id, contact_id, order_id, kind, position,
+            created_by, created_by_kind, created_at, updated_at)
+         SELECT $1, conversation_id, contact_id, id, 'pedido',
+                (SELECT count(*) + 1 FROM crm.conversation_subjects
+                 WHERE conversation_id = orders.conversation_id),
+                $2, 'human', $3, $3
+         FROM crm.orders WHERE id = $4`,
+        [subjectId, seller.id, NOW, order.id],
+      );
+      return subjectId;
+    }
+    /** Quotes the order as it is now and selects one service.
+     * @param {any} order @param {string} subjectId @param {number} serviceId */
+    async function selectedQuote(order, subjectId, serviceId) {
+      const target = {
+        orderId: order.id,
+        orderVersion: order.version,
+        subjectId,
+      };
+      const { quote } = await shipping.quote(
+        command(seller, {
+          body: { ...target, ...FREIGHT_PACKAGE },
+          conversationId,
+        }),
+      );
+      await shipping.select(
+        command(seller, {
+          body: { ...target, serviceId },
+          conversationId,
+          quoteId: quote.id,
+        }),
+      );
+      return quote.id;
+    }
+    /** @param {string} orderId */
+    const row = async (orderId) =>
+      (await pool.query('SELECT * FROM crm.orders WHERE id = $1', [orderId]))
+        .rows[0];
+    /** @param {string} orderId */
+    const freightEvents = async (orderId) =>
+      (
+        await pool.query(
+          `SELECT kind, order_version, pieces_cents, freight_cents,
+                  previous_freight_cents, total_cents, source, quote_id,
+                  quote_service_id, quoted_cents, actor_id
+           FROM crm.order_freight_events WHERE order_id = $1
+           ORDER BY order_version, kind`,
+          [orderId],
+        )
+      ).rows.map((event) =>
+        Object.fromEntries(
+          Object.entries(event).map(([key, value]) => [
+            key,
+            typeof value === 'string' && /^\d+$/u.test(value)
+              ? Number(value)
+              : value,
+          ]),
+        ),
+      );
+    return {
+      admin,
+      command,
+      conversationId,
+      freightEvents,
+      other,
+      pricedOrder,
+      provider,
+      row,
+      runtime,
+      selectedQuote,
+      seller,
+      shipping,
+      subjectFor,
+      tag,
+    };
+  }
+
+  test('OLC-05h/i PostgreSQL: only the active responsible seller writes the freight, serialized, idempotent and audited without values', async () => {
+    const h = await freightHarness();
+    const order = await h.pricedOrder();
+    const before = await h.row(order.id);
+    assert.equal(before.freight_cents, '0');
+    assert.equal(before.pricing_rule, 'pieces-v1');
+    assert.equal(Number(before.final_amount_cents), PIECES_CENTS);
+
+    /** @param {any} actor @param {any} current @param {unknown} freightCents */
+    const inform = (actor, current, freightCents) =>
+      h.runtime.setFreight(
+        h.command(actor, {
+          expectedVersion: current.version,
+          freightCents,
+          orderId: current.id,
+        }),
+      );
+    /** The repository alone, as if the service check had been skipped.
+     * @param {any} actor */
+    const write = (actor) =>
+      repository.saveFreight(
+        { ...order, updatedAt: NOW.toISOString() },
+        {
+          actor,
+          correlationId: `correlation-freight-${h.tag}`,
+          expectedVersion: order.version,
+          freight: { cents: 3750, source: 'seller' },
+        },
+      );
+
+    // An admin who is not the responsible seller edits this order by the
+    // current rule, and yet is denied its freight by API and repository.
+    for (const actor of [h.admin, h.other]) {
+      await assert.rejects(inform(actor, order, 3750), {
+        code: 'FORBIDDEN',
+        statusCode: 403,
+      });
+      await assert.rejects(write(actor), {
+        code: 'FORBIDDEN',
+        statusCode: 403,
+      });
+    }
+    for (const actor of [
+      { ...h.seller, kind: 'assistant' },
+      { capabilities: [], id: 'AUTOMATION_EXECUTOR', kind: 'automation' },
+      undefined,
+    ]) {
+      await assert.rejects(write(actor), { code: 'FORBIDDEN' });
+    }
+    // The responsible seller, disabled or no longer a Vendedor, is denied
+    // inside the write even with a still valid session actor.
+    await pool.query('UPDATE crm.users SET disabled_at = $2 WHERE id = $1', [
+      h.seller.id,
+      NOW,
+    ]);
+    await assert.rejects(write(h.seller), { code: 'FORBIDDEN' });
+    await pool.query('UPDATE crm.users SET disabled_at = NULL WHERE id = $1', [
+      h.seller.id,
+    ]);
+    await pool.query(
+      "UPDATE crm.user_functions SET function_name = 'Financeiro' WHERE user_id = $1",
+      [h.seller.id],
+    );
+    await assert.rejects(write(h.seller), { code: 'FORBIDDEN' });
+    await pool.query(
+      "UPDATE crm.user_functions SET function_name = 'Vendedor' WHERE user_id = $1",
+      [h.seller.id],
+    );
+    // Invalid values and a stale version write nothing either.
+    for (const [value, code] of /** @type {[unknown, string][]} */ ([
+      [-1, 'FREIGHT_INVALID'],
+      [0.5, 'FREIGHT_INVALID'],
+      ['3750', 'FREIGHT_INVALID'],
+      [null, 'FREIGHT_INVALID'],
+      [Number.MAX_SAFE_INTEGER + 1, 'FREIGHT_OVERFLOW'],
+      [Number.MAX_SAFE_INTEGER, 'FREIGHT_OVERFLOW'],
+    ])) {
+      await assert.rejects(inform(h.seller, order, value), {
+        code,
+        statusCode: 422,
+      });
+    }
+    await assert.rejects(
+      h.runtime.setFreight(
+        h.command(h.seller, {
+          expectedVersion: order.version + 1,
+          freightCents: 3750,
+          orderId: order.id,
+        }),
+      ),
+      { code: 'VERSION_CONFLICT', statusCode: 409 },
+    );
+    assert.deepEqual(await h.row(order.id), before);
+    assert.deepEqual(await h.freightEvents(order.id), []);
+
+    // Two commands on independent connections: exactly one wins.
+    const outcomes = await Promise.allSettled(
+      [3750, 4100].map((freightCents) => inform(h.seller, order, freightCents)),
+    );
+    assert.deepEqual(outcomes.map((outcome) => outcome.status).sort(), [
+      'fulfilled',
+      'rejected',
+    ]);
+    const lost = /** @type {PromiseRejectedResult} */ (
+      outcomes.find((outcome) => outcome.status === 'rejected')
+    );
+    assert.equal(lost.reason.code, 'VERSION_CONFLICT');
+    const won = /** @type {PromiseFulfilledResult<any>} */ (
+      outcomes.find((outcome) => outcome.status === 'fulfilled')
+    ).value;
+    const freight = won.freight.cents;
+    assert.ok([3750, 4100].includes(freight));
+    assert.equal(won.version, order.version + 1);
+    assert.equal(won.finalAmountCents, PIECES_CENTS + freight);
+    assert.deepEqual(won.amounts, {
+      freightCents: freight,
+      piecesCents: PIECES_CENTS,
+      totalCents: PIECES_CENTS + freight,
+    });
+    assert.equal(won.freight.source, 'seller');
+    assert.equal(won.freight.pricingRule, 'pieces-freight-v1');
+    assert.deepEqual(won.freight.setBy, {
+      id: h.seller.id,
+      name: `Pessoa ${h.seller.id}`,
+    });
+    const stored = await h.row(order.id);
+    assert.equal(Number(stored.freight_cents), freight);
+    assert.equal(Number(stored.final_amount_cents), PIECES_CENTS + freight);
+    assert.equal(stored.freight_source, 'seller');
+    assert.equal(stored.freight_set_by, h.seller.id);
+    assert.equal(stored.pricing_rule, 'pieces-freight-v1');
+    assert.equal(stored.version, before.version + 1);
+    assert.equal(stored.commercial_revision, before.commercial_revision + 1);
+    assert.deepEqual(await h.freightEvents(order.id), [
+      {
+        actor_id: h.seller.id,
+        freight_cents: freight,
+        kind: 'set',
+        order_version: won.version,
+        pieces_cents: PIECES_CENTS,
+        previous_freight_cents: 0,
+        quote_id: null,
+        quote_service_id: null,
+        quoted_cents: null,
+        source: 'seller',
+        total_cents: PIECES_CENTS + freight,
+      },
+    ]);
+
+    // Replay with the same key answers the same and writes nothing more;
+    // another body under that key is refused.
+    const input = h.command(h.seller, {
+      expectedVersion: won.version,
+      freightCents: 5000,
+      orderId: order.id,
+    });
+    const first = await h.runtime.setFreight(input);
+    const [replayed, concurrent] = await Promise.all([
+      h.runtime.setFreight({ ...input }),
+      h.runtime.setFreight({ ...input }),
+    ]);
+    assert.deepEqual(replayed, first);
+    assert.deepEqual(concurrent, first);
+    await assert.rejects(
+      h.runtime.setFreight({ ...input, freightCents: 5001 }),
+      { code: 'IDEMPOTENCY_KEY_REUSED', statusCode: 409 },
+    );
+    assert.equal((await h.row(order.id)).version, first.version);
+    assert.equal((await h.freightEvents(order.id)).length, 2);
+
+    // Events and audit carry identifiers, action and version: no value.
+    const events = await pool.query(
+      `SELECT event_type, payload FROM crm.domain_events
+       WHERE aggregate_type = 'order' AND aggregate_id = $1
+         AND event_type = 'order.freight_updated' ORDER BY stream_cursor`,
+      [order.id],
+    );
+    assert.equal(events.rows.length, 2);
+    for (const event of events.rows) {
+      assert.deepEqual(event.payload, {
+        conversationId: h.conversationId,
+        orderId: order.id,
+      });
+    }
+    const audits = await pool.query(
+      `SELECT actor_id, action, target_type, target_id, version, reason
+       FROM crm.audit_events WHERE target_id = $1 AND action = 'order.freight'
+       ORDER BY version::integer`,
+      [order.id],
+    );
+    assert.deepEqual(
+      audits.rows.map((audit) => [audit.actor_id, audit.version, audit.reason]),
+      [
+        [h.seller.id, String(order.version), 'order.freight'],
+        [h.seller.id, String(won.version), 'order.freight'],
+      ],
+    );
+    const record = await pool.query(
+      `SELECT response::text AS response FROM crm.idempotency_records
+       WHERE idempotency_key = $1`,
+      [input.idempotencyKey],
+    );
+    assert.equal(record.rows.length, 1);
+    assert.doesNotMatch(record.rows[0].response, /5000|freight/u);
+
+    // A quantity change asks for the subtotal again and keeps the freight.
+    const [group] = first.ficha.sizePricing;
+    const edited = await h.runtime.patchSection(
+      h.command(h.seller, {
+        expectedVersion: first.version,
+        orderId: order.id,
+        section: 'size-pricing',
+        value: {
+          action: 'change_quantity',
+          groupId: group.id,
+          lineId: group.lines[0].id,
+          quantity: group.lines[0].quantity + 1,
+        },
+      }),
+    );
+    assert.equal(edited.finalAmountCents, null);
+    assert.equal(edited.freight.cents, 5000);
+    const unpriced = await h.row(order.id);
+    assert.equal(unpriced.final_amount_cents, null);
+    assert.equal(Number(unpriced.freight_cents), 5000);
+    const repriced = await h.runtime.patchSection(
+      h.command(h.seller, {
+        expectedVersion: edited.version,
+        orderId: order.id,
+        section: 'size-pricing',
+        value: {
+          action: 'review_subtotal',
+          groupId: group.id,
+          lineId: group.lines[0].id,
+          subtotalCents: group.lines[0].subtotalCents + 700,
+        },
+      }),
+    );
+    assert.equal(repriced.finalAmountCents, PIECES_CENTS + 700 + 5000);
+    assert.equal(
+      Number((await h.row(order.id)).final_amount_cents),
+      PIECES_CENTS + 700 + 5000,
+    );
+
+    // The conversation moves to the admin: now the admin is the responsible
+    // seller, and the previous one is denied.
+    await pool.query(
+      'UPDATE crm.conversations SET assigned_user_id = $2 WHERE id = $1',
+      [h.conversationId, h.admin.id],
+    );
+    await assert.rejects(inform(h.seller, repriced, 100), {
+      code: 'FORBIDDEN',
+    });
+    const byAdmin = await inform(h.admin, repriced, 100);
+    assert.equal(byAdmin.freight.cents, 100);
+    assert.equal(byAdmin.freight.setBy?.id, h.admin.id);
+    assert.equal((await h.row(order.id)).freight_set_by, h.admin.id);
+
+    // A local cancellation is not a commercial recalculation: it passes the
+    // guard of migration 0076, keeps the freight and ends the order.
+    const cancelled = await h.runtime.cancel(
+      h.command(h.admin, {
+        expectedVersion: byAdmin.version,
+        orderId: order.id,
+        reason: 'Motivo sintetico',
+      }),
+    );
+    assert.equal(cancelled.effectiveStatus, 'cancelado');
+    assert.equal(cancelled.freight.cents, 100);
+    assert.equal(Number((await h.row(order.id)).freight_cents), 100);
+    await assert.rejects(inform(h.admin, cancelled, 0), {
+      code: 'ORDER_CANCELLED',
+      statusCode: 409,
+    });
+  });
+
+  test('OLC-05h PostgreSQL: an estimate is applied by identity; stale, foreign and unselected ones are refused and later ones never change the freight', async () => {
+    const h = await freightHarness();
+    let order = await h.pricedOrder();
+    const subjectId = await h.subjectFor(order);
+    /** @param {any} current @param {string} quoteId @param {number} serviceId */
+    const apply = (current, quoteId, serviceId) =>
+      h.runtime.setFreight(
+        h.command(h.seller, {
+          expectedVersion: current.version,
+          orderId: current.id,
+          quote: { quoteId, serviceId },
+        }),
+      );
+    const read = async () => (await h.runtime.get(order.id)).order;
+
+    // A quoted and selected estimate changes nothing by itself.
+    const quoteId = await h.selectedQuote(order, subjectId, 2);
+    assert.equal((await h.row(order.id)).freight_cents, '0');
+    assert.equal(Number((await h.row(order.id)).version), order.version);
+    // The selected current estimate differs from "no freight": a warning.
+    assert.equal((await read()).freight.quoteNotice, 'divergent');
+
+    // The service that is not the selected one, and an unknown estimate.
+    await assert.rejects(apply(order, quoteId, 1), {
+      code: 'INVALID_SHIPPING_SERVICE',
+      statusCode: 422,
+    });
+    await assert.rejects(apply(order, `quote-${randomUUID()}`, 2), {
+      code: 'SHIPPING_QUOTE_NOT_FOUND',
+      statusCode: 404,
+    });
+    // Another order's estimate answers like a missing one.
+    const foreign = await freightHarness();
+    const foreignOrder = await foreign.pricedOrder();
+    const foreignQuote = await foreign.selectedQuote(
+      foreignOrder,
+      await foreign.subjectFor(foreignOrder),
+      2,
+    );
+    await assert.rejects(apply(order, foreignQuote, 2), {
+      code: 'SHIPPING_QUOTE_NOT_FOUND',
+      statusCode: 404,
+    });
+    assert.equal((await h.row(order.id)).freight_cents, '0');
+    assert.deepEqual(await h.freightEvents(order.id), []);
+
+    // Applied: the server read the price (SEDEX 45,90) from the envelope.
+    const applied = await apply(order, quoteId, 2);
+    assert.equal(applied.freight.cents, 4590);
+    assert.equal(applied.freight.source, 'quote');
+    assert.equal(applied.freight.quoteId, quoteId);
+    assert.equal(applied.freight.serviceId, 2);
+    assert.equal(applied.freight.quotedCents, 4590);
+    assert.equal(applied.freight.quoteNotice, null);
+    assert.equal(applied.finalAmountCents, PIECES_CENTS + 4590);
+    const stored = await h.row(order.id);
+    assert.equal(stored.freight_source, 'quote');
+    assert.equal(stored.freight_quote_id, quoteId);
+    assert.equal(stored.freight_quote_service_id, 2);
+    assert.equal(Number(stored.freight_quoted_cents), 4590);
+    assert.equal(Number(stored.final_amount_cents), PIECES_CENTS + 4590);
+    assert.deepEqual(await h.freightEvents(order.id), [
+      {
+        actor_id: h.seller.id,
+        freight_cents: 4590,
+        kind: 'set',
+        order_version: applied.version,
+        pieces_cents: PIECES_CENTS,
+        previous_freight_cents: 0,
+        quote_id: quoteId,
+        quote_service_id: 2,
+        quoted_cents: 4590,
+        source: 'quote',
+        total_cents: PIECES_CENTS + 4590,
+      },
+    ]);
+    order = applied;
+
+    // The order moved one version: that estimate is stale by ADR 054 and
+    // cannot be applied again. The stored freight is untouched.
+    await assert.rejects(apply(order, quoteId, 2), {
+      code: 'SHIPPING_QUOTE_STALE',
+      statusCode: 409,
+    });
+
+    // A new estimate with another price, quoted and selected afterwards,
+    // never changes the stored freight: it only raises the warning.
+    h.provider.priceCents = 3100;
+    const newer = await h.selectedQuote(order, subjectId, 1);
+    const after = await h.row(order.id);
+    assert.equal(Number(after.freight_cents), 4590);
+    assert.equal(after.freight_quote_id, quoteId);
+    assert.equal(Number(after.final_amount_cents), PIECES_CENTS + 4590);
+    assert.equal(Number(after.version), order.version);
+    assert.equal((await read()).freight.quoteNotice, 'divergent');
+
+    // The seller declares another value: P1 keeps the quoted one beside it.
+    const declared = await h.runtime.setFreight(
+      h.command(h.seller, {
+        expectedVersion: order.version,
+        freightCents: 2000,
+        orderId: order.id,
+      }),
+    );
+    assert.equal(declared.freight.source, 'seller');
+    assert.equal(declared.freight.quoteId, null);
+    assert.equal(declared.freight.quotedCents, null);
+    assert.deepEqual((await h.freightEvents(order.id)).at(-1), {
+      actor_id: h.seller.id,
+      freight_cents: 2000,
+      kind: 'set',
+      order_version: declared.version,
+      pieces_cents: PIECES_CENTS,
+      previous_freight_cents: 4590,
+      quote_id: newer,
+      quote_service_id: 1,
+      quoted_cents: 3100,
+      source: 'seller',
+      total_cents: PIECES_CENTS + 2000,
+    });
+    // That newer estimate is stale now as well.
+    await assert.rejects(apply(declared, newer, 1), {
+      code: 'SHIPPING_QUOTE_STALE',
+    });
+    order = declared;
+
+    // Apply a current one, then change the grade: the origin estimate goes
+    // stale, which is a warning and does not block the confirmation (P2).
+    const third = await h.selectedQuote(order, subjectId, 1);
+    order = await apply(order, third, 1);
+    assert.equal(order.freight.cents, 3100);
+    assert.equal(order.freight.quoteNotice, null);
+    order = await h.runtime.patchSection(
+      h.command(h.seller, {
+        expectedVersion: order.version,
+        orderId: order.id,
+        section: 'observations',
+        value: ['Conferir arte'],
+      }),
+    );
+    assert.equal(order.freight.quoteNotice, 'stale');
+    const confirmed = await h.runtime.confirm(
+      h.command(h.seller, {
+        expectedVersion: order.version,
+        orderId: order.id,
+        paymentCondition: 'pix',
+      }),
+    );
+    assert.equal(confirmed.status, 'confirmado');
+    assert.equal(confirmed.finalAmountCents, PIECES_CENTS + 3100);
+    assert.equal(confirmed.freight.quoteNotice, null);
+    assert.deepEqual((await h.freightEvents(order.id)).at(-1), {
+      actor_id: h.seller.id,
+      freight_cents: 3100,
+      kind: 'confirmed',
+      order_version: confirmed.version,
+      pieces_cents: PIECES_CENTS,
+      previous_freight_cents: null,
+      quote_id: third,
+      quote_service_id: 1,
+      quoted_cents: 3100,
+      source: 'quote',
+      total_cents: PIECES_CENTS + 3100,
+    });
+    // The estimate itself was never rewritten by the order.
+    const estimate = await pool.query(
+      'SELECT selected_service_id, superseded_at FROM crm.shipping_quotes WHERE id = $1',
+      [third],
+    );
+    assert.deepEqual(estimate.rows, [
+      { selected_service_id: 1, superseded_at: null },
+    ]);
+  });
+
+  test('OLC-05a/i/j PostgreSQL: the confirmation freezes total and freight; reopening and a new freight invalidate settlement; Dashboard and performance sum the single total', async () => {
+    const h = await freightHarness();
+    const today = '2026-09-12';
+    const sold = async () =>
+      repository.summary({
+        dailyFrom: today,
+        dailyTo: today,
+        from: today,
+        to: today,
+      });
+    const performance = async () =>
+      (
+        await readDashboardPerformance(databaseFor(pool), {
+          actorId: h.seller.id,
+          from: today,
+          to: today,
+        })
+      ).rows.find((/** @type {any} */ entry) => entry.userId === h.seller.id);
+    const baseline = await sold();
+    assert.equal((await performance())?.soldAmountCents ?? 0, 0);
+
+    let order = await h.pricedOrder();
+    order = await h.runtime.setFreight(
+      h.command(h.seller, {
+        expectedVersion: order.version,
+        freightCents: 3750,
+        orderId: order.id,
+      }),
+    );
+    /** @param {any} actor @param {any} current @param {Record<string, unknown>} [extra] */
+    const confirm = (actor, current, extra = {}) =>
+      h.runtime.confirm(
+        h.command(actor, {
+          expectedVersion: current.version,
+          orderId: current.id,
+          paymentCondition: 'pix',
+          ...extra,
+        }),
+      );
+    // The legacy declaration of the pieces alone is refused.
+    await assert.rejects(confirm(h.seller, order, { amountText: '500,00' }), {
+      code: 'SIZE_PRICING_AMOUNT_MISMATCH',
+      statusCode: 422,
+    });
+    assert.equal((await h.row(order.id)).status, 'pendente');
+
+    // An admin confirms by the current rule and the freight stays the
+    // seller's, frozen with the total.
+    const confirmed = await confirm(h.admin, order, { amountText: '537,50' });
+    assert.equal(confirmed.status, 'confirmado');
+    assert.equal(confirmed.finalAmountCents, PIECES_CENTS + 3750);
+    assert.equal(confirmed.confirmedBy?.id, h.admin.id);
+    assert.equal(confirmed.freight.cents, 3750);
+    assert.equal(confirmed.freight.setBy?.id, h.seller.id);
+    const frozen = await h.row(order.id);
+    assert.equal(Number(frozen.final_amount_cents), PIECES_CENTS + 3750);
+    assert.equal(Number(frozen.freight_cents), 3750);
+    assert.equal(frozen.freight_set_by, h.seller.id);
+    assert.equal(frozen.pricing_rule, 'pieces-freight-v1');
+    assert.deepEqual((await h.freightEvents(order.id)).at(-1), {
+      actor_id: h.admin.id,
+      freight_cents: 3750,
+      kind: 'confirmed',
+      order_version: confirmed.version,
+      pieces_cents: PIECES_CENTS,
+      previous_freight_cents: null,
+      quote_id: null,
+      quote_service_id: null,
+      quoted_cents: null,
+      source: 'seller',
+      total_cents: PIECES_CENTS + 3750,
+    });
+
+    // No command changes the freight of a confirmed order, for anyone.
+    for (const actor of [h.seller, h.admin]) {
+      await assert.rejects(
+        h.runtime.setFreight(
+          h.command(actor, {
+            expectedVersion: confirmed.version,
+            freightCents: 0,
+            orderId: order.id,
+          }),
+        ),
+        (/** @type {any} */ error) =>
+          ['ORDER_STATUS_CONFLICT', 'FORBIDDEN'].includes(error.code),
+      );
+    }
+    await assert.rejects(
+      repository.saveFreight(
+        /** @type {any} */ ({ ...confirmed, updatedAt: NOW.toISOString() }),
+        {
+          actor: h.seller,
+          correlationId: `correlation-freight-${h.tag}`,
+          expectedVersion: confirmed.version,
+          freight: { cents: 0, source: 'seller' },
+        },
+      ),
+      { code: 'ORDER_STATUS_CONFLICT', statusCode: 409 },
+    );
+    assert.equal(Number((await h.row(order.id)).freight_cents), 3750);
+
+    // OLC-05j / P3: the Dashboard "vendido" and the seller's performance
+    // count the single total, freight included, without splitting it.
+    const afterSale = await sold();
+    assert.equal(
+      afterSale.period.soldAmountCents - baseline.period.soldAmountCents,
+      PIECES_CENTS + 3750,
+    );
+    assert.equal(
+      afterSale.soldAmountCents - baseline.soldAmountCents,
+      PIECES_CENTS + 3750,
+    );
+    assert.equal(
+      (afterSale.daily[0]?.soldAmountCents ?? 0) -
+        (baseline.daily[0]?.soldAmountCents ?? 0),
+      PIECES_CENTS + 3750,
+    );
+    assert.equal((await performance())?.soldAmountCents, PIECES_CENTS + 3750);
+
+    // Settled and checked by Financeiro, then reopened: freight and total
+    // stay as they were, like any reopened order.
+    let current = await h.runtime.recordMilestones(
+      h.command(h.seller, {
+        deliveredOn: null,
+        expectedVersion: confirmed.version,
+        orderId: order.id,
+        paidOn: '2026-09-11',
+      }),
+    );
+    await pool.query(
+      'INSERT INTO crm.order_finance(order_id, version, completed_at, completed_by) VALUES($1,1,$2,$3)',
+      [order.id, NOW, h.seller.id],
+    );
+    await pool.query(
+      "INSERT INTO crm.order_finance_events(id,order_id,version,order_version,action,actor_id,reason,occurred_at,correlation_id) VALUES($1,$2,1,$3,'completed',$4,'FINANCE_ROUTINE_COMPLETED',$5,'freight-live')",
+      [randomUUID(), order.id, current.version, h.seller.id, NOW],
+    );
+    current = await h.runtime.reopen(
+      h.command(h.seller, {
+        expectedVersion: current.version,
+        orderId: order.id,
+      }),
+    );
+    assert.equal(current.status, 'pendente');
+    assert.equal(current.freight.cents, 3750);
+    assert.equal(current.finalAmountCents, PIECES_CENTS + 3750);
+    assert.equal(current.paidOn, '2026-09-11');
+
+    // A new freight changes the total: the earlier settlement does not
+    // prove the new amount, exactly as a changed subtotal.
+    current = await h.runtime.setFreight(
+      h.command(h.seller, {
+        expectedVersion: current.version,
+        freightCents: 4200,
+        orderId: order.id,
+      }),
+    );
+    assert.equal(current.finalAmountCents, PIECES_CENTS + 4200);
+    assert.equal(current.paidOn, null);
+    const reviewed = await h.row(order.id);
+    assert.equal(reviewed.paid_on, null);
+    const finance = (
+      await pool.query(
+        'SELECT completed_at, completed_by, version FROM crm.order_finance WHERE order_id=$1',
+        [order.id],
+      )
+    ).rows[0];
+    assert.equal(finance.completed_at, null);
+    assert.equal(finance.completed_by, null);
+    assert.equal(Number(finance.version), 2);
+    assert.deepEqual(
+      (
+        await pool.query(
+          'SELECT action, reason FROM crm.order_finance_events WHERE order_id=$1 ORDER BY version',
+          [order.id],
+        )
+      ).rows,
+      [
+        { action: 'completed', reason: 'FINANCE_ROUTINE_COMPLETED' },
+        { action: 'invalidated', reason: 'ORDER_AMOUNT_CHANGED' },
+      ],
+    );
+    const again = await confirm(h.seller, current);
+    assert.equal(again.finalAmountCents, PIECES_CENTS + 4200);
+    assert.deepEqual(
+      (await h.freightEvents(order.id)).map((event) => [
+        event.kind,
+        event.freight_cents,
+        event.total_cents,
+      ]),
+      [
+        ['set', 3750, PIECES_CENTS + 3750],
+        ['confirmed', 3750, PIECES_CENTS + 3750],
+        ['set', 4200, PIECES_CENTS + 4200],
+        ['confirmed', 4200, PIECES_CENTS + 4200],
+      ],
+    );
+    assert.equal((await performance())?.soldAmountCents, PIECES_CENTS + 4200);
+
+    // Rollback guard on the real row: a writer that does not declare the
+    // freight-aware rule cannot recalculate or reopen it; a paid day passes.
+    await assert.rejects(
+      pool.query(
+        'UPDATE crm.orders SET final_amount_cents = $2 WHERE id = $1',
+        [order.id, PIECES_CENTS],
+      ),
+      { code: '23514', constraint: 'order_freight_rule_required' },
+    );
+    await assert.rejects(
+      pool.query("UPDATE crm.orders SET status = 'pendente' WHERE id = $1", [
+        order.id,
+      ]),
+      { code: '23514', constraint: 'order_freight_rule_required' },
+    );
+    const revision = (await h.row(order.id)).commercial_revision;
+    const paid = await h.runtime.recordMilestones(
+      h.command(h.seller, {
+        deliveredOn: null,
+        expectedVersion: again.version,
+        orderId: order.id,
+        paidOn: '2026-09-12',
+      }),
+    );
+    assert.equal(paid.paidOn, '2026-09-12');
+    assert.equal(paid.finalAmountCents, PIECES_CENTS + 4200);
+    // The paid day is not commercially exportable content.
+    const milestone = await h.row(order.id);
+    assert.equal(milestone.version, again.version + 1);
+    assert.equal(milestone.commercial_revision, revision);
+
+    // OLC-05d: a pending order without size pricing (legacy) takes no
+    // freight and keeps the pieces-only rule.
+    const legacyConversation = await seedConversation(pool);
+    await pool.query(
+      'UPDATE crm.conversations SET assigned_user_id = $2 WHERE id = $1',
+      [legacyConversation, h.seller.id],
+    );
+    const legacyVersion = Number(
+      (
+        await pool.query(
+          'SELECT version FROM crm.conversations WHERE id = $1',
+          [legacyConversation],
+        )
+      ).rows[0].version,
+    );
+    const legacy = (
+      await h.runtime.createManual(
+        h.command(h.seller, {
+          conversationId: legacyConversation,
+          expectedVersion: legacyVersion,
+        }),
+      )
+    ).order;
+    await assert.rejects(
+      h.runtime.setFreight(
+        h.command(h.seller, {
+          expectedVersion: legacy.version,
+          freightCents: 100,
+          orderId: legacy.id,
+        }),
+      ),
+      { code: 'SIZE_PRICING_NOT_INITIALIZED', statusCode: 409 },
+    );
+    const legacyRow = await h.row(legacy.id);
+    assert.equal(legacyRow.freight_cents, '0');
+    assert.equal(legacyRow.pricing_rule, 'pieces-v1');
+    assert.equal(legacyRow.freight_source, null);
+    assert.deepEqual(legacy.amounts, {
+      freightCents: 0,
+      piecesCents: null,
+      totalCents: null,
+    });
   });
 }

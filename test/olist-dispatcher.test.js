@@ -468,42 +468,156 @@ test('T08 persists observed sale id before GET and confirms every correlated lin
   assert.equal(f.posts.length, 1);
 });
 
-test('T17 an ERP-existing buyer is freshly rechecked before the sale ticket and a changed identity prevents the POST', async () => {
-  for (const changed of [false, true]) {
-    const contact = {
-      id: 101,
-      nome: 'Comprador Sintético',
-      celular: '5511999990000',
-      situacao: 'A',
-    };
-    const f = fixture({
-      afterResources: () => {
-        if (changed) contact.celular = '5511999990001';
-      },
-    });
-    const captured = captureOlistExistingBuyer({
+/** A snapshot frozen under ADR 072/081: ERP buyer by name and phone.
+ * @param {any} f */
+function freezeErpBuyer(f) {
+  const contact = {
+    id: 101,
+    nome: 'Comprador Sintético',
+    celular: '5511999990000',
+    situacao: 'A',
+  };
+  Object.assign(
+    f.snapshot,
+    captureOlistExistingBuyer({
       config,
       buyer: { name: contact.nome, phone: contact.celular },
       contact,
-    });
-    Object.assign(f.snapshot, captured);
-    const client = /** @type {any} */ (f.client);
-    client.contact = async (/** @type {number} */ id) => {
-      assert.equal(id, 101);
-      f.events.push('buyer-get');
-      return contact;
-    };
-    const result = await f.dispatcher().dispatch({ exportId: EXPORT_ID });
-    if (changed) {
-      assert.equal(result.outcome, 'outcome_unknown');
-      assert.equal(result.errorCode, 'OLIST_CUSTOMER_DIVERGENT');
-      assert.equal(f.operation.saleAttempt, null);
-      assert.equal(f.posts.length, 0);
-    } else {
-      assert.equal(result.outcome, 'sent');
-      assert.ok(f.events.indexOf('buyer-get') < f.events.indexOf('reserve'));
-      assert.equal(f.posts.length, 1);
+    }),
+  );
+  /** @type {any} */ (f.client).contact = async () => {
+    f.events.push('buyer-get');
+    return contact;
+  };
+}
+/** No guard, lookup, stage, resource resolution, ticket or POST happened.
+ * @param {any} f */
+function nothingRemote(f) {
+  assert.equal(f.posts.length, 0);
+  assert.equal(f.reads.length, 0);
+  assert.equal(f.operation.saleAttempt, null);
+  assert.equal(f.operation.state, 'queued');
+  for (const event of [
+    'guard',
+    'find',
+    'buyer-get',
+    'resources',
+    'ready',
+    'reserve',
+    'post',
+  ])
+    assert.equal(f.events.includes(event), false, event);
+  assert.equal(
+    f.events.some((/** @type {string} */ event) => event.startsWith('stage:')),
+    false,
+  );
+}
+
+test('ADR 082 a job queued before the fix (ERP buyer or incomplete registration) stops safely with no remote call when nothing started', async () => {
+  /** @type {((f:any)=>void)[]} */
+  const cases = [
+    freezeErpBuyer,
+    (f) => {
+      f.snapshot.customer = {
+        nome: 'comprador sintético',
+        celular: '5511999990000',
+      };
+    },
+    (f) => {
+      delete f.snapshot.customer.endereco.cep;
+    },
+    (f) => {
+      f.snapshot.customer.cpfCnpj = '11111111111';
+    },
+    (f) => {
+      f.snapshot.customer = null;
+    },
+  ];
+  for (const [index, change] of cases.entries()) {
+    const f = fixture();
+    change(f);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const result = await f.dispatcher().dispatch({ exportId: EXPORT_ID });
+      assert.equal(result.outcome, 'failed', String(index));
+      assert.equal(result.errorCode, 'OLIST_CUSTOMER_INVALID');
+      noRetry(result);
+      nothingRemote(f);
+      assert.equal(f.operation.last_error_code, 'OLIST_CUSTOMER_INVALID');
     }
+    assert.equal(f.retryChecks.length, 2, 'the database gate decides');
+  }
+  // A complete fiscal snapshot is not affected by the gate.
+  const complete = fixture();
+  const sent = await complete.dispatcher().dispatch({ exportId: EXPORT_ID });
+  assert.equal(sent.outcome, 'sent');
+  assert.equal(complete.retryChecks.length, 0);
+});
+
+test('ADR 082 with an open effect the blocked operation creates nothing more and stays for administrative reconciliation', async () => {
+  for (const retrySafe of [false, 'throws', 'missing']) {
+    const f = fixture(retrySafe === false ? { retrySafe } : {});
+    freezeErpBuyer(f);
+    if (retrySafe === 'throws')
+      f.repository.assertRetrySafe = async () => {
+        throw new Error('PRIVATE_DATABASE_CANARY');
+      };
+    if (retrySafe === 'missing')
+      delete (/** @type {any} */ (f.repository).assertRetrySafe);
+    const result = await f.dispatcher().dispatch({ exportId: EXPORT_ID });
+    assert.equal(result.outcome, 'outcome_unknown', String(retrySafe));
+    assert.equal(result.errorCode, 'OLIST_RESOURCE_RECONCILIATION_REQUIRED');
+    noRetry(result);
+    nothingRemote(f);
+    assert.equal(
+      f.operation.last_error_code,
+      'OLIST_RESOURCE_RECONCILIATION_REQUIRED',
+    );
+    assert.doesNotMatch(JSON.stringify(result), /PRIVATE_/u);
+  }
+  // The stop that cannot be recorded is never reported as a plain failure.
+  const unsaved = fixture();
+  freezeErpBuyer(unsaved);
+  unsaved.repository.recordDispatchStop = async () => {
+    throw new Error('PRIVATE_DATABASE_CANARY');
+  };
+  const result = await unsaved.dispatcher().dispatch({ exportId: EXPORT_ID });
+  assert.equal(result.outcome, 'outcome_unknown');
+  assert.equal(result.errorCode, 'OLIST_PERSISTENCE_FAILED');
+  nothingRemote(unsaved);
+});
+
+test('ADR 082 a sale already reserved keeps the existing reconciliation: readback only, never the gate or another POST', async () => {
+  // An incomplete fiscal customer could never reserve a sale (the sale plan
+  // itself refuses it), so the ERP reference is the only started-effect shape.
+  for (const change of [freezeErpBuyer]) {
+    // The sale left the process under the previous rules; its answer was lost.
+    const f = fixture({ timeoutOnce: true });
+    const first = await f.dispatcher().dispatch({ exportId: EXPORT_ID });
+    assert.equal(first.outcome, 'outcome_unknown');
+    assert.equal(f.posts.length, 1);
+    const attemptId = f.operation.saleAttempt.id;
+    change(f);
+    const resources = f.events.filter((event) => event === 'resources').length;
+    const result = await f.dispatcher().dispatch({ exportId: EXPORT_ID });
+    assert.equal(result.outcome, 'sent');
+    noRetry(result);
+    assert.equal(f.posts.length, 1);
+    assert.equal(f.operation.saleAttempt.id, attemptId);
+    assert.equal(f.operation.state, 'confirmed');
+    assert.equal(f.retryChecks.length, 0, 'a ticket never reaches the gate');
+    assert.equal(
+      f.events.filter((event) => event === 'resources').length,
+      resources,
+    );
+    // An uncertain sale with no remote answer still never posts again.
+    const lost = fixture({ timeoutOnce: true, searchAbsent: true });
+    await lost.dispatcher().dispatch({ exportId: EXPORT_ID });
+    change(lost);
+    const again = await lost.dispatcher().dispatch({ exportId: EXPORT_ID });
+    assert.equal(again.outcome, 'outcome_unknown');
+    assert.equal(again.errorCode, 'OLIST_SALE_UNCERTAIN');
+    assert.equal(lost.posts.length, 1);
+    assert.equal(lost.retryChecks.length, 0);
   }
 });
 

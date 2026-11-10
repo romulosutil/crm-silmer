@@ -19,19 +19,17 @@ import {
   olistReadWait,
   olistSettings,
   olistProductFiscal,
-  resolveOlistExistingBuyer,
-  assertOlistExistingBuyerSource,
-  olistBuyerRegistrationIncomplete,
+  olistNewSendBuyerBlocked,
+  assertOlistOrderCommercialRead,
 } from '@crm-silmer/olist';
 import {
   buildOlistPreviewPlan,
-  withoutOptionalBuyerIssues,
+  olistBuyerRegistrationIssues,
 } from './olist-preview-plan.js';
 import { planOlistResources } from './olist-preview-resources.js';
 
 const TTL = 15 * 60_000;
 const REVIEWED_FISCAL = Symbol('reviewed-product-fiscal');
-const REVIEWED_BUYER = Symbol('reviewed-existing-buyer');
 const SAFE_LOOKUP_ERRORS = new Set([
   'OLIST_AMBIGUOUS_MATCH',
   'OLIST_INCOMPLETE_LOOKUP',
@@ -63,6 +61,9 @@ export function createOlistPreview(database, options) {
   ) {
     const work = async (/** @type {any} */ tx) => {
       const actor = await lockOlistActor(tx, input, action, clock());
+      // OLC-02: a new send also needs the actor's existing commercial read of
+      // the Order (the order detail ACL); the checkbox alone is not enough.
+      if (action === 'olist.export') assertOlistOrderCommercialRead(actor);
       if (
         !config.configured ||
         orderKey.length !== 32 ||
@@ -197,20 +198,10 @@ export function createOlistPreview(database, options) {
           [config.accountKey],
         )
       ).rows[0];
-      const buyerSource = input[REVIEWED_BUYER] ?? null;
-      if (buyerSource) {
-        if (!olistBuyerRegistrationIncomplete(buyer?.registration))
-          throw new OlistError('OLIST_PREVIEW_STALE');
-        try {
-          assertOlistExistingBuyerSource({
-            config,
-            customer: { nome: buyer?.name, celular: buyer?.phone },
-            buyerSource,
-          });
-        } catch {
-          throw new OlistError('OLIST_PREVIEW_STALE');
-        }
-      }
+      // ADR 082: a new send never carries an ERP buyer reference. The field
+      // stays in the binding so its shape is stable; the administrative link
+      // sets its own reference on the returned snapshot (ADR 073).
+      const buyerSource = null;
       const creationEnabled = Boolean(
         config.configured &&
         config.pilotUserIds?.includes(actor.id) &&
@@ -265,7 +256,7 @@ export function createOlistPreview(database, options) {
         paymentDueOn,
         productFiscalHash,
         productFiscalDeferred,
-        buyerSourceDigest: buyerSource?.digest ?? null,
+        buyerSourceDigest: null,
         // Hash contents as well as versions: a malformed/stale writer cannot reuse a receipt.
         contents: identityHash(config.hmacKey, 'preview-source', [
           source,
@@ -323,7 +314,6 @@ export function createOlistPreview(database, options) {
     /** @param {any} input */
     async preview(input) {
       const startedAt = clock();
-      let reviewedInput = input;
       let before = await snapshot(input);
       if (before.operation?.state === 'legacy_review_required')
         throw new OlistError('OLIST_LEGACY_REVIEW_REQUIRED');
@@ -334,22 +324,10 @@ export function createOlistPreview(database, options) {
           settings: current.settings,
           now: startedAt,
           paymentDueOn: input.paymentDueOn,
-          buyerSource: current.buyerSource,
         });
+      // ADR 082: an empty, partial or invalid registration is a per-field
+      // pendency. No ERP lookup by name/phone replaces it in a new send.
       let plan = buildPlan(before);
-      const canResolveBuyer = (
-        /** @type {any} */ current,
-        /** @type {any} */ candidate,
-      ) =>
-        olistBuyerRegistrationIncomplete(current.buyer?.registration) &&
-        typeof current.buyer?.name === 'string' &&
-        current.buyer.name.trim().length >= 2 &&
-        normalizeContactPhone(current.buyer?.phone) &&
-        candidate.issues.every(
-          (/** @type {any} */ entry) =>
-            entry.field.startsWith('buyer.registration.') ||
-            entry.field === 'buyer.email',
-        );
       const preparationIssues = [];
       let httpReads = 0;
       const client = createOlistClient({
@@ -367,10 +345,7 @@ export function createOlistPreview(database, options) {
       // A normal token refresh changes the connection version. Prepare it
       // before capturing the receipt's source, rather than making this preview
       // stale through its own first GET. No entity/sale effect happens here.
-      if (
-        (plan.issues.length === 0 || canResolveBuyer(before, plan)) &&
-        before.connected
-      ) {
+      if (plan.issues.length === 0 && before.connected) {
         try {
           await connection.credentials(input, 'olist.export');
         } catch (error) {
@@ -380,32 +355,6 @@ export function createOlistPreview(database, options) {
         }
         before = await snapshot(input);
         plan = buildPlan(before);
-        if (preparationIssues.length === 0 && canResolveBuyer(before, plan)) {
-          try {
-            const captured = await resolveOlistExistingBuyer({
-              client,
-              config,
-              buyer: before.buyer,
-            });
-            reviewedInput = {
-              ...input,
-              [REVIEWED_BUYER]: captured.buyerSource,
-            };
-            before = await snapshot(reviewedInput);
-            plan = buildPlan(before);
-          } catch (error) {
-            const code = /** @type {any} */ (error).code;
-            if (
-              !SAFE_LOOKUP_ERRORS.has(code) &&
-              ![
-                'OLIST_CUSTOMER_NOT_FOUND',
-                'OLIST_CUSTOMER_DIVERGENT',
-              ].includes(code)
-            )
-              throw error;
-            preparationIssues.push({ code, field: 'buyer.source' });
-          }
-        }
       }
       if (
         before.binding.proposedDay &&
@@ -428,11 +377,6 @@ export function createOlistPreview(database, options) {
         });
       if (before.resources.length > 1000)
         issues.push({ code: 'OLIST_INCOMPLETE_LOOKUP', field: 'resources' });
-      issues.splice(
-        0,
-        issues.length,
-        ...withoutOptionalBuyerIssues(issues, before.buyer),
-      );
       let registrations = null;
       if (issues.length === 0) {
         try {
@@ -477,7 +421,7 @@ export function createOlistPreview(database, options) {
           issues.push({ code: candidate.code, field: 'resources' });
         }
       }
-      const after = await snapshot(reviewedInput);
+      const after = await snapshot(input);
       if (fingerprint(before.binding) !== fingerprint(after.binding))
         throw new OlistError('OLIST_PREVIEW_STALE', 409);
       const expiresAt = new Date(startedAt.getTime() + TTL).toISOString();
@@ -492,7 +436,7 @@ export function createOlistPreview(database, options) {
               expiresAt,
               commercial: plan.commercial,
               customer: plan.customer,
-              buyerSource: plan.buyerSource ?? null,
+              buyerSource: null,
               settings: before.settings,
               productFiscal: plan.productFiscal,
               productFiscalDeferred: before.productFiscalDeferred,
@@ -524,9 +468,7 @@ export function createOlistPreview(database, options) {
         productFiscal: before.productFiscal,
         productFiscalRequired: before.productFiscalRequired,
         productFiscalDeferred: before.productFiscalDeferred,
-        buyerSource: plan.buyerSource
-          ? { mode: plan.buyerSource.mode, remoteId: plan.buyerSource.remoteId }
-          : null,
+        buyerSource: null,
         issues,
         commercial: plan.commercial,
         customer: plan.customer
@@ -565,6 +507,7 @@ export function createOlistPreview(database, options) {
       const receipt = readReceipt(input);
       const source = receiptSource(input, receipt);
       const current = source === input ? initial : await snapshot(source);
+      assertBuyerRegistration(current, receipt);
       validateFresh(current, receipt);
       return {
         valid: true,
@@ -619,16 +562,10 @@ export function createOlistPreview(database, options) {
     )
       throw new OlistError('INVALID_REQUEST', 400);
     let source = input;
-    if (receipt.buyerSource) {
-      assertOlistExistingBuyerSource({
-        config,
-        customer: receipt.customer,
-        buyerSource: receipt.buyerSource,
-      });
-      if (receipt.binding.buyerSourceDigest !== receipt.buyerSource.digest)
-        throw new OlistError('OLIST_PREVIEW_INVALID');
-      source = { ...source, [REVIEWED_BUYER]: receipt.buyerSource };
-    }
+    // ADR 082: a receipt issued under ADR 072/081 (ERP buyer by name/phone)
+    // is refused before any snapshot is compared or reserved.
+    if (receipt.buyerSource !== null && receipt.buyerSource !== undefined)
+      throw new OlistError('OLIST_CUSTOMER_INVALID', 409);
     if (
       (receipt.settings?.productFiscal === null ||
         receipt.settings?.productFiscal === undefined) &&
@@ -655,6 +592,21 @@ export function createOlistPreview(database, options) {
       throw new OlistError('OLIST_PREVIEW_INVALID', 409);
     return { ...source, paymentDueOn: due };
   }
+  /** ADR 082: acceptance re-checks the receipt's frozen customer and the
+   * CURRENT buyer registration. An old receipt (empty/partial registration,
+   * with or without an ERP reference) can never reserve an operation or
+   * enqueue a job. A buyer that can no longer be read (stale source) is left
+   * to the receipt fence below, which refuses it as `OLIST_PREVIEW_STALE`.
+   * @param {any} current @param {any} receipt */
+  function assertBuyerRegistration(current, receipt) {
+    if (
+      olistNewSendBuyerBlocked(receipt) ||
+      (current.buyer !== null &&
+        current.buyer !== undefined &&
+        olistBuyerRegistrationIssues(current.buyer).length > 0)
+    )
+      throw new OlistError('OLIST_CUSTOMER_INVALID', 409);
+  }
   /** @param {any} current @param {any} receipt */
   function validateFresh(current, receipt) {
     if (clock().getTime() >= Date.parse(receipt.expiresAt))
@@ -670,6 +622,7 @@ export function createOlistPreview(database, options) {
    * @param {any} input @param {any} receipt */
   async function assertFreshReceipt(input, receipt) {
     const current = await snapshot(receiptSource(input, receipt));
+    assertBuyerRegistration(current, receipt);
     validateFresh(current, receipt);
     return current;
   }

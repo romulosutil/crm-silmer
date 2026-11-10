@@ -2,6 +2,7 @@ import { normalizeContactPhone } from '@crm-silmer/contacts';
 import { normalizeDocument } from './configuration.js';
 import { identityHash } from './crypto.js';
 import { OlistError } from './errors.js';
+import { buildCustomerPayload } from './resource-payloads.js';
 
 /** @param {unknown} value */
 export function olistBuyerRegistrationEmpty(value) {
@@ -18,7 +19,8 @@ export function olistBuyerRegistrationEmpty(value) {
       ))
   );
 }
-/** Fields the fiscal customer path needs; a CRM registration is always optional. */
+/** Fields the fiscal customer path needs. ADR 082: all of them are mandatory
+ * for a new Olist send and never for saving, confirming or printing an Order. */
 export const OLIST_BUYER_REQUIRED_REGISTRATION = Object.freeze([
   'personType',
   'document',
@@ -31,9 +33,10 @@ export const OLIST_BUYER_REQUIRED_REGISTRATION = Object.freeze([
   'number',
 ]);
 /**
- * ADR 081: only a complete CRM registration selects the fiscal path. Anything
- * less is ignored, never merged, and the buyer is found in the ERP by name and
- * phone. Malformed values are not "incomplete" and stay refused.
+ * True for an empty or partial CRM registration. ADR 082 (supersedes ADR 081):
+ * such a registration blocks a new Olist send; it is never completed from the
+ * ERP nor replaced by a name/phone lookup. Malformed values are not
+ * "incomplete" and are refused by the field validation.
  * @param {unknown} value
  */
 export function olistBuyerRegistrationIncomplete(value) {
@@ -143,7 +146,9 @@ export function assertOlistExistingBuyerSource({
 }
 /** @param {{client:any,config:any,buyer:any}} input */
 export async function resolveOlistExistingBuyer({ client, config, buyer }) {
-  if (!olistBuyerRegistrationIncomplete(buyer?.registration))
+  // Administrative historical linking only (ADR 072/073): an entirely empty
+  // registration. A new send never reaches this lookup (ADR 082).
+  if (!olistBuyerRegistrationEmpty(buyer?.registration))
     throw new OlistError('OLIST_CUSTOMER_DIVERGENT');
   const identity = {
     name: olistExistingBuyerName(buyer?.name),
@@ -180,4 +185,21 @@ export async function verifyOlistExistingBuyer({
   )
     throw new OlistError('OLIST_CUSTOMER_DIVERGENT');
   return { remoteId };
+}
+/**
+ * ADR 082 gate for a NEW send, applied to a frozen snapshot before any
+ * creating effect: an ERP reference (`erp-existing-v1`) never replaces the
+ * registration, and the customer must be the complete fiscal payload.
+ * Pure and local: no lookup, no write.
+ * @param {any} snapshot
+ */
+export function olistNewSendBuyerBlocked(snapshot) {
+  if (snapshot?.buyerSource !== null && snapshot?.buyerSource !== undefined)
+    return true;
+  try {
+    buildCustomerPayload(snapshot?.customer, 'CRM-customer');
+    return false;
+  } catch {
+    return true;
+  }
 }

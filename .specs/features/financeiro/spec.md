@@ -1,5 +1,20 @@
 # Financeiro — Fila e detalhe
 
+## Separação da geração Olist em 10/11/2026
+
+[ADR 067](../../../docs/adr/067-olist-a-partir-do-pedido-confirmado.md) /
+[OLC-01–16](../olist-confirmed/spec.md): Olist parte do detalhe comercial de
+Pedido confirmado, sem exigir quitação ou check Nota criada. Não acrescentar
+menu, busca ou projeção Olist ao perfil Financeiro nesta entrega.
+
+O módulo manual existente e seu histórico permanecem até FINQ-DEPREC-01,
+trilha independente em [tasks.md](tasks.md), com verificação própria de
+quitação conciliada/dependências. A geração não espera essa remoção e a remoção
+não depende de Olist. Billing e regras válidas de pagamento são preservados.
+
+A emenda de 04/11 abaixo é referência anterior: projeção Olist de perfil
+restrito fica em OLC-F01 e cancelamento em OLC-F03, sem novos efeitos nesta fase.
+
 ## Emenda Olist e cancelamento de 04/11/2026
 
 [ADR 057](../../../docs/adr/057-olist-por-habilitacao-subtotal-por-tamanho-e-cancelamento.md)

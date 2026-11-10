@@ -12,33 +12,35 @@ corretos; multiplicação exata do unitário retornado confere a linha, e ambos
 os totais devem coincidir. F1 só fecha para esse subconjunto após prova API/UI;
 os gates de conexão/ACL/runtime/piloto continuam separados. Sem nova infraestrutura.
 
-## Evolução aprovada para implementação Olist e valores por tamanho
+## Olist pelo pedido confirmado em 10/11/2026
 
-Decisão de 04/11/2026 na [ADR 057](docs/adr/057-olist-por-habilitacao-subtotal-por-tamanho-e-cancelamento.md) / [RFC 050](docs/rfc/050-geracao-assistida-de-pedidos-no-olist.md),
-OLIST-01–50 e OLIST-PLAN-02. Estes pontos supersedem os trechos antigos
-incompatíveis para o novo contrato; o código ainda não foi alterado.
+[ADR 067](docs/adr/067-olist-a-partir-do-pedido-confirmado.md) e revisão 3 da
+[RFC 050](docs/rfc/050-geracao-assistida-de-pedidos-no-olist.md), OLIST-PLAN-03:
+[OLC-01–16](.specs/features/olist-confirmed/spec.md) supersedem o recorte amplo
+da ADR 057 onde incompatível. Contrato aprovado; runtime ainda por implementar.
 
-- Checkbox Habilitado Olist é ortogonal ao perfil e dono: usuário humano ativo
-  habilitado opera Olist em qualquer Pedido com ficha/cadastro completos.
-  Admin não herda envio; habilitação não concede Inbox, edição geral ou conexão.
-- Buscar e criar cliente comprador, produto pai e variações/tamanhos ausentes,
-  com dados válidos, reservas por identidade, vínculos e reconciliação por etapa.
-  Não criar conta de funcionário nem sobrescrever cadastro remoto encontrado.
-- Item CRM é grupo; linha de tamanho contém quantidade e subtotal informado.
-  Total soma subtotais no backend, sem valor final independente digitado.
-  Unitário ERP é derivado, preservando cada subtotal; inexatidão bloqueia só
-  exportação, sem inventar resíduo/desconto ou preço legado.
-- Cancelamento local terminal pré-exportação serve higiene/métricas/filas;
-  não apaga história/pagamento/check nem estorna dinheiro. Enviado/vinculado/
-  incerto não admite essa ação ou reabertura de edição; não há cancelamento ERP.
-  Cancelamento conserva ACL comercial própria e não deriva do checkbox.
-- Previsão de entrega substitui Entrega prometida e Aplicação substitui Técnica
-  por item; chaves e templates históricos preservados, nova ficha v7 com gates.
-- Loja mantém travas/gateway; adapter de completude não inventa dado faltante.
-  Parâmetros ERP centralizados e piloto individual por ID privado, sem PII em diff.
+- Somente Pedido `confirmado`, pelo detalhe atual, em **Gerar no Olist**.
+  Validação interna e estado na mesma página, sem prévia obrigatória, PDF
+  anterior, quitação ou check financeiro como pré-requisito.
+- Humano ativo com acesso comercial ao Pedido e checkbox Habilitado Olist;
+  Admin também depende do checkbox. Preservar piloto por ID privado, sem nova
+  entrada/projeção para Financeiro ou liberação de edição geral.
+- Dados estruturados, não PDF. Composição por tamanho é aditiva, revisada e
+  corresponde exatamente à grade confirmada; soma backend iguala o total
+  confirmado, sem rateio ou alteração de snapshot, ficha, checkout ou pagamento.
+  Loja/legado têm adapter e pendências explícitas. ADR 062 permanece integral.
+- Resolver/reutilizar/criar comprador, produtos e variações com identidade,
+  reservas e reconciliação por etapa. Não sobrescrever cadastro encontrado.
+  Persistir uma operação por conta/Pedido e conferir linhas/totais antes de
+  sucesso; incerteza não permite retry criador. Bloquear edição incompatível.
+- Conexão e parâmetros centrais, ACL, auditoria, privacidade, recuperação e
+  homologação são parte da entrega. Usar monólito/worker/PostgreSQL existentes.
+- FINQ-DEPREC-01 remove Financeiro em trilha própria; OLC-F01–F04 diferem
+  operação centralizada, vínculo antigo, cancelamento e revisão/preços ampliados.
+  FIP-T01–T03 preservam sua entrega de ficha. Nenhuma bloqueia OLC-T01–T06.
 
-As regras abaixo descrevem baseline anterior onde houver divergência expressa.
-Nada neste registro habilita conta, muda produção ou substitui os gates da RFC.
+As regras abaixo continuam vigentes nas demais fronteiras. Nada neste registro
+habilita conta, altera produção ou apaga histórico Financeiro.
 
 ## Cobranças InfinitePay — extensão aprovada (05/11/2026)
 

@@ -10,23 +10,29 @@ no CRM e bloqueiam a exportação inteira antes de qualquer inclusão. Identidad
 por linha e conferência exata de valores retornados/totais são obrigatórias;
 F1 restrito depende da prova API e tela. Demais regras de produto preservadas.
 
-## Evolução aprovada Olist e subtotal por tamanho em 04/11/2026
+## Olist pelo pedido confirmado em 10/11/2026
 
-[ADR 057](docs/adr/057-olist-por-habilitacao-subtotal-por-tamanho-e-cancelamento.md) / [RFC 050](docs/rfc/050-geracao-assistida-de-pedidos-no-olist.md), requisitos OLIST-01–50,
-tarefa documental OLIST-PLAN-02 e execução OLIST-T01–T26. Contrato aprovado,
-implementação/piloto pendentes; prevalece sobre descrições históricas incompatíveis.
+[ADR 067](docs/adr/067-olist-a-partir-do-pedido-confirmado.md) e revisão 3 da
+[RFC 050](docs/rfc/050-geracao-assistida-de-pedidos-no-olist.md), OLIST-PLAN-03:
+o usuário abre um Pedido **Confirmado**, aciona **Gerar no Olist** e acompanha
+etapas/resultado no mesmo detalhe. O status é o que permite comercialmente o
+PDF, mas não exige gerar PDF antes, quitar ou marcar Nota criada.
 
-Cada usuário tem Habilitado Olist. Humano ativo habilitado pode gerar em
-qualquer Pedido completo, sem posse/perfil implícito e sem liberar edição
-geral. Buscar/criar comprador, produto e variações/tamanhos com vínculos seguros.
-Item CRM continua grupo; linha de tamanho recebe quantidade/subtotal, total
-calculado. Desconto de fábrica é expresso pelo subtotal, não por preço unitário
-obrigatório. Legados não recebem valores inventados e loja preserva gateway.
+Geração exige humano ativo, leitura comercial do Pedido, Habilitado Olist e
+piloto privado; não acrescenta acesso ou edição geral ao perfil Financeiro.
+O CRM valida comprador, produtos/tamanhos e composição de preços, resolve
+cadastros ausentes e cria uma venda conferida. Subtotais correspondem à grade
+confirmada e somam exatamente seu valor final, sem inferência de preços ou
+alteração de ficha/snapshot. Centavos exatos e bloqueio de duplicidade seguem
+obrigatórios; falha incerta pede conferência, sem nova criação automática.
 
-Cancelamento CRM é higiene/métricas antes da exportação, terminal/auditado,
-sem excluir dados ou cancelar/estornar ERP. Não editar após envio. Aplicação
-e Previsão de entrega são os novos rótulos, inclusive na ficha v7 versionada.
-Configuração comercial central e piloto individual em identidade privada.
+[OLC-01–16](.specs/features/olist-confirmed/spec.md) e
+[OLC-T01–T06](.specs/features/olist-confirmed/tasks.md) são o aceite e o caminho
+vigentes, ainda não implementados ponta a ponta. A amplitude anterior da ADR
+057 fica supersedida onde incompatível. Remoção Financeiro (FINQ-DEPREC-01),
+melhorias OLC-F01–F04 e ficha FIP-T01–T03 são trilhas próprias, sem bloquear
+a geração. Não há nova tela de prévia, menu/busca Olist ou cancelamento local
+como requisito desta entrega.
 
 ## Evolução aprovada — cobranças InfinitePay (05/11/2026)
 

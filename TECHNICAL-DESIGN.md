@@ -38,45 +38,48 @@ os gates de conexão/ACL/runtime/piloto continuam separados. Sem nova infraestru
 
 Prova C05–C07 concluída em 05/11: [API e tela nativa consistentes](docs/integrations/olist/evidence/exact-cent-proof-result.json),
 14 GETs, três pedidos/R$ 5,20. F1/T02 fechados somente para `exact-cent-v1`;
-T03 pode iniciar. Runtime integrado, ACL, banco, UI e piloto seguem nas tarefas
-posteriores; frações continuam bloqueadas antes do envio.
+Implementação segue OLC-T01–T06 pelo recorte de 10/11 abaixo. Runtime integrado,
+ACL, banco, UI e piloto continuam pendentes; frações bloqueadas antes do envio.
 
-## Olist subtotal e cancelamento contrato para implementação
+## Olist pelo pedido confirmado em 10/11/2026
 
-[ADR 057](docs/adr/057-olist-por-habilitacao-subtotal-por-tamanho-e-cancelamento.md) / [RFC 050](docs/rfc/050-geracao-assistida-de-pedidos-no-olist.md), OLIST-01–50,
-OLIST-PLAN-02 e T01–T26. Não representa código ou schema já publicados.
+[ADR 067](docs/adr/067-olist-a-partir-do-pedido-confirmado.md) e revisão 3 da
+[RFC 050](docs/rfc/050-geracao-assistida-de-pedidos-no-olist.md), OLIST-PLAN-03:
+[OLC-01–16](.specs/features/olist-confirmed/spec.md) e
+[OLC-T01–T06](.specs/features/olist-confirmed/tasks.md) são o contrato vigente.
+O recorte substitui os trechos incompatíveis da ADR 057, ainda sem runtime ERP.
 
-- Identidade/acesso: checkbox default false gerido por Admin, autorização
-  ortogonal antes das negações por perfil e sem posse. Projeção Olist mínima
-  para qualquer Pedido; revogação verificada antes de toda inclusão remota.
-- Pedido: IDs estáveis de grupo/linha, subtotal em centavos, revisão após
-  quantidade, soma backend, enriquecimento de legado sem alterar snapshot/total.
-  Loja usa adapter/complemento próprio sem modificar pagamento/checkout.
-- Integração: recursos compartilhados por conta/documento e identidade de
-  produto/variação, com HMAC/envelopes, reserva/fencing e outbox transacional.
-  Resolver/criar cliente, pai, tamanhos e venda; persistir cada resultado antes
-  de avançar. Timeout de cadastro bloqueia dependentes, sem POST novo ou delete.
-- Dinheiro ERP: representação derivada e precisão provada por linha. Comparar
-  subtotais remotos/total, bloquear só exportação inexata; não atualizar catálogo
-  encontrado, inventar desconto ou compensar diferenças entre tamanhos.
-- Cancelamento: proposta de marcador terminal separado dos dois status,
-  motivo/versão/auditoria e exclusão das métricas/filas ativas antes de paginar;
-  preservar histórico/pagamento/check. Só pré-exportação, serializado com worker.
-- UI/ficha: Aplicação por grupo e Previsão de entrega preservam chaves. Nova
-  ficha v7/selector/snapshot/amostra; templates v2–v6 intactos. Sem preço novo
-  na impressão. Configuração ERP central versionada, piloto por ID privado.
+- Acesso: humano ativo, leitura comercial existente, checkbox default false
+  gerido por Admin e piloto privado. Não criar nova entrada de perfil restrito.
+- Pedido: somente `confirmado`, com comando **Gerar no Olist** no detalhe.
+  Composição ERP aditiva deriva identidade/grade no servidor, liga cada linha
+  ao tamanho/quantidade confirmado e soma exatamente `finalAmountCents`.
+  Preservar total, confirmação, snapshot e PDF; nenhum rateio automático ou
+  alteração de grade pelo comando de enriquecimento. Loja tem adapter próprio.
+- Conexão: credenciais cifradas, renovação serializada, conta esperada e
+  configuração central versionada. API oficial no monólito/worker/PostgreSQL.
+- Processamento: validação interna antes de qualquer inclusão, snapshot/reserva/
+  auditoria/job transacionais, unicidade conta/Pedido e recursos por identidade.
+  Resolver cliente → produtos/variações → venda; persistir cada ID confirmado.
+- Consistência: serializar com comandos incompatíveis, inclusive reabertura e
+  correção de quantidade da loja. Conferir revisão/fingerprint do conteúdo
+  comercial exportável; mudança compatível de pagamento/entrega não invalida
+  envio apenas por incremento de `orders.version`. Não relaxar verificação de
+  status, conta, parâmetros ou habilitação. Após sucesso, bloquear edição.
+- Dinheiro/recuperação: manter ADR 062, núcleo exato e conferência de conta,
+  referências, identidade de linhas/produtos e ambos os totais. Incerteza bloqueia
+  dependentes e exige recuperação administrativa mínima, sem POST repetido.
+- UI: bloco no detalhe com pendências, botão e progresso persistido; sem
+  previewId ou prévia obrigatória. Não usar PDF, pagamento ou check financeiro
+  como entrada/gate. Runbook e gate operacional próprios antes de ativar.
 
-Contrato/precisão fiscal e detalhes DDL são gates T02/T03/T23; flags e variáveis
-ainda serão definidas. Sem novo serviço/store/infra; publicação GitHub → EasyPanel.
+FINQ-DEPREC-01, OLC-F01–F04 e FIP-T01–T03 são trilhas separadas, não predecessoras
+de OLC-T01–T06. Não remover Financeiro, reformar preços globalmente ou trocar
+template nesta integração. Publicação GitHub → EasyPanel permanece vigente.
 
-Preparação local T20a/T21a em 05/11: `modules/orders/src/domain/size-pricing.js`
-implementa IDs de grupo/linha, subtotal positivo em centavos, soma exata e
-invalidação de revisão após mudança de quantidade. Exportado por Orders,
-sem integração HTTP/persistência/UI nem mudança de snapshots. A futura
-aplicação deve autorizar/versionar o comando humano e calcular o total antes
-da gravação; o navegador não fornece revisão ou total autoritativo.
+Já existem `size-pricing.js`, `olist-exact-cent.js` e F1/T02 fechado para
+`exact-cent-v1`; faltam persistência/comandos/conexão/worker/UI integrados.
 [Estado e evidências](docs/integrations/olist/implementation-progress.md).
-F1 monetário e as tarefas completas permanecem abertos; nenhuma geração ERP.
 
 ## Cobranças InfinitePay — COB-DEL-01 (05/11/2026)
 

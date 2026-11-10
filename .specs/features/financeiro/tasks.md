@@ -192,9 +192,12 @@ tabelas e os dados históricos** (migrações 0042/0043), sem migração destrut
 e sem mexer em quitação (`paid_on`, `finance_payment_review_required`),
 cobranças InfinitePay nem Dashboard. A execução é independente dos blocos 1–6
 do Olist e não é predecessora deles.
-COB-DEL-01 está entregue localmente; COB-OPS-01 ainda registra ativação e
-homologação reais pendentes. Verificar quitação conciliada efetiva no alvo
-antes da retirada; não inferir disponibilidade operacional a partir do código.
+COB-DEL-01 está entregue localmente. BREL-10/T9 já registra emissão,
+recebimento e envio habilitados para teste manual em 10/11; isso não comprova
+homologação financeira nem quitação real. Conferir o estado atual em
+[order-billing-activation.md](../../../docs/runbooks/order-billing-activation.md)
+e verificar quitação conciliada efetiva no alvo antes da retirada, sem
+refazer a ativação ou inferir pagamento a partir das flags.
 
 Esta tarefa não bloqueia [OLC-T01–T06](../olist-confirmed/tasks.md), nem depende
 de Olist. O check Nota criada e pagamento não habilitam a geração ERP.

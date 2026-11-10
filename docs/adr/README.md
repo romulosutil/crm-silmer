@@ -2,9 +2,13 @@
 
 ## Decisão de 10/11/2026
 
+- [082 — Cadastro obrigatório somente no envio Olist](082-cadastro-obrigatorio-somente-no-envio-olist.md):
+  correção do proprietário; cadastro completo bloqueia somente exportação ERP,
+  preservando confirmação e ficha/PDF. Supersede ADR 081 para novos envios;
+  correção funcional do commit `865388f0` permanece pendente.
+
 - [081 — Cadastro do comprador opcional no Olist](081-cadastro-do-comprador-opcional-no-olist.md):
-  cadastro vazio ou parcial nunca é pendência; o comprador é localizado no
-  Olist por nome e telefone, sem mesclar dados. Complementa a ADR 072.
+  registro histórico, supersedido pela ADR 082 para novos envios.
 
 - [080 — Valor final com frete](080-valor-final-com-frete.md), RFC 062 /
   OLC-05a–j / OLC-T01: valor final = soma dos subtotais + frete; o vendedor

@@ -7,6 +7,13 @@ Prompts por bloco em [prompts-pedido-confirmado.md](../../../docs/integrations/o
 
 ## Estado e ordem
 
+Atualização OLIST-PROMPTS-01 de 10/11: há runtime Olist, preços por tamanho,
+autorização, conexão, dispatcher e painel na master; os checkboxes OLC abaixo
+representam a adequação integral ao fluxo vigente, não a ausência de todo esse
+código. Reaproveitar e testar as fronteiras existentes antes de reimplementar.
+Cadastro completo continua obrigatório só no envio Olist, conforme a
+[ADR 082](../../../docs/adr/082-cadastro-obrigatorio-somente-no-envio-olist.md).
+
 OLIST-PLAN-03 é a atualização documental de 10/11/2026, não a implementação.
 F1/T02 continuam concluídos somente para `exact-cent-v1`; núcleos de preço e
 conferência já existem. As tarefas abaixo começam desmarcadas.
@@ -31,6 +38,12 @@ só para Pedido não confirmado (OLC-F03); a remoção do Financeiro foi aprovad
 Requisitos OLC-01–06/09/10/14 (com OLC-05a–j). Dono Backend/Dados com
 revisão QA.
 
+- [ ] **Prioridade: corrigir a regressão do cadastro opcional** (commit
+      `865388f0`, ADR 081 supersedida pela ADR 082). Cadastro vazio/parcial
+      permite fechar o Pedido e gerar ficha/PDF, mas bloqueia novo envio Olist
+      antes de inclusões, também na API/revalidação/worker e com token/job
+      antigo. Não usar comprador ERP por nome/telefone para contornar esse gate.
+      Preservar contratos de vínculo histórico e recuperação de efeitos.
 - [ ] Implementar checkbox default falso, gestão Admin e política que combina
       usuário ativo, habilitação, leitura comercial do Pedido e piloto privado;
       Admin não herda geração e Financeiro não ganha entrada/projeção nova.

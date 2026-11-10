@@ -110,6 +110,14 @@ export function olistIssueLabel(issue, groups = []) {
 }
 
 /**
+ * Uma linha por motivo: várias pendências com o mesmo texto não repetem a lista.
+ * @param {{code:string,field?:string}[]} [issues] @param {any[]} [groups]
+ */
+export function olistIssueLabels(issues = [], groups = []) {
+  return [...new Set(issues.map((issue) => olistIssueLabel(issue, groups)))];
+}
+
+/**
  * Motivo seguro e fixo para o código público da operação ou da tentativa.
  * Código desconhecido nunca vira texto livre.
  * @param {unknown} code @param {string} [state]

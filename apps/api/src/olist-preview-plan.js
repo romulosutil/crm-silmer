@@ -12,19 +12,11 @@ import {
   normalizeContactPhone,
   normalizeContactRegistration,
 } from '@crm-silmer/contacts';
-import { olistBuyerRegistrationEmpty } from '@crm-silmer/olist';
+import {
+  OLIST_BUYER_REQUIRED_REGISTRATION,
+  olistBuyerRegistrationIncomplete,
+} from '@crm-silmer/olist';
 
-const REQUIRED_REGISTRATION = [
-  'personType',
-  'document',
-  'legalName',
-  'postalCode',
-  'city',
-  'state',
-  'street',
-  'district',
-  'number',
-];
 const REQUIRED_SETTINGS = [
   'sellerId',
   'operationNatureId',
@@ -52,6 +44,24 @@ function calendarDay(value) {
     Number.isFinite(instant.getTime()) &&
     instant.toISOString().slice(0, 10) === value
   );
+}
+
+/**
+ * ADR 081: an optional CRM registration is never a pending item. The fields go
+ * only when another issue remains, so the preview can never turn eligible here.
+ * @param {{code:string,field:string}[]} issues @param {any} buyer
+ */
+export function withoutOptionalBuyerIssues(issues, buyer) {
+  if (!olistBuyerRegistrationIncomplete(buyer?.registration)) return issues;
+  const blocking = issues.filter(
+    (entry) =>
+      !(
+        ['OLIST_BUYER_REQUIRED', 'OLIST_BUYER_INVALID'].includes(entry.code) &&
+        (entry.field.startsWith('buyer.registration.') ||
+          entry.field === 'buyer.email')
+      ),
+  );
+  return blocking.length ? blocking : issues;
 }
 
 /**
@@ -129,7 +139,7 @@ export function buildOlistPreviewPlan(input) {
   const source = input.buyerSource;
   const existingBuyer =
     source?.mode === 'erp-existing-v1' &&
-    olistBuyerRegistrationEmpty(buyer?.registration) &&
+    olistBuyerRegistrationIncomplete(buyer?.registration) &&
     typeof source.remoteId === 'string' &&
     /^[1-9][0-9]{0,15}$/u.test(source.remoteId) &&
     Number.isSafeInteger(Number(source.remoteId)) &&
@@ -150,7 +160,7 @@ export function buildOlistPreviewPlan(input) {
     for (const key of Object.keys(normalized.errors))
       issue('OLIST_BUYER_INVALID', 'buyer.registration.' + key);
   const registration = normalized.ok ? normalized.value : null;
-  for (const key of REQUIRED_REGISTRATION)
+  for (const key of OLIST_BUYER_REQUIRED_REGISTRATION)
     if (
       !existingBuyer &&
       !registration?.[/** @type {keyof typeof registration} */ (key)]

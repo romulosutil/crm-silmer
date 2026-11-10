@@ -21,9 +21,12 @@ import {
   olistProductFiscal,
   resolveOlistExistingBuyer,
   assertOlistExistingBuyerSource,
-  olistBuyerRegistrationEmpty,
+  olistBuyerRegistrationIncomplete,
 } from '@crm-silmer/olist';
-import { buildOlistPreviewPlan } from './olist-preview-plan.js';
+import {
+  buildOlistPreviewPlan,
+  withoutOptionalBuyerIssues,
+} from './olist-preview-plan.js';
 import { planOlistResources } from './olist-preview-resources.js';
 
 const TTL = 15 * 60_000;
@@ -196,7 +199,7 @@ export function createOlistPreview(database, options) {
       ).rows[0];
       const buyerSource = input[REVIEWED_BUYER] ?? null;
       if (buyerSource) {
-        if (!olistBuyerRegistrationEmpty(buyer?.registration))
+        if (!olistBuyerRegistrationIncomplete(buyer?.registration))
           throw new OlistError('OLIST_PREVIEW_STALE');
         try {
           assertOlistExistingBuyerSource({
@@ -338,7 +341,7 @@ export function createOlistPreview(database, options) {
         /** @type {any} */ current,
         /** @type {any} */ candidate,
       ) =>
-        olistBuyerRegistrationEmpty(current.buyer?.registration) &&
+        olistBuyerRegistrationIncomplete(current.buyer?.registration) &&
         typeof current.buyer?.name === 'string' &&
         current.buyer.name.trim().length >= 2 &&
         normalizeContactPhone(current.buyer?.phone) &&
@@ -425,6 +428,11 @@ export function createOlistPreview(database, options) {
         });
       if (before.resources.length > 1000)
         issues.push({ code: 'OLIST_INCOMPLETE_LOOKUP', field: 'resources' });
+      issues.splice(
+        0,
+        issues.length,
+        ...withoutOptionalBuyerIssues(issues, before.buyer),
+      );
       let registrations = null;
       if (issues.length === 0) {
         try {

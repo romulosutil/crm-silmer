@@ -7,7 +7,7 @@ import {
   dayLabel,
   paymentConditionLabel,
 } from '../../lib/order-format.js';
-import { olistIssueLabel, olistFailure } from '../../lib/olist-feedback.js';
+import { olistIssueLabels, olistFailure } from '../../lib/olist-feedback.js';
 import {
   OLIST_FOLLOW_DELAYS_MS,
   isAdminInvalidated,
@@ -84,6 +84,9 @@ const generationAllowed = computed(
     preview.value?.eligible === true &&
     typeof preview.value?.previewToken === 'string' &&
     preview.value.previewToken.length > 0,
+);
+const issueLabels = computed(() =>
+  olistIssueLabels(preview.value?.issues, preview.value?.commercial?.groups),
 );
 const expiryLabel = computed(() => {
   const stamp = Date.parse(preview.value?.expiresAt ?? '');
@@ -705,13 +708,8 @@ onBeforeUnmount(() => {
                 : 'Pendências para o Olist'
             }}
           </h3>
-          <ul v-if="preview.issues?.length">
-            <li
-              v-for="(issue, index) in preview.issues"
-              :key="`${issue.code}:${issue.field}:${index}`"
-            >
-              {{ olistIssueLabel(issue, preview.commercial?.groups) }}
-            </li>
+          <ul v-if="issueLabels.length">
+            <li v-for="label in issueLabels" :key="label">{{ label }}</li>
           </ul>
           <p v-if="preview.issues?.length" class="field-help">
             Peça a uma pessoa autorizada a corrigir o pedido, o cadastro de
@@ -721,8 +719,11 @@ onBeforeUnmount(() => {
             <div v-if="preview.customer">
               <dt>Comprador</dt>
               <dd>
-                {{ preview.customer.name }} · documento final
-                {{ preview.customer.documentSuffix }}
+                {{ preview.customer.name
+                }}<template v-if="preview.customer.documentSuffix">
+                  · documento final
+                  {{ preview.customer.documentSuffix }}</template
+                >
               </dd>
             </div>
             <div>

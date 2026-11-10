@@ -25,6 +25,8 @@ export {
   assertOlistExistingBuyerSource,
   olistExistingBuyerDocumentHash,
   olistBuyerRegistrationEmpty,
+  olistBuyerRegistrationIncomplete,
+  OLIST_BUYER_REQUIRED_REGISTRATION,
 } from './existing-buyer.js';
 export {
   createOlistRepository,

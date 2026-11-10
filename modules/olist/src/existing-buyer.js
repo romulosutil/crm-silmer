@@ -18,6 +18,37 @@ export function olistBuyerRegistrationEmpty(value) {
       ))
   );
 }
+/** Fields the fiscal customer path needs; a CRM registration is always optional. */
+export const OLIST_BUYER_REQUIRED_REGISTRATION = Object.freeze([
+  'personType',
+  'document',
+  'legalName',
+  'postalCode',
+  'city',
+  'state',
+  'street',
+  'district',
+  'number',
+]);
+/**
+ * ADR 081: only a complete CRM registration selects the fiscal path. Anything
+ * less is ignored, never merged, and the buyer is found in the ERP by name and
+ * phone. Malformed values are not "incomplete" and stay refused.
+ * @param {unknown} value
+ */
+export function olistBuyerRegistrationIncomplete(value) {
+  if (olistBuyerRegistrationEmpty(value)) return true;
+  if (typeof value !== 'object' || value === null || Array.isArray(value))
+    return false;
+  const registration = /** @type {Record<string, unknown>} */ (value);
+  /** @param {string} key */
+  const filled = (key) =>
+    typeof registration[key] === 'string' && registration[key].trim() !== '';
+  return (
+    !OLIST_BUYER_REQUIRED_REGISTRATION.every(filled) ||
+    (registration.personType === 'company' && !filled('stateRegistration'))
+  );
+}
 /** @param {unknown} value */
 export function olistExistingBuyerName(value) {
   if (
@@ -112,7 +143,7 @@ export function assertOlistExistingBuyerSource({
 }
 /** @param {{client:any,config:any,buyer:any}} input */
 export async function resolveOlistExistingBuyer({ client, config, buyer }) {
-  if (!olistBuyerRegistrationEmpty(buyer?.registration))
+  if (!olistBuyerRegistrationIncomplete(buyer?.registration))
     throw new OlistError('OLIST_CUSTOMER_DIVERGENT');
   const identity = {
     name: olistExistingBuyerName(buyer?.name),

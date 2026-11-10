@@ -255,14 +255,39 @@ export function buildOlistPreviewPlan(input) {
         feito_pela_silmer: artwork?.feito_pela_silmer ?? false,
         sem_estampa: artwork?.sem_estampa ?? false,
       });
+      const rawFreight =
+        order.freightCents === undefined || order.freightCents === null
+          ? 0
+          : order.freightCents;
+      const validFreight =
+        typeof rawFreight === 'number' &&
+        Number.isSafeInteger(rawFreight) &&
+        rawFreight >= 0 &&
+        !(
+          rawFreight > 0 &&
+          (order.origin === 'loja' || order.pricingRule === 'pieces-v1')
+        );
+      if (!validFreight) issue('OLIST_FREIGHT_INVALID', 'freightCents');
+      else if (rawFreight > 0) commercial.freightCents = rawFreight;
       // Deliberately ignore persisted missingFields and confirmed shortcuts.
       for (const field of missingForConfirmation({
         ...order,
         status: 'pendente',
+        freightCents: validFreight ? rawFreight : 0,
       }))
         issue('OLIST_ORDER_REQUIRED', field);
       const pricing = sizePricingSummary(order.ficha);
-      if (pricing.complete && pricing.totalCents !== order.finalAmountCents)
+      const expectedTotal =
+        validFreight &&
+        pricing.complete &&
+        pricing.totalCents !== null &&
+        Number.isSafeInteger(pricing.totalCents + rawFreight)
+          ? pricing.totalCents + rawFreight
+          : null;
+      if (
+        pricing.complete &&
+        (!validFreight || expectedTotal !== order.finalAmountCents)
+      )
         issue('OLIST_TOTAL_MISMATCH', 'finalAmountCents');
       const exact = prepareExactCentExport(order.ficha.sizePricing);
       for (const entry of exact.issues)
@@ -272,7 +297,12 @@ export function buildOlistPreviewPlan(input) {
             .filter(Boolean)
             .join('.'),
         );
-      commercial.totalCents = exact.totalCents;
+      commercial.totalCents =
+        exact.totalCents !== null &&
+        validFreight &&
+        Number.isSafeInteger(exact.totalCents + rawFreight)
+          ? exact.totalCents + rawFreight
+          : null;
       commercial.deliveryOn = order.ficha.summary.data_entrega_confirmada;
       commercial.paymentCondition = order.paymentCondition;
       if (order.orderDate === null || order.orderDate === undefined) {

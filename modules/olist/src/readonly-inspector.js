@@ -192,9 +192,19 @@ export function createOlistReadonlyInspector({ client, config }) {
         })),
       })),
     );
+    const rawFreight =
+      snapshot.commercial?.freightCents === undefined ||
+      snapshot.commercial?.freightCents === null
+        ? 0
+        : snapshot.commercial.freightCents;
     if (
+      typeof rawFreight !== 'number' ||
+      !Number.isSafeInteger(rawFreight) ||
+      rawFreight < 0 ||
       !prepared.eligible ||
-      prepared.totalCents !== snapshot.commercial.totalCents
+      prepared.totalCents === null ||
+      !Number.isSafeInteger(prepared.totalCents + rawFreight) ||
+      prepared.totalCents + rawFreight !== snapshot.commercial.totalCents
     )
       refuse();
     /** @param {any} value @param {string[]} fields */
@@ -498,9 +508,7 @@ export function createOlistReadonlyInspector({ client, config }) {
       !emptyArray(body.pagamentosIntegrados) ||
       ![undefined, null, ''].includes(body.dataFaturamento) ||
       !zero(body.origemPedido) ||
-      ![body.valorDesconto, body.valorFrete, body.valorOutrasDespesas].every(
-        zero,
-      )
+      ![body.valorDesconto, body.valorOutrasDespesas].every(zero)
     )
       refuse();
     /** Literal day or documented ERP midnight, never an inferred timezone.
@@ -546,15 +554,22 @@ export function createOlistReadonlyInspector({ client, config }) {
     if (paymentDueOn !== undefined && paymentDueOn !== due) refuse();
     let checked;
     try {
-      checked = reconcileExactCentExport(prepared, {
-        lines: body.itens.map((/** @type {any} */ item) => ({
-          lineId: item.infoAdicional,
-          quantity: olistIntegerFromJson(item.quantidade),
-          unitLexeme: olistNumberLexeme(item.valorUnitario),
-        })),
-        totalProductsLexeme: olistNumberLexeme(body.valorTotalProdutos),
-        totalOrderLexeme: olistNumberLexeme(body.valorTotalPedido),
-      });
+      checked = reconcileExactCentExport(
+        { ...prepared, freightCents: rawFreight },
+        {
+          lines: body.itens.map((/** @type {any} */ item) => ({
+            lineId: item.infoAdicional,
+            quantity: olistIntegerFromJson(item.quantidade),
+            unitLexeme: olistNumberLexeme(item.valorUnitario),
+          })),
+          totalProductsLexeme: olistNumberLexeme(body.valorTotalProdutos),
+          totalOrderLexeme: olistNumberLexeme(body.valorTotalPedido),
+          freightLexeme:
+            body.valorFrete === undefined || body.valorFrete === null
+              ? null
+              : olistNumberLexeme(body.valorFrete),
+        },
+      );
     } catch {
       refuse();
     }

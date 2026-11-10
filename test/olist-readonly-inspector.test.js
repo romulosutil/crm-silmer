@@ -1155,3 +1155,42 @@ test('T09 linked reconciliation rejects reparenting even when sale child IDs and
   });
   assert.equal(f.posts(), 0);
 });
+
+test('OLC-T02 readonly inspector verifies positive valorFrete in existingSale, legacyExistingSale and reconcileSale', async () => {
+  const f = fixture();
+  Object.assign(f.snapshot.commercial, {
+    freightCents: 1500,
+    totalCents: 1800,
+  });
+  f.body.valorFrete = 15;
+  f.body.valorTotalProdutos = 3;
+  f.body.valorTotalPedido = 18;
+  if (f.body.pagamento?.parcelas?.[0]) f.body.pagamento.parcelas[0].valor = 18;
+  const checked = await f.inspect();
+  assert.equal(checked.proof.totalCents, 1800);
+  assert.equal(f.posts(), 0);
+
+  // Absent valorFrete when positive freight is expected must be rejected
+  delete f.body.valorFrete;
+  await assert.rejects(f.inspect(), { code: 'OLIST_SALE_READBACK_MISMATCH' });
+  f.body.valorFrete = 15;
+
+  const leg = explicitLegacyFixture();
+  Object.assign(leg.snapshot.commercial, {
+    freightCents: 1500,
+    totalCents: 1800,
+  });
+  leg.body.valorFrete = 15;
+  leg.body.valorTotalProdutos = 3;
+  leg.body.valorTotalPedido = 18;
+  if (leg.body.pagamento?.parcelas?.[0])
+    leg.body.pagamento.parcelas[0].valor = 18;
+  const legacyChecked = await leg.legacy();
+  assert.equal(legacyChecked.proof.totalCents, 1800);
+  assert.equal(leg.posts(), 0);
+
+  delete leg.body.valorFrete;
+  await assert.rejects(leg.legacy(), {
+    code: 'OLIST_SALE_READBACK_MISMATCH',
+  });
+});

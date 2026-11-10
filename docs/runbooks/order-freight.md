@@ -34,9 +34,34 @@ parte, no momento da implantação.
 
 Pedido legado (sem composição por tamanho) e Pedido da loja ficam com frete
 zero e `pieces-v1`; total, snapshot, ficha, PDF, cobrança e quitação não mudam.
-A ficha não mostra frete e `PRINT_TEMPLATE` não muda. O Olist continua
-exigindo `valorFrete` zero até OLC-T02: um Pedido com frete positivo fica
-bloqueado para o Olist, que é o estado seguro esperado.
+A ficha não mostra frete e `PRINT_TEMPLATE` não muda.
+
+Em **OLC-T02** (`modules/orders/src/domain/olist-exact-cent.js`,
+`modules/olist/src/sale-payload.js`, `modules/olist/src/readonly-inspector.js`,
+`modules/olist/src/resource-resolver.js`, `apps/api/src/olist-preview-plan.js` e
+`apps/api/src/olist-preview-resources.js`):
+
+- O frete congelado do Pedido (`freightCents`) é validado em centavos inteiros
+  não negativos, sem diluir no `valorUnitario` das linhas:
+  `valorTotalProdutos` = soma dos subtotais das linhas;
+  `valorTotalPedido` = `valorTotalProdutos` + `valorFrete`;
+  `pagamento.parcelas[0].valor` = `valorTotalPedido` (quando pagamento enviado).
+- Quando `freightCents === 0`, `valorFrete` permanece omitido no payload do POST
+  para preservar igualdade byte a byte com reservas existentes sem frete; na
+  leitura de retorno, `valorFrete` ausente só equivale a zero quando o frete
+  esperado do Pedido é zero.
+- Quando `freightCents > 0`, `valorFrete` é enviado como literal numérico decimal
+  exato fora dos unitários e exigido com o mesmo valor em centavos exatos no
+  readback bruto (`reconcileOlistSale`, `existingSale`, `legacyExistingSale` e
+  `reconcileSale`), mantendo `valorDesconto` e `valorOutrasDespesas` ausentes ou
+  zero. Divergência após o POST preserva `observed_sale_id` e marca a operação
+  como `uncertain`, bloqueando novo POST criador.
+- Cadastro completo do comprador permanece obrigatório exclusivamente no novo
+  envio Olist (ADR 082), bloqueando `buyerSource` (`erp-existing-v1`), cadastro
+  vazio/parcial ou busca por nome/telefone tanto na prévia quanto no resolvedor
+  de recursos antes de qualquer reserva ou chamada ao ERP, sem alterar os
+  contratos administrativos de vínculo histórico (`readonly-inspector.js` e
+  `olist-administration.js`).
 
 ## Aplicação da migration 0076
 

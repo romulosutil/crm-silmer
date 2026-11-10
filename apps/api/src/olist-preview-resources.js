@@ -2,7 +2,6 @@ import {
   olistResourceIdentityHash,
   normalizeDocument,
   olistProductFiscal,
-  verifyOlistExistingBuyer,
 } from '@crm-silmer/olist';
 
 const PRODUCT_FIELDS = [
@@ -178,25 +177,19 @@ export async function planOlistResources({ client, config, plan, resources }) {
   /** @returns {{action:string,remoteId:string|null}} */
   const blocked = () => ({ action: 'blocked', remoteId: null });
   let customer = blocked();
-  if (plan.buyerSource?.mode === 'erp-existing-v1') {
-    try {
-      const found = await verifyOlistExistingBuyer({
-        client,
-        config,
-        customer: plan.customer,
-        buyerSource: plan.buyerSource,
-      });
-      customer = { action: 'reuse', remoteId: found.remoteId };
-    } catch (error) {
-      failure('customer', error);
-    }
+  if (plan.buyerSource !== null && plan.buyerSource !== undefined) {
+    issue('customer', 'OLIST_CUSTOMER_INVALID');
   } else if (plan.customer) {
     const field = 'customer';
-    const link = linked(
-      'customer',
-      hash('customer', normalizeDocument(plan.customer.cpfCnpj)),
-      field,
-    );
+    let document = null;
+    try {
+      document = normalizeDocument(plan.customer.cpfCnpj);
+    } catch {
+      issue(field, 'OLIST_CUSTOMER_INVALID');
+    }
+    const link = document
+      ? linked('customer', hash('customer', document), field)
+      : { blocked: true, row: null };
     if (!link.blocked) {
       try {
         let found;

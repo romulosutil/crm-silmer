@@ -155,8 +155,17 @@ export function createOlistAdministration(database, options) {
     if (blocked.length || (!plan.customer && !existingBuyer))
       throw new OlistError('OLIST_ORDER_INCOMPLETE', 422);
     const order = current.source.order,
-      prepared = prepareExactCentExport(order.ficha.sizePricing);
-    if (!prepared.eligible || prepared.totalCents !== order.finalAmountCents)
+      prepared = prepareExactCentExport(order.ficha.sizePricing),
+      freight = order.freightCents ?? 0;
+    if (
+      typeof freight !== 'number' ||
+      !Number.isSafeInteger(freight) ||
+      freight < 0 ||
+      !prepared.eligible ||
+      prepared.totalCents === null ||
+      !Number.isSafeInteger(prepared.totalCents + freight) ||
+      prepared.totalCents + freight !== order.finalAmountCents
+    )
       throw new OlistError('OLIST_ORDER_INCOMPLETE', 422);
     const groups = order.ficha.sizePricing.map(
       (/** @type {any} */ group, /** @type {number} */ index) => {

@@ -941,3 +941,115 @@ test('L2 sale POST reserves write headroom (2 readbacks) BEFORE the ticket; with
   });
   assert.deepEqual(events, ['credentials', 'reserveWrite']);
 });
+
+test('OLC-T02 buildOlistSalePayload and reconcileOlistSale handle valorFrete zero/absent, positive, divergent and fractional', () => {
+  const zero = fixture();
+  assert.equal(zero.plan.freightCents, 0);
+  assert.equal(zero.plan.freightLexeme, '0.00');
+  assert.equal(zero.plan.productsTotalCents, 900);
+  assert.equal(zero.plan.totalCents, 900);
+  assert.equal('valorFrete' in JSON.parse(zero.plan.encoded), false);
+  for (const zeroField of ['', ',"valorFrete":0', ',"valorFrete":0.00']) {
+    const raw = rawOrder(zero.plan).replace(
+      '"valorTotalPedido":9.00',
+      '"valorTotalPedido":9.00' + zeroField,
+    );
+    assert.equal(reconcileOlistSale(zero.plan, raw, 401).matched, true);
+  }
+
+  const pos = fixture();
+  Object.assign(pos.snapshot.commercial, {
+    freightCents: 2590,
+    totalCents: 3490,
+  });
+  const plan = buildOlistSalePayload({
+    snapshot: pos.snapshot,
+    resolved: pos.resolved,
+    reference: REFERENCE,
+  });
+  assert.equal(plan.freightCents, 2590);
+  assert.equal(plan.freightLexeme, '25.90');
+  assert.equal(plan.productsTotalCents, 900);
+  assert.equal(plan.productsTotalLexeme, '9.00');
+  assert.equal(plan.totalCents, 3490);
+  assert.equal(plan.totalLexeme, '34.90');
+  assert.match(plan.encoded, /"valorFrete":25\.90/u);
+  assert.match(plan.encoded, /"valor":34\.90/u);
+  const parsed = JSON.parse(plan.encoded);
+  assert.equal(parsed.valorFrete, 25.9);
+  assert.equal(parsed.pagamento.parcelas[0].valor, 34.9);
+  assert.deepEqual(
+    parsed.itens.map((/** @type {any} */ item) => item.valorUnitario),
+    [1, 3],
+  );
+
+  const positiveRaw = rawOrder(plan)
+    .replace('"valorTotalProdutos":34.90', '"valorTotalProdutos":9.00')
+    .replace(
+      '"valorTotalPedido":34.90',
+      '"valorTotalPedido":34.90,"valorFrete":25.90,"valorDesconto":0,"valorOutrasDespesas":0,"pagamento":{"meioPagamento":{"id":15},"formaRecebimento":{"id":16},"parcelas":[{"data":"2026-11-10","valor":34.90}]}',
+    );
+  assert.deepEqual(reconcileOlistSale(plan, positiveRaw, 401), {
+    matched: true,
+    lineCount: 2,
+    totalCents: 3490,
+    number: '99',
+  });
+
+  // Absent, zero, divergent, fractional valorFrete or unadjusted totals/installments must fail closed
+  for (const badBody of [
+    positiveRaw.replace(',"valorFrete":25.90', ''),
+    positiveRaw.replace('"valorFrete":25.90', '"valorFrete":null'),
+    positiveRaw.replace('"valorFrete":25.90', '"valorFrete":0'),
+    positiveRaw.replace('"valorFrete":25.90', '"valorFrete":25.89'),
+    positiveRaw.replace('"valorFrete":25.90', '"valorFrete":25.905'),
+    positiveRaw.replace('"valorFrete":25.90', '"valorFrete":"25.90"'),
+    positiveRaw.replace(
+      '"valorTotalProdutos":9.00',
+      '"valorTotalProdutos":34.90',
+    ),
+    positiveRaw.replace('"valorTotalPedido":34.90', '"valorTotalPedido":9.00'),
+    positiveRaw.replace('"valor":34.90', '"valor":9.00'),
+    positiveRaw.replace('"valorDesconto":0', '"valorDesconto":0.01'),
+    positiveRaw.replace(
+      '"valorOutrasDespesas":0',
+      '"valorOutrasDespesas":0.01',
+    ),
+  ]) {
+    assert.throws(() => reconcileOlistSale(plan, badBody, 401), {
+      code: 'OLIST_SALE_READBACK_MISMATCH',
+    });
+  }
+
+  // Preflight rejects negative, fractional, mismatched or overflowing freightCents
+  for (const mutate of [
+    (/** @type {any} */ s) => {
+      s.commercial.freightCents = -1;
+      s.commercial.totalCents = 899;
+    },
+    (/** @type {any} */ s) => {
+      s.commercial.freightCents = 12.5;
+      s.commercial.totalCents = 912.5;
+    },
+    (/** @type {any} */ s) => {
+      s.commercial.freightCents = 2590;
+      s.commercial.totalCents = 900;
+    },
+    (/** @type {any} */ s) => {
+      s.commercial.freightCents = Number.MAX_SAFE_INTEGER;
+      s.commercial.totalCents = Number.MAX_SAFE_INTEGER;
+    },
+  ]) {
+    const bad = fixture();
+    mutate(bad.snapshot);
+    assert.throws(
+      () =>
+        buildOlistSalePayload({
+          snapshot: bad.snapshot,
+          resolved: bad.resolved,
+          reference: REFERENCE,
+        }),
+      { code: 'OLIST_SALE_EXACT_CENT_REQUIRED' },
+    );
+  }
+});

@@ -723,11 +723,22 @@ export function createOlistAdminRepository(database, options) {
             })),
           })),
         );
+        const freight =
+          input.snapshot.commercial.freightCents === undefined ||
+          input.snapshot.commercial.freightCents === null
+            ? 0
+            : input.snapshot.commercial.freightCents;
         if (
+          typeof freight !== 'number' ||
+          !Number.isSafeInteger(freight) ||
+          freight < 0 ||
           !prepared.eligible ||
-          input.proof.totalCents !== prepared.totalCents ||
+          prepared.totalCents === null ||
+          !Number.isSafeInteger(prepared.totalCents + freight) ||
+          input.proof.totalCents !== prepared.totalCents + freight ||
           input.proof.lineCount !== prepared.lines.length ||
-          input.snapshot.commercial.totalCents !== prepared.totalCents ||
+          input.snapshot.commercial.totalCents !==
+            prepared.totalCents + freight ||
           input.proof.fiscalVerified !== false
         )
           throw new OlistError('OLIST_SALE_DIVERGENT');

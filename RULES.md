@@ -82,7 +82,8 @@ incompatíveis para o novo contrato; a implementação segue as fases e os
 gates registrados na RFC e no plano de tarefas.
 
 - Checkbox Habilitado Olist é ortogonal ao perfil e dono: usuário humano ativo
-  habilitado opera Olist em qualquer Pedido com ficha/cadastro completos.
+  habilitado opera Olist em qualquer Pedido com ficha completa; o cadastro
+  completo é opcional ([ADR 081](docs/adr/081-cadastro-do-comprador-opcional-no-olist.md)).
   Admin não herda envio; habilitação não concede Inbox, edição geral ou conexão.
 - Buscar e criar cliente comprador, produto pai e variações/tamanhos ausentes,
   com dados válidos, reservas por identidade, vínculos e reconciliação por etapa.

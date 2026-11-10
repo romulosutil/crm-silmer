@@ -6,7 +6,20 @@ import {
   verifyOlistExistingBuyer,
   assertOlistExistingBuyerSource,
   olistBuyerRegistrationEmpty,
+  olistBuyerRegistrationIncomplete,
 } from '../modules/olist/src/existing-buyer.js';
+
+const completeRegistration = {
+  personType: 'individual',
+  document: '52998224725',
+  legalName: 'Comprador sintético',
+  postalCode: '01001000',
+  city: 'São Paulo',
+  state: 'SP',
+  street: 'Rua sintética',
+  district: 'Centro',
+  number: 'S/N',
+};
 
 const config = {
   accountKey: 'synthetic-account',
@@ -70,7 +83,7 @@ test('existing ERP buyer captures only name/phone plus account-bound private has
     );
   assert.equal(reads, 2);
 });
-test('only entirely empty CRM registration can trigger lookup; partial values never merge', async () => {
+test('ADR 081: an empty or partial CRM registration triggers lookup; malformed or complete ones do not', async () => {
   for (const registration of [
     null,
     undefined,
@@ -79,12 +92,35 @@ test('only entirely empty CRM registration can trigger lookup; partial values ne
   ])
     assert.equal(olistBuyerRegistrationEmpty(registration), true);
   for (const registration of [
+    null,
+    {},
     { personType: 'company' },
     { instagram: 'synthetic' },
+    { ...completeRegistration, number: ' ' },
+    { ...completeRegistration, personType: 'company' },
+  ]) {
+    assert.equal(olistBuyerRegistrationIncomplete(registration), true);
+    const found = await resolveOlistExistingBuyer({
+      config,
+      buyer: { ...buyer, registration },
+      client: {
+        findCustomerByIdentity: async () => ({
+          id: 101,
+          nome: buyer.name,
+          celular: buyer.phone,
+          situacao: 'A',
+        }),
+      },
+    });
+    assert.deepEqual(Object.keys(found.customer).sort(), ['celular', 'nome']);
+  }
+  for (const registration of [
+    completeRegistration,
+    { ...completeRegistration, personType: 'company', stateRegistration: 'X' },
     [],
     '',
   ]) {
-    assert.equal(olistBuyerRegistrationEmpty(registration), false);
+    assert.equal(olistBuyerRegistrationIncomplete(registration), false);
     await assert.rejects(
       resolveOlistExistingBuyer({
         config,

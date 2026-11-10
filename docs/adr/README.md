@@ -2,6 +2,10 @@
 
 ## Decisão de 10/11/2026
 
+- [081 — Cadastro do comprador opcional no Olist](081-cadastro-do-comprador-opcional-no-olist.md):
+  cadastro vazio ou parcial nunca é pendência; o comprador é localizado no
+  Olist por nome e telefone, sem mesclar dados. Complementa a ADR 072.
+
 - [080 — Valor final com frete](080-valor-final-com-frete.md), RFC 062 /
   OLC-05a–j / OLC-T01: valor final = soma dos subtotais + frete; o vendedor
   responsável informa o frete com o Pedido pendente, a cotação é só sugestão,

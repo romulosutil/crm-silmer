@@ -7,7 +7,10 @@ import {
   createSizePricing,
   reviewSizePricingSubtotal,
 } from '@crm-silmer/orders';
-import { buildOlistPreviewPlan } from '../apps/api/src/olist-preview-plan.js';
+import {
+  buildOlistPreviewPlan,
+  withoutOptionalBuyerIssues,
+} from '../apps/api/src/olist-preview-plan.js';
 import { captureOlistExistingBuyer } from '../modules/olist/src/existing-buyer.js';
 
 function fixture() {
@@ -282,6 +285,24 @@ test('T06 buyer CPF/CNPJ DV, fiscal address, explicit IE and contact data are re
   assert.equal(plan.customer.inscricaoEstadual, 'ISENTO');
 });
 
+test('ADR 081 optional registration fields are not listed beside a real blocker and never clear the last one', () => {
+  const field = 'buyer.registration.document';
+  const optional = { code: 'OLIST_BUYER_REQUIRED', field };
+  const real = { code: 'OLIST_SOURCE_INCOMPLETE', field: 'source' };
+  const phone = { code: 'OLIST_BUYER_REQUIRED', field: 'buyer.phone' };
+  const buyer = { registration: null };
+  assert.deepEqual(withoutOptionalBuyerIssues([optional, real], buyer), [real]);
+  assert.deepEqual(withoutOptionalBuyerIssues([optional, phone], buyer), [
+    phone,
+  ]);
+  assert.deepEqual(withoutOptionalBuyerIssues([optional], buyer), [optional]);
+  const complete = { registration: fixture().buyer.registration };
+  assert.deepEqual(withoutOptionalBuyerIssues([optional, real], complete), [
+    optional,
+    real,
+  ]);
+});
+
 test('T06 buyer null or malformed optional email cannot produce a customer payload', () => {
   const input = fixture();
   hasIssue(
@@ -469,11 +490,20 @@ test('T17 ERP-owned payment needs no due or payment IDs; a minimal buyer needs e
     buildOlistPreviewPlan({
       ...input,
       settings,
-      buyer: { ...buyer, registration: { personType: 'individual' } },
+      buyer: { ...buyer, registration: input.buyer.registration },
       buyerSource: captured.buyerSource,
     }),
     'OLIST_BUYER_INVALID',
   );
+  // ADR 081: a partial CRM registration is ignored, never merged nor required.
+  const partial = buildOlistPreviewPlan({
+    ...input,
+    settings,
+    buyer: { ...buyer, registration: { personType: 'individual' } },
+    buyerSource: captured.buyerSource,
+  });
+  assert.equal(partial.eligible, true, JSON.stringify(partial.issues));
+  assert.deepEqual(partial.customer, captured.customer);
   hasIssue(
     buildOlistPreviewPlan({
       ...input,

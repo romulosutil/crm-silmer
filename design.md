@@ -242,7 +242,11 @@ desenhada primeiro para 390×844.
 |---|---|
 | `Button` | secundário por padrão; `.primary` (uma por região), `.quiet`, `.danger`, `.link-button`; `.button-link` para links com cara de botão; loading e disabled |
 | `IconButton` | alvo mínimo de `44×44px`, tooltip e nome acessível |
-| `Field` | label, descrição, input/select/textarea, erro e estado obrigatório |
+| `Field` | label visível, descrição, input/select/textarea, erro e estado obrigatório; variante **em linha** (rótulo à esquerda, campo à direita) para edição no lugar; uma só anatomia de campo em todo o produto (§20) |
+| `FieldGap` | `Badge` de atenção "Falta" sob o campo exigido para concluir a tarefa; ligado ao campo por `aria-describedby`, com `aria-required`; nunca `aria-invalid` (§20) |
+| `SaveStatus` | "Salvando…" → "Salvo" no cabeçalho da seção, `role="status"`, texto + ícone; falha vira erro no campo (§20) |
+| `BlankRow` | última linha de uma lista editável, sempre vazia e tracejada; preencher cria a linha; substitui "Adicionar linha" (§20) |
+| `InlineConfirm` | confirmação de ação destrutiva no próprio item: pergunta, `Manter` e `Remover`; foco em `Manter`, Esc cancela (§20) |
 | `Checkbox` / `Radio` / `Switch` | label clicável, foco visível e estado indeterminado quando necessário |
 | `SearchField` | limpeza, atalho opcional e anúncio de resultados |
 | `Badge` / `Status` | texto + ícone; nunca somente cor |
@@ -419,10 +423,21 @@ tem esse título e imprime os dados em cada folha, sem Pago em.
   quem não edita, para pedido confirmado nem para pedido da loja.
 - **Cabeçalho de seção (PFI-17):** título, estado em texto com ícone
   ("Entrega 20/11/2026", "Falta: cor do item 1", "1 item · 150 peças", "1 de
-  3 datas") e o botão `Editar resumo`, `Editar datas`, `Editar itens`,
-  `Editar arte` ou `Editar observações`, com 44 px. Com uma seção em edição,
-  os outros ficam com `aria-disabled` e o motivo "Salve ou cancele a edição
-  aberta.".
+  3 datas") e o `SaveStatus`. Decisão do PO em 10/11/2026 (§20): os botões
+  `Editar resumo`, `Editar datas`, `Editar itens`, `Editar arte` e `Editar
+  observações` saem; quem pode editar encontra os campos abertos. Enquanto
+  uma seção não for migrada, ela mantém o botão e o bloqueio "Salve ou
+  cancele a edição aberta."; nenhuma seção nova nasce com eles.
+- **Itens e especificações (§20, protótipo
+  `output/prototipos/itens-especificacoes/`):** um cartão por item. Cabeçalho:
+  número na linha do nome, "MODELO · Público", peças e valor, e o menu "Mais
+  ações do item N" (Duplicar para outro público, Mover, Remover). Corpo:
+  `Field` em linha na ordem Modelo, Cor, Aplicação, Malha, Gola; adicionais
+  entram um a um por botão quieto e só aparecem com dado. Tamanhos: uma
+  linha por tamanho com Tamanho, Quantidade e Subtotal, a `BlankRow` no fim
+  e o total do item. Sem botões de − e +, sem reordenar tamanhos e sem o
+  passo "Usar subtotais por tamanho": o subtotal existe desde a primeira
+  linha. No notebook, especificações à esquerda e tamanhos à direita.
 - **Acordeão no celular (PFI-18):** até 768 px, uma seção aberta por vez,
   Dados do atendimento inclusive; acima disso, tudo aberto e empilhado.
 - **Arte do pedido (PFI-20):** quem faz a arte ("A {empresa} cria a arte" com
@@ -514,6 +529,15 @@ Uma tela ou componente só está pronto quando:
 - Usar placeholder como label.
 - Exibir status somente como ponto colorido.
 - Criar um novo estilo de botão, input, badge ou panel dentro de uma feature.
+- Campo sem borda, sem fundo ou que só parece campo no foco ou no hover.
+- Campo cujo único nome visível é o placeholder ou um `aria-label`.
+- Pendência mostrada como texto colorido solto, sem ícone e sem ligação com o
+  campo.
+- Borda tracejada fora de `BlankRow` e de "Adicionar item".
+- Modo de edição por seção (Editar → Salvar/Cancelar) em tela nova.
+- Um controle próprio para "adicionar linha" quando a `BlankRow` resolve.
+- Número, selo ou ícone centralizado contra um bloco de várias linhas: ele
+  alinha com a primeira linha de texto.
 - Truncar conteúdo crítico sem alternativa para leitura completa.
 - Usar drag-and-drop como única forma de alterar etapa.
 
@@ -587,20 +611,28 @@ alterada e completam a §3 (baixa carga cognitiva) e a §11 (acessibilidade).
   e mostra o estado em texto ("Completo", "Falta a cor do item 2"), que entra
   no nome acessível.
 - A seção inicial vem do hash da URL (por exemplo `#itens`), senão do
-  primeiro passo pendente, senão do Resumo; uma seção em edição não fecha até
-  Salvar ou Cancelar, e o rascunho sobrevive a redimensionar a tela.
+  primeiro passo pendente, senão do Resumo. Com edição no lugar (§20), trocar
+  de seção confirma o campo em foco antes de fechar; não há rascunho a
+  perder. Numa seção ainda não migrada, ela não fecha até Salvar ou Cancelar
+  e o rascunho sobrevive a redimensionar a tela.
 - Abrir uma seção grava o hash na URL sem navegar (`history.replace` do
   router), para não remontar a view, que o shell identifica pela `fullPath`,
   e perder foco e rascunho.
-- O botão "Editar" + seção fica fora do botão do cabeçalho (irmão do `h2`) e
-  só aparece na seção aberta; com uma seção em edição, os outros cabeçalhos
-  ficam com `aria-disabled` e o motivo.
+- Só em seção ainda não migrada para a §20: o botão "Editar" + seção fica
+  fora do botão do cabeçalho (irmão do `h2`) e só aparece na seção aberta;
+  com uma seção em edição, os outros cabeçalhos ficam com `aria-disabled` e
+  o motivo.
 
 ### Um só modelo de edição
 
-- Todo dado editável fica atrás de "Editar" + seção → Salvar/Cancelar ou do
-  diálogo da ação; nunca num bloco sempre aberto ao lado de seções em
-  leitura.
+- O modelo é a **edição no lugar** (§20, decisão do PO em 10/11/2026): quem
+  pode editar vê os campos abertos e cada alteração salva sozinha. Substitui
+  "Editar" + seção → Salvar/Cancelar, que permanece só nas seções ainda não
+  migradas e não pode ser usado em tela nova.
+- Continua valendo um só modelo por tela pronta: uma tela migrada não mistura
+  seção com botão "Editar" e seção editável no lugar.
+- Fica em diálogo apenas o que compromete ou é irreversível (gerar,
+  cancelar, reabrir, enviar).
 - O diálogo da ação final (por exemplo, "Gerar o pedido") revisa o que vai
   acontecer, pede só o que falta, foca o primeiro campo e devolve o foco com
   Esc ou "Voltar" ao botão que o abriu (no pedido, o do trilho ou o do
@@ -628,10 +660,16 @@ fatias estão no "Resultado" do
 
 | Tela             | Celular                                                      | Notebook            |
 | ---------------- | ------------------------------------------------------------ | ------------------- |
-| Pedido aberto    | ≤ 12; documento ≤ 1.800 px; ≤ 1 "Editar" visível; 1 primária | ≤ 16                |
+| Pedido aberto    | ≤ 12 ações; documento ≤ 1.800 px; nenhum "Editar"; 1 primária | ≤ 16 ações          |
 | Conversa         | ≤ 9 antes de assumir; ≤ 12 depois; cabeçalho ≤ 4             | ≤ 24; cabeçalho ≤ 4 |
 | Caixa de Entrada | ≤ 15; barra de ferramentas de 7 para 5                       | ≤ 24                |
 | Pedidos          | ≤ 12, com o 1º cartão inteiro acima da barra inferior        | ≤ 19                |
+
+Decisão do PO em 10/11/2026 (§20): na tela com edição no lugar a meta conta
+**ações** (botões, links e itens de menu visíveis); campos de dados não
+contam. O limite de altura do documento vale com as seções do acordeão
+fechadas e a seção do próximo passo aberta. A medição do pedido migrado entra
+aqui quando a implementação for entregue; até lá a linha é meta, não medida.
 
 INBOX-UX-03, layout autorizado em 03/11/2026: os quatro controles do
 cabeçalho incluem o acesso ao cadastro pelo nome, pedido/criação/assumir,
@@ -932,3 +970,120 @@ volta para revisão, não segue para implementação.
   desenho, e a prancheta "Componentes" do protótipo espelha este documento.
 - Decisões do PO entram com data no `tasks.md` da feature; numeração de
   RFC, ADR e migração segue o maior número entre todas as branches remotas.
+
+## 20. Edição no lugar — EDIT-01 (10/11/2026)
+
+Decisão do PO em 10/11/2026, a partir do protótipo
+`output/prototipos/itens-especificacoes/` (local, não versionado). Registro:
+[ADR 083](docs/adr/083-edicao-no-lugar.md), que supersede em parte a ADR 036
+no modelo "Editar" + seção → Salvar/Cancelar. Completa as §8, §16 e §17. A
+especificação (PFI-17, PFI-18, PIT-02) é emendada junto da primeira tela
+migrada. Começa em "Itens e especificações" e
+segue para as demais seções do pedido; até cada seção ser migrada, o código
+dela continua no modelo anterior.
+
+### Regra
+
+- Quem pode editar vê o campo aberto, com o valor atual. Não existe modo de
+  edição, botão "Editar" nem Salvar/Cancelar de seção.
+- Cada alteração salva sozinha ao sair do campo ou com Enter: um campo, um
+  comando. Não há rascunho de seção.
+- Quem não pode editar e o pedido confirmado veem o mesmo cartão em leitura,
+  com texto no lugar do campo; nenhum campo desabilitado em massa.
+- Nada do que é opcional bloqueia salvar. Só gerar o pedido cobra o que
+  falta (`RULES.md`, regra 14).
+
+### Campo: uma anatomia só
+
+- Todo campo é o `Field` da §8: rótulo visível, campo com borda
+  `--color-border-strong` (3:1), fundo `--color-surface`, raio
+  `--radius-md`, altura `--control-height` (44 px no toque), texto de
+  `--text-base` com peso 500 e 16 px no celular.
+- Hover escurece a borda para `--color-text-muted`; foco troca a borda por
+  `--color-focus` e soma o halo de 3 px `--color-focus-halo`; desabilitado
+  usa `--color-surface-muted` e texto atenuado; erro usa
+  `--status-error-text` na borda e mensagem logo abaixo.
+- `Field` em linha: rótulo à esquerda em coluna fixa (6,5rem), campo à
+  direita ocupando o resto; descrição, `FieldGap` e erro ficam sob o campo,
+  na coluna dele. Rótulo com peso 500 e cor atenuada, sem caixa alta.
+- É proibido campo sem borda, campo que só aparece no foco e campo nomeado
+  só por placeholder ou `aria-label`. Em tabela editável o cabeçalho da
+  coluna é o rótulo visível e cada célula repete o nome em `aria-label`
+  ("Quantidade do tamanho M, item 1").
+- Valor em caixa alta (modelo, cor, malha, gola, tamanho) é transformação de
+  exibição e de gravação; o rótulo nunca é em caixa alta.
+
+### Pendência no campo (`FieldGap`)
+
+- O que falta para concluir a tarefa é estado do campo, não erro: o campo
+  leva `aria-required="true"` e `aria-describedby` apontando para o
+  `FieldGap`; nunca `aria-invalid`.
+- O `FieldGap` é um `Badge` de atenção com ícone e o texto "Falta"; o nome
+  acessível completa o motivo ("Falta para gerar o pedido").
+- Ele some quando o campo recebe valor e nunca aparece em campo opcional.
+- A mesma pendência aparece, com as mesmas palavras, no estado do cabeçalho
+  da seção e no rodapé ("Falta: aplicação do item 1 e mais 2 pontos"); os
+  três leem a mesma fonte (`missingFields`).
+- O rodapé leva ao primeiro campo pendente e põe o foco nele.
+
+### Salvamento (`SaveStatus`)
+
+- Uma só região `role="status"` por seção, no cabeçalho: "Salvando…" e
+  depois "Salvo", com ícone. Não há toast de sucesso.
+- Falha de salvamento vira erro no campo, com o valor digitado preservado e
+  a recuperação na mensagem; conflito de versão diz que o pedido mudou e
+  oferece recarregar.
+- Mudança que invalida outro dado mostra o efeito ao lado dele, com ação
+  nomeada: quantidade alterada marca o subtotal com atenção e "Manter R$
+  640,00" (`RULES.md`, revisão humana do subtotal).
+- Totais e somas são recalculados enquanto se digita e nunca são digitados.
+
+### Listas editáveis (`BlankRow`)
+
+- Toda lista em que se digita termina numa linha em branco, com borda
+  tracejada. Preencher e sair dela, ou Enter, cria a linha; outra em branco
+  aparece no lugar. Não existe botão "Adicionar linha".
+- A `BlankRow` não tem botão de remover, não gera pendência e não entra em
+  total.
+- Colar uma lista na primeira célula cria várias linhas de uma vez ("P 20 M
+  60 G 50"). Um valor repetido soma na linha existente e avisa; nunca cria
+  duas linhas iguais.
+- Uma dica de uma linha sob a lista diz o que a linha em branco faz; com a
+  lista vazia ela dá o exemplo de colar.
+- Enter percorre como planilha: da esquerda para a direita e, na última
+  célula, para a linha seguinte.
+- Remover linha é botão de ícone de 44 px com nome ("Remover tamanho M do
+  item 1"); o foco vai para a linha seguinte ou para a `BlankRow`.
+
+### Campos opcionais
+
+- Opcional não ocupa espaço vazio: cada um entra por um botão quieto com
+  "+" e o nome do campo, e passa a ficar visível enquanto tiver dado.
+- Não há acordeão "Adicionais" abrindo vários campos de uma vez.
+- "Não aplicável" é um chip de alternância ao lado do campo; ligado, o
+  campo mostra "Não aplicável" desabilitado e guarda o valor anterior.
+
+### Cartão de item
+
+- O número do item fica na primeira linha, alinhado ao nome, com a altura da
+  linha do nome; nunca centralizado contra duas linhas.
+- O nome do cartão é lido dos campos ("CAMISETA · Feminino") e não é um
+  campo; "Modelo" é o primeiro `Field` do corpo.
+- Peças e valor ficam sob o nome no celular e à direita dele no notebook.
+- Ações do item ficam em "Mais ações do item N"; remover usa
+  `InlineConfirm`.
+
+### Botões desta superfície
+
+- `Adicionar item` é o único botão de borda tracejada; "+ campo" é `quiet`
+  com texto de ação; a primária é só a do rodapé ("Completar itens" ou
+  "Gerar pedido").
+- Botão padrão tem borda `--color-border` e peso 500; peso 600 só em
+  `primary` e `soft`.
+
+### Não usar
+
+- Edição no lugar em dado que compromete ou não tem volta: isso é diálogo.
+- Salvar a cada tecla.
+- Esconder que salvou: sem `SaveStatus` a seção não está pronta.
+- Um segundo modelo na mesma tela migrada.

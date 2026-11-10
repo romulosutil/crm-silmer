@@ -4501,6 +4501,7 @@ components:
           required:
             [groups, totalCents, orderDate, deliveryOn, paymentCondition]
           properties:
+            freightCents: { type: integer, minimum: 0 }
             totalCents: { type: [integer, 'null'], minimum: 1 }
             orderDate: { type: [string, 'null'], format: date }
             deliveryOn: { type: [string, 'null'], format: date }

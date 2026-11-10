@@ -367,3 +367,91 @@ test('response fields and sparse arrays cannot smuggle claimed subtotal evidence
   sparse.lines = Array(3);
   assert.throws(() => reconcileExactCentExport(prepared, sparse), mismatch);
 });
+
+test('ADR 080 / OLC-05: reconcileExactCentExport verifies freightCents zero/absent vs positive and separates products total from order total', () => {
+  const zeroPrepared = ready();
+  for (const freightLexeme of [undefined, null, '0', '0.00', '0e0', '0.0000']) {
+    /** @type {any} */
+    const remote = observed(zeroPrepared);
+    if (freightLexeme !== undefined) remote.freightLexeme = freightLexeme;
+    assert.deepEqual(reconcileExactCentExport(zeroPrepared, remote), {
+      matched: true,
+      lineCount: 3,
+      totalCents: 12,
+    });
+  }
+  for (const badZero of ['0.01', '0.001', '-0', '-0.01', '01', 'NaN', 0]) {
+    /** @type {any} */
+    const remote = observed(zeroPrepared);
+    remote.freightLexeme = badZero;
+    assert.throws(
+      () => reconcileExactCentExport(zeroPrepared, remote),
+      mismatch,
+    );
+  }
+
+  const withFreight = { ...ready(), freightCents: 2590 };
+  const remoteWithFreight = {
+    ...observed(withFreight),
+    totalProductsLexeme: '0.12',
+    freightLexeme: '25.90',
+    totalOrderLexeme: '26.02',
+  };
+  assert.deepEqual(reconcileExactCentExport(withFreight, remoteWithFreight), {
+    matched: true,
+    lineCount: 3,
+    totalCents: 2602,
+  });
+  assert.equal(
+    reconcileExactCentExport(withFreight, {
+      ...remoteWithFreight,
+      freightLexeme: '259e-1',
+      totalOrderLexeme: '26.0200',
+    }).matched,
+    true,
+  );
+
+  // When expected freight > 0, absent/null/zero/divergent/fractional freightLexeme is rejected,
+  // and totalOrderLexeme === totalProductsLexeme is rejected.
+  for (const mutate of [
+    (/** @type {any} */ r) => {
+      delete r.freightLexeme;
+    },
+    (/** @type {any} */ r) => {
+      r.freightLexeme = null;
+    },
+    (/** @type {any} */ r) => {
+      r.freightLexeme = '0.00';
+    },
+    (/** @type {any} */ r) => {
+      r.freightLexeme = '25.89';
+    },
+    (/** @type {any} */ r) => {
+      r.freightLexeme = '25.905';
+    },
+    (/** @type {any} */ r) => {
+      r.totalOrderLexeme = '0.12';
+    },
+    (/** @type {any} */ r) => {
+      r.totalProductsLexeme = '26.02';
+    },
+  ]) {
+    const candidate = structuredClone(remoteWithFreight);
+    mutate(candidate);
+    assert.throws(
+      () => reconcileExactCentExport(withFreight, candidate),
+      mismatch,
+    );
+  }
+
+  for (const badPlanFreight of [-1, 1.5, '2590', Number.MAX_SAFE_INTEGER]) {
+    const badPrepared = {
+      ...structuredClone(ready()),
+      freightCents: /** @type {any} */ (badPlanFreight),
+    };
+    assert.throws(
+      () => reconcileExactCentExport(badPrepared, remoteWithFreight),
+      errorCode('OLIST_EXACT_CENT_PLAN_INVALID'),
+    );
+  }
+});

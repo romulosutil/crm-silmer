@@ -600,3 +600,59 @@ test('T17 ERP-owned payment needs no due or payment IDs; only the administrative
     'OLIST_SETTINGS_INVALID',
   );
 });
+
+test('OLC-T02 buildOlistPreviewPlan validates freightCents outside unit prices and checks products + freight === finalAmountCents', () => {
+  const zero = fixture();
+  const zeroPlan = buildOlistPreviewPlan(zero);
+  assert.equal(zeroPlan.eligible, true);
+  assert.equal('freightCents' in zeroPlan.commercial, false);
+  assert.equal(zeroPlan.commercial.totalCents, 1800);
+
+  const positive = fixture();
+  positive.source.order.freightCents = 1590;
+  positive.source.order.finalAmountCents = 1800 + 1590;
+  const posPlan = buildOlistPreviewPlan(positive);
+  assert.equal(posPlan.eligible, true, JSON.stringify(posPlan.issues));
+  assert.equal(posPlan.commercial.freightCents, 1590);
+  assert.equal(posPlan.commercial.totalCents, 3390);
+  assert.deepEqual(
+    posPlan.commercial.groups.map(
+      (/** @type {any} */ g) => g.lines[0].unitLexeme,
+    ),
+    ['3.00', '4.00'],
+  );
+
+  // Mismatched finalAmountCents (e.g. equal only to pieces total when freight > 0)
+  const mismatchInput = fixture();
+  mismatchInput.source.order.freightCents = 1590;
+  mismatchInput.source.order.finalAmountCents = 1800;
+  const mismatchPlan = buildOlistPreviewPlan(mismatchInput);
+  assert.equal(mismatchPlan.eligible, false);
+  hasIssue(mismatchPlan, 'OLIST_TOTAL_MISMATCH');
+
+  // Invalid freightCents (negative, fractional, or positive on store/legacy order)
+  for (const mutate of [
+    (/** @type {any} */ input) => {
+      input.source.order.freightCents = -100;
+    },
+    (/** @type {any} */ input) => {
+      input.source.order.freightCents = 10.5;
+    },
+    (/** @type {any} */ input) => {
+      input.source.order.origin = 'loja';
+      input.source.order.freightCents = 500;
+      input.source.order.finalAmountCents = 2300;
+    },
+    (/** @type {any} */ input) => {
+      input.source.order.pricingRule = 'pieces-v1';
+      input.source.order.freightCents = 500;
+      input.source.order.finalAmountCents = 2300;
+    },
+  ]) {
+    const bad = fixture();
+    mutate(bad);
+    const badPlan = buildOlistPreviewPlan(bad);
+    assert.equal(badPlan.eligible, false);
+    hasIssue(badPlan, 'OLIST_FREIGHT_INVALID');
+  }
+});

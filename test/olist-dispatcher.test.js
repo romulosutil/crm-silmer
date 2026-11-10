@@ -1173,3 +1173,53 @@ test('M4 the dispatcher keeps no read memory: findOrder and the sale readback al
   assert.deepEqual(f.patience, [['raw', true]]);
   assert.equal(f.posts.length, 1);
 });
+
+test('OLC-T02 dispatcher sends frozen valorFrete outside unit prices and marks uncertain without re-POST on freight readback mismatch', async () => {
+  const f = fixture();
+  f.operation.snapshot.commercial.freightCents = 1590;
+  f.operation.snapshot.commercial.totalCents = 1890;
+  const origRaw = f.client.orderRaw;
+  f.client.orderRaw = async (
+    /** @type {number} */ id,
+    /** @type {any} */ opts,
+  ) => {
+    const raw = await origRaw(id, opts);
+    return raw.replace(
+      '"valorTotalPedido":3.00',
+      '"valorTotalPedido":18.90,"valorFrete":15.90',
+    );
+  };
+  const sent = await f.dispatcher().dispatch({ exportId: EXPORT_ID });
+  assert.equal(sent.outcome, 'sent');
+  assert.equal(f.posts.length, 1);
+  assert.match(f.posts[0], /"valorFrete":15\.90/u);
+  assert.match(f.posts[0], /"valor":18\.90/u);
+  assert.equal(f.operation.state, 'confirmed');
+  assert.equal(f.operation.remote_id, '401');
+
+  // Divergent valorFrete in readback after POST keeps observed ID and never issues a second POST
+  const div = fixture();
+  div.operation.snapshot.commercial.freightCents = 1590;
+  div.operation.snapshot.commercial.totalCents = 1890;
+  const divOrigRaw = div.client.orderRaw;
+  div.client.orderRaw = async (
+    /** @type {number} */ id,
+    /** @type {any} */ opts,
+  ) => {
+    const raw = await divOrigRaw(id, opts);
+    return raw.replace(
+      '"valorTotalPedido":3.00',
+      '"valorTotalPedido":18.90,"valorFrete":15.00',
+    );
+  };
+  const first = await div.dispatcher().dispatch({ exportId: EXPORT_ID });
+  assert.equal(first.outcome, 'outcome_unknown');
+  assert.equal(first.errorCode, 'OLIST_SALE_READBACK_MISMATCH');
+  assert.equal(div.posts.length, 1);
+  assert.equal(div.operation.state, 'uncertain');
+  assert.equal(div.operation.saleAttempt.observedRemoteId, '401');
+
+  const second = await div.dispatcher().dispatch({ exportId: EXPORT_ID });
+  assert.equal(second.outcome, 'outcome_unknown');
+  assert.equal(div.posts.length, 1, 'no second POST after uncertain readback');
+});

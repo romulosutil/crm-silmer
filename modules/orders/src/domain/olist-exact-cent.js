@@ -10,11 +10,12 @@ import { calculateSizePricing } from './size-pricing.js';
  *   subtotalCents: number, unitCents: number, unitLexeme: string}} ExactCentLine
  * @typedef {{code: string, groupId: string|null, lineId: string|null}} ExportIssue
  * @typedef {{policy: 'exact-cent-v1', eligible: boolean, totalCents: number|null,
+ *   freightCents?: number,
  *   lines: readonly Readonly<ExactCentLine>[],
  *   issues: readonly Readonly<ExportIssue>[]}} ExactCentPreparation
  * @typedef {{lineId: string, quantity: number, unitLexeme: string}} ObservedLine
  * @typedef {{lines: ObservedLine[], totalProductsLexeme: string,
- *   totalOrderLexeme: string}} ExactCentObservation
+ *   totalOrderLexeme: string, freightLexeme?: string|null}} ExactCentObservation
  */
 const POLICY = 'exact-cent-v1';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
@@ -58,6 +59,11 @@ function dense(value, code) {
 /** @param {unknown} value @returns {value is number} */
 function positiveInteger(value) {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+
+/** @param {unknown} value @returns {value is number} */
+function nonNegativeInteger(value) {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }
 
 /** @param {number} cents */
@@ -152,21 +158,33 @@ export function prepareExactCentExport(groups) {
 
 /** Reject a damaged or forged server-side preparation before reconciliation.
  * This integrity validation is not authorization of an external effect.
- * @param {unknown} prepared @returns {Map<string, ExactCentLine>} */
+ * @param {unknown} prepared
+ * @returns {{lines: Map<string, ExactCentLine>, freightCents: bigint}} */
 function expectedLines(prepared) {
   const code = 'OLIST_EXACT_CENT_PLAN_INVALID';
+  const hasFreight =
+    prepared !== null &&
+    typeof prepared === 'object' &&
+    !Array.isArray(prepared) &&
+    Object.hasOwn(prepared, 'freightCents');
   const plan = record(
     prepared,
-    ['policy', 'eligible', 'totalCents', 'lines', 'issues'],
+    hasFreight
+      ? ['policy', 'eligible', 'totalCents', 'freightCents', 'lines', 'issues']
+      : ['policy', 'eligible', 'totalCents', 'lines', 'issues'],
     code,
   );
   if (
     plan.policy !== POLICY ||
     plan.eligible !== true ||
     !positiveInteger(plan.totalCents) ||
+    (hasFreight && !nonNegativeInteger(plan.freightCents)) ||
     dense(plan.issues, code).length !== 0
   )
     refuse(code);
+  const freightCents = hasFreight
+    ? BigInt(/** @type {number} */ (plan.freightCents))
+    : 0n;
   const source = dense(plan.lines, code);
   if (source.length === 0) refuse(code);
   const lines = new Map();
@@ -202,24 +220,36 @@ function expectedLines(prepared) {
     total += BigInt(line.subtotalCents);
     lines.set(line.lineId, /** @type {ExactCentLine} */ (line));
   }
-  if (total !== BigInt(plan.totalCents) || total > MAX) refuse(code);
-  return lines;
+  if (total !== BigInt(plan.totalCents) || total + freightCents > MAX)
+    refuse(code);
+  return { lines, freightCents };
 }
 
 /**
  * Match opaque returned line markers and independently returned quantities,
- * unit values and totals. Metadata must never carry a claimed subtotal as
- * evidence. The adapter checks product IDs/SKUs and account/order identity.
+ * unit values, `valorFrete` and totals. Metadata must never carry a claimed
+ * subtotal as evidence. The adapter checks product IDs/SKUs and account/order
+ * identity. `totalProductsLexeme` must equal the sum of lines; `totalOrderLexeme`
+ * must equal products + freight; `freightLexeme` absent only counts as zero
+ * when the expected freight is zero.
  * @param {Readonly<ExactCentPreparation>} prepared
  * @param {ExactCentObservation} observed
  * @returns {Readonly<{matched: true, lineCount: number, totalCents: number}>}
  */
 export function reconcileExactCentExport(prepared, observed) {
-  const expected = expectedLines(prepared);
+  const { lines: expected, freightCents: expectedFreight } =
+    expectedLines(prepared);
   const code = 'OLIST_EXACT_CENT_READBACK_MISMATCH';
+  const hasFreightLexeme =
+    observed !== null &&
+    typeof observed === 'object' &&
+    !Array.isArray(observed) &&
+    Object.hasOwn(observed, 'freightLexeme');
   const body = record(
     observed,
-    ['lines', 'totalProductsLexeme', 'totalOrderLexeme'],
+    hasFreightLexeme
+      ? ['lines', 'totalProductsLexeme', 'totalOrderLexeme', 'freightLexeme']
+      : ['lines', 'totalProductsLexeme', 'totalOrderLexeme'],
     code,
   );
   const lines = dense(body.lines, code);
@@ -246,15 +276,23 @@ export function reconcileExactCentExport(prepared, observed) {
       refuse(code);
     total += subtotal;
   }
+  const rawFreight = hasFreightLexeme ? body.freightLexeme : undefined;
+  if (rawFreight === undefined || rawFreight === null) {
+    if (expectedFreight !== 0n) refuse(code);
+  } else if (exactCents(rawFreight, code) !== expectedFreight) {
+    refuse(code);
+  }
+  const orderTotal = total + expectedFreight;
   if (
+    total !== BigInt(/** @type {number} */ (prepared.totalCents)) ||
+    orderTotal > MAX ||
     exactCents(body.totalProductsLexeme, code) !== total ||
-    exactCents(body.totalOrderLexeme, code) !== total ||
-    total !== BigInt(/** @type {number} */ (prepared.totalCents))
+    exactCents(body.totalOrderLexeme, code) !== orderTotal
   )
     refuse(code);
   return Object.freeze({
     matched: true,
     lineCount: lines.length,
-    totalCents: Number(total),
+    totalCents: Number(orderTotal),
   });
 }

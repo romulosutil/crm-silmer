@@ -547,7 +547,7 @@ test('T09 a legacy parent uses only its frozen verified SKU and exact confirmed 
   assert.equal(after.groups[0].lines[0].action, 'blocked');
 });
 
-test('T17 an ERP-existing buyer is rechecked by frozen ID without any customer discovery or creation plan', async () => {
+test('ADR 082 blocks ERP-existing buyer bypass and incomplete customer on new-send preview without any customer lookup', async () => {
   const f = fixture();
   const contact = {
     id: 101,
@@ -569,9 +569,10 @@ test('T17 an ERP-existing buyer is rechecked by frozen ID without any customer d
   f.client.findCustomer = async () => {
     throw new Error('customer document lookup is forbidden');
   };
-  f.client.contact = async (/** @type {number} */ id) => {
-    assert.equal(id, 101);
-    return contact;
+  f.client.contact = async () => {
+    throw new Error(
+      'ERP contact lookup by ID/name/phone is forbidden on new send',
+    );
   };
   const result = await planOlistResources({
     config,
@@ -579,20 +580,11 @@ test('T17 an ERP-existing buyer is rechecked by frozen ID without any customer d
     client: f.client,
     resources: [],
   });
-  assert.deepEqual(result.customer, { action: 'reuse', remoteId: '101' });
-  assert.equal(
-    result.issues.some((entry) => entry.field === 'customer'),
-    false,
-  );
-  contact.celular = '5511999990001';
-  const changed = await planOlistResources({
-    config,
-    plan: f.plan,
-    client: f.client,
-    resources: [],
-  });
-  assert.equal(changed.customer.action, 'blocked');
+  assert.deepEqual(result.customer, { action: 'blocked', remoteId: null });
   assert.ok(
-    changed.issues.some((entry) => entry.code === 'OLIST_CUSTOMER_DIVERGENT'),
+    result.issues.some(
+      (entry) =>
+        entry.field === 'customer' && entry.code === 'OLIST_CUSTOMER_INVALID',
+    ),
   );
 });

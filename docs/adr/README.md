@@ -2,6 +2,12 @@
 
 ## Decisão de 10/11/2026
 
+- [083 — Edição no lugar no pedido](083-edicao-no-lugar.md), EDIT-01 /
+  `design.md` §20: campos abertos com salvamento por campo no lugar de
+  "Editar" + seção → Salvar/Cancelar, começando por "Itens e especificações";
+  supersede em parte a ADR 036 nesse ponto. Documental; telas e emendas de
+  PFI-17, PFI-18 e PIT-02 ficam para a implementação.
+
 - [082 — Cadastro obrigatório somente no envio Olist](082-cadastro-obrigatorio-somente-no-envio-olist.md):
   correção do proprietário; cadastro completo bloqueia somente exportação ERP,
   preservando confirmação e ficha/PDF. Supersede ADR 081 para novos envios;

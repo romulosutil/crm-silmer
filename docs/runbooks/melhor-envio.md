@@ -239,6 +239,62 @@ ausência de um probe enviado antes da assinatura não é evidência suficiente.
   dos tokens e uso pela nova instância. Renovação por expiração permanece
   coberta pelos testes dedicados, sem forçar expiração da conta conectada.
 
+### Ativação de produção — 02/11/2026
+
+T138 / MEVC-01–08, continuidade da autorização do proprietário para conexão
+e cotação. Aplicativo **CRM Silmer** criado na conta verificada de produção;
+contato e suporte preenchidos com o endereço eletrônico indicado pelo
+proprietário para validações e aprovações, sem reproduzi-lo neste documento.
+
+A configuração privada de `espectro-mvp/silmer-api` foi conferida após salvar:
+mudaram somente `MELHOR_ENVIO_ENVIRONMENT=production`, Client ID e client
+secret. User-Agent já correspondia ao contato autorizado. Flag, chave de
+envelope, callback, demais variáveis, fonte, build e deploy foram preservados.
+Nenhum segredo foi salvo em arquivo local. Reinício sem rebuild produziu
+uma única instância saudável com a mesma imagem runtime documentada acima.
+A rota customizada do Traefik continua com `observability.accessLogs=false`.
+
+O fluxo OAuth pediu somente `shipping-calculate shipping-companies`; termos e uso do
+endereço já cadastrado receberam autorizações específicas. A geolocalização
+do operador não foi solicitada. Unidade Correios AGF Bairro Ibes, serviços
+PAC/SEDEX/Mini Envios e declaração final de postagem receberam autorização
+específica do proprietário. A primeira finalização encontrou a sessão do
+provedor expirada; o CRM também exigiu novo login. Após o proprietário
+restaurar ambos os logins, uma tentativa com estado OAuth novo concluiu a
+conexão. O CRM confirmou **Conta conectada**, **Ambiente: produção** e
+autorização válida até **02/12/2026**, sem parâmetros OAuth restantes na URL.
+
+Cotação de produção pela interface administrativa: CEPs públicos sintéticos
+01001-000 → 20040-002, 1.000 g, largura 20 cm, altura 15 cm, comprimento
+10 cm e valor segurado de R$ 100. Retornaram Correios PAC (R$ 22,64,
+cinco dias úteis) e SEDEX (R$ 32,01, dois dias úteis). Mini Envios apareceu
+indisponível, coerente com o pacote. São estimativas para esse cenário,
+não condições comerciais permanentes. Nenhum pedido, compra ou etiqueta.
+
+API reiniciada novamente após a conexão, sem rebuild. A nova instância
+`0772a384e8b6` foi observada como única instância em execução e saudável,
+mantendo a mesma imagem. Reload do CRM preservou conta conectada, ambiente
+e validade; a mesma cotação retornou PAC e SEDEX com valores e prazos iguais.
+`GET /api/health/ready` público retornou `status=ready`. Isso verifica o uso
+dos tokens persistidos pela nova instância; não força expiração nem substitui
+os testes dedicados de renovação. Compra de etiquetas e demais decisões da
+RFC 038 continuam fora desta ativação.
+
+Para voltar temporariamente ao Sandbox, recuperar as credenciais do aplicativo
+de testes no ambiente privado do provedor, restaurar somente ambiente/Client ID/
+client secret na API e reiniciá-la sem rebuild. A chave de envelope e o callback
+devem permanecer iguais; os contextos de conexão são separados por ambiente e
+aplicativo. Para suspender as consultas, desabilitar a flag e reiniciar a API.
+Não apagar tabelas nem presumir revogação remota ao desabilitar ou desconectar.
+
+Gate local com Node 24.20.0 / npm 11.19.0: `npm run validate` passou
+(1.606 testes aprovados, sete ignorados, build concluído). A execução inicial
+restrita falhou por `EPERM` em links temporários; a reexecução autorizada fora
+dessa restrição passou. Formatação dos dois documentos e `git diff --check`
+passaram. Não houve alteração de código, dependências ou migrations.
+`npm audit --audit-level=high` passou, com nove achados baixos/moderados
+preexistentes (um baixo e oito moderados); nenhuma dependência foi alterada.
+
 Fontes oficiais verificadas em 01/11/2026:
 [autenticação](https://docs.melhorenvio.com.br/docs/autenticacao-1),
 [autorização](https://docs.melhorenvio.com.br/reference/fluxo-de-autoriza%C3%A7%C3%A3o)

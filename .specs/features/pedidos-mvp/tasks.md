@@ -2257,6 +2257,20 @@ validate` passou (1.393 testes aprovados, cinco ignorados); diff check
   saudável permaneceu, readiness `ready`, conta conectada preservada e a mesma
   cotação retornou as quatro opções novamente. Homologação de compra de
   etiquetas e ativação de produção permanecem fora desta fatia.
+- **Ativação de produção em 02/11/2026:** autorizada pelo proprietário,
+  limitada a conexão e cotação (MEVC-01–08). Aplicativo CRM Silmer criado com
+  contato/suporte indicados para validações e aprovações. Somente ambiente,
+  Client ID e client secret da API mudaram; demais variáveis, imagem, fonte,
+  build e configuração de deploy preservados. Consentimento mínimo concluído
+  com estado novo após restaurar sessões expiradas e obter aceites específicos
+  para termos, endereço cadastrado, unidade Correios AGF Bairro Ibes e regras
+  de postagem. Conta conectada em produção, válida até 02/12/2026. Cotação
+  sintética retornou PAC e SEDEX; Mini Envios indisponível para o pacote.
+  Reinício sem rebuild e repetição da cotação verificaram tokens persistidos;
+  apenas a nova instância saudável permaneceu, readiness público `ready`.
+  Sem compra, etiqueta ou alteração de pedido. [Evidência e rollback](../../../docs/runbooks/melhor-envio.md).
+  `npm run validate` passou (1.606 aprovados, sete ignorados, build concluído)
+  com Node 24.20.0 / npm 11.19.0; formatação e `git diff --check` limpos.
 
 ### T139: Cotação na conversa vinculada ao pedido
 

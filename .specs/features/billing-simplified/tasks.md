@@ -24,6 +24,7 @@ Escritor único root; revisão independente somente leitura até handoff do rela
 flowchart LR
   T1 --> T2
   T2 --> T3
+  T3 --> T4
 ```
 
 ## Task Breakdown
@@ -60,13 +61,28 @@ para suprimir substituição idêntica, helper de pendências e E2E.
 
 **Gate**: Full e npm run validate (Build); gate global de navegador fechado em T3.
 
-### T3: Revisão independente e operação local (BCS-T03)
+### T3: Fechar achados da revisão independente (BCS-T03)
+
+- [x] Concluída: F1 corrigido por pausa dedicada dos diálogos do pai; F2
+      coberto por assertions do vínculo original. Cinco unit e 14 E2E BCS
+      aprovados, sem skips; typecheck/lint e diff check aprovados.
+
+**Where**: `OrderBillingSection.vue`, `OrderBillingWorkspace.vue` e testes BCS.
+
+**Depends on**: T2
+
+**Tests**: F1, pausa de polling em diálogo do pai sem bloquear seu comando;
+F2, vínculo do recebimento externo ao ledger preservado por assertion explícita.
+
+**Gate**: Full, unit e E2E BCS, typecheck/lint e diff check.
+
+### T4: Revisão independente e operação local (BCS-T04)
 
 - [ ] Concluída.
 
 **Where**: `.specs/features/billing-simplified/validation.md` e runbook.
 
-**Depends on**: T2
+**Depends on**: T3
 
 **Tests**: matriz independente, sensor isolado, smoke persistido e gates finais.
 
@@ -78,3 +94,4 @@ para suprimir substituição idêntica, helper de pendências e E2E.
 | ---------- | ------- | ---------- |
 | T1 → T2    | yes     | yes        |
 | T2 → T3    | yes     | yes        |
+| T3 → T4    | yes     | yes        |

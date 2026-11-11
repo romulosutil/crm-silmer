@@ -36,6 +36,8 @@ test('BCS-01: a charge owns its receipts; external collections do not duplicate 
     ['external:same', 'charge:same'],
   );
   assert.equal(rows[0].external.reversedAt, '2026-11-11T12:00:00Z');
+  assert.equal(rows[0].payments[0].id, 'same');
+  assert.equal(rows[0].payments[0].source, 'external');
   assert.equal(rows[1].payments[0].id, 'ip');
   assert.equal(rows[0].amountCents, 7000);
   assert.equal(JSON.stringify(billing), before);

@@ -917,6 +917,9 @@ onBeforeUnmount(() => {
             busy || Boolean(otherEditing) || uncertain || !canInspectPrivate
           "
           :allow-issue="!choosing || !canIssue"
+          :pause-refresh="
+            Boolean(modal) || editing?.editingSection?.value === 'billing'
+          "
           compact
           @snapshot="applyBilling"
           @changed="

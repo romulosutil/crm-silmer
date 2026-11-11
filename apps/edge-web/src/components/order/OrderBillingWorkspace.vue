@@ -21,6 +21,7 @@ const props = defineProps({
   initialBilling: { type: Object, default: null },
   compact: { type: Boolean, default: false },
   allowIssue: { type: Boolean, default: true },
+  pauseRefresh: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
 });
 const emit = defineEmits(['changed', 'snapshot']);
@@ -659,6 +660,7 @@ async function poll() {
   if (
     !props.compact ||
     (!mode.value &&
+      !props.pauseRefresh &&
       !busy.value &&
       !loading.value &&
       !props.disabled &&

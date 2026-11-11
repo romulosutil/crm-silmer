@@ -874,10 +874,6 @@ test.describe('INBOX-RD-05: compositor', () => {
         name: 'Gravar áudio',
         exact: true,
       });
-      // A tap that moves the focus into the composer first hides the bottom
-      // bar and shifts the tools 64 px (see the report); focus the field so
-      // this test checks the recording, not that shift.
-      await page.locator('#reply').focus();
       await record.click();
       const stop = composer.getByRole('button', {
         name: 'Parar gravação',
@@ -1083,4 +1079,226 @@ test.describe('INBOX-RD-05: compositor', () => {
       await context.close();
     });
   }
+});
+
+// INBOX-RD-04: the phone header in three rows, and the first tap on the
+// composer tools. Synthetic data only.
+test.describe('INBOX-RD-04: cabeçalho no celular', () => {
+  /**
+   * @param {import('@playwright/test').Page} page
+   * @param {string} id
+   * @param {Record<string, any> | null} [order]
+   */
+  async function openHeader(page, id, order) {
+    const { items } = await installMocks(page, { writes: [], unmocked: [] });
+    if (order) {
+      const item = items.find((candidate) => candidate.id === id);
+      if (item) /** @type {Record<string, any>} */ (item).order = order;
+    }
+    await page.goto(`/inbox/${id}`);
+    await page.locator('header.conv-head').waitFor();
+  }
+
+  /** @param {import('@playwright/test').Page} page */
+  const headerBoxes = (page) =>
+    page.evaluate(() => {
+      const head = /** @type {Element} */ (
+        globalThis.document.querySelector('header.conv-head')
+      ).getBoundingClientRect();
+      /** @param {string} selector */
+      const box = (selector) => {
+        const node = globalThis.document.querySelector(selector);
+        if (!node) return null;
+        const rect = node.getBoundingClientRect();
+        return {
+          top: rect.top - head.top,
+          bottom: rect.bottom - head.top,
+          left: rect.left,
+          right: rect.right,
+          width: rect.width,
+          height: rect.height,
+        };
+      };
+      return {
+        head: { height: head.height, width: head.width },
+        back: box('.conv-back'),
+        name: box('.conv-contact-name'),
+        order: box('.conv-order-link'),
+        identity: box('.conv-identity'),
+        take: box('.conv-actions > .primary'),
+        more: box('.conv-more > button'),
+        details: box('.conv-context-toggle'),
+        fits:
+          globalThis.document.documentElement.scrollWidth <=
+          globalThis.innerWidth,
+      };
+    });
+
+  for (const width of [390, 320]) {
+    test.describe(`at ${width}px`, () => {
+      test.use({
+        viewport: { width, height: width === 390 ? 844 : 568 },
+        hasTouch: true,
+        isMobile: true,
+      });
+
+      test('back, name and the two actions share row one; the order link and the identity follow', async ({
+        page,
+      }) => {
+        await openHeader(page, 'r-elisa');
+        const boxes = await headerBoxes(page);
+        const { back, name, more, details, order, identity } = boxes;
+        if (!back || !name || !more || !details || !order || !identity)
+          throw new Error('Missing header part');
+        expect(back.top).toBe(name.top);
+        expect(more.top).toBe(name.top);
+        expect(details.top).toBe(name.top);
+        expect(order.top).toBeGreaterThanOrEqual(name.bottom);
+        expect(identity.top).toBeGreaterThanOrEqual(order.bottom);
+        // 44 px to the touch, 8 px between the two actions, nothing past
+        // the edge.
+        for (const box of [back, name, more, details, order])
+          expect(box.height).toBeGreaterThanOrEqual(44);
+        for (const box of [back, more, details])
+          expect(box.width).toBeGreaterThanOrEqual(44);
+        expect(Math.round(details.left - more.right)).toBe(8);
+        expect(boxes.fits).toBe(true);
+        expect(boxes.head.height).toBeLessThanOrEqual(130);
+      });
+
+      test('a long name is cut with an ellipsis and keeps its full accessible name', async ({
+        page,
+      }) => {
+        await openHeader(page, 'r-carla');
+        const button = page.getByRole('button', {
+          name: 'Dados de Cliente Carla Regina Albuquerque de Souza Mendonça',
+          exact: true,
+        });
+        await expect(button).toBeVisible();
+        const cut = await button.locator('span').evaluate((node) => ({
+          overflow: node.scrollWidth > node.clientWidth,
+          style: globalThis.getComputedStyle(node).textOverflow,
+        }));
+        expect(cut).toEqual({ overflow: true, style: 'ellipsis' });
+        expect((await headerBoxes(page)).fits).toBe(true);
+      });
+
+      test('Assumir atendimento takes the last row, full width, under the other parts', async ({
+        page,
+      }) => {
+        await openHeader(page, 'r-carla', {
+          id: 'order-77',
+          number: '77-CRM',
+          status: 'pendente',
+        });
+        await expect(
+          page.getByRole('button', {
+            name: 'Assumir atendimento',
+            exact: true,
+          }),
+        ).toBeVisible();
+        const boxes = await headerBoxes(page);
+        const { name, details, order, identity, take } = boxes;
+        if (!name || !details || !order || !identity || !take)
+          throw new Error('Missing header part');
+        expect(details.top).toBe(name.top);
+        expect(take.top).toBeGreaterThanOrEqual(identity.bottom);
+        expect(take.height).toBeGreaterThanOrEqual(44);
+        expect(boxes.head.width - take.width).toBeLessThanOrEqual(24);
+        expect(boxes.fits).toBe(true);
+      });
+    });
+  }
+
+  test.describe('on the desktop', () => {
+    test.use({ viewport: { width: 1366, height: 768 } });
+
+    test('the header stays one row of flex boxes', async ({ page }) => {
+      await openHeader(page, 'r-elisa');
+      const flow = await page.evaluate(() => {
+        /** @param {string} selector */
+        const display = (selector) =>
+          globalThis.getComputedStyle(
+            /** @type {Element} */ (
+              globalThis.document.querySelector(selector)
+            ),
+          ).display;
+        return [
+          display('header.conv-head'),
+          display('.conv-title'),
+          display('.conv-actions'),
+        ];
+      });
+      expect(flow).toEqual(['flex', 'block', 'flex']);
+      expect((await headerBoxes(page)).head.height).toBeLessThan(100);
+    });
+  });
+});
+
+test.describe('INBOX-RD-04: ferramentas do compositor ao toque', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  });
+
+  /** @param {import('@playwright/test').Page} page @param {string} name */
+  async function tap(page, name) {
+    const button = page
+      .locator('.inbox-composer')
+      .getByRole('button', { name, exact: true });
+    await expect(button).toBeVisible();
+    const box = await button.boundingBox();
+    if (!box) throw new Error(`No box for ${name}`);
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+  }
+
+  test('one tap on Anexar opens the file picker and the bar stays', async ({
+    page,
+  }) => {
+    await mockConversationShipping(page);
+    await page.goto('/inbox/shipping-conversation-1');
+    await expect(page.locator('.mobile-nav')).toBeVisible();
+    const chooser = page.waitForEvent('filechooser');
+    await tap(page, 'Anexar arquivo');
+    await chooser;
+    await expect(page.locator('.mobile-nav')).toBeVisible();
+  });
+
+  test('one tap on Gravar áudio asks for the microphone once', async ({
+    page,
+  }) => {
+    await fakeRecorder(page);
+    await mockConversationShipping(page);
+    await page.goto('/inbox/shipping-conversation-1');
+    await expect(page.locator('.mobile-nav')).toBeVisible();
+    await tap(page, 'Gravar áudio');
+    await expect(
+      page
+        .locator('.inbox-composer')
+        .getByRole('button', { name: 'Parar gravação', exact: true }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => /** @type {any} */ (globalThis).__capture.requests,
+      ),
+    ).toBe(1);
+  });
+
+  test('the bar leaves while the reply field has the focus and comes back when it loses it', async ({
+    page,
+  }) => {
+    await mockConversationShipping(page);
+    await page.goto('/inbox/shipping-conversation-1');
+    const nav = page.locator('.mobile-nav');
+    await expect(nav).toBeVisible();
+    const field = page.locator('#reply');
+    const box = await field.boundingBox();
+    if (!box) throw new Error('No reply box');
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(field).toBeFocused();
+    await expect(nav).toBeHidden();
+    await field.evaluate((node) => node.blur());
+    await expect(nav).toBeVisible();
+  });
 });

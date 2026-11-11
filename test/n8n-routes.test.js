@@ -27,6 +27,13 @@ function harness() {
     ].map((method) => [
       method,
       async (/** @type {Record<string, unknown>} */ input) => {
+        if (method === 'storeAttachment') {
+          for await (const chunk of /** @type {import('node:stream').Readable} */ (
+            input.stream
+          )) {
+            assert.ok(chunk.length);
+          }
+        }
         calls.push({ input, method });
         return { accepted: true, method };
       },
@@ -49,6 +56,38 @@ function harness() {
     },
   );
   return { api, authorizedActions, calls };
+}
+
+for (const size of [16 * 1024 * 1024, 16 * 1024 * 1024 + 1]) {
+  test(`INBOX-PDF-01 inbound PDF upload enforces 16 MiB (${size} bytes)`, async (t) => {
+    const { api, calls } = harness();
+    t.after(() => api.close());
+    const form = new globalThis.FormData();
+    form.set('schema_version', '1.0');
+    form.set('external_id', 'synthetic-pdf');
+    form.set(
+      'file',
+      new globalThis.Blob([Buffer.alloc(size)], { type: 'application/pdf' }),
+      'documento.pdf',
+    );
+    const request = new globalThis.Request('https://crm.invalid', {
+      method: 'POST',
+      body: form,
+    });
+    const response = await api.inject({
+      method: 'POST',
+      url: '/api/v1/integrations/n8n/conversations/conversation-synthetic/attachments',
+      headers: {
+        ...technicalHeaders,
+        'content-type': request.headers.get('content-type') ?? '',
+        'x-silmer-content-sha256': 'a'.repeat(64),
+      },
+      payload: Buffer.from(await request.arrayBuffer()),
+    });
+    assert.equal(response.statusCode, size === 16 * 1024 * 1024 ? 201 : 413);
+    assert.equal(calls.length, size === 16 * 1024 * 1024 ? 1 : 0);
+    if (calls.length) assert.equal(calls[0].input.size, size);
+  });
 }
 
 test('n8n inbound route authenticates the technical envelope and forwards the DTO', async (t) => {

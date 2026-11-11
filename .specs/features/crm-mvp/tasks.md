@@ -1,5 +1,18 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## INBOX-PDF-01 — corrigir PDF recebido na Inbox (11/11/2026)
+
+INB-01, MSG-01–03 e PRV-03; correção do fluxo existente, sem nova arquitetura.
+
+- [x] Projetar PDF validado como documento e indicar bytes ausentes nas novas mensagens.
+- [x] Servir download privado com scanner, hash, TTL e autorização preservados.
+- [x] Oferecer download por teclado na Inbox, com erro recuperável e nome sintético.
+- [x] Preparar patch offline do ramo Evolution independente, preservando atendimento,
+      credenciais, IDs, replay e relatório de falha, com limite PDF de 16 MiB.
+- [ ] Publicar delta no workflow corrente e homologar recebimento real (gate operacional).
+
+Evidências, limites históricos e rollback: [runbook](../../../docs/runbooks/inbox-pdf.md).
+
 ## OLIST-PROMPTS-01 Entregas recentes e prompts copiáveis em 10/11/2026
 
 Requisitos OLC-04/07, OLC-T01–T06; orientação explícita do proprietário na

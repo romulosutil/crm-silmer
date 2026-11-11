@@ -2214,6 +2214,7 @@ paths:
     post:
       operationId: storeN8nAttachment
       summary: Valida em streaming, quarentena e publica uma mídia transitória segura
+      description: PDF application/pdf, áudio e vídeo limitados a 16 MiB; imagens a 5 MiB. Scanner, MIME detectado, SHA-256 e retenção continuam obrigatórios.
       security: [{ automationBasic: [], idempotencyKey: [] }]
       parameters:
         - $ref: '#/components/parameters/ConversationId'
@@ -2373,19 +2374,22 @@ paths:
   /conversations/{conversationId}/media/{mediaId}/content:
     get:
       operationId: getChatMediaContent
-      summary: Bytes privados da mídia retida
+      summary: Bytes privados da mídia recebida ou retida
       description: >-
         Sessão humana e conversation.read obrigatórias. Draft somente autor/admin;
         attached segue leitura da conversa mesmo após oito dias ou encerramento.
         Aceita um único Range bytes fechado, aberto ou sufixo. Respostas usam
         Cache-Control private,no-store, X-Content-Type-Options nosniff e Accept-Ranges bytes.
         Indisponibilidade transitória não altera estado durable ou quota.
+        Anexo inbound media-UUID segue o TTL transitório e fica indisponível após
+        encerramento; PDF validado usa Content-Disposition attachment com nome
+        sintético documento.pdf e limite de 16 MiB.
       parameters:
         - $ref: '#/components/parameters/ConversationId'
         - name: mediaId
           in: path
           required: true
-          schema: { type: string, format: uuid }
+          schema: { type: string }
         - name: Range
           in: header
           schema: { type: string }
@@ -5702,8 +5706,10 @@ components:
       required:
         [mediaId, kind, state, mimeType, sizeBytes, durationMs, contentUrl]
       properties:
-        mediaId: { type: string, format: uuid }
-        kind: { type: string, enum: [image, audio, video] }
+        mediaId:
+          type: [string, 'null']
+          description: UUID da mídia persistente ou media-UUID transitório; null sem bytes observados.
+        kind: { type: string, enum: [image, audio, video, document] }
         state: { type: string }
         mimeType: { type: [string, 'null'] }
         sizeBytes: { type: [integer, 'null'], minimum: 0 }

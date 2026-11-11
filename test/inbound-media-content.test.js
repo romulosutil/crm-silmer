@@ -117,6 +117,55 @@ for (const type of ['image', 'document']) {
   }
 }
 
+test('INBOX-PDF-01: validated PDF downloads privately with a synthetic filename', async (t) => {
+  const pdf = Buffer.from('%PDF-1.7\nsynthetic-pdf\n%%EOF');
+  const response = await (
+    await harness(t, {
+      bytes: pdf,
+      row: {
+        media_type: 'document',
+        detected_mime_type: 'application/pdf',
+        size_bytes: pdf.length,
+        content_sha256: createHash('sha256').update(pdf).digest('hex'),
+      },
+    })
+  ).get();
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.rawPayload, pdf);
+  assert.equal(response.headers['content-type'], 'application/pdf');
+  assert.equal(
+    response.headers['content-disposition'],
+    'attachment; filename="documento.pdf"',
+  );
+  assert.equal(response.headers['cache-control'], 'private, no-store');
+  assert.equal(response.headers['x-content-type-options'], 'nosniff');
+});
+
+for (const row of [
+  { validation_status: 'rejected' },
+  { availability_status: 'quarantined' },
+  { detected_mime_type: 'text/html' },
+  { size_bytes: 16 * 1024 * 1024 + 1 },
+  { content_sha256: '0'.repeat(64) },
+]) {
+  test(`INBOX-PDF-01: unsafe PDF is unavailable (${JSON.stringify(row)})`, async (t) => {
+    assert.equal(
+      (
+        await (
+          await harness(t, {
+            row: {
+              media_type: 'document',
+              detected_mime_type: 'application/pdf',
+              ...row,
+            },
+          })
+        ).get()
+      ).statusCode,
+      503,
+    );
+  });
+}
+
 for (const [
   name,
   options,
@@ -198,7 +247,7 @@ for (const [
   ],
   [
     'PDF document cannot be served as an image',
-    { row: { media_type: 'document', detected_mime_type: 'application/pdf' } },
+    { row: { media_type: 'image', detected_mime_type: 'application/pdf' } },
     {},
     undefined,
     503,

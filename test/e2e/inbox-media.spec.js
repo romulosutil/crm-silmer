@@ -52,22 +52,23 @@ async function setup(page, options = {}) {
       [conversation.lastMessage],
     ]),
   );
-  if (options.receivedImage) {
+  if (options.receivedImage || options.receivedPdf) {
     messages.get('conversation-1')?.push(
       /** @type {any} */ ({
         id: 'received-image',
-        type: 'image',
-        preview: 'Imagem',
+        type: options.receivedPdf ? 'document' : 'image',
+        preview: options.receivedPdf ? 'Documento' : 'Imagem',
         direction: options.direction ?? 'inbound',
         occurredAt: '2026-10-29T10:00:00Z',
         media: options.missingMedia
           ? null
           : {
               mediaId: 'media-inbound',
-              kind: 'image',
-              state: 'attached',
-              contentUrl:
-                '/api/v1/conversations/conversation-1/media/media-inbound/content',
+              kind: options.receivedPdf ? 'document' : 'image',
+              state: options.unavailable ? 'unavailable' : 'attached',
+              contentUrl: options.unavailable
+                ? null
+                : '/api/v1/conversations/conversation-1/media/media-inbound/content',
             },
       }),
     );
@@ -101,8 +102,10 @@ async function setup(page, options = {}) {
       '/api/v1/conversations/conversation-1/media/media-inbound/content'
     ) {
       return route.fulfill({
-        contentType: 'image/png',
-        body: await readFile('test/fixtures/media-composer.png'),
+        contentType: options.receivedPdf ? 'application/pdf' : 'image/png',
+        body: options.receivedPdf
+          ? Buffer.from('%PDF-1.7\nsynthetic\n%%EOF')
+          : await readFile('test/fixtures/media-composer.png'),
       });
     }
     if (/^\/api\/v1\/orders\/order-[12]\/files$/.test(path)) {
@@ -239,6 +242,35 @@ async function setup(page, options = {}) {
     },
   };
 }
+
+test('INBOX-PDF-01 received document renders and downloads in the real Inbox by keyboard', async ({
+  page,
+}) => {
+  const state = await setup(page, { receivedPdf: true });
+  const button = page.getByRole('button', { name: 'Baixar PDF', exact: true });
+  await expect(page.getByText('Documento PDF', { exact: true })).toBeVisible();
+  await button.focus();
+  const pending = page.waitForEvent('download');
+  await page.keyboard.press('Enter');
+  const download = await pending;
+  expect(download.suggestedFilename()).toBe('documento-media-inbound.pdf');
+  expect(await readFile(/** @type {string} */ (await download.path()))).toEqual(
+    Buffer.from('%PDF-1.7\nsynthetic\n%%EOF'),
+  );
+  expect(state.sends).toHaveLength(0);
+  expect(state.orderUploads).toHaveLength(0);
+  await page.screenshot({ path: 'test-results/inbox-pdf-conversation.png' });
+});
+
+test('INBOX-PDF-01 missing document bytes are visible in the real Inbox', async ({
+  page,
+}) => {
+  await setup(page, { receivedPdf: true, unavailable: true });
+  await expect(
+    page.locator('.media-message').getByRole('status'),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Baixar PDF' })).toHaveCount(0);
+});
 
 test('IMG-01/ARQ-02 Inbox owner attaches a received image to the explicitly selected pending order', async ({
   page,

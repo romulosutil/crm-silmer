@@ -206,6 +206,9 @@ if (connectionString) {
       for (const [mime, content] of [
         ['image/png', bytes],
         ['image/gif', SYNTHETIC_GIF],
+        ...(type === 'document'
+          ? [['application/pdf', Buffer.from('%PDF-1.7\nsynthetic\n%%EOF')]]
+          : []),
       ]) {
         const uploaded = await image(String(sequence++), true, {
           type,
@@ -216,7 +219,10 @@ if (connectionString) {
         assert.equal(replay.duplicate, true);
         const shown = await inbox.get(uploaded.received.conversation_id);
         assert.equal(shown.messages[0].type, type);
-        assert.equal(shown.messages[0].media.kind, 'image');
+        assert.equal(
+          shown.messages[0].media.kind,
+          mime === 'application/pdf' ? 'document' : 'image',
+        );
         assert.equal(shown.messages[0].media.state, 'attached');
         assert.equal(shown.messages[0].media.mimeType, mime);
         const listed = await inbox.list({ limit: 20 });
@@ -252,6 +258,16 @@ if (connectionString) {
         }
       }
     }
+    const missingPdf = await image('118', false, {
+      type: 'document',
+      mime: 'application/pdf',
+    });
+    const missingPdfDetail = await inbox.get(
+      missingPdf.received.conversation_id,
+    );
+    assert.equal(missingPdfDetail.messages[0].media.kind, 'document');
+    assert.equal(missingPdfDetail.messages[0].media.state, 'unavailable');
+    assert.equal(missingPdfDetail.messages[0].media.contentUrl, null);
     const missingDocument = await image('117', false, {
       type: 'document',
       mime: 'image/png',
@@ -304,34 +320,26 @@ if (connectionString) {
         .media.contentUrl,
       null,
     );
-    const missingPdf = await image('118', false, {
-      type: 'document',
-      mime: 'application/pdf',
-    });
-    assert.equal(
-      (await inbox.get(missingPdf.received.conversation_id)).messages[0].media,
-      null,
-    );
     const pdf = await image('119', true, {
       type: 'document',
       mime: 'application/pdf',
       bytes: Buffer.from('%PDF-1.7\nsynthetic\n'),
     });
     assert.equal(
-      (await inbox.get(pdf.received.conversation_id)).messages[0].media,
-      null,
+      (await inbox.get(pdf.received.conversation_id)).messages[0].media.kind,
+      'document',
     );
     assert.equal(
       (await get(pdf.received.conversation_id, pdf.stored.attachment_id))
         .statusCode,
-      404,
+      200,
     );
     const pdfList = await inbox.list({ limit: 20 });
     assert.equal(
       pdfList.items.find(
         (/** @type {any} */ item) => item.id === pdf.received.conversation_id,
-      ).lastMessage.media,
-      null,
+      ).lastMessage.media.kind,
+      'document',
     );
     detectedMimeType = 'image/png';
 

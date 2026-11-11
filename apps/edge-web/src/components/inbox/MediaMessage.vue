@@ -130,18 +130,24 @@ async function imageFile(signal) {
     'image/png': 'png',
     'image/webp': 'webp',
     'image/gif': 'gif',
+    'application/pdf': 'pdf',
   };
   const mime = (response.headers.get('Content-Type') ?? '')
     .split(';')[0]
     .trim();
-  if (!(mime in extensions))
+  const isPdf = props.media.kind === 'document';
+  if (
+    !(mime in extensions) ||
+    (isPdf && mime !== 'application/pdf') ||
+    (!isPdf && mime === 'application/pdf')
+  )
     throw new ApiError(415, { code: 'FILE_TYPE_NOT_ALLOWED' });
   const bytes = await response.blob();
-  if (!bytes.size || bytes.size > 5 * 1024 * 1024)
+  if (!bytes.size || bytes.size > (isPdf ? 16 : 5) * 1024 * 1024)
     throw new Error('Invalid image size');
   return new globalThis.File(
     [bytes],
-    `imagem-${props.media.mediaId}.${extensions[mime]}`,
+    `${isPdf ? 'documento' : 'imagem'}-${props.media.mediaId}.${extensions[mime]}`,
     { type: mime },
   );
 }
@@ -171,11 +177,12 @@ async function downloadImage() {
     );
   } catch (cause) {
     if (signal.aborted) return;
+    const noun = props.media.kind === 'document' ? 'documento' : 'imagem';
     downloadError.value = [401, 403].includes(cause?.status)
-      ? 'Sem permissão para baixar esta imagem. Atualize a conversa.'
+      ? `Sem permissão para baixar ${noun === 'imagem' ? 'esta imagem' : 'este documento'}. Atualize a conversa.`
       : [404, 410].includes(cause?.status)
-        ? 'Esta imagem não está mais disponível para baixar.'
-        : 'Não foi possível baixar a imagem. Tente novamente.';
+        ? `${noun === 'imagem' ? 'Esta imagem' : 'Este documento'} não está mais disponível para baixar.`
+        : `Não foi possível baixar ${noun === 'imagem' ? 'a imagem' : 'o documento'}. Tente novamente.`;
   } finally {
     if (!signal.aborted) downloading.value = false;
   }
@@ -475,6 +482,19 @@ watch(
             @input="changeVolume"
         /></label>
       </div>
+    </div>
+    <div v-else-if="media.kind === 'document'" ref="player">
+      <p>Documento PDF</p>
+      <button
+        type="button"
+        :aria-disabled="downloading || undefined"
+        :aria-busy="downloading || undefined"
+        @click="downloadImage"
+      >
+        <AppIcon name="download" />
+        {{ downloading ? 'Baixando PDF…' : 'Baixar PDF' }}
+      </button>
+      <p v-if="downloadError" role="alert">{{ downloadError }}</p>
     </div>
     <video
       v-else-if="media.kind === 'video'"

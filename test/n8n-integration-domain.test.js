@@ -75,7 +75,7 @@ test('normalizes WhatsApp buttons inside canonical text content', async () => {
   assert.equal(normalized.technical.actor, 'AUTOMATION_EXECUTOR');
 });
 
-test('EVOL-02 document image metadata stays optional and restricted to raster placeholders', async () => {
+test('INBOX-PDF-01/EVOL-02 document metadata stays optional and restricted to PDF/raster placeholders', async () => {
   for (const mime of [
     'image/jpeg',
     'image/png',
@@ -104,9 +104,7 @@ test('EVOL-02 document image metadata stays optional and restricted to raster pl
     });
     const normalized = calls[0].input.message;
     assert.equal(normalized.type, 'document');
-    const supported =
-      typeof mime === 'string' &&
-      !['application/pdf', 'image/svg+xml'].includes(mime);
+    const supported = typeof mime === 'string' && mime !== 'image/svg+xml';
     assert.deepEqual(normalized.content, {
       attachmentId: 'synthetic-attachment',
       caption: 'Synthetic',

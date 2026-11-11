@@ -127,6 +127,20 @@ tratamento de legado, antes de mudar o significado desta data.
 
 ## Validação deste planejamento
 
+DTL-P02 (11/11/2026): protótipo inserido no site local pelo harness existente
+`docs/prototypes/billing-chat-preview.mjs`, com `datesPreview=true`.
+`OrderDatesPreview.vue` substitui apenas a seção de datas em memória. O
+componente financeiro do outro simulador é omitido nessa prévia focada.
+O código em `apps/` e os dados financeiros não são alterados.
+Endereço da avaliação: http://127.0.0.1:4190/pedidos/billing-preview-order.
+Teste reproduzível: `node --test docs/prototypes/order-dates-preview.test.mjs`.
+Gate: cinco cenários, detalhes por teclado, mobile sem overflow, ausência
+de erro JS e estado financeiro das fixtures inalterado.
+Verificação concluída: teste Chromium aprovado, lint e build aprovados,
+`git diff --check` aprovado e revisão independente sem bloqueios após corrigir
+a referência à data do recebimento revertido. Implementação DTL-T01–04 continua
+futura; DTL-P02 entrega somente o protótipo navegável no contexto do site.
+
 DTL-P01: planejar e apresentar protótipo interativo, sem alterar o produto.
 Protótipo navegável: [Datas e recebimentos](../prototypes/order-dates-timeline.html).
 Inspeção do endpoint, ledger, componente e consumidor realizada; o protótipo

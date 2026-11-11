@@ -17,7 +17,10 @@ const orderPreviewComponent = resolve(
   repository,
   'docs/prototypes/BillingOrderPreview.vue',
 ).replaceAll('\\', '/');
-export async function createBillingChatPreview({ port = 4189 } = {}) {
+export async function createBillingChatPreview({
+  port = 4189,
+  datesPreview = false,
+} = {}) {
   const fixtures = createBillingPreviewFixtures();
   const server = await createServer({
     configFile: false,
@@ -29,6 +32,24 @@ export async function createBillingChatPreview({ port = 4189 } = {}) {
         enforce: 'pre',
         transform(code, id) {
           if (id.replaceAll('\\', '/').endsWith('/src/views/OrderView.vue')) {
+            if (datesPreview) {
+              const anchor = '<OrderMilestonesSection :order="order" />';
+              if (!code.includes(anchor))
+                throw new Error(
+                  'Review the current dates section before previewing.',
+                );
+              const component = resolve(
+                repository,
+                'docs/prototypes/OrderDatesPreview.vue',
+              ).replaceAll('\\', '/');
+              code = code
+                .replace(
+                  '<script setup>',
+                  `<script setup>\nimport OrderDatesPreview from '${component}';`,
+                )
+                .replace(anchor, '<OrderDatesPreview />');
+              return code.replace(/<OrderBillingSection\b[\s\S]*?\/>/, '');
+            }
             if ((code.match(/<OrderBillingSection\b/g) ?? []).length !== 1)
               throw new Error(
                 'The current Order billing section changed; review preview insertion.',
@@ -159,6 +180,7 @@ if (
 ) {
   const preview = await createBillingChatPreview({
     port: Number(process.env.BILLING_PREVIEW_PORT ?? 4189),
+    datesPreview: process.env.ORDER_DATES_PREVIEW === 'true',
   });
   process.stdout.write(
     `Protótipo local, somente dados fictícios: ${preview.url}\n`,

@@ -435,9 +435,17 @@ const pendingHandoff = computed(
   () => active.value?.handoff?.status === 'pending',
 );
 /**
+ * INBOX-RD-05: the "Pedido" group of the composer (billing, shipping quote)
+ * exists only for whoever may use one of its tools.
+ */
+const showOrderTools = computed(
+  () => canQuoteShipping.value || (canReply.value && isAdmin.value),
+);
+/**
  * PCX-13: until a person has the conversation, taking it is the one thing to
- * do, so "Assumir atendimento" sits where the reply would be. Whoever cannot
- * act keeps the disabled reply and the reason beside it.
+ * do: "Assumir atendimento" is the header's primary, the reason bar says why
+ * the conversation stopped, and the composer does not exist yet. Whoever
+ * cannot act keeps the reply, unavailable, with the reason beside it.
  */
 const needsTakeover = computed(
   () =>
@@ -738,7 +746,9 @@ const canSendReply = computed(
 /**
  * Mobile first (ADR 035): on a phone the header keeps the order link,
  * "Criar pedido" when it is due and "Mais"; everything else goes to the
- * "Mais" sheet. The one primary action sits in the composer (PCX-13).
+ * "Mais" sheet. The one primary is "Assumir atendimento" in the header until
+ * a person has the conversation, then "Enviar resposta" in the composer
+ * (PCX-13).
  */
 const phoneQuery = globalThis.matchMedia?.('(max-width: 768px)');
 const isPhone = ref(phoneQuery?.matches ?? false);
@@ -3116,9 +3126,9 @@ onBeforeUnmount(() => {
                 {{ serviceLabel }}
               </p>
             </div>
-            <!-- No primary here: the conversation's one primary action sits
-                 in the composer, "Assumir atendimento" or "Enviar resposta"
-                 (PCX-13). Two visible at most, the rest under "Mais"
+            <!-- The conversation's one primary is "Assumir atendimento" here
+                 until a person has it, then "Enviar resposta" in the
+                 composer (PCX-13). Two visible at most, the rest under "Mais"
                  (pesquisa UX, achado 1). ADR 015: once a person has the
                  conversation it never goes back to the bot, so there is no
                  hand-back action here. -->
@@ -3595,22 +3605,28 @@ onBeforeUnmount(() => {
             @reopen="openReopenDialog"
           />
 
+          <!-- INBOX-RD-05: field on top; below, the tools in two groups (media,
+               order) and "Enviar resposta", the one primary. Before anyone has
+               the conversation there is no composer: "Assumir atendimento" is
+               in the header (PCX-13). Where the reason is a permission or the
+               conversation's state, the controls are aria-disabled and
+               `#reply-help` says why. -->
           <div v-if="!needsTakeover" class="inbox-composer">
-            <!-- PCX-13: until a person has the conversation, taking it is the
-                 one action where the reply would be, with why it stopped and
-                 for how long (PCX-03). -->
             <AudioRecorder
               v-if="!needsTakeover"
               :key="active.id"
               :conversation-id="active.id"
               :expected-version="active.version"
               :disabled="busy || !canReply || active.channel === 'site_chat'"
+              :unavailable="!canReply"
+              reason-id="reply-help"
+              :order-tools="showOrderTools"
               @sending-change="mediaSending = $event"
               @sent="mediaSent"
             >
               <template #tools="{ disabled: quoteDisabled }">
                 <ConversationBillingAction
-                  v-if="canQuoteShipping || (canReply && isAdmin)"
+                  v-if="showOrderTools"
                   :key="`billing-${active.id}`"
                   :conversation-id="active.id"
                   :conversation-version="active.version"
@@ -3647,9 +3663,9 @@ onBeforeUnmount(() => {
                     rows="1"
                     placeholder="Escreva uma mensagem…"
                     maxlength="2000"
-                    :disabled="
-                      busy || mediaSending || recordingActive || !canReply
-                    "
+                    :disabled="busy || mediaSending || recordingActive"
+                    :aria-disabled="canReply ? undefined : 'true'"
+                    :readonly="!canReply"
                     aria-describedby="reply-help"
                     @keydown="replyKeydown"
                   ></textarea>
@@ -3691,12 +3707,14 @@ onBeforeUnmount(() => {
                     busy ||
                     mediaSending ||
                     recordingActive ||
-                    !canReply ||
-                    !reply.trim()
+                    (canReply && !reply.trim())
                   "
+                  :aria-disabled="canReply ? undefined : 'true'"
+                  :aria-describedby="canReply ? undefined : 'reply-help'"
+                  @click="canReply || $event.preventDefault()"
                 >
                   <AppIcon name="send" />
-                  <span class="sr-only">Enviar resposta</span>
+                  <span class="composer-label">Enviar resposta</span>
                 </button>
               </template>
             </AudioRecorder>

@@ -1,5 +1,6 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { mockConversationShipping } from './support/conversation-shipping-mock.js';
 import { installMocks } from './support/inbox-vez-mock.js';
 
 // INBOX-RD-T01/T02/T03/T08: wider list, "Mensagem nova", grouped history,
@@ -526,4 +527,560 @@ test.describe('INBOX-RD-01: lista mais larga', () => {
       ),
     ).toBe(true);
   });
+});
+
+// INBOX-RD-05: the composer in two rows. Synthetic data only.
+/** @param {import('@playwright/test').Page} page */
+async function fakeRecorder(page) {
+  await page.addInitScript(() => {
+    const scope = /** @type {any} */ (globalThis);
+    scope.__capture = { requests: 0 };
+    const stream = { getTracks: () => [{ stop() {} }] };
+    scope.navigator.mediaDevices.getUserMedia = () => {
+      scope.__capture.requests += 1;
+      return Promise.resolve(stream);
+    };
+    scope.MediaRecorder = class extends scope.EventTarget {
+      /** @param {string} type */
+      static isTypeSupported(type) {
+        return type === 'audio/ogg;codecs=opus';
+      }
+      /** @param {unknown} _stream @param {{mimeType:string}} config */
+      constructor(_stream, config) {
+        super();
+        this.mimeType = config.mimeType;
+        this.state = 'inactive';
+      }
+      start() {
+        this.state = 'recording';
+      }
+      stop() {
+        this.state = 'inactive';
+      }
+    };
+  });
+}
+
+/** @param {import('@playwright/test').Page} page @param {string[]} names */
+async function edges(page, names) {
+  return page.evaluate(
+    (labels) =>
+      labels.map((label) => {
+        const node = [
+          ...globalThis.document.querySelectorAll('.inbox-composer button'),
+        ].find((button) => button.getAttribute('aria-label') === label);
+        if (!node) throw new Error(`Missing button ${label}`);
+        const box = node.getBoundingClientRect();
+        return { left: box.left, right: box.right, width: box.width };
+      }),
+    names,
+  );
+}
+
+test.describe('INBOX-RD-05: compositor', () => {
+  test.use({ viewport: { width: 1366, height: 768 } });
+  const COMPOSER = '.inbox-composer';
+
+  test('two rows: the field on top, media and order groups 8 px apart, one primary last', async ({
+    page,
+  }) => {
+    await mockConversationShipping(page);
+    await page.goto('/inbox/shipping-conversation-1');
+    const composer = page.locator(COMPOSER);
+    const media = composer.getByRole('group', { name: 'Mídia', exact: true });
+    const order = composer.getByRole('group', { name: 'Pedido', exact: true });
+    await expect(media).toBeVisible();
+    await expect(order).toBeVisible();
+    /** @param {import('@playwright/test').Locator} group */
+    const labels = (group) =>
+      group
+        .getByRole('button')
+        .evaluateAll((nodes) =>
+          nodes.map((node) => node.getAttribute('aria-label')),
+        );
+    expect(await labels(media)).toEqual(['Anexar arquivo', 'Gravar áudio']);
+    expect(await labels(order)).toEqual([
+      'Cobranças e pagamentos',
+      'Cotar frete',
+    ]);
+    // Focus order is the visual order: media, order, then the primary.
+    const names = [
+      'Anexar arquivo',
+      'Gravar áudio',
+      'Cobranças e pagamentos',
+      'Cotar frete',
+      'Enviar resposta',
+    ];
+    const boxes = await edges(page, names);
+    for (let index = 1; index < boxes.length; index += 1)
+      expect(boxes[index].left).toBeGreaterThan(boxes[index - 1].right);
+    // 8 px between buttons inside a group.
+    expect(Math.round(boxes[1].left - boxes[0].right)).toBe(8);
+    expect(Math.round(boxes[3].left - boxes[2].right)).toBe(8);
+    // The rule between the groups has 8 px on each side.
+    const divider = await composer
+      .locator('.composer-divider')
+      .evaluate((node) => {
+        const box = node.getBoundingClientRect();
+        return { left: box.left, right: box.right };
+      });
+    expect(Math.round(divider.left - boxes[1].right)).toBe(8);
+    expect(Math.round(boxes[2].left - divider.right)).toBe(8);
+    // Tabbing from the field walks the same order.
+    await page.locator('#reply').fill('Resposta sintética');
+    await page.locator('#reply').focus();
+    for (const name of names) {
+      await page.keyboard.press('Tab');
+      await expect(
+        page.getByRole('button', { name, exact: true }),
+      ).toBeFocused();
+    }
+    // The field sits above the tool row; only "Enviar resposta" is primary.
+    const rows = await page.evaluate(() => {
+      const field = globalThis.document
+        .querySelector('#reply')
+        ?.getBoundingClientRect();
+      const bar = globalThis.document
+        .querySelector('.media-composer__toolbar')
+        ?.getBoundingClientRect();
+      return { field: field?.bottom ?? 0, bar: bar?.top ?? 0 };
+    });
+    expect(rows.field).toBeLessThanOrEqual(rows.bar);
+    await expect(composer.locator('button.primary')).toHaveCount(1);
+    await expect(composer.locator('button.primary')).toHaveAccessibleName(
+      'Enviar resposta',
+    );
+    // Every tool is a quiet button, 44 px at least.
+    for (const button of await composer
+      .locator('.composer-group button')
+      .all()) {
+      await expect(button).toHaveClass(/quiet/u);
+      const box = await button.boundingBox();
+      expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  test('a group with no visible tool is not drawn, nor is its divider', async ({
+    page,
+  }) => {
+    // Not the Vendedor who owns it and not an administrator: no order tools.
+    await mockConversationShipping(page, { owner: 'someone-else' });
+    await page.goto('/inbox/shipping-conversation-1');
+    const composer = page.locator(COMPOSER);
+    await expect(
+      composer.getByRole('group', { name: 'Mídia', exact: true }),
+    ).toBeVisible();
+    await expect(
+      composer.getByRole('group', { name: 'Pedido', exact: true }),
+    ).toHaveCount(0);
+    await expect(composer.locator('.composer-divider')).toHaveCount(0);
+  });
+
+  test('the field has the Field anatomy and the outer box is gone', async ({
+    page,
+  }) => {
+    await mockConversationShipping(page);
+    await page.goto('/inbox/shipping-conversation-1');
+    const field = page.locator('#reply');
+    await expect(field).toBeVisible();
+    const tokens = await page.evaluate(() => {
+      const probe = globalThis.document.createElement('div');
+      probe.style.cssText =
+        'border:1px solid var(--color-border-strong);background:var(--color-surface);border-radius:var(--radius-md);';
+      globalThis.document.body.append(probe);
+      const style = globalThis.getComputedStyle(probe);
+      const resolved = {
+        border: style.borderTopColor,
+        fill: style.backgroundColor,
+        radius: style.borderTopLeftRadius,
+      };
+      probe.remove();
+      const own = globalThis.getComputedStyle(
+        /** @type {Element} */ (globalThis.document.querySelector('#reply')),
+      );
+      const recorder = globalThis.getComputedStyle(
+        /** @type {Element} */ (
+          globalThis.document.querySelector('.inbox-composer .audio-recorder')
+        ),
+      );
+      return {
+        resolved,
+        own: {
+          border: own.borderTopColor,
+          width: own.borderTopWidth,
+          fill: own.backgroundColor,
+          radius: own.borderTopLeftRadius,
+          size: own.fontSize,
+          weight: own.fontWeight,
+        },
+        outer: {
+          width: recorder.borderTopWidth,
+          fill: recorder.backgroundColor,
+        },
+      };
+    });
+    expect(tokens.own.border).toBe(tokens.resolved.border);
+    expect(tokens.own.width).toBe('1px');
+    expect(tokens.own.fill).toBe(tokens.resolved.fill);
+    expect(tokens.own.radius).toBe(tokens.resolved.radius);
+    expect(tokens.own.size).toBe('14px');
+    expect(tokens.own.weight).toBe('400');
+    // No box around the whole composer.
+    expect(tokens.outer.width).toBe('0px');
+    expect(tokens.outer.fill).toBe('rgba(0, 0, 0, 0)');
+    // Focus swaps the border for the focus color and adds the halo.
+    await field.focus();
+    const focused = await field.evaluate((node) => {
+      const style = globalThis.getComputedStyle(node);
+      return { shadow: style.boxShadow, border: style.borderTopColor };
+    });
+    expect(focused.shadow).not.toBe('none');
+    expect(focused.border).not.toBe(tokens.resolved.border);
+    // The label stays for the screen reader; the placeholder is unchanged.
+    await expect(page.getByLabel('Responder', { exact: true })).toBeVisible();
+    await expect(field).toHaveAttribute('placeholder', 'Escreva uma mensagem…');
+  });
+
+  test('words appear beside the icons only where the composer is 40rem wide', async ({
+    page,
+  }) => {
+    await mockConversationShipping(page);
+    await page.goto('/inbox/shipping-conversation-1');
+    const composer = page.locator(COMPOSER);
+    await expect(composer).toBeVisible();
+    /** @param {string} width */
+    const labelWidths = async (width) =>
+      composer.evaluate((node, value) => {
+        const box = /** @type {HTMLElement} */ (node);
+        // The padding centers the reading column; the content is the width.
+        box.style.inlineSize = value;
+        box.style.paddingInline = '0';
+        return [...node.querySelectorAll('.composer-label')].map((label) =>
+          Math.round(label.getBoundingClientRect().width),
+        );
+      }, width);
+    // 48rem box, 16 px of padding on each side: 736 px of content, wide.
+    const wide = await labelWidths('48rem');
+    expect(wide).toHaveLength(3);
+    for (const width of wide) expect(width).toBeGreaterThan(20);
+    await expect(
+      composer.getByRole('button', { name: 'Enviar resposta' }),
+    ).toContainText('Enviar resposta');
+    // Attach and record never carry words.
+    await expect(
+      composer.getByRole('group', { name: 'Mídia', exact: true }),
+    ).not.toContainText(/\S/u);
+    // 36rem box: narrow, icons only, the names stay on aria-label and title.
+    const narrow = await labelWidths('36rem');
+    for (const width of narrow) expect(width).toBeLessThanOrEqual(1);
+    for (const name of [
+      'Cobranças e pagamentos',
+      'Cotar frete',
+      'Enviar resposta',
+    ]) {
+      const button = composer.getByRole('button', { name, exact: true });
+      await expect(button).toHaveAttribute(
+        'title',
+        new RegExp(`^${name}`, 'u'),
+      );
+      const box = await button.boundingBox();
+      expect(box?.width ?? 0).toBeLessThan(60);
+    }
+  });
+
+  test('unavailable: aria-disabled with the reason visible, focusable and inert', async ({
+    page,
+  }) => {
+    await fakeRecorder(page);
+    const { calls } = await mockConversationShipping(page, {
+      owner: 'someone-else',
+    });
+    await page.goto('/inbox/shipping-conversation-1');
+    const composer = page.locator(COMPOSER);
+    const reason = 'Somente o vendedor responsável pode responder.';
+    const help = page.locator('#reply-help');
+    await expect(help).toBeVisible();
+    await expect(help).toHaveText(reason);
+    const field = page.getByLabel('Responder', { exact: true });
+    await expect(field).toHaveAttribute('aria-disabled', 'true');
+    await expect(field).toHaveAttribute('readonly', '');
+    await expect(field).toHaveAccessibleDescription(reason);
+    let chooser = false;
+    page.on('filechooser', () => (chooser = true));
+    for (const name of ['Anexar arquivo', 'Gravar áudio', 'Enviar resposta']) {
+      const button = composer.getByRole('button', { name, exact: true });
+      await expect(button).toHaveAttribute('aria-disabled', 'true');
+      // Not the native attribute: the control keeps the keyboard.
+      expect(
+        await button.evaluate((node) => node.hasAttribute('disabled')),
+      ).toBe(false);
+      await expect(button).toHaveAccessibleDescription(reason);
+      await button.focus();
+      await expect(button).toBeFocused();
+      await button.dispatchEvent('click');
+      await button.press('Enter');
+      await button.press('Space');
+    }
+    await page.waitForTimeout(300);
+    expect(chooser).toBe(false);
+    expect(
+      await page.evaluate(
+        () => /** @type {any} */ (globalThis).__capture.requests,
+      ),
+    ).toBe(0);
+    expect(calls).toEqual([]);
+    await expect(composer.locator('.composer-status')).toHaveCount(0);
+    // The muted look says "unavailable"; the reason is words, not color.
+    expect(
+      await composer
+        .getByRole('button', { name: 'Enviar resposta', exact: true })
+        .evaluate((node) => globalThis.getComputedStyle(node).cursor),
+    ).toBe('not-allowed');
+  });
+
+  test('available with no text: Enviar stays natively disabled, never aria-disabled', async ({
+    page,
+  }) => {
+    await mockConversationShipping(page);
+    await page.goto('/inbox/shipping-conversation-1');
+    const send = page
+      .locator(COMPOSER)
+      .getByRole('button', { name: 'Enviar resposta', exact: true });
+    await expect(send).toBeDisabled();
+    await expect(send).not.toHaveAttribute('aria-disabled', 'true');
+    await page.locator('#reply').fill('Resposta sintética');
+    await expect(send).toBeEnabled();
+  });
+
+  for (const viewport of [
+    { width: 1366, height: 768, touch: false },
+    { width: 390, height: 844, touch: true },
+  ]) {
+    test(`recording keeps the tool row in view at ${viewport.width}px`, async ({
+      browser,
+    }) => {
+      const context = await browser.newContext({
+        viewport: { width: viewport.width, height: viewport.height },
+        hasTouch: viewport.touch,
+        locale: 'pt-BR',
+      });
+      const page = await context.newPage();
+      await fakeRecorder(page);
+      await mockConversationShipping(page);
+      await page.goto('/inbox/shipping-conversation-1');
+      const composer = page.locator(COMPOSER);
+      const record = composer.getByRole('button', {
+        name: 'Gravar áudio',
+        exact: true,
+      });
+      // A tap that moves the focus into the composer first hides the bottom
+      // bar and shifts the tools 64 px (see the report); focus the field so
+      // this test checks the recording, not that shift.
+      await page.locator('#reply').focus();
+      await record.click();
+      const stop = composer.getByRole('button', {
+        name: 'Parar gravação',
+        exact: true,
+      });
+      await expect(stop).toBeFocused();
+      await expect(
+        composer.getByText('Gravando áudio. Pare para revisar.'),
+      ).toBeVisible();
+      await expect(composer.getByText(/\d+ de 300 segundos/)).toBeVisible();
+      await expect(
+        composer.getByRole('button', {
+          name: 'Descartar gravação',
+          exact: true,
+        }),
+      ).toBeVisible();
+      // The rest is unavailable while recording, with the native attribute.
+      for (const name of [
+        'Gravar áudio',
+        'Cobranças e pagamentos',
+        'Cotar frete',
+        'Enviar resposta',
+      ])
+        await expect(
+          composer.getByRole('button', { name, exact: true }),
+        ).toBeDisabled();
+      // Status between the field and the bar; the whole bar stays in view.
+      const layout = await page.evaluate(() => {
+        const rect = (/** @type {string} */ selector) =>
+          /** @type {Element} */ (
+            globalThis.document.querySelector(selector)
+          ).getBoundingClientRect();
+        return {
+          field: rect('#reply').bottom,
+          status: rect('.composer-status').top,
+          bar: rect('.media-composer__toolbar'),
+          view: globalThis.innerHeight,
+          composer: rect('.inbox-composer'),
+          thread: rect('.thread'),
+        };
+      });
+      expect(layout.status).toBeGreaterThanOrEqual(layout.field);
+      expect(layout.bar.top).toBeGreaterThanOrEqual(layout.status);
+      expect(layout.bar.bottom).toBeLessThanOrEqual(layout.view);
+      expect(layout.thread.bottom).toBeLessThanOrEqual(layout.composer.top + 1);
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+      // Esc discards and gives the focus back to Gravar áudio.
+      await page.keyboard.press('Escape');
+      await expect(stop).toHaveCount(0);
+      await expect(record).toBeFocused();
+      await expect(record).toBeEnabled();
+      await context.close();
+    });
+  }
+
+  test('axe: idle and unavailable, light and dark, have no violations', async ({
+    page,
+  }) => {
+    await mockConversationShipping(page);
+    await page.goto('/inbox/shipping-conversation-1');
+    await expect(page.locator(COMPOSER)).toBeVisible();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await page.evaluate(() => {
+      globalThis.document.documentElement.dataset.theme = 'dark';
+    });
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await mockConversationShipping(page, { owner: 'someone-else' });
+    await page.goto('/inbox/shipping-conversation-1');
+    await expect(page.locator('#reply-help')).toBeVisible();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await page.evaluate(() => {
+      globalThis.document.documentElement.dataset.theme = 'dark';
+    });
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  });
+
+  test('on a phone the history stays above the composer, the bar hides while typing and targets are 44 px apart by 8', async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+      locale: 'pt-BR',
+    });
+    const page = await context.newPage();
+    await mockConversationShipping(page);
+    await page.goto('/inbox/shipping-conversation-1');
+    const field = page.locator('#reply');
+    await expect(page.locator('.mobile-nav')).toBeVisible();
+    await field.focus();
+    await field.fill('Primeira linha\nSegunda linha\nTerceira linha');
+    // The existing rule that takes the bottom bar away while the composer
+    // holds the focus keeps working.
+    await expect(page.locator('.mobile-nav')).toBeHidden();
+    const layout = await page.evaluate(() => {
+      const rect = (/** @type {string} */ selector) =>
+        /** @type {Element} */ (
+          globalThis.document.querySelector(selector)
+        ).getBoundingClientRect();
+      const last = /** @type {Element} */ (
+        globalThis.document.querySelector('.thread')?.lastElementChild
+      ).getBoundingClientRect();
+      return {
+        last: last.bottom,
+        composer: rect('.inbox-composer').top,
+        bar: rect('.media-composer__toolbar').bottom,
+        view: globalThis.innerHeight,
+        font: globalThis.getComputedStyle(
+          /** @type {Element} */ (globalThis.document.querySelector('#reply')),
+        ).fontSize,
+        fits:
+          globalThis.document.documentElement.scrollWidth <=
+          globalThis.innerWidth,
+      };
+    });
+    expect(layout.last).toBeLessThanOrEqual(layout.composer + 1);
+    expect(layout.bar).toBeLessThanOrEqual(layout.view);
+    expect(layout.font).toBe('16px');
+    expect(layout.fits).toBe(true);
+    const boxes = await edges(page, ['Anexar arquivo', 'Gravar áudio']);
+    expect(Math.round(boxes[1].left - boxes[0].right)).toBe(8);
+    for (const box of boxes) expect(box.width).toBeGreaterThanOrEqual(44);
+    await context.close();
+  });
+
+  for (const viewport of [
+    { width: 1366, height: 768, touch: false },
+    { width: 390, height: 844, touch: true },
+  ]) {
+    test(`a long history keeps its last message above the composer as it grows at ${viewport.width}px`, async ({
+      browser,
+    }) => {
+      const context = await browser.newContext({
+        viewport: { width: viewport.width, height: viewport.height },
+        hasTouch: viewport.touch,
+        locale: 'pt-BR',
+      });
+      const page = await context.newPage();
+      await fakeRecorder(page);
+      await page.addInitScript(() => {
+        const original = globalThis.fetch.bind(globalThis);
+        globalThis.fetch = async (...args) => {
+          const response = await original(...args);
+          const input = /** @type {any} */ (args[0]);
+          const url = String(input?.url ?? input);
+          if (!url.endsWith('/inbox/conversations/shipping-conversation-1'))
+            return response;
+          const json = await response.clone().json();
+          const base = json.messages[0];
+          json.messages = Array.from({ length: 30 }, (_, index) => ({
+            ...base,
+            id: `history-${index}`,
+            preview: `Mensagem sintética ${index}`,
+            text: `Mensagem sintética ${index}`,
+            occurredAt: `2026-11-02T14:${String(index).padStart(2, '0')}:00.000Z`,
+          }));
+          return new globalThis.Response(JSON.stringify(json), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        };
+      });
+      await mockConversationShipping(page);
+      await page.goto('/inbox/shipping-conversation-1');
+      const field = page.locator('#reply');
+      await expect(field).toBeVisible();
+      await expect(page.getByText('Mensagem sintética 29')).toBeVisible();
+      const tail = () =>
+        page.evaluate(() => {
+          const thread = /** @type {Element} */ (
+            globalThis.document.querySelector('.thread')
+          );
+          const last = /** @type {Element} */ (
+            thread.lastElementChild
+          ).getBoundingClientRect();
+          const composer = /** @type {Element} */ (
+            globalThis.document.querySelector('.inbox-composer')
+          ).getBoundingClientRect();
+          return {
+            last: last.bottom,
+            composer: composer.top,
+            pinned:
+              Math.abs(
+                thread.scrollHeight - thread.clientHeight - thread.scrollTop,
+              ) <= 1,
+          };
+        });
+      await field.focus();
+      await field.fill('Primeira linha\nSegunda linha\nTerceira linha');
+      await expect.poll(async () => (await tail()).pinned).toBe(true);
+      let state = await tail();
+      expect(state.last).toBeLessThanOrEqual(state.composer);
+      await field.fill('');
+      await page
+        .getByRole('button', { name: 'Gravar áudio', exact: true })
+        .click();
+      await expect(
+        page.getByRole('button', { name: 'Parar gravação', exact: true }),
+      ).toBeVisible();
+      await expect.poll(async () => (await tail()).pinned).toBe(true);
+      state = await tail();
+      expect(state.last).toBeLessThanOrEqual(state.composer);
+      await context.close();
+    });
+  }
 });

@@ -6,6 +6,11 @@ const props = defineProps({
   conversationId: { type: String, required: true },
   expectedVersion: { type: Number, required: true },
   disabled: { type: Boolean, default: false },
+  // INBOX-RD-05: see MediaComposer. A reason beside the field turns `disabled`
+  // into aria-disabled; recording itself still uses the real attribute.
+  unavailable: { type: Boolean, default: false },
+  reasonId: { type: String, default: '' },
+  orderTools: { type: Boolean, default: false },
 });
 const emit = defineEmits(['sent', 'sending-change']);
 const startButton = ref(null),
@@ -218,6 +223,9 @@ onBeforeUnmount(clear);
       :expected-version="expectedVersion"
       :disabled="disabled || active"
       :recording="recording"
+      :unavailable="unavailable"
+      :reason-id="reasonId"
+      :order-tools="orderTools"
       @sending-change="sendingChanged"
       @recording-dismissed="recordingDismissed"
       @sent="sent"
@@ -226,14 +234,20 @@ onBeforeUnmount(clear);
         ><slot name="message" :recording-active="active"
       /></template>
       <template #send><slot name="send" :recording-active="active" /></template>
-      <template #tools>
-        <slot name="tools" :disabled="disabled || active || sending" />
+      <template #media-tools>
         <button
           ref="startButton"
           type="button"
+          class="quiet"
           title="Gravar áudio"
           aria-label="Gravar áudio"
-          :disabled="disabled || active || sending"
+          :disabled="(disabled && !unavailable) || active || sending"
+          :aria-disabled="
+            disabled && unavailable && !active && !sending ? 'true' : undefined
+          "
+          :aria-describedby="
+            disabled && unavailable && reasonId ? reasonId : undefined
+          "
           @click="start"
         >
           <AppIcon name="mic" />
@@ -242,6 +256,7 @@ onBeforeUnmount(clear);
           v-if="state === 'recording'"
           ref="stopButton"
           type="button"
+          class="quiet"
           aria-label="Parar gravação"
           title="Parar gravação"
           @click="stop"
@@ -251,6 +266,7 @@ onBeforeUnmount(clear);
         <button
           v-if="active || recording"
           type="button"
+          class="quiet"
           aria-label="Descartar gravação"
           title="Descartar gravação"
           :disabled="sending"
@@ -259,22 +275,27 @@ onBeforeUnmount(clear);
           <AppIcon name="trash" />
         </button>
       </template>
+      <template #tools>
+        <slot name="tools" :disabled="disabled || active || sending" />
+      </template>
       <template #recording-status>
-        <p v-if="state !== 'idle'" role="status" aria-live="polite">
-          {{
-            state === 'requesting'
-              ? 'Aguardando permissão do microfone.'
-              : state === 'recording'
-                ? 'Gravando áudio. Pare para revisar.'
-                : state === 'review'
-                  ? 'Ouça a gravação e envie quando quiser.'
-                  : 'Finalizando gravação…'
-          }}
-        </p>
-        <p v-if="state === 'recording'" aria-live="off">
-          {{ seconds }} de 300 segundos
-        </p>
-        <p v-if="error" role="alert">{{ error }}</p>
+        <div v-if="state !== 'idle' || error" class="composer-status">
+          <p v-if="state !== 'idle'" role="status" aria-live="polite">
+            {{
+              state === 'requesting'
+                ? 'Aguardando permissão do microfone.'
+                : state === 'recording'
+                  ? 'Gravando áudio. Pare para revisar.'
+                  : state === 'review'
+                    ? 'Ouça a gravação e envie quando quiser.'
+                    : 'Finalizando gravação…'
+            }}
+          </p>
+          <p v-if="state === 'recording'" aria-live="off">
+            {{ seconds }} de 300 segundos
+          </p>
+          <p v-if="error" role="alert">{{ error }}</p>
+        </div>
       </template>
     </MediaComposer>
   </section>
@@ -283,5 +304,24 @@ onBeforeUnmount(clear);
 .audio-recorder {
   display: grid;
   gap: var(--space-3);
+}
+/* The state of the recording sits between the field and the tool row. */
+.composer-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+}
+.composer-status p {
+  margin: 0;
+}
+.composer-status p[aria-live='off'] {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.composer-status [role='alert'] {
+  flex-basis: 100%;
 }
 </style>

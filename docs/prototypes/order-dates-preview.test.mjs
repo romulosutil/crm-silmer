@@ -35,6 +35,8 @@ test('DTL-P02: timeline is usable inside the current order screen without changi
         .isVisible(),
     );
     assert.equal(await section.locator('ol li').count(), 4);
+    // DTL-P04: a single vertical timeline replaces the horizontal dates summary.
+    assert.equal(await section.locator('dl').count(), 0);
     assert.ok((await section.innerText()).includes('R$ 840,00'));
     await example.selectOption('partial');
     assert.equal(await section.locator('ol li').count(), 3);
@@ -61,7 +63,10 @@ test('DTL-P02: timeline is usable inside the current order screen without changi
       await deliveryButton.evaluate((el) => el === document.activeElement),
       true,
     );
-    assert.ok((await section.innerText()).includes('Ainda não entregue'));
+    assert.equal(
+      await section.getByText('Pedido entregue', { exact: true }).count(),
+      0,
+    );
     assert.equal(await section.locator('ol li').count(), 3);
     await deliveryButton.click();
     await page.keyboard.press('Escape');
@@ -76,11 +81,18 @@ test('DTL-P02: timeline is usable inside the current order screen without changi
       .getByRole('button', { name: 'Sim, confirmar entrega' })
       .click();
     const today = await page.evaluate(() =>
-      new Intl.DateTimeFormat('pt-BR', {
+      new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Sao_Paulo',
       }).format(new Date()),
     );
-    assert.ok((await section.locator('dl').innerText()).includes(today));
+    assert.equal(
+      await section
+        .locator('li')
+        .filter({ hasText: 'Pedido entregue' })
+        .locator('time')
+        .getAttribute('datetime'),
+      today,
+    );
     assert.equal(
       await section
         .getByRole('button', { name: 'Confirmar entrega', exact: true })
@@ -99,8 +111,7 @@ test('DTL-P02: timeline is usable inside the current order screen without changi
     );
     assert.equal(
       await section
-        .locator('dd')
-        .last()
+        .getByText('Pedido entregue', { exact: true })
         .evaluate((el) => el === document.activeElement),
       true,
     );
@@ -140,8 +151,12 @@ test('DTL-P02: timeline is usable inside the current order screen without changi
     });
     await page.setViewportSize({ width: 390, height: 844 });
     // The real phone accordion is closed on navigation; open it through its native heading.
+    await section
+      .getByRole('button', { name: /Datas do pedido/ })
+      .waitFor({ state: 'visible' });
     if (!(await example.isVisible()))
       await section.getByRole('button', { name: /Datas do pedido/ }).click();
+    await example.waitFor({ state: 'visible' });
     assert.ok(await example.isVisible());
     await section
       .getByRole('button', { name: 'Confirmar entrega', exact: true })
@@ -154,8 +169,14 @@ test('DTL-P02: timeline is usable inside the current order screen without changi
     );
     await dialog.screenshot({ path: 'tmp/order-dates-delivery-mobile.png' });
     await dialog.getByRole('button', { name: 'Cancelar' }).click();
+    assert.equal(
+      await section.getByText('Pedido entregue', { exact: true }).count(),
+      0,
+    );
     assert.ok(
-      (await section.locator('dl').innerText()).includes('Ainda não entregue'),
+      await section
+        .getByRole('button', { name: 'Confirmar entrega', exact: true })
+        .isVisible(),
     );
     assert.ok(
       await page.evaluate(

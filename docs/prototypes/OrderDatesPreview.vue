@@ -44,6 +44,9 @@ async function restoreDeliveryFocus() {
   await nextTick();
   (delivery.value ? deliveryResult.value : deliveryTrigger.value)?.focus();
 }
+function setDeliveryResult(element) {
+  deliveryResult.value = element;
+}
 const full = computed(() => scenario.value === 'full');
 const legacy = computed(() => scenario.value === 'legacy');
 const failed = computed(() => scenario.value === 'error');
@@ -204,34 +207,18 @@ const events = computed(() => {
           </select>
         </div>
       </div>
-      <dl class="preview-milestones">
-        <div>
-          <dt>Primeiro contato</dt>
-          <dd>06/11/2026</dd>
-        </div>
-        <div>
-          <dt>Pago em</dt>
-          <dd>{{ paid }}</dd>
-          <span class="op-hint">Quitação integral</span>
-        </div>
-        <div>
-          <dt>Entregue em</dt>
-          <dd ref="deliveryResult" tabindex="-1">
-            {{ delivery ? dayLabel(delivery.day) : 'Ainda não entregue' }}
-          </dd>
-          <button
-            v-if="!delivery"
-            ref="deliveryTrigger"
-            type="button"
-            class="preview-delivery-button"
-            @click="askDelivery"
-          >
-            Confirmar entrega
-          </button>
-          <span v-else class="op-hint">Entrega confirmada</span>
-        </div>
-      </dl>
-      <h3>Linha do tempo</h3>
+      <div class="preview-timeline-heading">
+        <h3>Linha do tempo</h3>
+        <button
+          v-if="!delivery"
+          ref="deliveryTrigger"
+          type="button"
+          class="preview-delivery-button"
+          @click="askDelivery"
+        >
+          Confirmar entrega
+        </button>
+      </div>
       <p v-if="failed" role="status" class="op-alert">
         Não foi possível carregar os recebimentos. As datas do pedido continuam
         disponíveis.
@@ -253,7 +240,10 @@ const events = computed(() => {
           ></span>
           <div class="preview-entry">
             <div class="preview-entry-head">
-              <strong>{{ event.title }}</strong
+              <strong
+                :ref="event.id === 'delivered' ? setDeliveryResult : undefined"
+                :tabindex="event.id === 'delivered' ? -1 : undefined"
+                >{{ event.title }}</strong
               ><strong v-if="event.amount" class="op-num">{{
                 event.amount
               }}</strong>
@@ -345,28 +335,22 @@ const events = computed(() => {
 .preview-toolbar select {
   max-inline-size: 100%;
 }
-.preview-milestones {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-4);
-  padding-block: var(--space-4);
-  border-block: 1px solid var(--color-border);
-  margin: 0 0 var(--space-6);
+.preview-timeline-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
 }
-dt,
 time {
   color: var(--color-text-muted);
   font-size: var(--text-xs);
 }
-dd {
-  margin: var(--space-1) 0 0;
-  font-weight: var(--weight-medium);
-  font-variant-numeric: tabular-nums;
-}
 h3 {
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
-  margin: 0 0 var(--space-5);
+  margin: 0;
 }
 .preview-timeline {
   list-style: none;
@@ -462,15 +446,8 @@ summary:focus-visible {
     grid-template-columns: 3.5rem 0.75rem minmax(0, 1fr);
     gap: var(--space-2);
   }
-  .preview-milestones {
-    gap: var(--space-2);
-  }
-  .preview-milestones dd {
-    font-size: var(--text-sm);
-  }
 }
 .preview-delivery-button {
-  margin-top: var(--space-2);
   white-space: normal;
 }
 .preview-delivery-dialog form {

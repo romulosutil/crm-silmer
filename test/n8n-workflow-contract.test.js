@@ -759,9 +759,15 @@ test('decision normalizer applies the handoff rules of ADR 009', async () => {
       artwork_status: 'não informado',
     },
   });
-  assert.equal(flattened.briefing_patch.product_type, 'camiseta, boné');
-  assert.equal(flattened.briefing_patch.quantity, 'camiseta: 30; bone: 30');
-  assert.equal('artwork_status' in flattened.briefing_patch, false);
+  // VND-L06: flattening cannot merge different products into one scalar target.
+  assert.equal(flattened.trigger, 'subject_ambiguous');
+  assert.equal(flattened.briefing_patch, null);
+  assert.equal(flattened.open_order, false);
+  const singleProduct = decide({
+    briefing_patch: { product_type: ['camiseta'], quantity: { adulto: 30 } },
+  });
+  assert.equal(singleProduct.briefing_patch.product_type, 'camiseta');
+  assert.equal(singleProduct.briefing_patch.quantity, 'adulto: 30');
   assert.equal(
     'sizes' in
       decide({ briefing_patch: { sizes: 'a definir com o time' } })
@@ -2068,7 +2074,9 @@ test('a cap or another product asks its own points, and removed bags transfer (C
       colors: 'preto',
     },
   });
-  assert.equal('collar' in mixed.briefing_patch, false);
+  assert.equal(mixed.trigger, 'subject_ambiguous');
+  assert.equal(mixed.briefing_patch, null);
+  assert.equal(mixed.asked_point, null);
   // VND-L02: clothing in the order asks its fabric, and every order its artwork.
   assert.deepEqual(mixed.missing_briefing_fields, [
     'product_model',
@@ -2173,18 +2181,14 @@ test('a kit fills what the product or the technique defines, and the seller gets
   const mixedAbada = await rhythmDecision({
     briefing_patch: { product_type: 'camisetas e abadás' },
   });
+  assert.equal(mixedAbada.trigger, 'subject_ambiguous');
   assert.equal(
-    'colors' in mixedAbada.briefing_patch,
-    false,
-    'a kit applies only when every product of the order is it',
+    mixedAbada.briefing_patch,
+    null,
+    'a kit cannot project across unscoped items',
   );
 
-  for (const model of [
-    'regata',
-    'Camisa regata dry fit',
-    'abadá',
-    '30 regatas e 20 abadás',
-  ]) {
+  for (const model of ['regata', 'Camisa regata dry fit', 'abadá']) {
     const decision = await rhythmDecision({
       briefing_patch: { product_model: model },
     });
@@ -2196,11 +2200,17 @@ test('a kit fills what the product or the technique defines, and the seller gets
     });
     assert.equal(decision.briefing_patch.collar, 'gola polo', model);
   }
-  for (const model of ['camisetas e regatas', 'camiseta e polo']) {
+  for (const model of [
+    'camisetas e regatas',
+    'camiseta e polo',
+    '30 regatas e 20 abadás',
+  ]) {
     const decision = await rhythmDecision({
       briefing_patch: { product_model: model },
     });
-    assert.equal('collar' in decision.briefing_patch, false, model);
+    assert.equal(decision.trigger, 'subject_ambiguous', model);
+    assert.equal(decision.briefing_patch, null, model);
+    assert.equal(decision.asked_point, null, model);
   }
   assert.equal(
     (

@@ -432,6 +432,16 @@ exigem que a pergunta gerada também respeite campos já respondidos.
 Nenhuma dessas redes converte exceção comercial em regra geral ou concede
 criação automática de pedido. Aceite sintético em `test/n8n-vendedor-prioridades.test.js`.
 
+Refinamento VND-L06 (11/11/2026), AGT-01/02/05/08: origem genérica por
+fotos do site não define parceria/contexto externo; layout previamente
+combinado com a Silmer exige retomada humana. Tecido incerto e alternativas
+de orçamento não substituem escolhas inequívocas. Vários produtos sem alvo
+individual não recebem projeção escalar compartilhada: o resumo encaminha a
+separação ao vendedor. Negação, conteúdo da estampa e dúvida de outro campo
+não alteram uma escolha confirmada. Mensagens humanas são contexto, não
+política comercial. Aceite sintético em `test/n8n-vendedor-contexto-l06.test.js`;
+[limites e implantação](../../../docs/integrations/n8n/revisao-2026-11-11.md).
+
 O contexto do agente vem de `recent_messages` e do snapshot de briefing da
 Conversa; não existe memória comercial paralela no n8n. `briefing_patch` ignora
 nulos, aceita somente campos de qualificação e altera apenas esse snapshot até sua projeção autorizada no Pedido pendente; o agente não sobrescreve escolhas humanas.

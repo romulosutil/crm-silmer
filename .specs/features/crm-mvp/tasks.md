@@ -842,6 +842,27 @@ em claro/escuro, desktop, celular e 320 px. Detalhes no runbook.
 
 Operação e rollback em [inbox-compacta](../../../docs/runbooks/inbox-compacta.md).
 
+## VND-L06 — Contexto e interpretação das conversas (11/11/2026)
+
+AGT-01–05/08/10, ORC-03/05/07; ADRs 013/049/051/052/056/063.
+Implementação solicitada pelo proprietário após análise das mensagens dos
+clientes e vendedores, sem inferir condições comerciais dos atendimentos.
+
+- [x] Proteger origem genérica por fotos do site contra contexto externo espúrio.
+- [x] Encaminhar vários produtos sem alvo individual, sem misturar seus campos.
+- [x] Preservar dúvida de tecido, escolhas anteriores e alternativas de orçamento.
+- [x] Reconhecer layout/arte já tratado com a equipe sem reiniciar coleta genérica.
+- [x] Preparar SDK/snapshots principal/DEV/local mvp-simple-24 e testes fictícios
+      nos nós reais, com negativos de QA, sem transcrições ou dados pessoais.
+- [x] Concluir gates e revisão final: validate com 2.619 aprovados/52 ignorados,
+      build, 42 cenários novos e auditoria sem vulnerabilidades. E2E: 954
+      aprovados/7 ignorados; as duas falhas passaram isoladamente, sem alterar
+      UI/assertions. Diff check limpo. Commit/push e PR registrados no handoff.
+- [ ] Publicar delta revisado sobre Evolution e observar turnos reais; candidato
+      e testes locais não comprovam publicação ou melhoria comercial.
+
+[Amostra, comportamento, verificação e rollback](../../../docs/integrations/n8n/revisao-2026-11-11.md).
+
 ## VND-L05 — Triagem prioritária sem inferir regra comercial (06/11/2026)
 
 AGT-01–05/08, ORC-03/05/07; RFC 051 / ADR 063, autorizadas pelo proprietário

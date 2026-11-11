@@ -111,3 +111,18 @@ metadata e demais nós; os quatro fingerprints candidatos foram atualizados.
 Nenhuma migration, dependência, API, flag ou workflow publicado foi alterado.
 O CI da revisão integrada executará novamente seus gates de PostgreSQL,
 E2E/axe, auditoria e imagens antes do merge.
+
+## VND-L06 — Contexto e interpretação (11/11/2026)
+
+A [revisão VND-L06](../integrations/n8n/revisao-2026-11-11.md) prepara
+mvp-simple-24: origem por fotos do site, alvo de múltiplos produtos, tecido
+incerto, quantidades alternativas e retomada de layout tratado com a equipe.
+Os exemplos de clientes/vendedores são fictícios; nenhuma condição comercial
+foi aprendida como regra. Os testes novos estão em
+`test/n8n-vendedor-contexto-l06.test.js`.
+
+O procedimento acima continua aplicável a prompt/normalizador. O preparador
+conserva o rótulo histórico VND-L05 em plan.task; registrar VND-L06 no plano
+operacional e revisar os cabeçalhos separadamente. Referência publicada e
+pendências externas não foram substituídas. Publicação/observação continuam
+separadas; rollback usa os campos do backup vivo, sem replay nem retorno ao bot.

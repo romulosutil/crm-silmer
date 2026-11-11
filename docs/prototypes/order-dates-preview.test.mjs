@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chromium } from '@playwright/test';
+import { chromium, expect } from '@playwright/test';
 import { createBillingChatPreview } from './billing-chat-preview.mjs';
 
 test('DTL-P02: timeline is usable inside the current order screen without changing financial state', async () => {
@@ -29,13 +29,33 @@ test('DTL-P02: timeline is usable inside the current order screen without changi
         .getByText('Prévia visual com dados fictícios.', { exact: false })
         .isVisible(),
     );
+    assert.equal(
+      await section.getByRole('heading', { name: 'Linha do tempo' }).count(),
+      0,
+    );
+    const headingBox = await section
+      .getByRole('heading', { name: 'Datas do pedido', exact: true })
+      .boundingBox();
+    const deliveryBox = await section
+      .getByRole('button', { name: 'Confirmar entrega', exact: true })
+      .boundingBox();
+    assert.ok(Math.abs(headingBox.y - deliveryBox.y) < 24);
+    const desktopEvents = await section.locator('ol li').evaluateAll((items) =>
+      items.map((item) => {
+        const r = item.getBoundingClientRect();
+        return { x: r.x, y: r.y };
+      }),
+    );
     assert.ok(
-      await section
-        .getByRole('heading', { name: 'Linha do tempo' })
-        .isVisible(),
+      desktopEvents.every((item) => Math.abs(item.y - desktopEvents[0].y) < 2),
+    );
+    assert.ok(
+      desktopEvents.every(
+        (item, index) => index === 0 || item.x > desktopEvents[index - 1].x,
+      ),
     );
     assert.equal(await section.locator('ol li').count(), 4);
-    // DTL-P04: a single vertical timeline replaces the horizontal dates summary.
+    // DTL-P04/P05: the events are the only dates view, now arranged horizontally.
     assert.equal(await section.locator('dl').count(), 0);
     assert.ok((await section.innerText()).includes('R$ 840,00'));
     await example.selectOption('partial');
@@ -115,7 +135,9 @@ test('DTL-P02: timeline is usable inside the current order screen without changi
         .evaluate((el) => el === document.activeElement),
       true,
     );
-    await section.getByText('Ver detalhes da entrega', { exact: true }).click();
+    await section
+      .getByLabel('Ver detalhes da entrega', { exact: true })
+      .click();
     assert.ok((await section.innerText()).includes('Confirmada por Marina'));
     await example.selectOption('full');
     await example.selectOption('partial');
@@ -144,11 +166,25 @@ test('DTL-P02: timeline is usable inside the current order screen without changi
       ),
     );
     await example.selectOption('full');
+    await section
+      .getByRole('button', { name: 'Confirmar entrega', exact: true })
+      .click();
+    await dialog
+      .getByRole('button', { name: 'Sim, confirmar entrega' })
+      .click();
+    assert.equal(await section.locator('ol li').count(), 5);
+    assert.ok(
+      await section
+        .locator('.preview-timeline-scroll')
+        .evaluate((el) => el.scrollWidth <= el.clientWidth),
+    );
     await section.scrollIntoViewIfNeeded();
     await page.screenshot({
       path: 'tmp/order-dates-site-desktop.png',
       fullPage: true,
     });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await example.waitFor({ state: 'visible' });
     await page.setViewportSize({ width: 390, height: 844 });
     // The real phone accordion is closed on navigation; open it through its native heading.
     await section
@@ -184,6 +220,37 @@ test('DTL-P02: timeline is usable inside the current order screen without changi
       ),
     );
     await section.screenshot({ path: 'tmp/order-dates-site-mobile.png' });
+    const rail = section.getByRole('region', {
+      name: 'Cronologia do pedido, deslize para ver os eventos',
+    });
+    assert.ok(await rail.evaluate((el) => el.scrollWidth > el.clientWidth));
+    await rail.focus();
+    await rail.evaluate((el) => {
+      el.scrollLeft = 0;
+    });
+    await page.keyboard.press('ArrowRight');
+    await expect
+      .poll(() => rail.evaluate((el) => el.scrollLeft))
+      .toBeGreaterThan(0);
+    // The header action remains usable when the phone accordion is closed.
+    await section.getByRole('button', { name: /Datas do pedido/ }).click();
+    await example.waitFor({ state: 'hidden' });
+    await section
+      .getByRole('button', { name: 'Confirmar entrega', exact: true })
+      .click();
+    await dialog.waitFor();
+    await dialog
+      .getByRole('button', { name: 'Sim, confirmar entrega' })
+      .click();
+    await section
+      .getByText('Pedido entregue', { exact: true })
+      .waitFor({ state: 'visible' });
+    assert.equal(
+      await section
+        .getByText('Pedido entregue', { exact: true })
+        .evaluate((el) => el === document.activeElement),
+      true,
+    );
     assert.equal(JSON.stringify(preview.fixtures.view()), before);
     assert.deepEqual(errors, []);
   } finally {

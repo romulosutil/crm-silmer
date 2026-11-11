@@ -38,8 +38,9 @@ nenhum ADR aprovado é alterado por este planejamento. Issue/PR: ainda não cria
 
 Manter o título **Datas do pedido**, o acordeão e o design existente.
 Conforme revisão do proprietário em 11/11/2026 (DTL-P04), remover os três
-marcos horizontais para evitar repetição. Exibir uma lista vertical, do mais
-antigo ao mais recente, com **Confirmar entrega** junto ao título enquanto
+marcos duplicados para evitar repetição. A revisão DTL-P05 dispõe os eventos
+em uma sequência horizontal, do mais antigo ao mais recente, com **Confirmar
+entrega** no cabeçalho **Datas do pedido** enquanto
 não houver entrega registrada. A data canônica de quitação permanece no
 modelo financeiro; a seção usa os recebimentos e o saldo sem repetir o bloco
 de datas:
@@ -130,6 +131,22 @@ tratamento de legado, antes de mudar o significado desta data.
 | DTL-T04 | Integração e evidências de regressão, documentação de cobrança e aceite visual. Depende T03.                                                                                                        | Conferir Financeiro/Dashboard/PDF sem mudança contratual; testes backend/e2e relevantes, checks padrão, `git diff --check`, commit e push por tarefa implementada.                                                            |
 
 ## Validação deste planejamento
+
+DTL-P05 (11/11/2026): composição horizontal no protótipo conforme solicitação
+do proprietário. Remover o subtítulo “Linha do tempo” e mover **Confirmar
+entrega** para a linha de **Datas do pedido**. Priorizar data/título/origem/valor
+nos eventos, preservando revisões e detalhes expansíveis com nomes acessíveis.
+Eventos compartilham a mesma linha; quando não couberem, a rolagem fica
+contida na seção, inclusive no celular, sem alargar a página. A região de
+rolagem é nomeada e focável para teclado. A confirmação acrescenta o evento
+e o foco continua chegando ao resultado. Gate: teste existente ampliado com
+alinhamento horizontal, posição do botão no cabeçalho, ausência do subtítulo,
+rolagem interna mobile e regressão do fluxo de entrega. Esta composição
+substitui a orientação vertical da proposta anterior; contratos financeiros
+continuam os mesmos.
+Verificado: os cinco eventos do exemplo quitado com entrega cabem lado a
+lado na tela de 1440px; rolagem nativa por ArrowRight e confirmação pelo
+cabeçalho com acordeão mobile fechado também passaram no teste do harness.
 
 DTL-P04 (11/11/2026): remover o resumo horizontal do protótipo e mover
 **Confirmar entrega** para o cabeçalho da linha do tempo. Confirmar adiciona

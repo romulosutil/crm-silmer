@@ -1,5 +1,14 @@
 # Architecture Decision Records
 
+## Decisão de 11/11/2026
+
+- [084 — Caixa de Entrada refinada](084-caixa-de-entrada-refinada.md),
+  INBOX-RD-01–09 / `design.md` §21: lista de 300 px, aviso de mensagem nova
+  por navegador, histórico em coluna com grupos de mensagens, compositor em
+  duas linhas, casca de jornada no frete e navegação agrupada; exceção ao
+  orçamento da ADR 036 só no compositor. Documental; a casca na cobrança
+  espera o PR 348.
+
 ## Decisão de 10/11/2026
 
 - [083 — Edição no lugar no pedido](083-edicao-no-lugar.md), EDIT-01 /

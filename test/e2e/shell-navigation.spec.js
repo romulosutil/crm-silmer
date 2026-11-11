@@ -293,3 +293,88 @@ test.describe('contador e título da Caixa', () => {
     ).toBeNull();
   });
 });
+
+test.describe('chegadas da Caixa (INBOX-RD-02)', () => {
+  test('o cliente responde a uma resposta nossa: contador 1 e título', async ({
+    page,
+  }) => {
+    await page.setViewportSize(DESKTOP);
+    const state = await mount(page);
+    state.items = [
+      {
+        id: 'c1',
+        bucket: 'respond',
+        lastMessage: { id: 'm1', direction: 'outbound' },
+      },
+    ];
+    await page.goto('/conta');
+    await expect.poll(() => state.listRequests).toBeGreaterThan(0);
+    await expect(page).toHaveTitle('CRM Silmer');
+    await arrive(page, state, 'm2');
+    await expect(page).toHaveTitle('(1) CRM Silmer');
+  });
+
+  test('conversa nova, com mensagem posterior à linha de base, marca', async ({
+    page,
+  }) => {
+    await page.setViewportSize(DESKTOP);
+    const state = await mount(page);
+    await page.goto('/conta');
+    await expect.poll(() => state.listRequests).toBeGreaterThan(0);
+    state.items = [
+      ...state.items,
+      {
+        id: 'c9',
+        bucket: 'respond',
+        lastMessage: {
+          id: 'm9',
+          direction: 'inbound',
+          occurredAt: new Date(Date.now() + 60_000).toISOString(),
+        },
+      },
+    ];
+    await page.evaluate(() =>
+      globalThis.__emitInbox('inbox.conversation.changed'),
+    );
+    await expect(page).toHaveTitle('(1) CRM Silmer');
+  });
+
+  test('cada chegada é anunciada, também a segunda', async ({ page }) => {
+    await page.setViewportSize(DESKTOP);
+    const state = await mount(page);
+    state.items = [conversation('c1', 'm1'), conversation('c2', 'm1')];
+    await page.goto('/conta');
+    await expect.poll(() => state.listRequests).toBeGreaterThan(0);
+    await page.evaluate(() => {
+      globalThis.__heard = [];
+      const region = globalThis.document.querySelector(
+        'p.sr-only[role="status"]',
+      );
+      new globalThis.MutationObserver(() => {
+        if (region.textContent) globalThis.__heard.push(region.textContent);
+      }).observe(region, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+    });
+    state.items = [conversation('c1', 'm2'), conversation('c2', 'm1')];
+    await page.evaluate(() =>
+      globalThis.__emitInbox('inbox.conversation.changed'),
+    );
+    await expect(page).toHaveTitle('(1) CRM Silmer');
+    state.items = [conversation('c1', 'm2'), conversation('c2', 'm2')];
+    await page.evaluate(() =>
+      globalThis.__emitInbox('inbox.conversation.changed'),
+    );
+    await expect(page).toHaveTitle('(2) CRM Silmer');
+    await expect
+      .poll(
+        async () =>
+          (await page.evaluate(() => globalThis.__heard)).filter(
+            (text) => text === 'Mensagem nova na Caixa de Entrada.',
+          ).length,
+      )
+      .toBe(2);
+  });
+});

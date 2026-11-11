@@ -30,7 +30,7 @@ import {
   unreadNoticeText,
   unreadTitle,
 } from './lib/inbox-unread.js';
-import { inboxListUrl, inboxStateFromRoute } from './lib/inbox-turn.js';
+import { inboxListUrl } from './lib/inbox-turn.js';
 import { RETURN_QUERY, safeReturnPath } from './lib/return-path.js';
 
 const router = useRouter();
@@ -459,8 +459,10 @@ function commitUnreadState(next) {
 
 /** @param {unknown[]} arrived */
 function announceArrival(arrived) {
-  if (Array.isArray(arrived) && arrived.length > 0)
-    announce(NEW_MESSAGE_ANNOUNCEMENT);
+  if (!Array.isArray(arrived) || arrived.length === 0) return;
+  // `announce` ignores a repeat of the last message; every arrival must be heard.
+  lastAnnouncement = '';
+  announce(NEW_MESSAGE_ANNOUNCEMENT);
 }
 
 provide('inboxUnread', {
@@ -501,19 +503,11 @@ function clearUnreadState() {
   }
 }
 
-/** The Inbox view observes its own Responder list; the shell must not repeat it. */
-function inboxViewObservesRespond() {
-  if (!route.path.startsWith('/inbox')) return false;
-  const state = inboxStateFromRoute(route.query);
-  return state.bucket === 'respond' && state.consult === 'open';
-}
-
 async function observeInboxFromShell() {
   if (
     phase.value !== 'authenticated' ||
     isFinance.value ||
-    globalThis.document?.visibilityState === 'hidden' ||
-    inboxViewObservesRespond()
+    globalThis.document?.visibilityState === 'hidden'
   )
     return;
   const sequence = ++unreadFetchSeq;

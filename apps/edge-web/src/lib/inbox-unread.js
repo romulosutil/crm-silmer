@@ -4,8 +4,12 @@
  * recebe um estado e devolve um estado novo, ou o mesmo objeto quando nada
  * mudou. O estado fica no navegador de quem atende; o servidor não o conhece.
  *
- * - `seen`: id da conversa -> id da última mensagem do cliente já conhecida;
- * - `unread`: id da conversa -> id da mensagem do cliente ainda não lida.
+ * - `seen`: id da conversa -> id da ÚLTIMA mensagem observada, de qualquer
+ *   direção;
+ * - `unread`: id da conversa -> id da mensagem do cliente ainda não lida;
+ * - `since`: instante ISO da observação anterior (`null` antes da primeira,
+ *   que é só linha de base). Só muda quando se afasta mais de 1 s do valor
+ *   guardado, para o estado não trocar de identidade à toa.
  *
  * Toda chave de `unread` também existe em `seen`. A chave `__proto__` nunca
  * é aceita como id, então nenhuma entrada chega ao protótipo de Object.
@@ -15,17 +19,26 @@ export const INBOX_UNREAD_STORAGE_KEY = 'crm.inbox.unread.v1';
 export const INBOX_UNREAD_LIMIT = 500;
 
 const VERSION = 1;
+const SINCE_TOLERANCE_MS = 1000;
 
 /**
- * @typedef {{seen: Record<string, string>, unread: Record<string, string>}} UnreadState
- * @typedef {{id: string, lastMessage?: {id: string, direction: 'inbound'|'outbound'} | null}} InboxConversation
+ * @param {unknown} value
+ * @returns {number} o instante em ms, ou NaN quando não é data ISO válida.
+ */
+function instant(value) {
+  return typeof value === 'string' ? Date.parse(value) : Number.NaN;
+}
+
+/**
+ * @typedef {{seen: Record<string, string>, unread: Record<string, string>, since: string|null}} UnreadState
+ * @typedef {{id: string, bucket?: string, lastMessage?: {id: string, direction: 'inbound'|'outbound', occurredAt?: string} | null}} InboxConversation
  */
 
 /**
  * @returns {UnreadState} o estado inicial, sem nenhuma conversa conhecida.
  */
 export function emptyUnreadState() {
-  return { seen: {}, unread: {} };
+  return { seen: {}, unread: {}, since: null };
 }
 
 /**
@@ -96,29 +109,35 @@ function trimDraft(seen, unread) {
 }
 
 /**
- * Compara a lista do servidor com o que este navegador já viu. A primeira vez
- * que uma conversa aparece só registra a última mensagem; a partir daí, uma
- * mensagem nova do cliente marca a conversa, exceto a aberta. Uma resposta
- * `outbound` tira a marca.
+ * Compara a lista do servidor com o que este navegador já viu. Para uma
+ * conversa cuja última mensagem é do cliente, que não é a aberta e cujo
+ * `bucket` é 'respond' (ou ausente), marca quando:
+ * - já era conhecida e a última mensagem mudou; ou
+ * - era desconhecida, houve observação anterior (`since` de ENTRADA) e a
+ *   mensagem tem `occurredAt` válido e posterior a ela.
+ * A primeira observação (`since` nulo) só registra. Uma mensagem nossa tira
+ * a marca; conversa fora de Responder nunca é marcada. `seen` guarda sempre a
+ * última mensagem, de qualquer direção. `since` de saída é `now`, trocado só
+ * quando muda mais de 1 s (ou era nulo).
  *
  * @param {UnreadState} state
- * @param {unknown} conversations lista de `InboxConversation`; qualquer outro
- *   valor (ou item malformado) é tratado como vazio ou ignorado.
- * @param {{openId?: string|null}} [options] `openId`: a conversa aberta agora.
+ * @param {InboxConversation[]} conversations
+ * @param {{openId?: string|null, now?: string}} [options] `openId`: a
+ *   conversa aberta agora; `now`: instante ISO da observação.
  * @returns {{state: UnreadState, arrived: string[]}} `arrived`: ids marcados
  *   nesta chamada (que não estavam marcados antes), na ordem da lista.
  */
 export function observeConversations(
   state,
   conversations,
-  { openId = null } = {},
+  { openId = null, now = new Date().toISOString() } = {},
 ) {
   const before = state?.unread ?? {};
   const seen = { ...(state?.seen ?? {}) };
   const unread = { ...before };
-  const list = Array.isArray(conversations)
-    ? /** @type {Partial<InboxConversation>[]} */ (conversations)
-    : [];
+  const sinceIn = state?.since ?? null;
+  const sinceMs = instant(sinceIn);
+  const list = Array.isArray(conversations) ? conversations : [];
   /** @type {string[]} */
   const arrived = [];
   let changed = false;
@@ -127,7 +146,14 @@ export function observeConversations(
     const id = conversation?.id;
     const last = conversation?.lastMessage;
     if (!isConversationId(id) || !last || !isText(last.id)) continue;
-    // Direction is checked below; a malformed one is ignored there.
+    if (last.direction !== 'inbound' && last.direction !== 'outbound') continue;
+
+    const known = has(seen, id);
+    const lastChanged = seen[id] !== last.id;
+    if (!known || lastChanged) {
+      remember(seen, id, last.id);
+      changed = true;
+    }
 
     if (last.direction === 'outbound') {
       if (has(unread, id)) {
@@ -136,27 +162,38 @@ export function observeConversations(
       }
       continue;
     }
-    if (last.direction !== 'inbound') continue;
-
-    if (!has(seen, id)) {
-      remember(seen, id, last.id);
-      changed = true;
+    const eligible =
+      id !== openId &&
+      (conversation.bucket === undefined || conversation.bucket === 'respond');
+    if (id === openId || !eligible) {
+      if (has(unread, id)) {
+        delete unread[id];
+        changed = true;
+      }
       continue;
     }
-    if (seen[id] === last.id) continue;
-
-    remember(seen, id, last.id);
-    changed = true;
-    if (id === openId) {
-      if (has(unread, id)) delete unread[id];
-    } else {
-      if (!has(before, id) && !arrived.includes(id)) arrived.push(id);
+    if (has(unread, id)) {
+      if (lastChanged) unread[id] = last.id;
+      continue;
+    }
+    const occurred = instant(last.occurredAt);
+    const mark = known
+      ? lastChanged
+      : !Number.isNaN(sinceMs) && !Number.isNaN(occurred) && occurred > sinceMs;
+    if (mark) {
       unread[id] = last.id;
+      if (!arrived.includes(id)) arrived.push(id);
     }
   }
 
   if (trimDraft(seen, unread)) changed = true;
-  return { arrived, state: changed ? { seen, unread } : state };
+  const nowMs = instant(now);
+  const advance =
+    !Number.isNaN(nowMs) &&
+    (Number.isNaN(sinceMs) || Math.abs(nowMs - sinceMs) > SINCE_TOLERANCE_MS);
+  const since = advance ? now : sinceIn;
+  if (advance) changed = true;
+  return { arrived, state: changed ? { seen, unread, since } : state };
 }
 
 /**
@@ -182,15 +219,11 @@ export function markConversationRead(state, conversation) {
     changed = true;
   }
   const last = source?.lastMessage;
-  if (
-    last?.direction === 'inbound' &&
-    isText(last.id) &&
-    seen[id] !== last.id
-  ) {
+  if (isText(last?.id) && seen[id] !== last.id) {
     remember(seen, id, last.id);
     changed = true;
   }
-  return changed ? { seen, unread } : state;
+  return changed ? { seen, unread, since: state?.since ?? null } : state;
 }
 
 /**
@@ -258,13 +291,14 @@ function validMap(value) {
 
 /**
  * @param {UnreadState} state
- * @returns {string} JSON `{"v":1,"seen":{…},"unread":{…}}`.
+ * @returns {string} JSON `{"v":1,"seen":{…},"unread":{…},"since":ISO|null}`; o formato antigo, sem `since`, continua legível.
  */
 export function serializeUnreadState(state) {
   return JSON.stringify({
     v: VERSION,
     seen: validMap(state?.seen),
     unread: validMap(state?.unread),
+    since: Number.isNaN(instant(state?.since)) ? null : state.since,
   });
 }
 
@@ -293,5 +327,9 @@ export function parseUnreadState(text) {
     if (!has(seen, id)) seen[id] = unread[id];
   }
   trimDraft(seen, unread);
-  return { seen, unread };
+  return {
+    seen,
+    unread,
+    since: Number.isNaN(instant(data.since)) ? null : String(data.since),
+  };
 }

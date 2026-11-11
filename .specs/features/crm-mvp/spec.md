@@ -11,6 +11,17 @@ ORC-03/05/07, posse e handoff definitivo; não altera a observação da ficha.
 Contrato de implementação e gates em [REC-T00–T04](../lead-recovery/tasks.md).
 Entrega atual documental, sem ativação ou endpoint novo.
 
+## Datas do pedido horizontais — DTL (11/11/2026)
+
+O proprietário aprovou [DTL-01–12](../order-timeline/spec.md) e a composição
+horizontal da [RFC 063](../../../docs/rfc/063-linha-do-tempo-dos-recebimentos-do-pedido.md).
+Emenda a apresentação PLA: contato, confirmação, recebimentos reais,
+correções e entrega compartilham a sequência, sem resumo repetido. O botão
+Confirmar entrega no cabeçalho reutiliza ACT-04/PLA-11. Quitação, status,
+datas de origem e autorização mantêm seus contratos; sem mudança em PDF,
+Dashboard ou transporte financeiro. Operação no
+[runbook](../../../docs/runbooks/order-timeline.md).
+
 ## Caixa por vez de responder — PCX-19 (08/11/2026)
 
 [ADR 065](../../../docs/adr/065-caixa-de-entrada-por-vez-de-responder.md) e

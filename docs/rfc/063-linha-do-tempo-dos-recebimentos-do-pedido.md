@@ -1,6 +1,9 @@
 # RFC 063: linha do tempo dos recebimentos do pedido
 
-Status: proposta para revisão visual e de produto. Não autoriza implantação.
+Status: composição e implementação local aprovadas pelo proprietário em
+11/11/2026, após DTL-P01–P06. Implantação permanece fora desta autorização.
+Contrato em [order-timeline](../../.specs/features/order-timeline/spec.md)
+e operação no [runbook](../runbooks/order-timeline.md).
 Data: 10/11/2026. Base inspecionada: master `760f7924`.
 
 ## Objetivo e contratos relacionados
@@ -13,7 +16,8 @@ Continua PLA-01–12, COB-01–08 e os contratos de recebimentos externos de
 [order-billing-completion](../../.specs/features/order-billing-completion/spec.md),
 [RFC 060](060-recebimentos-externos-e-conciliacao-de-cobrancas.md) e ADR 077.
 Uma decisão durável futura deverá vincular esta proposta ao ADR correspondente;
-nenhum ADR aprovado é alterado por este planejamento. Issue/PR: ainda não criados.
+nenhum ADR aprovado é alterado por esta entrega.
+Implementação: [PR 348](https://github.com/romulosutil/crm-silmer/pull/348).
 
 ## Situação confirmada no código
 

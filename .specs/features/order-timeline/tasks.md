@@ -51,7 +51,7 @@ flowchart LR
 ### T2: Projetar eventos financeiros autorizados (DTL-T01)
 
 - [x] Concluída: projeção aditiva, seis testes unitários e oito PostgreSQL
-  aprovados, sem skips; typecheck, ESLint focado e diff check aprovados.
+      aprovados, sem skips; typecheck, ESLint focado e diff check aprovados.
       **Where**: `apps/api/src/order-billing-runtime.js`
 
 **Depends on**: T1
@@ -66,8 +66,8 @@ flowchart LR
 ### T3: Ligar a interface horizontal aos dados e à entrega (DTL-T02/T03)
 
 - [x] Concluída: seis testes puros de composição, 15 E2E novos, regressões
-  de Pedidos/Cobranças e gate validate aprovados. Smoke pela API local persistiu
-  dois recebimentos e entrega. Gate global de navegador e revisão final em T4.
+      de Pedidos/Cobranças e gate validate aprovados. Smoke pela API local persistiu
+      dois recebimentos e entrega. Gate global de navegador e revisão final em T4.
       **Where**: `apps/edge-web/src/components/order/OrderMilestonesSection.vue`
 
 **Depends on**: T2
@@ -82,7 +82,8 @@ flowchart LR
 
 ### T4: Verificar a integração e disponibilizar localmente (DTL-T04)
 
-- [ ] Concluída.
+- [x] Concluída: revisão independente e sensor aprovados, gates e retestes
+      de ambiente registrados; smoke persistido disponível na porta 4180.
       **Where**: `.specs/features/order-timeline/validation.md`
 
 **Depends on**: T3
@@ -92,7 +93,8 @@ flowchart LR
 com dados sintéticos, gates finais e teste de regressão conforme escopo.
 **Gate**: Build; relatório PASS e validate_state.py.
 
-- Suporte: runbook/README/RFC atualizados; PR revisável, sem merge/deploy.
+- Suporte: runbook/RFC e rastreabilidade canônica atualizados;
+  [PR 348](https://github.com/romulosutil/crm-silmer/pull/348) revisável, sem merge/deploy.
 - Entrega: evidência por requisito, limitações explícitas, commit/push e ambiente local atualizado.
 
 ## Cross-check

@@ -12,6 +12,7 @@ const props = defineProps({
   hasMore: { type: Boolean, default: false },
   mutable: { type: Boolean, default: false },
   privateReadable: { type: Boolean, default: false },
+  now: { type: Number, default: () => Date.now() },
 });
 const emit = defineEmits(['check', 'reverse', 'send', 'retry', 'load-more']);
 const operations = computed(() =>
@@ -91,7 +92,7 @@ function status(row) {
       : 'Devolução parcial';
   if (
     row.charge?.status === 'waiting' &&
-    Date.parse(row.charge.validUntil) <= Date.now()
+    Date.parse(row.charge.validUntil) <= props.now
   )
     return 'Link vencido';
   return row.charge
@@ -109,7 +110,7 @@ function reusable(row) {
     props.billing.balanceAmountCents > 0 &&
     charge?.status === 'waiting' &&
     charge.amountCents <= props.billing.balanceAmountCents &&
-    Date.parse(charge.validUntil) > Date.now() &&
+    Date.parse(charge.validUntil) > props.now &&
     Boolean(billingUrl(charge.checkoutUrl))
   );
 }
@@ -208,7 +209,7 @@ function eventState(item) {
             <template v-if="row.charge">
               <p v-if="row.charge.validUntil" class="op-hint">
                 {{
-                  Date.parse(row.charge.validUntil) <= Date.now()
+                  Date.parse(row.charge.validUntil) <= now
                     ? 'Validade encerrada'
                     : 'Válido até'
                 }}

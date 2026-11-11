@@ -34,6 +34,7 @@ const today = new Intl.DateTimeFormat('sv-SE', {
 }).format(new Date());
 const conversation = ref(null);
 const loading = ref(false);
+const checkedAt = ref(Date.now());
 const busy = ref(false);
 const error = ref('');
 const notice = ref('');
@@ -137,7 +138,8 @@ const activeCharge = computed(() =>
 const corrected = computed(() =>
   charges.value.filter(
     (item) =>
-      item.status === 'closed' && Date.parse(item.validUntil) <= Date.now(),
+      item.status === 'closed' &&
+      Date.parse(item.validUntil) <= checkedAt.value,
   ),
 );
 const existing = computed(() =>
@@ -146,7 +148,7 @@ const existing = computed(() =>
       item.status === 'waiting' &&
       item.amountCents <= balance.value &&
       balance.value > 0 &&
-      Date.parse(item.validUntil) > Date.now() &&
+      Date.parse(item.validUntil) > checkedAt.value &&
       billingUrl(item.checkoutUrl),
   ),
 );
@@ -240,6 +242,13 @@ async function load(append = false, silent = false) {
       ),
     ]);
     if (own.signal.aborted || props.order.id !== target) return;
+    const instant = Date.now();
+    const expiryChanged = (summary.data.billing?.charges ?? []).some(
+      (charge) =>
+        Date.parse(charge.validUntil) > checkedAt.value &&
+        Date.parse(charge.validUntil) <= instant,
+    );
+    if (!props.compact || expiryChanged) checkedAt.value = instant;
     const changed =
       JSON.stringify(billing.value) !== JSON.stringify(summary.data.billing);
     if (changed) billing.value = summary.data.billing;
@@ -260,7 +269,8 @@ async function load(append = false, silent = false) {
       nextCursor.value = events.data.nextCursor ?? null;
     if (append && props.compact) historyPaged = true;
     error.value = '';
-    if (props.compact && changed) emit('snapshot', billing.value);
+    if (props.compact && (changed || expiryChanged))
+      emit('snapshot', billing.value);
   } catch (cause) {
     if (!own.signal.aborted) {
       error.value = billingError(cause);
@@ -288,6 +298,17 @@ async function refreshConversation() {
 }
 async function show(nextMode, event, item = null) {
   if (busy.value || !mutable.value) return;
+  checkedAt.value = Date.now();
+  if (props.compact) emit('snapshot', billing.value);
+  if (
+    nextMode === 'send' &&
+    item &&
+    !existing.value.some((charge) => charge.id === item.id)
+  ) {
+    notice.value =
+      'A cobrança venceu ou mudou. Confira o estado atual antes de enviar.';
+    return;
+  }
   const trigger = event.currentTarget;
   const ownGeneration = generation;
   mode.value = nextMode;
@@ -354,7 +375,11 @@ async function selectRetry() {
 }
 async function showRetry(event, intent) {
   const ownGeneration = generation;
-  await show('send', event);
+  await show(
+    'send',
+    event,
+    charges.value.find((charge) => charge.id === intent.chargeId),
+  );
   if (
     ownGeneration !== generation ||
     !dialog.value?.open ||
@@ -822,6 +847,7 @@ onBeforeUnmount(() => {
         :loading="loading"
         :mutable="Boolean(mutable)"
         :private-readable="privateReadable"
+        :now="checkedAt"
         @send="(event, charge) => show('send', event, charge)"
         @retry="showRetry"
         @check="(event, charge) => show('check', event, charge)"

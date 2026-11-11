@@ -1915,3 +1915,43 @@ test('BCS-09: parent refund dialogue also pauses reconciliation and preserves th
   ).toBeFocused();
   expect(state.calls).toHaveLength(0);
 });
+
+test('BCS-05/09: expiry is a real state change even when polling returns identical snapshots', async ({
+  page,
+}) => {
+  const state = await setup(page, {
+    billing: {
+      managed: true,
+      percent: 30,
+      charges: [
+        {
+          id: 'expires-quietly',
+          kind: 'signal',
+          status: 'waiting',
+          amountCents: 30000,
+          validUntil: new Date(Date.now() + 6500).toISOString(),
+          checkoutUrl: 'https://checkout.infinitepay.io/expires-quietly',
+        },
+      ],
+    },
+  });
+  await page.goto('/pedidos/shipping-order-1#cobrancas');
+  const section = page.getByRole('region', { name: 'Cobranças', exact: true });
+  await expect(
+    section.getByRole('button', { name: 'Enviar cobrança', exact: true }),
+  ).toBeVisible();
+  await expect(section.locator('.op-sheet-state')).toContainText(
+    'Link vencido',
+    { timeout: 14000 },
+  );
+  await expect(
+    section.getByRole('button', { name: 'Enviar cobrança', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    section.getByRole('button', { name: 'Copiar link', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    section.getByRole('button', { name: 'Conferir cobrança', exact: true }),
+  ).toBeVisible();
+  expect(state.calls).toHaveLength(0);
+});

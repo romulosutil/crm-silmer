@@ -1225,3 +1225,14 @@ Ordem de implantação: PR das migrações 0046–0048 (merge, deploy e aplicaç
 no console), depois PR do código, worker com as envs e só então a publicação
 do workflow, como delta sobre o export vivo (Evolution). O passo a passo e o rollback estão
 no [runbook da VND-L03](../../runbooks/vendedor-l03-implantacao.md).
+
+## VND-L06 — Contexto e interpretação das conversas
+
+mvp-simple-24 prepara os ajustes solicitados após a revisão de 11/11/2026:
+origem por fotos do site, múltiplos produtos sem alvo, tecido incerto,
+alternativas de orçamento e layout anteriormente tratado com a equipe.
+[Amostra, uso das mensagens humanas, testes e limites](revisao-2026-11-11.md).
+Mensagens de vendedores orientam cenários fictícios e contexto de atendimento;
+não são fine-tuning nem fonte de preço, mínimo ou prazo geral. Abertura e
+confirmação humanas permanecem obrigatórias. Publicação é delta revisado,
+conforme o runbook, não importação do snapshot Meta sobre Evolution.

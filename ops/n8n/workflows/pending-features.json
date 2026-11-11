@@ -213,6 +213,49 @@
       "runbook": "../../../docs/runbooks/vendedor-prioridades.md",
       "externalIssue": null,
       "publicationEvidence": null
+    },
+    {
+      "task": "VND-L06",
+      "date": "2026-11-11",
+      "candidateVersion": "mvp-simple-24",
+      "status": "prepared_not_published",
+      "requirements": [
+        "AGT-01",
+        "AGT-02",
+        "AGT-03",
+        "AGT-04",
+        "AGT-05",
+        "AGT-08",
+        "AGT-10",
+        "ORC-03",
+        "ORC-05",
+        "ORC-07"
+      ],
+      "runbook": "docs/integrations/n8n/revisao-2026-11-11.md",
+      "baseCandidateCommit": "cca73612d0592a924319c3cae20e19348b4603b0",
+      "operationalReferenceChanged": false,
+      "changedArtifacts": [
+        {
+          "path": "ops/n8n/workflows/k7tI6T4RhQPyJkn9-mvp-simple.sdk.js",
+          "beforeSha256": "d72697ed58bd14ed214eeb9dfc55ecb5f46040bb303c3686bd81a6745e2e0739",
+          "afterSha256": "3cf60daf0808f3504f6827677de089bb1ef46fc1976c2f4b14d8a014374acc9a"
+        },
+        {
+          "path": "ops/n8n/workflows/k7tI6T4RhQPyJkn9-mvp-simple.sanitized.json",
+          "beforeSha256": "e1d081d72bd9c2e61c3ed51f7326d56c22452bcd9435d6f043d3283e6aaa9a22",
+          "afterSha256": "80b76145d192a777330a591653c1b9c3e41624672fccdb623501eadc1c61512d"
+        },
+        {
+          "path": "ops/n8n/workflows/0S5ZS1xeDCSoWovs-dev-test.sanitized.json",
+          "beforeSha256": "e936a6613c7ca9500250e952d1e6b2d9a08b1ac7346d5fdc2f07f18d78a5c8e7",
+          "afterSha256": "abdb3737c4b7a52b43b00d99f87a60548cd682f8b77963c6e1dced754590290d"
+        },
+        {
+          "path": "ops/n8n/workflows/0S5ZS1xeDCSoWovs-local-test.sanitized.json",
+          "beforeSha256": "a562fca9d67a87b7e51eca3a0a5c753feecedc9ff094b4125d0f38067a1efd4d",
+          "afterSha256": "39598f98b543ca0c1d1b92af01d7a0df2ebc29bfad2dcf84f772cfd9033fae0e"
+        }
+      ]
     }
   ]
 }

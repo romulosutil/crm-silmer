@@ -86,7 +86,7 @@ const paymentEvents = computed(() => {
       id: 'confirmed',
       day: '08 nov',
       date: '2026-11-08',
-      title: 'Confirmação atual',
+      title: 'Pedido confirmado',
       subtitle: 'Valor final: R$ 1.200,00',
     },
   ];

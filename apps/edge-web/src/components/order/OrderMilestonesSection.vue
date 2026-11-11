@@ -8,6 +8,7 @@ import {
 import { commandKey } from '../../lib/api-client.js';
 import { billingMoney } from '../../lib/order-billing.js';
 import { orderTimeline } from '../../lib/order-timeline.js';
+import OrderIcon from './OrderIcon.vue';
 import OrderSheetHead from './OrderSheetHead.vue';
 
 const SECTION = 'milestones';
@@ -314,11 +315,21 @@ onBeforeUnmount(() => deliveryDialog.value?.close());
                 event.amountLabel
               }}</strong>
               <p class="op-hint">{{ event.subtitle }}</p>
-              <span v-if="event.statusLabel" class="timeline-state">{{
-                event.statusLabel
-              }}</span>
+              <span
+                v-if="
+                  event.statusLabel &&
+                  event.statusLabel !== 'Registro revertido'
+                "
+                class="timeline-state"
+                >{{ event.statusLabel }}</span
+              >
               <details v-if="event.detailLines.length">
-                <summary :aria-label="event.detailLabel">Detalhes</summary>
+                <summary
+                  :aria-label="event.detailLabel"
+                  :title="event.detailLabel"
+                >
+                  <OrderIcon name="chevron" />
+                </summary>
                 <p
                   v-for="line in event.detailLines"
                   :key="line"
@@ -517,10 +528,27 @@ li:last-child .timeline-track::after {
   background: transparent;
 }
 summary {
-  color: var(--color-link);
-  padding-block: var(--space-2);
-  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--target-min);
   min-block-size: var(--target-min);
+  color: var(--color-text-muted);
+  border-radius: var(--radius-sm);
+  list-style: none;
+  cursor: pointer;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+summary:hover {
+  background: var(--color-surface-raised);
+}
+summary .op-icon {
+  transform: rotate(-90deg);
+}
+details[open] > summary .op-icon {
+  transform: none;
 }
 summary:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-focus);

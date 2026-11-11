@@ -31,6 +31,7 @@ flowchart LR
   T1 --> T2
   T2 --> T3
   T3 --> T4
+  T4 --> T5
 ```
 
 ## Task Breakdown
@@ -97,6 +98,24 @@ com dados sintéticos, gates finais e teste de regressão conforme escopo.
   [PR 348](https://github.com/romulosutil/crm-silmer/pull/348) revisável, sem merge/deploy.
 - Entrega: evidência por requisito, limitações explícitas, commit/push e ambiente local atualizado.
 
+### T5: Discretizar os detalhes da linha do tempo (DTL-T05)
+
+- [x] Concluída: solicitação visual do proprietário em 11/11/2026.
+  O status Registro revertido sai da parte inferior do evento, mantendo o
+  evento de reversão e o estado nos detalhes. Um chevron sem texto repetido
+  abre detalhes nativos com nome acessível, foco e alvo de 44px.
+
+**Where**: OrderMilestonesSection.vue e runbook.
+
+**Depends on**: T4
+
+**Tests**: DTL-05/06/12; 19 E2E existentes aprovados, lint/tipos/tokens/build
+  e diff check aprovados; revisão independente sem findings. Smoke sintético
+  local com recebimento e reversão reais, Enter/Space e axe desktop/320px
+  aprovados. Sem alteração de API ou cálculo financeiro.
+
+**Gate**: checks focados e smoke local; commit/push no PR 348.
+
 ## Cross-check
 
 | Dependency | Diagram | Definition |
@@ -104,6 +123,7 @@ com dados sintéticos, gates finais e teste de regressão conforme escopo.
 | T1 → T2    | yes     | yes        |
 | T2 → T3    | yes     | yes        |
 | T3 → T4    | yes     | yes        |
+| T4 → T5    | yes     | yes        |
 
 Testes acompanham a camada alterada: T2 cobre backend; T3 acompanha frontend
 e entrega; T4 valida o conjunto sem substituir seus testes.

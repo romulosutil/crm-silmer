@@ -128,7 +128,7 @@ async function printedPages(page) {
 function measure(page) {
   return page.evaluate(() => {
     const blocks =
-      '.head,.panel,.pt,.row,.grade-head,.dt,.fld,.check,.cap,.foot,.alert,.free,.notes,.ctrl-head';
+      '.head,.aud,.panel,.row,.dt,.fld,.cap,.foot,.free,.ann,.art,.notes,.sec-head';
     return [...document.querySelectorAll('.sheet')].map((sheet) => {
       const box = sheet.getBoundingClientRect();
       let smallest = 999;
@@ -274,11 +274,26 @@ for (const [name, build, onGrid] of /** @type {const} */ ([
   });
 }
 
-test('FPI-07: annotations fill what is left of the sheet', async ({ page }) => {
+test('FPI-07: annotations keep seven ruled lines on item sheets and fill the rest on the last one', async ({
+  page,
+}) => {
   await open(page, commonOrder());
-  const heights = await page
-    .locator('.ruled')
-    .evaluateAll((all) => all.map((el) => el.getBoundingClientRect().height));
-  expect(heights.length).toBe(3);
-  expect(Math.min(...heights)).toBeGreaterThanOrEqual(5 * 28);
+  const areas = await page.locator('.ruled').evaluateAll((all) =>
+    all.map((el) => ({
+      extra: Boolean(el.closest('.extra')),
+      height: el.getBoundingClientRect().height,
+      lines: el.querySelectorAll('i').length,
+      seven: el.classList.contains('seven'),
+    })),
+  );
+  // Three item sheets, then the observations sheet with its continuation area.
+  expect(areas.map((area) => area.extra)).toEqual([false, false, false, true]);
+  for (const area of areas.slice(0, 3)) {
+    expect(area.seven).toBe(true);
+    expect(area.lines).toBe(7);
+    // Seven lines of at least 20px, and 7 equal rows that stretch past that.
+    expect(area.height).toBeGreaterThanOrEqual(7 * 20);
+  }
+  // The continuation area is a free area of 32px lines, at least three of them.
+  expect(areas[3].height).toBeGreaterThanOrEqual(3 * 32);
 });

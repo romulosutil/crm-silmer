@@ -6,6 +6,7 @@ import {
   OrderForbiddenError,
   OrderInputError,
   OrderNotFoundError,
+  OrderValidationError,
 } from '../domain/errors.js';
 import {
   briefingToFicha,
@@ -1163,7 +1164,8 @@ export function createOrderService(options) {
     },
 
     /** ACT-04 / PLA-11: today's São Paulo day after human confirmation.
-     * @param {{orderId: string, expectedVersion: number, actor: OrderActor, correlationId: string}} input
+     * DDE-02: an explicit day corrects only an already recorded delivery.
+     * @param {{orderId: string, deliveredOn?: unknown, expectedVersion: number, actor: OrderActor, correlationId: string}} input
      */
     async confirmDelivery(input) {
       const order = await loadForCommand(input);
@@ -1173,13 +1175,32 @@ export function createOrderService(options) {
           'ORDER_STATUS_CONFLICT',
         );
       }
-      if (order.deliveredOn) return order;
+      const correcting = Object.hasOwn(input, 'deliveredOn');
+      if (correcting && !order.deliveredOn)
+        throw new OrderConflictError(
+          'Delivery must be confirmed before correction',
+          'ORDER_STATUS_CONFLICT',
+        );
+      if (
+        correcting &&
+        (typeof input.deliveredOn !== 'string' || !input.deliveredOn)
+      )
+        throw new OrderValidationError(
+          'A delivery day is required',
+          'INVALID_DATE',
+          ['deliveredOn'],
+        );
+      if (
+        order.deliveredOn &&
+        (!correcting || input.deliveredOn === order.deliveredOn)
+      )
+        return order;
       const now = clock();
       return readOne(
         await repository.saveMilestones(
           recordMilestones(order, {
             paidOn: order.paidOn,
-            deliveredOn: operationalDay(now),
+            deliveredOn: correcting ? input.deliveredOn : operationalDay(now),
             now,
           }),
           {

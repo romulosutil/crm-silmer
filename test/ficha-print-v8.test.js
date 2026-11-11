@@ -271,8 +271,12 @@ test('FPI-01: a label binds to its value and the sides never move on a compact s
   assert.ok(space('3') >= 3 * space('1') && space('5') >= 5 * space('1'));
   // Compact shrinks vertical spacing only: the horizontal inset is one value.
   assert.doesNotMatch(css('.sheet.compact'), /--inset/u);
-  assert.match(css('.panel'), /padding: var\(--pad\) var\(--space-5\)/u);
-  assert.match(css('.sheet'), /--inset: calc\(var\(--space-5\) \+ 1px\)/u);
+  // The 1px border is paid out of the padding so blocks stay on the 4px grid.
+  assert.match(
+    css('.panel'),
+    /padding: calc\(var\(--pad\) - 1px\) calc\(var\(--space-5\) - 1px\)/u,
+  );
+  assert.match(css('.sheet'), /--inset: var\(--space-5\)/u);
 });
 
 test('FPI-08: annotations on an item sheet have seven ruled lines, beside half-width art', () => {

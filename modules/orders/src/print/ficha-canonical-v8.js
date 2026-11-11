@@ -35,6 +35,8 @@ const LOGO_PATH =
 // the 1.5 ratio. Lengths are the 4px scale of §6. The sheet is 729.7px wide inside
 // its 32px margins: twelve columns of ~50px with 8px gutters, the same on every
 // sheet; a compact sheet only shrinks vertical spacing.
+// The 1px border of a panel or table is paid out of its padding or height, so
+// every block starts and ends on the 4px grid (design.md §6).
 // A label sits 4px over its value and a row 20px (12 compact) from the next, so
 // a label always binds to its own value.
 const STYLE = `${POPPINS_FONT_FACES}
@@ -46,7 +48,7 @@ body { margin: 0; background: var(--color-surface); color: var(--color-text); fo
 h1, h2, h3, p, ol { margin: 0; }
 b, strong { font-weight: 600; }
 @media screen { .sheet { margin: 0 auto; } }
-.sheet { --val: var(--text-sm); --pad: var(--space-5); --inset: calc(var(--space-5) + 1px); --gap: var(--space-5); --row: var(--space-5); text-rendering: geometricPrecision; display: flex; flex-direction: column; width: 210mm; min-height: 1120px; padding: var(--space-6) var(--space-8); background: var(--color-surface); color: var(--color-text); font-size: var(--text-sm); line-height: var(--lh-sm); break-after: page; }
+.sheet { --val: var(--text-sm); --pad: var(--space-5); --inset: var(--space-5); --gap: var(--space-5); --row: var(--space-5); text-rendering: geometricPrecision; display: flex; flex-direction: column; width: 210mm; min-height: 1120px; padding: var(--space-6) var(--space-8); background: var(--color-surface); color: var(--color-text); font-size: var(--text-sm); line-height: var(--lh-sm); break-after: page; }
 .sheet:last-of-type { break-after: auto; }
 .sheet.compact { --val: var(--text-xs); --pad: var(--space-3); --gap: var(--space-2); --row: var(--space-3); }
 .sec { font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: 600; }
@@ -66,7 +68,7 @@ b, strong { font-weight: 600; }
 .brand svg { display: block; height: var(--space-6); width: auto; fill: var(--brand-primary); margin-bottom: var(--space-1); }
 .brand .lbl { margin-bottom: 0; }
 .order strong, .when strong { display: block; font-size: var(--text-2xl); line-height: var(--lh-xl); font-weight: 600; overflow-wrap: anywhere; }
-.panel { border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--pad) var(--space-5); background: var(--color-surface); }
+.panel { border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: calc(var(--pad) - 1px) calc(var(--space-5) - 1px); background: var(--color-surface); }
 .panel + .panel { margin-top: var(--gap); }
 .client { row-gap: var(--row); }
 .c { min-width: 0; }
@@ -86,7 +88,7 @@ tr.t th { height: var(--space-6); background: var(--color-surface-raised); font-
 tr.t th[scope="row"] { font-weight: 500; }
 tr.p td, tr.p th, tr.k td, tr.k th { border-top: 1px solid var(--color-border); }
 tr.p td, tr.p th { height: var(--space-8); }
-tr.k td, tr.k th { height: var(--space-8); }
+tr.k td, tr.k th { height: 34px; }
 tr.k th[scope="row"] { font-weight: 500; }
 td.spacer, th.spacer { border-left: 0; background: var(--color-surface); }
 .list th[scope="col"] { height: var(--space-6); background: var(--color-surface-raised); font-size: var(--text-xs); }

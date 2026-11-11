@@ -12,8 +12,8 @@ export const SHEET_BODY = 1072;
 // sheet; a label is 20px of line plus 4px over its value.
 const FOOT = 28;
 const PANEL_GAP = 20;
-// Padding of 20px on both sides and the 1px border of a panel.
-const PANEL_PADDING = 42;
+// Padding of 20px on both sides; the 1px border is paid out of it.
+const PANEL_PADDING = 40;
 const ROW_GAP = 20;
 const LINE = 20;
 const LABEL = 20;
@@ -24,7 +24,7 @@ const SECTION_TITLE = 32;
 // gaps between panels (8px) and between rows (12px, still 3x the 4px between
 // a label and its value). Its sides and columns are those of every sheet.
 const COMPACT = Object.freeze({
-  chrome: 26,
+  chrome: 24,
   gap: 8,
   row: 12,
   line: 20,
@@ -331,13 +331,7 @@ export function gradeLayout(grade) {
     );
     units.push({
       lines,
-      height:
-        2 +
-        Math.max(24, heads * LINE) +
-        1 +
-        Math.max(32, counts * LINE) +
-        1 +
-        32,
+      height: 2 + Math.max(24, heads * LINE) + Math.max(32, counts * LINE) + 34,
     });
   }
   return { list: false, units };

@@ -29,7 +29,10 @@ Abrir o histórico não gera link, mensagem ou recebimento.
 
 O botão **Confirmar entrega** fica no cabeçalho para responsável atual ou
 Admin ativo, em Pedido de atendimento confirmado, não teste, não cancelado
-e sem entrega. Loja conserva suas travas.
+e sem entrega. Após a confirmação, a mesma ação passa a **Alterar data de
+entrega**, com somente o campo **Entregue em**. Não há editor genérico de
+datas ou campo de pagamento nesta seção ([DDE-01–04](../../.specs/features/order-delivery-date/spec.md)).
+Loja conserva suas travas.
 
 Cancelar/Escape fecham sem comando e devolvem foco. Confirmar envia somente
 `expectedVersion` ao endpoint existente
@@ -37,17 +40,24 @@ Cancelar/Escape fecham sem comando e devolvem foco. Confirmar envia somente
 origem e idempotência. ID, versão e chave ficam congelados no diálogo.
 Duplo Enter não repete a escrita. A API fixa o dia de São Paulo; o resultado
 preenche **Pedido entregue** e recebe foco. Pagamento/saldo/status/snapshot
-da ficha permanecem independentes.
+da ficha permanecem independentes. A correção de uma entrega existente envia
+também `deliveredOn`, dia válido e não vazio até hoje em São Paulo. Não permite
+apagar a entrega nem escolher data na primeira confirmação; mesma data não
+gera escrita na UI e é no-op na API. A data integra o fingerprint idempotente.
 
 Falha/conflito não simulam sucesso. **Atualizar pedido** relê o resultado;
-se já entregue, mostra a entrega. Sem entrega e com a mesma versão, uma nova
+se o dia corresponder ao solicitado, mostra a entrega. A data antiga não
+comprova o sucesso de uma correção. Sem resultado e com a mesma versão, uma nova
 confirmação humana conserva a mesma chave; versão diferente exige revisão
 do contexto. Nunca repetir automaticamente um comando de resultado incerto.
 
 Autoria e horário aparecem somente quando a auditoria explícita
 `order.delivery.confirm` corresponde à mudança real de milestones e ao dia
 de `deliveredOn`. Legado/no-op/edição sem prova não ganham autoria fictícia;
-a data conhecida continua visível.
+a data conhecida continua visível. Uma correção retroativa pode não exibir
+autoria/horário na timeline quando não houver essa correspondência; a auditoria
+do comando continua preservada. Resposta atrasada não substitui versão mais
+recente já lida na tela.
 
 ## Contrato e operação
 
@@ -69,6 +79,11 @@ sintéticos: R$ 30 pela InfinitePay simulada e R$ 70 por transferência
 registrada manualmente, entrega pelo botão real e releitura após reload.
 Dois recebimentos e entrega persistiram, com saldo zero. Isso comprova
 integração local, sem representar dinheiro ou homologação de provedor real.
+
+No smoke DDE, um novo pedido sintético recebeu R$ 30 manualmente, confirmou
+entrega hoje, alterou para o dia anterior e foi relido após reload. A data
+persistiu com um único evento; recebimento, saldo de R$ 70, `paidOn`, status
+e ficha permaneceram iguais. O editor genérico estava ausente.
 
 ## Verificação e rollback
 

@@ -92,6 +92,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: BCS-01/F2 (frontend)
 - last seen: 2026-11-11T14:10:49Z
 
+### L-014 - Preserve the newest loaded order version when a command response arrives after an SSE refresh.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `edge-web` · harmful: 0
+- features: order-delivery-date
+- evidence: DDE-04 OrderView.vue:408; validation.md P2 (edge-web)
+- last seen: 2026-11-11T17:11:42Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

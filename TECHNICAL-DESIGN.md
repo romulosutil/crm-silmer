@@ -775,6 +775,10 @@ Idempotency-Key, exige responsável ou administrador humano, grava o dia de
 São Paulo e preserva pagamento/status/snapshot. A ADR 059 / ACT-04 amplia esse
 comando para pedidos de atendimento confirmados e não teste com ou sem
 conversa; a leitura legada `delivery-tasks` continua restrita aos manuais.
+A extensão [DDE-01–04](.specs/features/order-delivery-date/spec.md) aceita
+`deliveredOn` opcional nesse comando somente para corrigir entrega já existente,
+com dia não vazio válido até hoje, incluído no fingerprint. A UI usa uma única
+ação Confirmar entrega/Alterar data de entrega, sem o editor genérico de datas.
 `POST /api/v1/orders/:orderId/payment-confirmation` exige versão, idempotência,
 data válida até hoje em São Paulo e `receivedInFull: true`; preserva entrega e
 só libera revisão legada mediante declaração explícita de quitação integral.

@@ -31,6 +31,18 @@ pedido, operação dos detalhes por teclado, largura mobile e preservação do
 estado financeiro. Sem `ORDER_DATES_PREVIEW=true`, o harness mantém seu
 comportamento anterior de Inbox/cobrança.
 
+### Confirmar entrega — DTL-P03
+
+Os exemplos começam sem entrega registrada. Em **Entregue em**, clique
+**Confirmar entrega**, revise o dia atual de São Paulo e use **Sim, confirmar
+entrega**. A data aparece no resumo e o evento **Pedido entregue** mostra autor
+e horário em **Ver detalhes da entrega**. Pagamento e saldo permanecem iguais.
+Cancelar ou Escape preservam a data vazia e devolvem o foco ao botão.
+Após confirmar, o foco vai para a data registrada. Cada cenário conserva sua
+simulação enquanto a tela está aberta; atualizar a página reinicia os exemplos.
+Nenhum comando é enviado ao backend. O teste acima também verifica este fluxo
+no desktop e o diálogo no celular.
+
 ## Versão atual — Inbox da master de 08/11/2026
 
 O protótipo atual usa **o App, a Inbox, os componentes e os tokens reais** da

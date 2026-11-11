@@ -1,11 +1,49 @@
 <script setup>
-import { computed, inject, ref } from 'vue';
+import { computed, inject, nextTick, ref } from 'vue';
 import OrderSheetHead from '../../apps/edge-web/src/components/order/OrderSheetHead.vue';
+import {
+  operationalDay,
+  dayLabel,
+} from '../../apps/edge-web/src/lib/order-format.js';
 
 // DTL-P02: isolated visual snapshot; no financial commands or production imports.
 const editing = inject('orderEditing');
 const open = computed(() => editing?.isSectionOpen?.('milestones') ?? true);
 const scenario = ref('full');
+const deliveries = ref({});
+const delivery = computed(() => deliveries.value[scenario.value] ?? null);
+const deliveryDialog = ref(null);
+const deliveryTrigger = ref(null);
+const deliveryResult = ref(null);
+const cancelDelivery = ref(null);
+const pendingDelivery = ref(null);
+const deliveryNotice = ref('');
+
+async function askDelivery() {
+  const instant = new Date();
+  pendingDelivery.value = {
+    day: operationalDay(instant),
+    instant: instant.toISOString(),
+  };
+  deliveryDialog.value.showModal();
+  await nextTick();
+  cancelDelivery.value?.focus();
+}
+function confirmDelivery() {
+  if (!delivery.value) {
+    const instant = new Date();
+    deliveries.value[scenario.value] = {
+      day: operationalDay(instant),
+      instant: instant.toISOString(),
+    };
+  }
+  deliveryNotice.value = `Entrega confirmada em ${dayLabel(delivery.value.day)}. Somente neste protótipo.`;
+  deliveryDialog.value.close();
+}
+async function restoreDeliveryFocus() {
+  await nextTick();
+  (delivery.value ? deliveryResult.value : deliveryTrigger.value)?.focus();
+}
 const full = computed(() => scenario.value === 'full');
 const legacy = computed(() => scenario.value === 'legacy');
 const failed = computed(() => scenario.value === 'error');
@@ -31,7 +69,7 @@ const balance = computed(() =>
         ? 'R$ 0,00'
         : 'R$ 840,00',
 );
-const events = computed(() => {
+const paymentEvents = computed(() => {
   const rows = [
     {
       id: 'contact',
@@ -101,15 +139,33 @@ const events = computed(() => {
       detail:
         'Reversão registrada em 11/11/2026 às 11:05, vinculada ao recebimento manual de 10/11. O lançamento original permanece no histórico.',
     });
-  if (full.value)
-    rows.push({
+  return rows;
+});
+const events = computed(() => {
+  if (!delivery.value) return paymentEvents.value;
+  const day = delivery.value.day;
+  const stamp = new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+    timeZone: 'America/Sao_Paulo',
+  }).format(new Date(delivery.value.instant));
+  return [
+    ...paymentEvents.value,
+    {
       id: 'delivered',
-      day: '11 nov',
-      date: '2026-11-11',
+      day: new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: 'short',
+        timeZone: 'America/Sao_Paulo',
+      }).format(new Date(delivery.value.instant)),
+      year: day.slice(0, 4),
+      date: day,
       title: 'Pedido entregue',
       subtitle: 'Entrega confirmada pelo responsável',
-    });
-  return rows;
+      detail: `Confirmada por Marina — demonstração em ${stamp} (São Paulo). Esta confirmação é fictícia.`,
+      detailLabel: 'Ver detalhes da entrega',
+    },
+  ];
 });
 </script>
 
@@ -135,7 +191,11 @@ const events = computed(() => {
         </p>
         <div class="op-field">
           <label for="dates-preview-scenario">Exemplo</label>
-          <select id="dates-preview-scenario" v-model="scenario">
+          <select
+            id="dates-preview-scenario"
+            v-model="scenario"
+            @change="deliveryNotice = ''"
+          >
             <option value="full">Pagamento misto · quitado</option>
             <option value="partial">InfinitePay · sinal recebido</option>
             <option value="reverse">Manual · registro revertido</option>
@@ -156,7 +216,19 @@ const events = computed(() => {
         </div>
         <div>
           <dt>Entregue em</dt>
-          <dd>{{ full ? '11/11/2026' : 'Ainda não entregue' }}</dd>
+          <dd ref="deliveryResult" tabindex="-1">
+            {{ delivery ? dayLabel(delivery.day) : 'Ainda não entregue' }}
+          </dd>
+          <button
+            v-if="!delivery"
+            ref="deliveryTrigger"
+            type="button"
+            class="preview-delivery-button"
+            @click="askDelivery"
+          >
+            Confirmar entrega
+          </button>
+          <span v-else class="op-hint">Entrega confirmada</span>
         </div>
       </dl>
       <h3>Linha do tempo</h3>
@@ -173,7 +245,9 @@ const events = computed(() => {
         aria-label="Acontecimentos de demonstração do pedido"
       >
         <li v-for="event in events" :key="event.id" :data-kind="event.type">
-          <time :datetime="event.date">{{ event.day }}<span>2026</span></time>
+          <time :datetime="event.date"
+            >{{ event.day }}<span>{{ event.year ?? '2026' }}</span></time
+          >
           <span class="preview-track" aria-hidden="true"
             ><span class="preview-dot"></span
           ></span>
@@ -189,7 +263,9 @@ const events = computed(() => {
               event.badge
             }}</span>
             <details v-if="event.detail">
-              <summary>Ver detalhes do recebimento</summary>
+              <summary>
+                {{ event.detailLabel ?? 'Ver detalhes do recebimento' }}
+              </summary>
               <p class="op-hint">{{ event.detail }}</p>
             </details>
           </div>
@@ -205,7 +281,49 @@ const events = computed(() => {
       <p class="sr-only" aria-live="polite">
         {{ paid }}. Recebido: {{ received }}. Falta receber: {{ balance }}.
       </p>
+      <p v-if="deliveryNotice" role="status" class="op-hint">
+        {{ deliveryNotice }}
+      </p>
     </div>
+    <Teleport to="body">
+      <dialog
+        ref="deliveryDialog"
+        class="command-dialog preview-delivery-dialog"
+        aria-labelledby="delivery-preview-title"
+        aria-describedby="delivery-preview-description"
+        @close="restoreDeliveryFocus"
+      >
+        <form @submit.prevent="confirmDelivery">
+          <h2 id="delivery-preview-title">Confirmar entrega</h2>
+          <p id="delivery-preview-description">
+            Confirma que o cliente recebeu este pedido?
+          </p>
+          <p>
+            Entregue em:
+            <strong>{{
+              pendingDelivery ? dayLabel(pendingDelivery.day) : ''
+            }}</strong>
+            <span class="op-hint"> · hoje, em São Paulo</span>
+          </p>
+          <p class="op-hint">
+            A data de entrega não altera o pagamento do pedido. Esta ação é uma
+            simulação do protótipo.
+          </p>
+          <div class="op-form-actions">
+            <button
+              ref="cancelDelivery"
+              type="button"
+              @click="deliveryDialog.close()"
+            >
+              Cancelar
+            </button>
+            <button type="submit" class="op-save">
+              Sim, confirmar entrega
+            </button>
+          </div>
+        </form>
+      </dialog>
+    </Teleport>
   </section>
 </template>
 
@@ -350,5 +468,23 @@ summary:focus-visible {
   .preview-milestones dd {
     font-size: var(--text-sm);
   }
+}
+.preview-delivery-button {
+  margin-top: var(--space-2);
+  white-space: normal;
+}
+.preview-delivery-dialog form {
+  display: grid;
+  gap: var(--space-4);
+}
+.preview-delivery-dialog h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+.preview-delivery-dialog p {
+  margin: 0;
+}
+.preview-delivery-dialog button {
+  min-block-size: var(--target-min);
 }
 </style>

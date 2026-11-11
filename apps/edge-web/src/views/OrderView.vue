@@ -375,7 +375,7 @@ async function saveMilestones(value) {
 }
 
 /** DTL-10/11: the dialog freezes the target, version and idempotency key.
- * @param {{orderId:string,expectedVersion:number,idempotencyKey:string}} context
+ * @param {{orderId:string,expectedVersion:number,idempotencyKey:string,deliveredOn?:string}} context
  */
 async function confirmDelivery(context) {
   if (props.orderId !== context.orderId || order.value?.id !== context.orderId)
@@ -390,7 +390,12 @@ async function confirmDelivery(context) {
       `/api/v1/orders/${encodeURIComponent(context.orderId)}/delivery-confirmation`,
       {
         method: 'POST',
-        body: { expectedVersion: context.expectedVersion },
+        body: {
+          expectedVersion: context.expectedVersion,
+          ...(Object.hasOwn(context, 'deliveredOn')
+            ? { deliveredOn: context.deliveredOn }
+            : {}),
+        },
         idempotencyKey: context.idempotencyKey,
       },
     );
@@ -399,6 +404,13 @@ async function confirmDelivery(context) {
         ok: false,
         status: 409,
         message: 'O pedido selecionado mudou. Confira o pedido atual.',
+      };
+    if (Number(response.data.order.version) < Number(order.value?.version))
+      return {
+        ok: false,
+        status: 409,
+        message:
+          'O pedido mudou durante a gravação. Atualize os dados e revise a entrega.',
       };
     order.value = response.data.order;
     return { ok: true, order: response.data.order };

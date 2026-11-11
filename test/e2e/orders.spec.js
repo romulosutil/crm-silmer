@@ -396,11 +396,12 @@ test('lists exactly what is missing to generate, point by point, and fills the i
   await expect(progress.getByRole('button')).toHaveCount(0);
   await expect(readiness).toHaveText(/^Tudo pronto\./u);
   await expect(generate).not.toHaveAttribute('aria-disabled', /./u);
-  // The paid day stays empty: generating means paid until the CRM handles
-  // payments.
+  // Generating does not record payment. Only existing events appear in Dates.
   await expect(
-    page.getByRole('region', { name: 'Datas do pedido' }),
-  ).toContainText('Pago em');
+    page
+      .getByRole('region', { name: 'Datas do pedido' })
+      .locator('[data-kind="receipt"], [data-kind="legacy_payment"]'),
+  ).toHaveCount(0);
   await closing.getByRole('button', { name: 'Gerar pedido' }).click();
   const dialog = page.getByRole('dialog', { name: 'Gerar o pedido 07-CRM?' });
   await expect(dialog).toBeVisible();
@@ -1271,16 +1272,17 @@ test('stores the colour an older ficha shows when the seller types it again as i
 test('keeps a confirmed order in reading mode until it is reopened (PFI-10)', async ({
   page,
 }) => {
-  await mockOrders(page, { orders: [ownConfirmedOrder] });
+  await mockOrders(page, {
+    orders: [{ ...ownConfirmedOrder, origin: 'atendimento' }],
+  });
   await page.goto('/pedidos/order-confirmado');
 
-  // ADR 008: only the trail stays editable, since payment and delivery come
-  // after the order is generated.
-  await expect(page.getByRole('button', { name: 'Editar' })).toHaveCount(1);
+  // DDE-01: the dedicated delivery command replaces the generic dates editor.
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(0);
   await expect(
     page
       .getByRole('region', { name: 'Datas do pedido' })
-      .getByRole('button', { name: 'Editar' }),
+      .getByRole('button', { name: 'Confirmar entrega', exact: true }),
   ).toBeVisible();
 });
 
@@ -1307,7 +1309,7 @@ test('shows real milestones in chronological order without the repeated dates su
   expect(results.violations).toEqual([]);
 });
 
-test('manual orders edit only payment and preserve delivery and first contact (T136, PLA-02, PLA-04)', async ({
+test('manual orders change only the delivery date and preserve payment and first contact (DDE-01/02)', async ({
   page,
 }) => {
   /** @type {any[]} */
@@ -1317,9 +1319,9 @@ test('manual orders edit only payment and preserve delivery and first contact (T
     orders: [
       {
         ...ownConfirmedOrder,
+        origin: 'atendimento',
         conversationId: null,
         manualOwnerId: 'seller-marina',
-        origin: 'atendimento',
         firstContactAt: ownConfirmedOrder.createdAt,
         deliveredOn: '2026-09-19',
       },
@@ -1327,131 +1329,165 @@ test('manual orders edit only payment and preserve delivery and first contact (T
   });
   await page.clock.setFixedTime(new Date('2026-09-20T15:00:00.000Z'));
   await page.goto('/pedidos/order-confirmado');
-
-  const trail = page.getByRole('region', { name: 'Datas do pedido' });
-  await expect(trail.getByRole('listitem').first()).toContainText('08/09/2026');
-  await trail.getByRole('button', { name: 'Editar' }).focus();
+  const dates = page.getByRole('region', { name: 'Datas do pedido' });
+  await expect(dates.getByRole('button', { name: /^Editar/u })).toHaveCount(0);
+  await expect(dates.getByRole('listitem').first()).toContainText('08/09/2026');
+  await dates
+    .getByRole('button', { name: 'Alterar data de entrega', exact: true })
+    .focus();
   await page.keyboard.press('Enter');
-  await expect(trail.getByLabel('Pago em')).toBeFocused();
-  await expect(trail.locator('input')).toHaveCount(1);
-  await expect(trail.getByLabel('Entregue em')).toHaveCount(0);
-  await expect(trail.getByLabel('Primeiro contato')).toHaveCount(0);
-  await trail.getByLabel('Pago em').fill('2026-09-21');
-  await trail.getByRole('button', { name: 'Salvar datas' }).click();
-  await expect(trail.getByLabel('Pago em')).toHaveAttribute(
-    'aria-invalid',
-    'true',
-  );
-  expect(writes).toHaveLength(0);
-
-  await trail.getByLabel('Pago em').fill('');
-  await trail.getByRole('button', { name: 'Salvar datas' }).click();
-  await expect(trail.getByRole('button', { name: 'Editar' })).toBeVisible();
+  const dialog = page.getByRole('dialog', { name: 'Alterar data de entrega' });
+  const delivered = dialog.getByLabel('Entregue em', { exact: true });
+  await expect(delivered).toBeFocused();
+  await expect(delivered).toHaveValue('2026-09-19');
+  await expect(dialog.locator('input')).toHaveCount(1);
+  await expect(dialog.getByLabel('Pago em', { exact: true })).toHaveCount(0);
+  await expect(
+    dialog.getByRole('button', { name: 'Salvar data de entrega' }),
+  ).toBeDisabled();
+  await delivered.fill('2026-09-18');
+  await dialog.getByRole('button', { name: 'Salvar data de entrega' }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(
+    dates.locator('[data-event-id="milestone:delivered"]'),
+  ).toContainText('18/09/2026');
+  await expect(dates).toContainText('10/09/2026');
+  await expect(dates.getByRole('listitem').first()).toContainText('08/09/2026');
   expect(writes).toEqual([
-    { action: 'milestones', body: { expectedVersion: 4, paidOn: null } },
+    {
+      action: 'delivery-confirmation',
+      body: { expectedVersion: 4, deliveredOn: '2026-09-18' },
+    },
   ]);
-  await expect(trail.getByRole('listitem').first()).toContainText('08/09/2026');
-  await expect(trail.getByRole('listitem').last()).toContainText('19/09/2026');
   await expect(page.locator('.op-head .op-status')).toHaveText(/Confirmado/u);
   await expect(page.getByRole('button', { name: 'Gerar PDF' })).toBeEnabled();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('records payment and delivery on a confirmed order without reopening it (PLA-04, PLA-06)', async ({
+test('confirms the first delivery using today without changing payment or reopening (DDE-01/03)', async ({
   page,
 }) => {
   /** @type {any[]} */
   const writes = [];
   await mockOrders(page, {
     onWrite: (call) => writes.push(call),
-    orders: [ownConfirmedOrder],
+    orders: [{ ...ownConfirmedOrder, origin: 'atendimento' }],
   });
   await page.clock.setFixedTime(new Date('2026-09-20T15:00:00.000Z'));
   await page.goto('/pedidos/order-confirmado');
-
-  const trail = page.getByRole('region', { name: 'Datas do pedido' });
-  await trail.getByRole('button', { name: 'Editar' }).click();
-  await expect(trail.getByLabel('Pago em')).toBeFocused();
-  await expect(trail.getByLabel('Pago em')).toHaveValue('2026-09-10');
-  await expect(trail.getByLabel('Entregue em')).toHaveAttribute(
-    'max',
-    '2026-09-20',
-  );
-  await trail.getByLabel('Entregue em').fill('2026-09-19');
-  await trail.getByRole('button', { name: 'Salvar datas' }).click();
-
-  await expect(trail.getByRole('button', { name: 'Editar' })).toBeVisible();
-  await expect(trail).toContainText('3 de 3 datas');
-  await expect(trail.getByRole('listitem').last()).toContainText('19/09/2026');
+  const dates = page.getByRole('region', { name: 'Datas do pedido' });
+  await dates
+    .getByRole('button', { name: 'Confirmar entrega', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Confirmar entrega',
+    exact: true,
+  });
+  await expect(dialog.locator('input')).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Sim, confirmar entrega' }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(
+    dates.getByRole('button', { name: 'Alterar data de entrega', exact: true }),
+  ).toBeVisible();
+  await expect(
+    dates.getByText('Pedido entregue', { exact: true }),
+  ).toBeFocused();
+  await expect(
+    dates.locator('[data-event-id="milestone:delivered"]'),
+  ).toContainText('20/09/2026');
+  await expect(dates).toContainText('10/09/2026');
   expect(writes).toEqual([
-    {
-      action: 'milestones',
-      body: {
-        deliveredOn: '2026-09-19',
-        expectedVersion: 4,
-        paidOn: '2026-09-10',
-      },
-    },
+    { action: 'delivery-confirmation', body: { expectedVersion: 4 } },
   ]);
-  // The order stays confirmed and printable.
   await expect(page.locator('.op-head .op-status')).toHaveText(/Confirmado/u);
   await expect(page.getByRole('button', { name: 'Gerar PDF' })).toBeEnabled();
 });
 
-test('clears a recorded day and refuses a day after today, next to the field (PLA-05)', async ({
+test('delivery correction refuses future and empty dates without clearing delivery or payment (DDE-02/03)', async ({
   page,
 }) => {
   /** @type {any[]} */
   const writes = [];
   await mockOrders(page, {
     onWrite: (call) => writes.push(call),
-    orders: [ownConfirmedOrder],
+    orders: [
+      {
+        ...ownConfirmedOrder,
+        origin: 'atendimento',
+        deliveredOn: '2026-09-19',
+      },
+    ],
   });
   await page.clock.setFixedTime(new Date('2026-09-20T15:00:00.000Z'));
   await page.goto('/pedidos/order-confirmado');
-
-  const trail = page.getByRole('region', { name: 'Datas do pedido' });
-  await trail.getByRole('button', { name: 'Editar' }).click();
-  await trail.getByLabel('Entregue em').fill('2026-09-21');
-  await trail.getByRole('button', { name: 'Salvar datas' }).click();
-
-  const delivered = trail.getByLabel('Entregue em');
-  await expect(delivered).toHaveAttribute('aria-invalid', 'true');
-  await expect(trail.getByRole('alert')).toHaveText('Use uma data até hoje.');
+  const dates = page.getByRole('region', { name: 'Datas do pedido' });
+  await dates
+    .getByRole('button', { name: 'Alterar data de entrega', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Alterar data de entrega' });
+  const delivered = dialog.getByLabel('Entregue em', { exact: true });
+  const save = dialog.getByRole('button', { name: 'Salvar data de entrega' });
+  await expect(delivered).toHaveAttribute('max', '2026-09-20');
+  await delivered.fill('2026-09-21');
+  await save.click();
+  expect(
+    await delivered.evaluate(
+      (input) => /** @type {HTMLInputElement} */ (input).validity.rangeOverflow,
+    ),
+  ).toBe(true);
   expect(writes).toHaveLength(0);
-
   await delivered.fill('');
-  await trail.getByLabel('Pago em').fill('');
-  await trail.getByRole('button', { name: 'Salvar datas' }).click();
-  await expect(trail).toContainText('1 de 3 datas');
-  expect(writes.map((write) => write.body)).toEqual([
-    { deliveredOn: null, expectedVersion: 4, paidOn: null },
-  ]);
+  await expect(save).toBeDisabled();
+  expect(writes).toHaveLength(0);
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect(
+    dates.locator('[data-event-id="milestone:delivered"]'),
+  ).toContainText('19/09/2026');
+  await expect(dates).toContainText('10/09/2026');
 });
 
-test('names the day the server refused as invalid', async ({ page }) => {
+test('a server refusal preserves the old delivery and requires review before another write (DDE-04)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
   await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [
+      {
+        ...ownConfirmedOrder,
+        origin: 'atendimento',
+        deliveredOn: '2026-09-19',
+      },
+    ],
     writeFailure: {
-      body: { code: 'INVALID_DATE', fields: ['paidOn'] },
       status: 422,
+      body: { code: 'INVALID_DATE', fields: ['deliveredOn'] },
     },
   });
-  await page.goto('/pedidos/order-pendente');
-
-  const trail = page.getByRole('region', { name: 'Datas do pedido' });
-  await trail.getByRole('button', { name: 'Editar' }).click();
-  await trail.getByLabel('Pago em').fill('2026-09-11');
-  await trail.getByRole('button', { name: 'Salvar datas' }).click();
-
-  await expect(trail.getByLabel('Pago em')).toHaveAttribute(
-    'aria-invalid',
-    'true',
-  );
-  await expect(trail.getByLabel('Entregue em')).not.toHaveAttribute(
-    'aria-invalid',
-    'true',
-  );
-  await expect(trail.getByRole('alert')).toHaveText('Use uma data até hoje.');
+  await page.clock.setFixedTime(new Date('2026-09-20T15:00:00.000Z'));
+  await page.goto('/pedidos/order-confirmado');
+  const dates = page.getByRole('region', { name: 'Datas do pedido' });
+  await dates
+    .getByRole('button', { name: 'Alterar data de entrega', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Alterar data de entrega' });
+  await dialog.getByLabel('Entregue em', { exact: true }).fill('2026-09-18');
+  await dialog.getByRole('button', { name: 'Salvar data de entrega' }).click();
+  await expect(dialog.getByRole('alert')).toBeVisible();
+  await expect(
+    dialog.getByRole('button', { name: 'Salvar data de entrega' }),
+  ).toBeDisabled();
+  await expect(
+    dates.locator('[data-event-id="milestone:delivered"]'),
+  ).toContainText('19/09/2026');
+  expect(writes).toEqual([
+    {
+      action: 'delivery-confirmation',
+      body: { expectedVersion: 4, deliveredOn: '2026-09-18' },
+    },
+  ]);
 });
 
 test('reads each item with the seven points in order and the filled extras as text, without a field (PFI-03, PFI-10, PIT-01, PIT-02, EDIT-01)', async ({
@@ -1589,7 +1625,6 @@ test('opens every point of a pending item as a field, in the order of the ficha,
   await expect(items.locator('.op-editing-tag')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveText([
     'Editar resumo',
-    'Editar datas',
     'Editar arte',
     'Editar observações',
   ]);
@@ -2803,7 +2838,6 @@ test('heads each section with its state in words, "Editar" naming the section an
   // section edited in place has none.
   await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveText([
     'Editar resumo',
-    'Editar datas',
     'Editar arte',
     'Editar observações',
   ]);
@@ -2883,11 +2917,7 @@ test('keeps the other "Editar" focusable but unavailable, with the reason, while
   await name.fill('RASCUNHO');
 
   const others = page.getByRole('button', { name: /^Editar\b/u });
-  await expect(others).toHaveText([
-    'Editar datas',
-    'Editar arte',
-    'Editar observações',
-  ]);
+  await expect(others).toHaveText(['Editar arte', 'Editar observações']);
   for (const other of await others.all()) {
     await expect(other).toHaveAttribute('aria-disabled', 'true');
     await expect(other).toHaveAccessibleDescription(
@@ -2916,7 +2946,7 @@ test('keeps the other "Editar" focusable but unavailable, with the reason, while
 
   // Cancelling frees every "Editar" again, without the reason.
   await summary.getByRole('button', { name: 'Cancelar' }).click();
-  await expect(others).toHaveCount(4);
+  await expect(others).toHaveCount(3);
   for (const other of await others.all()) {
     await expect(other).not.toHaveAttribute('aria-disabled', /./u);
     await expect(other).not.toHaveAttribute('aria-describedby', /./u);
@@ -3304,7 +3334,7 @@ test('keeps the section heads readable and their buttons thumb sized, light and 
     await page.setViewportSize({ height: 800, width: 1280 });
     // On a wide screen every "Editar" is back but the one in edit (the items
     // have none, EDIT-01), and the edit is still open.
-    await expect(edits).toHaveCount(3);
+    await expect(edits).toHaveCount(2);
     await expect(observations.getByText('Editando')).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   }
@@ -3575,7 +3605,7 @@ test('keeps a confirmed order and a store order coherent in the accordion (PFI-1
   await page.setViewportSize({ height: 844, width: 390 });
   await mockOrders(page, {
     orders: [
-      ownConfirmedOrder,
+      { ...ownConfirmedOrder, origin: 'atendimento' },
       { ...incompleteOrder, id: 'order-loja', origin: 'loja' },
     ],
   });
@@ -3586,11 +3616,12 @@ test('keeps a confirmed order and a store order coherent in the accordion (PFI-1
   await expect(summaryHead).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator('main h2 button[aria-expanded]')).toHaveCount(6);
   await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(0);
-  // PLA-04: only the dates are written after the order is generated.
+  // DDE-01: dates have a dedicated delivery command, without a generic editor.
   await page.getByRole('button', { name: /^Datas do pedido/u }).click();
-  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveText([
-    'Editar datas',
-  ]);
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Confirmar entrega', exact: true }),
+  ).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
   // LOJ-07: a store order has no "Editar" and no fold to open.
@@ -3622,7 +3653,7 @@ test('keeps every section open and the heads plain on a wide screen (PFI-18)', a
   ]) {
     await expect(page.locator(body)).toBeVisible();
   }
-  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(4);
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(3);
   await expect(page.getByRole('region', { name: ITEMS })).toHaveAttribute(
     'data-items-state',
     'edit',

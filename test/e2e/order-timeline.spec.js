@@ -1,6 +1,10 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { mockOrders, ownConfirmedOrder } from './support/orders-mock.js';
+import {
+  eventStreamBody,
+  mockOrders,
+  ownConfirmedOrder,
+} from './support/orders-mock.js';
 
 /** @param {string} id @param {string} source @param {string} day @param {number} amountCents @param {Record<string, any>} [extra] */
 const receipt = (id, source, day, amountCents, extra = {}) => ({
@@ -101,7 +105,7 @@ async function setup(page, options = {}) {
       }
       if (mode === 'lost') return route.abort('failed');
       Object.assign(order, {
-        deliveredOn: '2026-11-11',
+        deliveredOn: req.postDataJSON().deliveredOn ?? '2026-11-11',
         version: order.version + 1,
       });
       Object.assign(billing, {
@@ -228,10 +232,216 @@ test('DTL: delivery uses a frozen version and server day, preserving partial pay
       .filter({ hasText: 'Pedido entregue' }),
   ).toContainText('11/11/2026');
   await expect(trigger).toHaveCount(0);
+  await expect(
+    section.getByRole('button', {
+      name: 'Alterar data de entrega',
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    section.getByRole('button', { name: 'Editar datas' }),
+  ).toHaveCount(0);
   expect(mock.order.paidOn).toBeNull();
   expect(mock.billing.balanceAmountCents).toBe(7000);
   expect(mock.order.status).toBe('confirmado');
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('DDE: one header action corrects only the existing delivery date with keyboard and mobile support', async ({
+  page,
+}) => {
+  const mock = await setup(page, {
+    order: {
+      deliveredOn: '2026-11-10',
+      conversationId: null,
+      manualOwnerId: 'seller-marina',
+    },
+  });
+  await page.clock.setFixedTime(new Date('2026-11-11T15:00:00Z'));
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto('/pedidos/order-confirmado');
+  const section = sectionFor(page);
+  const trigger = section.getByRole('button', {
+    name: 'Alterar data de entrega',
+    exact: true,
+  });
+  await expect(
+    section.getByRole('button', { name: 'Editar datas', exact: true }),
+  ).toHaveCount(0);
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', {
+    name: 'Alterar data de entrega',
+    exact: true,
+  });
+  const day = dialog.getByLabel('Entregue em', { exact: true });
+  const save = dialog.getByRole('button', {
+    name: 'Salvar data de entrega',
+    exact: true,
+  });
+  await expect(day).toBeFocused();
+  await expect(day).toHaveValue('2026-11-10');
+  await expect(day).toHaveAttribute('max', '2026-11-11');
+  await expect(dialog.locator('input')).toHaveCount(1);
+  await expect(dialog.getByLabel('Pago em')).toHaveCount(0);
+  await expect(save).toBeDisabled();
+  await day.fill('2026-11-09');
+  await page.keyboard.press('Escape');
+  await expect(trigger).toBeFocused();
+  expect(mock.writes).toEqual([]);
+  await trigger.click();
+  await expect(day).toHaveValue('2026-11-10');
+  await day.fill('2026-11-12');
+  await save.click();
+  expect(mock.writes).toEqual([]);
+  expect(
+    await day.evaluate(
+      (el) => /** @type {HTMLInputElement} */ (el).validity.valid,
+    ),
+  ).toBe(false);
+  await day.fill('');
+  await expect(save).toBeDisabled();
+  await day.fill('2026-11-09');
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(
+    await dialog.evaluate(
+      (el) => el.getBoundingClientRect().width <= globalThis.innerWidth,
+    ),
+  ).toBe(true);
+  await save.focus();
+  await page.keyboard.press('Enter');
+  await expect(dialog).not.toBeVisible();
+  await expect(
+    section.getByText('Pedido entregue', { exact: true }),
+  ).toBeFocused();
+  await expect(section.locator('[data-kind="delivery"]')).toHaveCount(1);
+  await expect(section.locator('[data-kind="delivery"]')).toContainText(
+    '09/11/2026',
+  );
+  expect(mock.writes).toHaveLength(1);
+  expect(mock.writes[0].body).toEqual({
+    expectedVersion: 4,
+    deliveredOn: '2026-11-09',
+  });
+  expect(mock.writes[0].key).toBeTruthy();
+  expect(mock.writes[0].csrf).toBe('synthetic-timeline-csrf');
+  expect(mock.order.paidOn).toBeNull();
+  expect(mock.billing.receivedAmountCents).toBe(3000);
+  expect(mock.billing.balanceAmountCents).toBe(7000);
+  expect(mock.order.status).toBe('confirmado');
+  await trigger.click();
+  await expect(day).toHaveValue('2026-11-09');
+  await dialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await expect(trigger).toBeFocused();
+  expect(mock.writes).toHaveLength(1);
+});
+
+for (const mode of ['lost', 'conflict'])
+  test(`DDE: ${mode} correction reconciles the requested day rather than the old delivery`, async ({
+    page,
+  }) => {
+    const mock = await setup(page, {
+      mode,
+      order: { deliveredOn: '2026-11-10' },
+    });
+    await page.clock.setFixedTime(new Date('2026-11-11T15:00:00Z'));
+    await page.goto('/pedidos/order-confirmado');
+    await sectionFor(page)
+      .getByRole('button', { name: 'Alterar data de entrega', exact: true })
+      .click();
+    const dialog = page.getByRole('dialog', {
+      name: 'Alterar data de entrega',
+      exact: true,
+    });
+    const day = dialog.getByLabel('Entregue em', { exact: true });
+    const save = dialog.getByRole('button', {
+      name: 'Salvar data de entrega',
+      exact: true,
+    });
+    await day.fill('2026-11-09');
+    await save.click();
+    await expect(dialog.getByRole('alert')).toBeVisible();
+    await expect(day).toBeDisabled();
+    await expect(save).toBeDisabled();
+    await dialog
+      .getByRole('button', { name: 'Atualizar pedido', exact: true })
+      .click();
+    await expect(dialog).toBeVisible();
+    expect(mock.order.deliveredOn).toBe('2026-11-10');
+    expect(mock.writes).toHaveLength(1);
+    if (mode === 'conflict') {
+      await expect(save).toBeDisabled();
+      return;
+    }
+    await expect(save).toBeEnabled();
+    mock.setMode('ok');
+    await save.click();
+    await expect(dialog).not.toBeVisible();
+    expect(mock.writes).toHaveLength(2);
+    expect(mock.writes[1].key).toBe(mock.writes[0].key);
+    expect(mock.writes[1].body).toEqual(mock.writes[0].body);
+    expect(mock.order.deliveredOn).toBe('2026-11-09');
+  });
+
+test('DDE: a late delivery response cannot replace a more recent order snapshot', async ({
+  page,
+}) => {
+  const mock = await setup(page, { order: { deliveredOn: '2026-11-10' } });
+  await page.clock.setFixedTime(new Date('2026-11-11T15:00:00Z'));
+  let release = () => {},
+    sendEvent = () => {},
+    started = false;
+  const responseGate = new Promise((resolve) => {
+    release = () => resolve(null);
+  });
+  const eventGate = new Promise((resolve) => {
+    sendEvent = () => resolve(null);
+  });
+  await page.route(/\/api\/v1\/events\?/u, async (route) => {
+    await eventGate;
+    return route.fulfill({
+      contentType: 'text/event-stream',
+      body: eventStreamBody({
+        type: 'inbox.order.changed',
+        payload: { orderId: mock.order.id },
+      }),
+    });
+  });
+  await page.route(
+    '**/api/v1/orders/*/delivery-confirmation',
+    async (route) => {
+      const previous = { ...mock.order, version: 5, deliveredOn: '2026-11-08' };
+      started = true;
+      await responseGate;
+      return route.fulfill({ json: { order: previous } });
+    },
+  );
+  await page.goto('/pedidos/order-confirmado');
+  const section = sectionFor(page);
+  await section
+    .getByRole('button', { name: 'Alterar data de entrega', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Alterar data de entrega',
+    exact: true,
+  });
+  await dialog.getByLabel('Entregue em').fill('2026-11-08');
+  await dialog
+    .getByRole('button', { name: 'Salvar data de entrega', exact: true })
+    .click();
+  await expect.poll(() => started).toBe(true);
+  Object.assign(mock.order, { version: 6, deliveredOn: '2026-11-09' });
+  mock.billing.orderVersion = 6;
+  sendEvent();
+  await expect(section.locator('[data-kind="delivery"]')).toContainText(
+    '09/11/2026',
+  );
+  release();
+  await expect(dialog.getByRole('alert')).toContainText('O pedido mudou');
+  await expect(section.locator('[data-kind="delivery"]')).toContainText(
+    '09/11/2026',
+  );
+  await expect(dialog).toBeVisible();
 });
 
 for (const mode of ['conflict', 'lost'])

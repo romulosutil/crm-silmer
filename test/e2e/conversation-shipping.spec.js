@@ -371,6 +371,14 @@ test('INBOX-RD-06: a phone shows a full-width bottom sheet with 44px targets', a
   await page.setViewportSize({ width: 390, height: 844 });
   await mockConversationShipping(page);
   const { dialog } = await openQuote(page);
+  // The sheet slides in; measure it at rest.
+  await dialog.evaluate((element) =>
+    Promise.all(
+      element
+        .getAnimations({ subtree: true })
+        .map((animation) => animation.finished),
+    ),
+  );
   const box = await dialog.boundingBox();
   expect(box?.x).toBe(0);
   expect(box?.width).toBe(390);

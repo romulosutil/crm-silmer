@@ -1853,3 +1853,65 @@ test('BCS-06: failed compact read also blocks the independent link-only action',
   await expect(section.getByRole('button', { name: /^Cobrar/ })).toBeDisabled();
   expect(state.calls).toHaveLength(0);
 });
+
+test('BCS-09: parent refund dialogue also pauses reconciliation and preserves the typed amount', async ({
+  page,
+}) => {
+  let reads = 0;
+  page.on('request', (req) => {
+    if (
+      req.method() === 'GET' &&
+      new URL(req.url()).pathname.endsWith('/billing')
+    )
+      reads++;
+  });
+  const prior = {
+    id: 'parent-dialog-paid',
+    kind: 'signal',
+    status: 'paid',
+    amountCents: 30000,
+    refundableAmountCents: 30000,
+  };
+  const state = await setup(page, {
+    billing: { managed: true, percent: 30, charges: [prior] },
+  });
+  state.receive(30000);
+  state.billing.charges.push({
+    id: 'parent-dialog-pending',
+    kind: 'balance',
+    status: 'waiting',
+    amountCents: 70000,
+    validUntil: new Date(Date.now() + 86400000).toISOString(),
+    checkoutUrl: 'https://checkout.infinitepay.io/parent-pending',
+  });
+  await page.goto('/pedidos/shipping-order-1#cobrancas');
+  const section = page.getByRole('region', { name: 'Cobranças', exact: true });
+  await section
+    .locator('summary[data-operation-id="charge:parent-dialog-paid"]')
+    .click();
+  await section
+    .getByRole('button', { name: 'Registrar devolução do sinal', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Registrar devolução já realizada',
+    exact: true,
+  });
+  await dialog.getByLabel('Valor já devolvido', { exact: true }).fill('12,34');
+  const before = reads;
+  await page.waitForTimeout(5600);
+  expect(reads).toBe(before);
+  await expect(
+    dialog.getByLabel('Valor já devolvido', { exact: true }),
+  ).toHaveValue('12,34');
+  await expect(
+    dialog.getByLabel('Valor já devolvido', { exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(
+    section.getByRole('button', {
+      name: 'Registrar devolução do sinal',
+      exact: true,
+    }),
+  ).toBeFocused();
+  expect(state.calls).toHaveLength(0);
+});

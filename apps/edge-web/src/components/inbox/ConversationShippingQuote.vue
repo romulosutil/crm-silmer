@@ -3,9 +3,10 @@ import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { commandKey, request } from '../../lib/api-client.js';
 import { amountLabel } from '../../lib/order-format.js';
 import { dateTimeBR } from '../../lib/format.js';
-import { openDialog } from '../../lib/ui.js';
 import OrderShippingEstimate from '../order/OrderShippingEstimate.vue';
+import AppHint from '../AppHint.vue';
 import AppIcon from '../AppIcon.vue';
+import JourneyDialog from '../JourneyDialog.vue';
 
 const props = defineProps({
   conversationId: { type: String, required: true },
@@ -15,7 +16,7 @@ const props = defineProps({
   revision: { type: Number, default: 0 },
 });
 const emit = defineEmits(['draft']);
-const dialog = ref(null);
+const journey = ref(null);
 const subjectId = ref('');
 const order = ref(null);
 const quote = ref(null);
@@ -69,7 +70,10 @@ function invalidate() {
   notice.value = '';
 }
 function close() {
-  dialog.value?.close();
+  journey.value?.close();
+}
+function focusError() {
+  errorNotice.value?.$el?.focus();
 }
 /** @param {HTMLElement} trigger @param {string} [postalCode] */
 async function open(trigger, postalCode = '') {
@@ -77,14 +81,24 @@ async function open(trigger, postalCode = '') {
   if (postalCode) fields.toPostalCode = postalCode;
   if (target.value) void loadOrder();
   estimateRevision.value += 1;
-  openDialog(dialog.value, trigger);
+  journey.value?.open(trigger);
   await nextTick();
-  dialog.value?.querySelector('select')?.focus();
+  journey.value?.element?.querySelector('select')?.focus();
 }
 function closeWork() {
   controller?.abort();
   controller = undefined;
   busy.value = false;
+}
+let pendingDraft = '';
+// The shell emits `close` after the trigger got its focus back, so the
+// composer focus requested by a draft is the last one to win.
+function onClose() {
+  closeWork();
+  if (!pendingDraft) return;
+  const text = pendingDraft;
+  pendingDraft = '';
+  emit('draft', text);
 }
 /** @param {any} cause */
 function failure(cause) {
@@ -139,7 +153,7 @@ async function calculate() {
     error.value =
       'Informe o valor segurado em reais, com até duas casas decimais.';
     await nextTick();
-    errorNotice.value?.focus();
+    focusError();
     return;
   }
   controller?.abort();
@@ -186,7 +200,7 @@ async function calculate() {
       )
         calculateKey = undefined;
       await nextTick();
-      errorNotice.value?.focus();
+      focusError();
     }
   } finally {
     if (own === controller) busy.value = false;
@@ -227,6 +241,8 @@ async function selectService(serviceId) {
     );
     if (own !== controller) return;
     quote.value = response.data.quote;
+    // A disabled button cannot take focus: release the busy state first.
+    busy.value = false;
     estimateRevision.value += 1;
     notice.value =
       'Frete estimado vinculado ao pedido. O valor final permanece igual.';
@@ -236,7 +252,7 @@ async function selectService(serviceId) {
     if (!own.signal.aborted && own === controller) {
       error.value = failure(cause);
       await nextTick();
-      errorNotice.value?.focus();
+      focusError();
     }
   } finally {
     if (own === controller) busy.value = false;
@@ -249,10 +265,7 @@ function draft() {
   const testLabel =
     quote.value.environment === 'sandbox' ? 'Cotação de teste — Sandbox. ' : '';
   const text = `${testLabel}Frete estimado para ${quote.value.totalPieces} peças: ${service.company} ${service.name}, ${amountLabel(service.priceCents)}, prazo previsto de ${service.deliveryDays} dias úteis. Cotação de ${dateTimeBR(quote.value.createdAt)}, sujeita a nova consulta.`;
-  // Native dialog close restores its trigger first. Only then focus the composer.
-  dialog.value?.addEventListener('close', () => emit('draft', text), {
-    once: true,
-  });
+  pendingDraft = text;
   close();
 }
 watch(fields, invalidate, { flush: 'sync' });
@@ -300,179 +313,233 @@ defineExpose({ open });
     >
       <AppIcon name="truck" /><span class="sr-only">Cotar frete</span>
     </button>
-    <dialog
-      ref="dialog"
-      class="conversation-shipping-dialog"
-      aria-labelledby="conversation-shipping-title"
-      @close="closeWork"
-    >
-      <div class="conversation-shipping-head">
-        <h2 id="conversation-shipping-title">Cotar frete para o pedido</h2>
-        <button type="button" @click="close">Fechar cotação</button>
-      </div>
-      <p id="conversation-shipping-help">
-        Escolha o pedido e informe o peso total e as medidas da embalagem
-        fechada. A estimativa fica separada do valor final.
-      </p>
-      <p v-if="!targets.length" role="status">
-        Vincule um pedido a um assunto deste atendimento para cotar o frete.
-      </p>
-      <form
-        v-else
-        :aria-busy="busy || loadingOrder"
-        aria-describedby="conversation-shipping-help"
-        @submit.prevent="calculate"
+    <!-- The composer styles every button inside it; the dialog lives on <body>. -->
+    <Teleport to="body">
+      <JourneyDialog
+        ref="journey"
+        class="conversation-shipping-dialog"
+        title="Cotar frete para o pedido"
+        close-label="Fechar cotação"
+        @close="onClose"
       >
-        <label for="shipping-target">Pedido deste atendimento</label>
-        <select id="shipping-target" v-model="subjectId" required>
-          <option value="">Escolha o pedido</option>
-          <option
-            v-for="subject in targets"
-            :key="subject.id"
-            :value="subject.id"
-          >
-            Pedido {{ subject.orderNumber }} ·
-            {{ subject.label || subject.title || 'Assunto do pedido' }}
-          </option>
-        </select>
-        <p v-if="loadingOrder" role="status">Carregando pedido…</p>
-        <button
-          v-if="target && !order && !loadingOrder"
-          type="button"
-          @click="loadOrder"
+        <p id="conversation-shipping-help" class="quote-help">
+          Escolha o pedido e informe o peso total e as medidas da embalagem
+          fechada. A estimativa fica separada do valor final.
+        </p>
+        <p v-if="!targets.length" role="status">
+          Vincule um pedido a um assunto deste atendimento para cotar o frete.
+        </p>
+        <form
+          v-else
+          id="conversation-shipping-form"
+          class="quote-form"
+          :aria-busy="busy || loadingOrder"
+          aria-describedby="conversation-shipping-help"
+          @submit.prevent="calculate"
         >
-          Carregar pedido novamente
-        </button>
-        <OrderShippingEstimate
-          v-if="order"
-          :order-id="order.id"
-          :revision="estimateRevision + revision"
-          show-empty
-        />
-        <fieldset
-          class="conversation-shipping-fields"
-          :disabled="!order || loadingOrder || disabled"
-        >
-          <legend>Embalagem para a cotação</legend>
-          <div
-            v-for="field in [
-              { key: 'fromPostalCode', label: 'CEP de origem' },
-              { key: 'toPostalCode', label: 'CEP de destino' },
-            ]"
-            :key="field.key"
-          >
-            <label :for="`conversation-shipping-${field.key}`">{{
-              field.label
-            }}</label>
-            <input
-              :id="`conversation-shipping-${field.key}`"
-              v-model="fields[field.key]"
-              inputmode="numeric"
-              autocomplete="off"
-              pattern="[0-9]{5}-?[0-9]{3}"
-              maxlength="9"
-              required
-            />
-          </div>
-          <div v-for="field in fieldDefinitions" :key="field.key">
-            <label :for="`conversation-shipping-${field.key}`">{{
-              field.label
-            }}</label>
-            <input
-              :id="`conversation-shipping-${field.key}`"
-              v-model="fields[field.key]"
-              type="number"
-              inputmode="numeric"
-              min="1"
-              :max="field.max"
-              step="1"
-              required
-            />
-          </div>
-          <div>
-            <label for="conversation-shipping-insurance"
-              >Valor segurado (R$)</label
+          <div class="quote-group">
+            <div class="quote-field">
+              <label for="shipping-target">Pedido deste atendimento</label>
+              <select id="shipping-target" v-model="subjectId" required>
+                <option value="">Escolha o pedido</option>
+                <option
+                  v-for="subject in targets"
+                  :key="subject.id"
+                  :value="subject.id"
+                >
+                  Pedido {{ subject.orderNumber }} ·
+                  {{ subject.label || subject.title || 'Assunto do pedido' }}
+                </option>
+              </select>
+            </div>
+            <p v-if="loadingOrder" role="status">Carregando pedido…</p>
+            <button
+              v-if="target && !order && !loadingOrder"
+              type="button"
+              class="quote-reload"
+              @click="loadOrder"
             >
-            <input
-              id="conversation-shipping-insurance"
-              v-model="fields.insuranceValue"
-              inputmode="decimal"
-              maxlength="12"
-              required
+              Carregar pedido novamente
+            </button>
+            <OrderShippingEstimate
+              v-if="order"
+              :order-id="order.id"
+              :revision="estimateRevision + revision"
+              show-empty
             />
           </div>
-        </fieldset>
-        <button
-          type="submit"
-          class="primary"
-          :disabled="busy || loadingOrder || !order || disabled"
-        >
-          {{ busy ? 'Consultando ou salvando…' : 'Consultar frete' }}
-        </button>
-      </form>
-      <p v-if="error" ref="errorNotice" role="alert" tabindex="-1">
-        {{ error }}
-      </p>
-      <p v-if="notice" role="status">{{ notice }}</p>
-      <section v-if="quote" aria-labelledby="conversation-shipping-results">
-        <h3
-          id="conversation-shipping-results"
-          ref="resultsHeading"
+          <fieldset
+            class="quote-fields"
+            :disabled="!order || loadingOrder || disabled"
+          >
+            <legend>Embalagem para a cotação</legend>
+            <div class="quote-row">
+              <div
+                v-for="field in [
+                  { key: 'fromPostalCode', label: 'CEP de origem' },
+                  { key: 'toPostalCode', label: 'CEP de destino' },
+                ]"
+                :key="field.key"
+                class="quote-field"
+              >
+                <label :for="`conversation-shipping-${field.key}`">{{
+                  field.label
+                }}</label>
+                <input
+                  :id="`conversation-shipping-${field.key}`"
+                  v-model="fields[field.key]"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  pattern="[0-9]{5}-?[0-9]{3}"
+                  maxlength="9"
+                  required
+                />
+              </div>
+            </div>
+            <div class="quote-row" data-cols="4">
+              <div
+                v-for="field in fieldDefinitions"
+                :key="field.key"
+                class="quote-field"
+              >
+                <label :for="`conversation-shipping-${field.key}`">{{
+                  field.label
+                }}</label>
+                <input
+                  :id="`conversation-shipping-${field.key}`"
+                  v-model="fields[field.key]"
+                  type="number"
+                  inputmode="numeric"
+                  min="1"
+                  :max="field.max"
+                  step="1"
+                  required
+                />
+              </div>
+            </div>
+            <div class="quote-row">
+              <div class="quote-field">
+                <label for="conversation-shipping-insurance"
+                  >Valor segurado (R$)</label
+                >
+                <input
+                  id="conversation-shipping-insurance"
+                  v-model="fields.insuranceValue"
+                  inputmode="decimal"
+                  maxlength="12"
+                  required
+                />
+              </div>
+            </div>
+          </fieldset>
+        </form>
+        <AppHint
+          v-if="error"
+          ref="errorNotice"
+          tone="error"
+          class="quote-alert"
+          role="alert"
           tabindex="-1"
         >
-          Opções de frete
-        </h3>
-        <p v-if="quote.environment === 'sandbox'">Cotação de teste — Sandbox</p>
-        <p>{{ quote.totalPieces }} peças · {{ dateTimeBR(quote.createdAt) }}</p>
-        <p v-if="quote.stale" role="status">
-          Cotação desatualizada. Consulte novamente antes de vincular o frete.
-        </p>
-        <p v-if="!quote.services.length">
-          Nenhum serviço disponível para esta embalagem e estes CEPs.
-        </p>
-        <ul class="conversation-shipping-services">
-          <li v-for="service in quote.services" :key="service.id">
-            <p>
-              <strong>{{ service.company }} · {{ service.name }}</strong> ·
-              {{ amountLabel(service.priceCents) }} ·
-              {{ service.deliveryDays }} dias úteis previstos
-            </p>
-            <button
-              type="button"
-              :disabled="
-                busy ||
-                disabled ||
-                quote.stale ||
-                quote.selectedServiceId === service.id
-              "
-              @click="selectService(service.id)"
-            >
-              {{
-                quote.selectedServiceId === service.id
-                  ? 'Frete vinculado'
-                  : `Vincular ${service.name} ao pedido`
-              }}
-            </button>
-          </li>
-        </ul>
-        <p v-for="service in quote.unavailable" :key="service.id">
-          {{ service.name }}: {{ service.message }}
-        </p>
-        <button
-          v-if="selected"
-          ref="draftButton"
-          type="button"
-          :disabled="busy || disabled || quote.stale"
-          @click="draft"
+          {{ error }}
+        </AppHint>
+        <AppHint v-if="notice" tone="success" class="quote-hint" role="status">
+          {{ notice }}
+        </AppHint>
+        <section
+          v-if="quote"
+          class="quote-group"
+          aria-labelledby="conversation-shipping-results"
         >
-          {{
-            hasDraft
-              ? 'Acrescentar resposta com o frete'
-              : 'Escrever resposta com o frete'
-          }}
-        </button>
-      </section>
-    </dialog>
+          <h3
+            id="conversation-shipping-results"
+            ref="resultsHeading"
+            tabindex="-1"
+          >
+            Opções de frete
+          </h3>
+          <AppHint
+            v-if="quote.environment === 'sandbox'"
+            tone="info"
+            class="quote-hint"
+          >
+            Cotação de teste — Sandbox
+          </AppHint>
+          <p class="quote-meta">
+            {{ quote.totalPieces }} peças · {{ dateTimeBR(quote.createdAt) }}
+          </p>
+          <AppHint
+            v-if="quote.stale"
+            tone="warning"
+            class="quote-hint"
+            role="status"
+          >
+            Cotação desatualizada. Consulte novamente antes de vincular o frete.
+          </AppHint>
+          <p v-if="!quote.services.length" class="quote-meta">
+            Nenhum serviço disponível para esta embalagem e estes CEPs.
+          </p>
+          <ul v-if="quote.services.length" class="quote-services">
+            <li v-for="service in quote.services" :key="service.id">
+              <div class="quote-service-main">
+                <strong>{{ service.company }} · {{ service.name }}</strong>
+                <span class="quote-meta"
+                  >{{ service.deliveryDays }} dias úteis previstos</span
+                >
+              </div>
+              <span class="quote-price">{{
+                amountLabel(service.priceCents)
+              }}</span>
+              <span
+                v-if="quote.selectedServiceId === service.id"
+                class="quote-linked"
+                ><AppIcon name="check" />Frete vinculado</span
+              >
+              <button
+                v-else
+                type="button"
+                class="quote-link"
+                :disabled="busy || disabled || quote.stale"
+                @click="selectService(service.id)"
+              >
+                Vincular {{ service.name }} ao pedido
+              </button>
+            </li>
+          </ul>
+          <p
+            v-for="service in quote.unavailable"
+            :key="service.id"
+            class="quote-meta"
+          >
+            {{ service.name }}: {{ service.message }}
+          </p>
+        </section>
+        <template v-if="targets.length" #footer>
+          <button
+            type="submit"
+            form="conversation-shipping-form"
+            :class="{ primary: !selected }"
+            :disabled="busy || loadingOrder || !order || disabled"
+          >
+            {{ busy ? 'Consultando ou salvando…' : 'Consultar frete' }}
+          </button>
+          <button
+            v-if="selected"
+            ref="draftButton"
+            type="button"
+            class="primary"
+            :disabled="busy || disabled || quote.stale"
+            @click="draft"
+          >
+            {{
+              hasDraft
+                ? 'Acrescentar resposta com o frete'
+                : 'Escrever resposta com o frete'
+            }}
+          </button>
+        </template>
+      </JourneyDialog>
+    </Teleport>
   </div>
 </template>
 
@@ -480,62 +547,141 @@ defineExpose({ open });
 .conversation-shipping-action {
   display: contents;
 }
-.conversation-shipping-dialog {
-  box-sizing: border-box;
-  inline-size: min(46rem, calc(100vw - 2rem));
-  max-inline-size: calc(100vw - 2rem);
-  max-block-size: 90dvh;
-  padding: var(--space-4);
-  color: var(--color-text);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  overflow-y: auto;
-}
-.conversation-shipping-dialog::backdrop {
-  background: var(--color-overlay);
-}
-.conversation-shipping-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-.conversation-shipping-head h2 {
+.quote-help,
+.quote-meta {
   margin: 0;
 }
-.conversation-shipping-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
-  gap: var(--space-3);
-  margin-block: var(--space-3);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+.quote-help {
+  max-inline-size: 70ch;
 }
-.conversation-shipping-fields div {
+.quote-meta {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+.quote-form {
+  gap: var(--space-5);
+}
+.quote-group {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+.quote-group > h3 {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+}
+.quote-reload {
+  justify-self: start;
+}
+.quote-fields {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.quote-fields > legend {
+  margin-block-end: var(--space-2);
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.quote-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: var(--space-3);
+}
+.quote-row[data-cols='4'] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.quote-field {
   display: grid;
   gap: var(--space-1);
   min-inline-size: 0;
 }
-.conversation-shipping-fields input {
-  box-sizing: border-box;
-  inline-size: 100%;
-  min-inline-size: 0;
+.quote-field > label {
+  margin: 0;
 }
-.conversation-shipping-services {
+.quote-alert {
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  background: var(--status-error-surface);
+  border-radius: var(--radius-md);
+}
+.quote-alert,
+.quote-hint {
+  font-size: var(--text-sm);
+}
+.quote-services {
   display: grid;
-  gap: var(--space-3);
+  margin: 0;
   padding: 0;
   list-style: none;
 }
-.conversation-shipping-services li {
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+.quote-services > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  padding-block: var(--space-3);
+  border-block-start: 1px solid var(--color-border-subtle);
 }
-.conversation-shipping-dialog p {
+.quote-service-main {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+.quote-service-main > strong {
+  font-weight: var(--weight-semibold);
+}
+.quote-price {
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  white-space: nowrap;
+}
+.quote-linked {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: var(--control-height);
+  padding-inline: var(--space-3);
+  color: var(--status-success-text);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  background: var(--status-success-surface);
+  border-radius: var(--radius-pill);
+}
+.quote-linked > .app-icon {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+p {
   overflow-wrap: anywhere;
+}
+@media (width < 48rem) {
+  .quote-row[data-cols='4'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .quote-services > li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .quote-link,
+  .quote-linked {
+    grid-column: 1 / -1;
+  }
+  .quote-link {
+    min-block-size: var(--target-min);
+  }
+  .quote-linked {
+    justify-self: start;
+  }
+  .quote-reload {
+    min-block-size: var(--target-min);
+  }
 }
 </style>

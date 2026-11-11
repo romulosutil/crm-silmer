@@ -307,6 +307,121 @@ test('T139: narrow screen quote dialog is accessible and fits the viewport', asy
   });
 });
 
+test('INBOX-RD-06: exactly one primary action per moment and the linked service shows a badge', async ({
+  page,
+}) => {
+  await mockConversationShipping(page);
+  const { dialog } = await openQuote(page);
+  const primaries = dialog.locator('button.primary');
+  await expect(primaries).toHaveCount(1);
+  await expect(primaries).toHaveText('Consultar frete');
+  await fillQuote(dialog);
+  await dialog
+    .getByRole('button', { name: 'Consultar frete', exact: true })
+    .click();
+  await expect(
+    dialog.getByRole('button', { name: 'Vincular PAC ao pedido' }),
+  ).toBeVisible();
+  await expect(primaries).toHaveCount(1);
+  await expect(primaries).toHaveText('Consultar frete');
+  await dialog.getByRole('button', { name: 'Vincular PAC ao pedido' }).click();
+  await expect(
+    dialog.getByText('Frete vinculado', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole('button', { name: 'Vincular PAC ao pedido' }),
+  ).toHaveCount(0);
+  await expect(primaries).toHaveCount(1);
+  await expect(primaries).toHaveText('Escrever resposta com o frete');
+  await expect(primaries).toBeFocused();
+  await expect(
+    dialog.getByRole('button', { name: 'Consultar frete', exact: true }),
+  ).not.toHaveClass(/primary/u);
+  const axe = await new AxeBuilder({ page })
+    .include('.conversation-shipping-dialog')
+    .analyze();
+  expect(axe.violations).toEqual([]);
+  await page.screenshot({
+    path: test.info().outputPath('conversation-shipping-desktop.png'),
+  });
+});
+
+test('INBOX-RD-06: Esc and a click on the backdrop close and return focus to the trigger', async ({
+  page,
+}) => {
+  await mockConversationShipping(page);
+  const { dialog, trigger } = await openQuote(page);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await expect(dialog).toBeVisible();
+  await page.mouse.click(2, 2);
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await dialog.getByRole('button', { name: 'Fechar cotação' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
+test('INBOX-RD-06: a phone shows a full-width bottom sheet with 44px targets', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockConversationShipping(page);
+  const { dialog } = await openQuote(page);
+  const box = await dialog.boundingBox();
+  expect(box?.x).toBe(0);
+  expect(box?.width).toBe(390);
+  expect((box?.y ?? 0) + (box?.height ?? 0)).toBeCloseTo(844, 0);
+  const close = await dialog
+    .getByRole('button', { name: 'Fechar cotação' })
+    .boundingBox();
+  expect(close?.width).toBeGreaterThanOrEqual(44);
+  expect(close?.height).toBeGreaterThanOrEqual(44);
+  const submit = await dialog
+    .getByRole('button', { name: 'Consultar frete', exact: true })
+    .boundingBox();
+  expect(submit?.height).toBeGreaterThanOrEqual(44);
+  await fillQuote(dialog);
+  await dialog
+    .getByRole('button', { name: 'Consultar frete', exact: true })
+    .click();
+  await dialog.getByRole('button', { name: 'Vincular PAC ao pedido' }).click();
+  await expect(
+    dialog.getByText('Frete vinculado', { exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: test.info().outputPath('conversation-shipping-phone.png'),
+  });
+});
+
+test('INBOX-RD-06: 320px has no horizontal scroll in the page or the dialog', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await mockConversationShipping(page);
+  const { dialog } = await openQuote(page);
+  await fillQuote(dialog);
+  await dialog
+    .getByRole('button', { name: 'Consultar frete', exact: true })
+    .click();
+  await dialog.getByRole('button', { name: 'Vincular PAC ao pedido' }).click();
+  await expect(
+    dialog.getByText('Frete vinculado', { exact: true }),
+  ).toBeVisible();
+  const overflow = {
+    page: await page
+      .locator('html')
+      .evaluate((root) => root.scrollWidth - root.clientWidth),
+    body: await dialog
+      .locator('.journey-body')
+      .evaluate((body) => body.scrollWidth - body.clientWidth),
+  };
+  expect(overflow).toEqual({ page: 0, body: 0 });
+});
+
 test('T139: order page reads the saved estimate and labels stale results without changing the total', async ({
   page,
 }) => {

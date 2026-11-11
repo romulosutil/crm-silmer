@@ -122,6 +122,34 @@ test('routes subtotal review blockers to the items instead of an independent amo
   ]);
 });
 
+test('names the subtotals to review once, however many sizes lack one (PFI-15, EDIT-04)', () => {
+  const missingFields = [
+    'finalAmount',
+    'paymentCondition',
+    'sizePricing.group.line-m',
+    'sizePricing.group.line-g',
+    'sizePricing.other',
+  ];
+  assert.deepEqual(missingFieldLabels(missingFields), [
+    'valor final',
+    'forma de pagamento',
+    'subtotais por tamanho a revisar',
+  ]);
+  assert.equal(
+    nextOrderStep({ missingFields })?.missing,
+    'falta: subtotais por tamanho a revisar',
+  );
+  assert.equal(
+    missingHeadline(['sizePricing.group.a', 'sizePricing.group.b']),
+    'Falta subtotais por tamanho a revisar',
+  );
+  // Distinct points keep their own place and order.
+  assert.deepEqual(
+    missingFieldLabels(['items[0].cor', 'sizePricing.g.a', 'items[1].cor']),
+    ['cor do item 1', 'subtotais por tamanho a revisar', 'cor do item 2'],
+  );
+});
+
 test('refuses malformed amounts in the browser, before the request', () => {
   // PFI-11: the dot-decimal form is a different number, never a guess.
   for (const text of ['4,820.00', 'abc', '', '0', '0,00', '-1', '1,234']) {

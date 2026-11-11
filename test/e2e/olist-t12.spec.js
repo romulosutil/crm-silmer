@@ -1,6 +1,10 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { mockOrders, pendingOrder } from './support/orders-mock.js';
+import {
+  mockOrders,
+  pendingOrder,
+  writeOrderSection,
+} from './support/orders-mock.js';
 
 const orderId = 'acbf1c1b-c57f-4c5c-8076-7f439f95cfb0';
 const groupId = '83a15e8e-1690-4c7b-ad7a-0cec51bbc155';
@@ -744,12 +748,6 @@ async function setupManaged(page, options = {}) {
       state.writes.push(body);
       expect(route.request().method()).toBe('PATCH');
       expect(Number.isInteger(body.expectedVersion)).toBe(true);
-      if (body.expectedVersion !== state.order.version) {
-        return route.fulfill({
-          status: 409,
-          json: { code: 'VERSION_CONFLICT' },
-        });
-      }
       expect(Object.keys(body).sort()).toEqual(['expectedVersion', 'value']);
       expect(route.request().headers()['idempotency-key']).toBeTruthy();
       if (state.conflict) {
@@ -757,120 +755,72 @@ async function setupManaged(page, options = {}) {
         state.order.version++;
         return route.fulfill({
           status: 409,
-          json: { code: 'VERSION_CONFLICT' },
+          json: { error: { code: 'VERSION_CONFLICT' } },
         });
       }
-      const command = body.value;
-      const group = state.order.ficha.sizePricing.find(
-        (/** @type {any} */ entry) => entry.id === command.groupId,
-      );
-      const line = group?.lines.find(
-        (/** @type {any} */ entry) => entry.id === command.lineId,
-      );
-      if (command.action === 'change_quantity') {
-        line.quantity = command.quantity;
-        line.subtotalReviewed = false;
-        const groupIndex = state.order.ficha.sizePricing.indexOf(group);
-        const lineIndex = group.lines.indexOf(line);
-        state.order.ficha.items[groupIndex].grade[lineIndex].quantidade =
-          command.quantity;
-      } else if (command.action === 'review_subtotal') {
-        line.subtotalCents = command.subtotalCents;
-        line.subtotalReviewed = command.subtotalCents !== null;
-      } else throw new Error('Unexpected T12 mock command');
-      const groups = state.order.ficha.sizePricing.map(
-        (/** @type {any} */ item) => ({
-          id: item.id,
-          subtotalCents: item.lines.every(
-            (/** @type {any} */ entry) =>
-              entry.subtotalReviewed && entry.subtotalCents !== null,
-          )
-            ? item.lines.reduce(
-                (/** @type {number} */ sum, /** @type {any} */ entry) =>
-                  sum + entry.subtotalCents,
-                0,
-              )
-            : null,
-        }),
-      );
-      const issues = state.order.ficha.sizePricing.flatMap(
-        (/** @type {any} */ item) =>
-          item.lines
-            .filter(
-              (/** @type {any} */ entry) =>
-                !entry.subtotalReviewed || entry.subtotalCents === null,
-            )
-            .map((/** @type {any} */ entry) => ({
-              groupId: item.id,
-              lineId: entry.id,
-              code:
-                entry.subtotalCents === null
-                  ? 'SIZE_SUBTOTAL_REQUIRED'
-                  : 'SIZE_SUBTOTAL_REVIEW_REQUIRED',
-            })),
-      );
-      const totalCents = issues.length
-        ? null
-        : groups.reduce(
-            (/** @type {number} */ sum, /** @type {any} */ item) =>
-              sum + item.subtotalCents,
-            0,
-          );
-      state.order.pricing = {
-        complete: issues.length === 0,
-        totalCents,
-        groups,
-        issues,
-      };
-      state.order.finalAmountCents = totalCents;
-      state.order.missingFields = [
-        ...issues.map(
-          (/** @type {any} */ issue) =>
-            `sizePricing.${issue.groupId}.${issue.lineId}`,
-        ),
-        'paymentCondition',
-      ];
-      state.order.version++;
+      // The server's own rules (exact keys, review flag, totals, versions).
+      const result = writeOrderSection(state.order, 'size-pricing', body);
+      if (result.status !== 200) {
+        return route.fulfill({
+          status: result.status,
+          json: { error: /** @type {any} */ (result).error },
+        });
+      }
       return route.fulfill({ json: { order: state.order } });
     },
   );
   return state;
 }
 
-test('FPI-05 the priced form names one control "Modelo", apart from the old field', async ({
+const ITEMS = 'Itens e especificações';
+
+/** @param {import('@playwright/test').Page} page */
+const itemsOf = (page) => page.getByRole('region', { name: ITEMS });
+
+/**
+ * EDIT-01: a locked order reads its items as text — no field, no action.
+ *
+ * @param {import('@playwright/test').Page} page
+ */
+async function expectItemsReadOnly(page) {
+  const items = itemsOf(page);
+  await expect(items).toHaveAttribute('data-items-state', 'read');
+  await expect(items.locator('input, select, textarea')).toHaveCount(0);
+  await expect(items.getByRole('button')).toHaveCount(0);
+}
+
+/** @param {any} state @param {number} count */
+const settled = (state, count) =>
+  expect.poll(() => state.writes.length).toBe(count);
+
+test('FPI-05 EDIT-01 the item names one control "Modelo", apart from the "Detalhe do modelo" extra', async ({
   page,
 }) => {
   await setupManaged(page);
   await page.goto(`/pedidos/${orderId}`);
-  await page
-    .getByRole('button', { name: 'Editar atributos do item 1', exact: true })
-    .click();
-  const model = page.getByLabel('Modelo', { exact: true });
+  const items = itemsOf(page);
+  const model = items.getByLabel('Modelo', { exact: true });
   await expect(model).toHaveCount(1);
-  await expect(model).toHaveAttribute('id', 'priced-tipo');
-  await expect(
-    page.getByLabel('Detalhe do modelo', { exact: true }),
-  ).toHaveAttribute('id', 'priced-modelo');
+  await expect(model).toHaveAttribute('id', 'item-0-tipo');
+  // The collar detail is another control: a labelled field of its own.
+  const detail = items.getByLabel('Detalhe do modelo', { exact: true });
+  await expect(detail).toHaveValue('GOLA OLÍMPICA');
+  await expect(detail).toHaveAttribute('id', 'item-0-modelo');
+  await expect(items.getByLabel('Modelo', { exact: true })).toHaveCount(1);
 });
 
-test('T12 changing quantity preserves IDs and old subtotal but requires a separate human review', async ({
+test('T12 EDIT-07 changing quantity preserves IDs and old subtotal but requires a separate human review', async ({
   page,
 }) => {
   const state = await setupManaged(page);
   await page.goto(`/pedidos/${orderId}`);
-  const trigger = page.getByRole('button', {
-    name: 'Alterar quantidade do item 1, tamanho M',
+  const items = itemsOf(page);
+  const quantity = items.getByLabel('Quantidade do tamanho M, item 1', {
     exact: true,
   });
-  await trigger.click();
-  const input = page.getByLabel('Quantidade do item 1, tamanho M', {
-    exact: true,
-  });
-  await expect(input).toBeFocused();
-  await input.fill('101');
-  await page
-    .getByRole('button', { name: 'Salvar alteração', exact: true })
-    .click();
+  await quantity.fill('101');
+  await quantity.press('Enter');
+  await settled(state, 1);
   expect(state.writes[0].value).toEqual({
     action: 'change_quantity',
     groupId,
@@ -878,49 +828,41 @@ test('T12 changing quantity preserves IDs and old subtotal but requires a separa
     quantity: 101,
   });
   const row = page.locator(`[data-line-id="${lineId}"]`).first();
-  await expect(row).toContainText('101');
-  await expect(row).toContainText('2,00');
-  await expect(row).toContainText('Revisar subtotal');
-  await expect(trigger).toBeFocused();
-  await page
-    .getByRole('button', {
-      name: 'Revisar subtotal do item 1, tamanho M',
-      exact: true,
-    })
-    .click();
-  await page
-    .getByLabel('Subtotal do item 1, tamanho M', { exact: true })
-    .fill('2,02');
-  await page
-    .getByRole('button', { name: 'Salvar subtotal revisado', exact: true })
-    .click();
+  const subtotal = items.getByLabel('Subtotal do tamanho M, item 1', {
+    exact: true,
+  });
+  await expect(quantity).toHaveValue('101');
+  await expect(subtotal).toHaveValue('2,00');
+  await expect(row).toContainText('Confira o subtotal.');
+  await expect(
+    row.getByRole('button', { name: 'Manter R$ 2,00' }),
+  ).toBeVisible();
+
+  // The review is a separate human act: a new amount, as its own command.
+  await subtotal.fill('2,02');
+  await subtotal.press('Enter');
+  await settled(state, 2);
   expect(state.writes[1].value).toEqual({
     action: 'review_subtotal',
     groupId,
     lineId,
     subtotalCents: 202,
   });
-  await expect(row).not.toContainText('Revisar subtotal');
+  await expect(row).not.toContainText('Confira o subtotal.');
   expect(state.order.pricing.totalCents).toBe(302);
 });
 
-test('T12 a blank subtotal saves an incomplete draft instead of a partial authoritative total', async ({
+test('T12 EDIT-07 a blank subtotal saves an incomplete draft instead of a partial authoritative total', async ({
   page,
 }) => {
   const state = await setupManaged(page);
   await page.goto(`/pedidos/${orderId}`);
-  await page
-    .getByRole('button', {
-      name: 'Revisar subtotal do item 1, tamanho M',
-      exact: true,
-    })
-    .click();
-  await page
-    .getByLabel('Subtotal do item 1, tamanho M', { exact: true })
-    .fill('');
-  await page
-    .getByRole('button', { name: 'Salvar subtotal revisado', exact: true })
-    .click();
+  const subtotal = itemsOf(page).getByLabel('Subtotal do tamanho M, item 1', {
+    exact: true,
+  });
+  await subtotal.fill('');
+  await subtotal.press('Enter');
+  await settled(state, 1);
   expect(state.writes[0].value).toEqual({
     action: 'review_subtotal',
     groupId,
@@ -929,61 +871,60 @@ test('T12 a blank subtotal saves an incomplete draft instead of a partial author
   });
   await expect(
     page.locator(`[data-line-id="${lineId}"]`).first(),
-  ).toContainText('Falta subtotal');
+  ).toContainText('Falta o subtotal');
   expect(state.order.pricing.totalCents).toBeNull();
   await page.reload();
   await expect(
     page.locator(`[data-line-id="${lineId}"]`).first(),
-  ).toContainText('Falta subtotal');
+  ).toContainText('Falta o subtotal');
 });
 
-for (const value of ['0', '-1,00', 'abc', '90.071.992.547.409,92']) {
-  test(`T12 rejects invalid managed subtotal ${value} before issuing a command`, async ({
+for (const value of ['0', '-1,00', 'abc', '9007199254740993,00']) {
+  test(`T12 EDIT-03 rejects invalid managed subtotal ${value} on the line before issuing a command`, async ({
     page,
   }) => {
     const state = await setupManaged(page);
     await page.goto(`/pedidos/${orderId}`);
-    await page
-      .getByRole('button', {
-        name: 'Revisar subtotal do item 1, tamanho M',
-        exact: true,
-      })
-      .click();
-    const input = page.getByLabel('Subtotal do item 1, tamanho M', {
+    const input = itemsOf(page).getByLabel('Subtotal do tamanho M, item 1', {
       exact: true,
     });
     await input.fill(value);
-    await page
-      .getByRole('button', { name: 'Salvar subtotal revisado', exact: true })
-      .click();
-    const form = page.getByRole('form', {
-      name: 'Revisar subtotal',
-      exact: true,
-    });
-    await expect(form.getByRole('alert')).toBeFocused();
+    await input.press('Enter');
     await expect(input).toHaveAttribute('aria-invalid', 'true');
+    await expect(
+      page.locator(`[data-line-id="${lineId}"]`).first().getByRole('alert'),
+    ).toBeVisible();
+    await expect(input).not.toHaveValue('');
     expect(state.writes).toHaveLength(0);
   });
 }
 
-test('T12 the same size in two groups updates only the selected server identities', async ({
+test('T12 EDIT-03 refuses an amount longer than the subtotal field instead of cutting it into a valid one', async ({
+  page,
+}) => {
+  const state = await setupManaged(page);
+  await page.goto(`/pedidos/${orderId}`);
+  const input = itemsOf(page).getByLabel('Subtotal do tamanho M, item 1', {
+    exact: true,
+  });
+  await input.fill('90.071.992.547.409,92');
+  await input.press('Enter');
+  await expect(input).toHaveAttribute('aria-invalid', 'true');
+  expect(state.writes).toHaveLength(0);
+});
+
+test('T12 EDIT-01 the same size in two groups updates only the selected server identities', async ({
   page,
 }) => {
   const state = await setupManaged(page, { secondGroup: true });
   const selected = state.order.ficha.sizePricing[1];
   await page.goto(`/pedidos/${orderId}`);
-  await page
-    .getByRole('button', {
-      name: 'Revisar subtotal do item 2, tamanho M',
-      exact: true,
-    })
-    .click();
-  await page
-    .getByLabel('Subtotal do item 2, tamanho M', { exact: true })
-    .fill('5,00');
-  await page
-    .getByRole('button', { name: 'Salvar subtotal revisado', exact: true })
-    .click();
+  const subtotal = itemsOf(page).getByLabel('Subtotal do tamanho M, item 2', {
+    exact: true,
+  });
+  await subtotal.fill('5,00');
+  await subtotal.press('Enter');
+  await settled(state, 1);
   expect(state.writes[0].value).toEqual({
     action: 'review_subtotal',
     groupId: selected.id,
@@ -993,72 +934,43 @@ test('T12 the same size in two groups updates only the selected server identitie
   expect(state.order.ficha.sizePricing[0].lines[0].subtotalCents).toBe(200);
 });
 
-test('T12 version conflict keeps the draft, disables resubmission and refreshes only after cancellation', async ({
+test('T12 EDIT-03 version conflict keeps what was typed at the field, offers "Recarregar pedido" and sends nothing again', async ({
   page,
 }) => {
   const state = await setupManaged(page, { conflict: true });
   await page.goto(`/pedidos/${orderId}`);
-  const trigger = page.getByRole('button', {
-    name: 'Revisar subtotal do item 1, tamanho M',
+  const input = itemsOf(page).getByLabel('Subtotal do tamanho M, item 1', {
     exact: true,
   });
-  await trigger.click();
-  await page
-    .getByLabel('Subtotal do item 1, tamanho M', { exact: true })
-    .fill('7,00');
-  const save = page.getByRole('button', {
-    name: 'Salvar subtotal revisado',
-    exact: true,
-  });
-  await save.click();
+  await input.fill('7,00');
+  await input.press('Enter');
+  const alert = page
+    .getByRole('alert')
+    .filter({ hasText: 'Este pedido mudou em outro lugar.' });
+  await expect(alert).toBeVisible();
   await expect(
-    page
-      .getByRole('form', { name: 'Revisar subtotal', exact: true })
-      .getByRole('alert'),
-  ).toBeFocused();
-  await expect(save).toBeDisabled();
+    alert.getByRole('button', { name: 'Recarregar pedido' }),
+  ).toBeVisible();
   await expect(
-    page.getByLabel('Subtotal do item 1, tamanho M', { exact: true }),
-  ).toHaveValue('7,00');
-  expect(state.writes).toHaveLength(1);
-  await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
-  await trigger.click();
-  await expect(
-    page.getByLabel('Subtotal do item 1, tamanho M', { exact: true }),
-  ).toHaveValue('2,00');
-});
-
-test('T12 Escape cancels monetary editing and returns focus without a write', async ({
-  page,
-}) => {
-  const state = await setupManaged(page);
-  await page.goto(`/pedidos/${orderId}`);
-  const trigger = page.getByRole('button', {
-    name: 'Revisar subtotal do item 1, tamanho M',
-    exact: true,
-  });
-  await trigger.click();
-  await page
-    .getByLabel('Subtotal do item 1, tamanho M', { exact: true })
-    .fill('9,00');
-  await page.keyboard.press('Escape');
-  await expect(trigger).toBeFocused();
-  await expect(
-    page.getByLabel('Subtotal do item 1, tamanho M', { exact: true }),
+    alert.getByRole('button', { name: 'Tentar de novo' }),
   ).toHaveCount(0);
-  expect(state.writes).toHaveLength(0);
+  await expect(input).toHaveAttribute('aria-invalid', 'true');
+  await expect(input).toHaveValue('7,00');
+  expect(state.writes).toHaveLength(1);
+  // The order as the server has it comes back with a new visit.
+  await page.reload();
+  await expect(
+    itemsOf(page).getByLabel('Subtotal do tamanho M, item 1', { exact: true }),
+  ).toHaveValue('2,00');
+  expect(state.writes).toHaveLength(1);
 });
 
-test('T12 empty managed composition remains an editable incomplete draft', async ({
+test('T12 EDIT-01 an empty managed composition remains an editable incomplete draft', async ({
   page,
 }) => {
   const state = await setupManaged(page, { empty: true });
   await page.goto(`/pedidos/${orderId}`);
-  await expect(
-    page.getByText(
-      'Informe o subtotal negociado para todas as peças de cada tamanho. O total é calculado pelo servidor.',
-    ),
-  ).toBeVisible();
+  await expect(itemsOf(page).getByText('Nenhum item ainda')).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Adicionar item', exact: true }),
   ).toBeVisible();
@@ -1270,15 +1182,7 @@ for (const stateName of ['confirmed', 'linked', 'outcome_unknown']) {
     await mockOrders(page, { orders: [order] });
     await page.goto(`/pedidos/${orderId}`);
     await expect(page.getByRole('button', { name: /Reabrir/u })).toHaveCount(0);
-    await expect(
-      page.getByRole('button', { name: /^Revisar subtotal do item/u }),
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole('button', { name: /^Alterar quantidade do item/u }),
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole('button', { name: /^Editar atributos do item/u }),
-    ).toHaveCount(0);
+    await expectItemsReadOnly(page);
   });
 }
 
@@ -1290,9 +1194,7 @@ test('T12 an already linked pending order may confirm unchanged without gaining 
   order.olistConfirmationAllowed = true;
   await mockOrders(page, { orders: [order] });
   await page.goto(`/pedidos/${orderId}`);
-  await expect(
-    page.getByRole('button', { name: /^Revisar subtotal do item/u }),
-  ).toHaveCount(0);
+  await expectItemsReadOnly(page);
   await page
     .getByRole('button', { name: 'Gerar pedido', exact: true })
     .first()
@@ -1343,12 +1245,10 @@ test('T12 a confirmed sale in the current account does not override a cross-acco
   await expect(
     page.getByRole('button', { name: 'Gerar pedido', exact: true }),
   ).toHaveCount(0);
-  await expect(
-    page.getByRole('button', { name: /^Revisar subtotal do item/u }),
-  ).toHaveCount(0);
+  await expectItemsReadOnly(page);
 });
 
-test('T12 two real tabs share versions while a stale monetary draft stays isolated until cancellation', async ({
+test('T12 EDIT-03 two real tabs share versions while a stale tab keeps its typed value at the field until it reloads', async ({
   page,
 }) => {
   const state = await setupManaged(page);
@@ -1358,43 +1258,30 @@ test('T12 two real tabs share versions while a stale monetary draft stays isolat
     page.goto(`/pedidos/${orderId}`),
     otherPage.goto(`/pedidos/${orderId}`),
   ]);
-  const triggerName = 'Revisar subtotal do item 1, tamanho M';
-  await page.getByRole('button', { name: triggerName, exact: true }).click();
-  await otherPage
-    .getByRole('button', { name: triggerName, exact: true })
-    .click();
-  const inputName = 'Subtotal do item 1, tamanho M';
-  await expect(page.getByLabel(inputName, { exact: true })).toHaveValue('2,00');
-  await expect(otherPage.getByLabel(inputName, { exact: true })).toHaveValue(
-    '2,00',
-  );
+  /** @param {import('@playwright/test').Page} tab */
+  const subtotalOf = (tab) =>
+    itemsOf(tab).getByLabel('Subtotal do tamanho M, item 1', { exact: true });
+  await expect(subtotalOf(page)).toHaveValue('2,00');
+  await expect(subtotalOf(otherPage)).toHaveValue('2,00');
   const originalVersion = state.order.version;
-  await page.getByLabel(inputName, { exact: true }).fill('4,00');
-  await page
-    .getByRole('button', { name: 'Salvar subtotal revisado', exact: true })
-    .click();
-  await expect(
-    page.locator(`[data-line-id="${lineId}"]`).first(),
-  ).toContainText('4,00');
+
+  await subtotalOf(page).fill('4,00');
+  await subtotalOf(page).press('Enter');
+  await settled(state, 1);
   expect(state.order.version).toBe(originalVersion + 1);
-  await otherPage.getByLabel(inputName, { exact: true }).fill('8,00');
-  await otherPage
-    .getByRole('button', { name: 'Salvar subtotal revisado', exact: true })
-    .click();
-  const form = otherPage.getByRole('form', {
-    name: 'Revisar subtotal',
-    exact: true,
-  });
-  await expect(form.getByRole('alert')).toBeFocused();
-  await expect(otherPage.getByLabel(inputName, { exact: true })).toHaveValue(
-    '8,00',
-  );
+  await expect(subtotalOf(page)).toHaveValue('4,00');
+
+  // The other tab still holds the older version: its write is refused, and
+  // what was typed stays where it was typed.
+  await subtotalOf(otherPage).fill('8,00');
+  await subtotalOf(otherPage).press('Enter');
   await expect(
-    otherPage.getByRole('button', {
-      name: 'Salvar subtotal revisado',
-      exact: true,
-    }),
-  ).toBeDisabled();
+    otherPage
+      .getByRole('alert')
+      .filter({ hasText: 'Este pedido mudou em outro lugar.' }),
+  ).toBeVisible();
+  await expect(subtotalOf(otherPage)).toHaveValue('8,00');
+  await expect(subtotalOf(otherPage)).toHaveAttribute('aria-invalid', 'true');
   expect(state.writes).toHaveLength(2);
   expect(
     state.writes.map((/** @type {any} */ write) => write.expectedVersion),
@@ -1402,29 +1289,17 @@ test('T12 two real tabs share versions while a stale monetary draft stays isolat
   expect(state.order.ficha.sizePricing[0].id).toBe(groupId);
   expect(state.order.ficha.sizePricing[0].lines[0].id).toBe(lineId);
   expect(state.order.ficha.sizePricing[0].lines[0].subtotalCents).toBe(400);
-  await otherPage
-    .getByRole('button', { name: 'Cancelar', exact: true })
-    .click();
-  await expect(
-    otherPage.locator(`[data-line-id="${lineId}"]`).first(),
-  ).toContainText('4,00');
-  await otherPage
-    .getByRole('button', { name: triggerName, exact: true })
-    .click();
-  await expect(otherPage.getByLabel(inputName, { exact: true })).toHaveValue(
-    '4,00',
-  );
-  await otherPage.getByLabel(inputName, { exact: true }).fill('9,00');
-  await otherPage
-    .getByRole('button', { name: 'Salvar subtotal revisado', exact: true })
-    .click();
-  await expect(
-    otherPage.locator(`[data-line-id="${lineId}"]`).first(),
-  ).toContainText('9,00');
-  expect(state.writes).toHaveLength(3);
+
+  // A new visit reads the order as it is, and its next write rides that version.
+  await otherPage.reload();
+  await expect(subtotalOf(otherPage)).toHaveValue('4,00');
+  await subtotalOf(otherPage).fill('9,00');
+  await subtotalOf(otherPage).press('Enter');
+  await settled(state, 3);
   expect(state.writes[2].expectedVersion).toBe(originalVersion + 1);
   expect(state.order.ficha.sizePricing[0].id).toBe(groupId);
   expect(state.order.ficha.sizePricing[0].lines[0].id).toBe(lineId);
+  expect(state.order.ficha.sizePricing[0].lines[0].subtotalCents).toBe(900);
   await otherPage.close();
 });
 
@@ -1433,7 +1308,7 @@ for (const visual of [
   { width: 390, height: 844, theme: 'light', name: 'light390' },
   { width: 1366, height: 900, theme: 'light', name: 'desktop1366' },
 ]) {
-  test(`T12 managed editor keyboard, axe and visual evidence ${visual.name}`, async ({
+  test(`T12 EDIT-01 EDIT-03 managed editor keyboard, axe and visual evidence ${visual.name}`, async ({
     page,
   }) => {
     await page.setViewportSize({ width: visual.width, height: visual.height });
@@ -1446,25 +1321,21 @@ for (const visual of [
       'data-theme',
       visual.theme,
     );
-    const trigger = page.getByRole('button', {
-      name: 'Revisar subtotal do item 1, tamanho M',
+    const items = itemsOf(page);
+    await expect(items).toHaveAttribute('data-items-state', 'edit');
+    const input = items.getByLabel('Subtotal do tamanho M, item 1', {
       exact: true,
     });
-    await trigger.focus();
+    // Keyboard only: focus the field, type a refused amount, Enter.
+    await input.focus();
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.keyboard.type('0');
     await page.keyboard.press('Enter');
-    const input = page.getByLabel('Subtotal do item 1, tamanho M', {
-      exact: true,
-    });
-    await expect(input).toBeFocused();
-    await input.fill('0');
-    await page
-      .getByRole('button', { name: 'Salvar subtotal revisado', exact: true })
-      .click();
+    await expect(input).toHaveAttribute('aria-invalid', 'true');
     await expect(
-      page
-        .getByRole('form', { name: 'Revisar subtotal', exact: true })
-        .getByRole('alert'),
-    ).toBeFocused();
+      page.locator(`[data-line-id="${lineId}"]`).first().getByRole('alert'),
+    ).toBeVisible();
+    await expect(input).toBeFocused();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     expect(
       await page.evaluate(
@@ -1480,14 +1351,11 @@ for (const visual of [
       path: `var/olist-t12-managed-${visual.name}.png`,
       fullPage: true,
     });
-    await input.focus();
-    await page.keyboard.press('Escape');
-    await expect(trigger).toBeFocused();
     expect(state.writes).toHaveLength(0);
   });
 }
 
-test('T12 an SSE event for another order preserves the open monetary draft and its original version', async ({
+test('T12 EDIT-03 an SSE event for another order preserves what is being typed and its original version', async ({
   page,
 }) => {
   const state = await setupManaged(page);
@@ -1535,34 +1403,26 @@ test('T12 an SSE event for another order preserves the open monetary draft and i
     });
   });
   await page.goto(`/pedidos/${orderId}`);
-  const trigger = page.getByRole('button', {
-    name: 'Revisar subtotal do item 1, tamanho M',
-    exact: true,
-  });
-  await trigger.click();
+  const items = itemsOf(page);
   const originalVersion = state.order.version;
-  const input = page.getByLabel('Subtotal do item 1, tamanho M', {
+  const input = items.getByLabel('Subtotal do tamanho M, item 1', {
     exact: true,
   });
   await input.fill('6,00');
   releaseEvent();
   await expect(page.getByText(/Revise o envio novamente/iu)).toBeVisible();
   await expect(input).toHaveValue('6,00');
-  await expect(
-    page.getByRole('form', { name: 'Revisar subtotal', exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('button', { name: 'Salvar subtotal revisado', exact: true }),
-  ).toBeEnabled();
+  await expect(items).toHaveAttribute('data-items-state', 'edit');
+  await expect(input).toBeEditable();
   await expect(
     page.getByText(/Pedido protegido por uma operação Olist/u),
   ).toHaveCount(0);
-  await page
-    .getByRole('button', { name: 'Salvar subtotal revisado', exact: true })
-    .click();
+  await input.press('Enter');
+  await settled(state, 1);
+  await expect(input).toHaveValue('6,00');
   await expect(
     page.locator(`[data-line-id="${lineId}"]`).first(),
-  ).toContainText('6,00');
+  ).toContainText('R$ 0,06 por peça');
   expect(state.writes).toHaveLength(1);
   expect(state.writes[0]).toEqual({
     expectedVersion: originalVersion,

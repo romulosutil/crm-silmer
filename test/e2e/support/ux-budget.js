@@ -20,6 +20,19 @@ const CONTROLS = [
   '[role="link"]',
 ].join(', ');
 
+// Decisão do PO em 10/11/2026 (design.md §16 e §20): na tela do pedido, com
+// edição no lugar, a meta conta ações — botão, link, item de menu, `summary`
+// e papel de botão ou link; campo, seleção e área de texto são dados, não
+// ações. As outras telas seguem contando todos os controles.
+const ACTIONS = [
+  'a[href]',
+  'button',
+  'summary',
+  '[role="button"]',
+  '[role="link"]',
+  '[role="menuitem"]',
+].join(', ');
+
 /** O conteúdo da página, sem a navegação global nem os diálogos. */
 export const MAIN = '#main-content';
 
@@ -31,6 +44,8 @@ const DIALOGS = 'dialog[open], [role="dialog"]';
  * @property {string} selector  CSS das raízes da região (uma ou mais).
  * @property {string} [exclude] CSS do que não conta (dentro da região).
  * @property {boolean} [firstScreen] só o que cruza a janela visível.
+ * @property {boolean} [actionsOnly] conta só ações (botões, links, itens de
+ *   menu, `summary`); campos de dados não contam. Só a tela do pedido.
  * @property {boolean} [outsideDialogs] ignora o que está em diálogos (a
  *   página atrás de um modal é outra região).
  * @property {string} [within] restringe a controles que casam este CSS
@@ -48,7 +63,8 @@ const DIALOGS = 'dialog[open], [role="dialog"]';
  */
 export function listControls(page, measure) {
   return page.evaluate(
-    ({ controls, dialogs, measure: options }) => {
+    ({ actions, controls: allControls, dialogs, measure: options }) => {
+      const controls = options.actionsOnly ? actions : allControls;
       const doc = globalThis.document;
       const view = {
         height: globalThis.innerHeight,
@@ -134,7 +150,7 @@ export function listControls(page, measure) {
         (element) => `${kindOf(element)} "${nameOf(element)}"`,
       );
     },
-    { controls: CONTROLS, dialogs: DIALOGS, measure },
+    { actions: ACTIONS, controls: CONTROLS, dialogs: DIALOGS, measure },
   );
 }
 

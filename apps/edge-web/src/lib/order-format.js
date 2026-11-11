@@ -165,14 +165,18 @@ export function joinPt(parts) {
 /**
  * PIT-06: `missingFields` in plain words, in the order the server lists them.
  * An entry this screen does not know is shown as it is, so a new blocker
- * appears as a raw name instead of disappearing from the list.
+ * appears as a raw name instead of disappearing from the list. A label is said
+ * once: every size still without its subtotal is "subtotais por tamanho a
+ * revisar", however many the server lists (EDIT-04).
  *
  * @param {unknown} missingFields
  * @returns {string[]}
  */
 export function missingFieldLabels(missingFields) {
   if (!Array.isArray(missingFields)) return [];
-  return missingFields.map((field) => missingFieldLabel(String(field)));
+  return [
+    ...new Set(missingFields.map((field) => missingFieldLabel(String(field)))),
+  ];
 }
 
 /** @param {string} field */
@@ -846,8 +850,13 @@ const LETTER_SIZE_ORDER = Object.freeze([
   'G5',
 ]);
 
-/** @param {unknown} size */
-function sizeKey(size) {
+/**
+ * A size as the comparisons read it: "M" and "m " are one size, accents
+ * aside (EDIT-01 reuses it to merge a size typed twice).
+ *
+ * @param {unknown} size
+ */
+export function sizeKey(size) {
   return String(size ?? '')
     .normalize('NFD')
     .replace(/\p{M}/gu, '')

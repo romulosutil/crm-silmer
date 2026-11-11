@@ -1,5 +1,13 @@
 import { expect } from '@playwright/test';
 
+import { OrderError } from '../../../modules/orders/src/domain/errors.js';
+import {
+  normalizeFicha,
+  validateItems,
+} from '../../../modules/orders/src/domain/ficha.js';
+import { applySizePricingCommand } from '../../../modules/orders/src/domain/size-pricing-composition.js';
+import { calculateSizePricing } from '../../../modules/orders/src/domain/size-pricing.js';
+
 // Mock da API de Pedidos para os testes de ponta a ponta, com dados
 // sintéticos. Uso: `await mockOrders(page, { orders: [pendingOrder] })`
 // antes de `page.goto(...)`; as fixtures exportadas servem de base para
@@ -139,6 +147,49 @@ export const pendingOrder = {
   version: 2,
 };
 
+// OLIST-43: the same pending order once it is priced by size — the ids are the
+// server's, every subtotal was reviewed by a human and the amount is their
+// sum (M: R$ 32,00 a piece). Only the payment method is left for "Gerar".
+export const PRICED_GROUP_ID = '6f0c2f0e-6f39-4c1c-9a57-0d0f0a5b7c11';
+export const PRICED_LINE_M = '0b9a4d7e-3c55-4a43-8a8e-51f2c1d9e001';
+export const PRICED_LINE_G = '0b9a4d7e-3c55-4a43-8a8e-51f2c1d9e002';
+
+export const pricedPendingOrder = {
+  ...pendingOrder,
+  ficha: {
+    ...pendingOrder.ficha,
+    sizePricing: [
+      {
+        id: PRICED_GROUP_ID,
+        lines: [
+          {
+            id: PRICED_LINE_M,
+            quantity: 100,
+            size: 'M',
+            subtotalCents: 320000,
+            subtotalReviewed: true,
+          },
+          {
+            id: PRICED_LINE_G,
+            quantity: 50,
+            size: 'G',
+            subtotalCents: 160000,
+            subtotalReviewed: true,
+          },
+        ],
+      },
+    ],
+  },
+  finalAmountCents: 480000,
+  missingFields: ['paymentCondition'],
+  pricing: {
+    complete: true,
+    groups: [{ id: PRICED_GROUP_ID, subtotalCents: 480000 }],
+    issues: [],
+    totalCents: 480000,
+  },
+};
+
 // The same confirmed order, owned by the signed-in seller: only the owner (or
 // an admin) sees the edit buttons.
 export const ownConfirmedOrder = {
@@ -160,40 +211,104 @@ export const extraPending = {
 };
 
 /**
- * The server recomputes totals and what is missing on every write; the mock
- * does the same, so the page is never asserted against a stale derived field.
+ * What the server derives from the ficha on every read and write: the pieces,
+ * what is missing and, once the order is priced by size (OLIST-43), the
+ * `pricing` summary and the amount it adds up to.
  *
- * @param {any} order @param {string} section @param {any} value
+ * @param {any} order an order whose `ficha` is the one to derive from
  */
-function applySection(order, section, value) {
-  const ficha = { ...order.ficha };
-  if (section === 'summary') {
-    ficha.summary = { ...ficha.summary, ...value };
-  } else if (section === 'items') {
-    ficha.items = value;
-  } else if (section === 'artwork') {
-    ficha.artwork = { ...ficha.artwork, ...value };
-  } else {
-    ficha.observations = value;
-  }
-  const totalPieces = ficha.items.reduce(
-    /** @param {number} total @param {any} item */
-    (total, item) =>
-      total +
-      item.grade.reduce(
-        /** @param {number} sum @param {any} line */
-        (sum, line) => sum + line.quantidade,
-        0,
-      ),
-    0,
-  );
+function derivedFields(order) {
+  const groups = order.ficha.sizePricing;
+  const pricing = Array.isArray(groups) ? calculateSizePricing(groups) : null;
+  const priced = pricing
+    ? { finalAmountCents: pricing.totalCents, pricing }
+    : {};
   return {
+    ...priced,
+    missingFields: missingFor({ ...order, ...priced }),
+    totalPieces: order.ficha.items.reduce(
+      /** @param {number} total @param {any} item */
+      (total, item) =>
+        total +
+        item.grade.reduce(
+          /** @param {number} sum @param {any} line */
+          (sum, line) => sum + line.quantidade,
+          0,
+        ),
+      0,
+    ),
+  };
+}
+
+/**
+ * `PATCH /orders/:id/sections/:section` as the server answers it, over one
+ * order kept in memory. The order is changed in place on success, so whoever
+ * holds it (a test, two tabs) reads what the page was answered with.
+ *
+ * The rules are the server's own, not a copy: the commands of `size-pricing`
+ * run through `applySizePricingCommand` and the whole-array write of `items`
+ * through `validateItems`, so a refusal here is a refusal there (exact keys
+ * per action, `initialize` once and never on a reopened order, a repeated
+ * size, the review flag reset by a change). The ids are issued here, like
+ * there. The version is fenced first; each write adds one to it.
+ *
+ * One deliberate difference: the server lists a bare `sizePricing` as missing
+ * for an order that never started its subtotals; the fixtures of the older
+ * journeys (PFI-15, PCL-07) are written without it, so it is derived only for
+ * an order that has `ficha.sizePricing`.
+ *
+ * @param {any} order
+ * @param {string} section
+ * @param {{expectedVersion?: unknown, value?: unknown}} body
+ * @returns {{status: 200, order: any}|{status: number, error: Record<string, unknown>}}
+ */
+export function writeOrderSection(order, section, body) {
+  if (body?.expectedVersion !== order.version) {
+    return { error: { code: 'VERSION_CONFLICT' }, status: 409 };
+  }
+  /** @type {any} */
+  let ficha = { ...order.ficha };
+  const value = /** @type {any} */ (body.value);
+  try {
+    if (section === 'size-pricing') {
+      ficha = applySizePricingCommand(
+        { ...order, ficha: normalizeFicha(order.ficha) },
+        value,
+      );
+    } else if (section === 'items') {
+      if (ficha.sizePricing !== undefined) {
+        return { error: { code: 'SIZE_PRICING_ITEMS_MANAGED' }, status: 409 };
+      }
+      ficha.items = validateItems(value);
+    } else if (section === 'summary') {
+      ficha.summary = { ...ficha.summary, ...value };
+    } else if (section === 'artwork') {
+      ficha.artwork = { ...ficha.artwork, ...value };
+    } else {
+      ficha.observations = value;
+    }
+  } catch (cause) {
+    if (!(cause instanceof OrderError)) throw cause;
+    const refusal = /** @type {any} */ (cause);
+    return {
+      error: {
+        code: refusal.code,
+        ...(refusal.fields ? { fields: [...refusal.fields] } : {}),
+        ...(refusal.index === undefined ? {} : { index: refusal.index }),
+        ...(refusal.itemIndex === undefined
+          ? {}
+          : { itemIndex: refusal.itemIndex }),
+      },
+      status: refusal.statusCode,
+    };
+  }
+  Object.assign(order, {
     ficha,
-    missingFields: missingFor({ ...order, ficha }),
-    totalPieces,
+    ...derivedFields({ ...order, ficha }),
     updatedAt: new Date().toISOString(),
     version: order.version + 1,
-  };
+  });
+  return { order, status: 200 };
 }
 
 /** @param {any} order @param {string} action @param {any} body */
@@ -248,6 +363,8 @@ function missingFor(order) {
   if (order.status === 'confirmado') return [];
   /** @type {string[]} */
   const missing = [];
+  const groups = order.ficha.sizePricing;
+  const pricing = Array.isArray(groups) ? calculateSizePricing(groups) : null;
   if (order.ficha.items.length === 0) missing.push('items');
   order.ficha.items.forEach(
     /** @param {any} item @param {number} index */ (item, index) => {
@@ -270,9 +387,17 @@ function missingFor(order) {
   ) {
     missing.push('summary.data_entrega_confirmada');
   }
-  if (!order.finalAmountCents) missing.push('finalAmount');
+  // OLIST-43: an order priced by size reads its amount from the subtotals.
+  if (!(pricing ? pricing.totalCents : order.finalAmountCents)) {
+    missing.push('finalAmount');
+  }
   if (!order.paymentCondition) missing.push('paymentCondition');
-  return missing;
+  for (const issue of pricing?.issues ?? []) {
+    missing.push(
+      ['sizePricing', issue.groupId, issue.lineId].filter(Boolean).join('.'),
+    );
+  }
+  return [...new Set(missing)];
 }
 
 /**
@@ -388,8 +513,12 @@ async function routeFiles(route, request, match, store, options) {
 }
 
 /**
+ * `sectionFailure` refuses one section write and lets the others through (a
+ * field that fails while the next one saves); `writeFailure` refuses them
+ * all. The answer is the live list of orders, as the writes left it.
+ *
  * @param {import('@playwright/test').Page} page
- * @param {{user?: Record<string, unknown>, orders?: any[], failDetailOnce?: boolean, failListOnce?: boolean, liveEvent?: Record<string, unknown>|null, onDetail?: (orderId: string) => void, onList?: (params: URLSearchParams) => void, onWrite?: (call: {section?: string, action?: string, body: any}) => void, pages?: any[][], writeFailure?: {status: number, body: Record<string, unknown>, persist?: Record<string, unknown>}, files?: Record<string, {final: any, references: any[]}>, onUpload?: (call: {filename: string, hasThumbnail: boolean, slot: string}) => void, onRemove?: (fileId: string) => void, uploadFailure?: {status: number, body: Record<string, unknown>}}} [options]
+ * @param {{user?: Record<string, unknown>, orders?: any[], failDetailOnce?: boolean, failListOnce?: boolean, liveEvent?: Record<string, unknown>|null, onDetail?: (orderId: string) => void, onList?: (params: URLSearchParams) => void, onWrite?: (call: {section?: string, action?: string, body: any}) => void, pages?: any[][], writeFailure?: {status: number, body: Record<string, unknown>, persist?: Record<string, unknown>}, sectionFailure?: (call: {section: string, body: any}) => {status: number, body: Record<string, unknown>}|null|undefined|void, files?: Record<string, {final: any, references: any[]}>, onUpload?: (call: {filename: string, hasThumbnail: boolean, slot: string}) => void, onRemove?: (fileId: string) => void, uploadFailure?: {status: number, body: Record<string, unknown>}}} [options]
  */
 export async function mockOrders(page, options = {}) {
   // A write mutates the order it answers with, so each test gets its own
@@ -488,12 +617,25 @@ export async function mockOrders(page, options = {}) {
         });
         return;
       }
+      const refusal = options.sectionFailure?.({ body, section: section[2] });
+      if (refusal) {
+        await route.fulfill({
+          status: refusal.status,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: refusal.body }),
+        });
+        return;
+      }
       const current = orders.find((candidate) => candidate.id === section[1]);
-      const next = applySection(current, section[2], body.value);
-      Object.assign(current, next);
+      const result = writeOrderSection(current, section[2], body);
       await route.fulfill({
+        status: result.status,
         contentType: 'application/json',
-        body: JSON.stringify({ order: current }),
+        body: JSON.stringify(
+          result.status === 200
+            ? { order: current }
+            : { error: /** @type {any} */ (result).error },
+        ),
       });
       return;
     }
@@ -610,4 +752,5 @@ export async function mockOrders(page, options = {}) {
       body: JSON.stringify({ error: { code: 'ORDER_NOT_FOUND' } }),
     });
   });
+  return { orders };
 }

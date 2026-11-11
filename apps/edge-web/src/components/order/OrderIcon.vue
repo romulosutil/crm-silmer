@@ -5,6 +5,7 @@ const PATHS = Object.freeze({
   check: ['M20 6 9 17l-5-5'],
   chevron: ['m6 9 6 6 6-6'],
   clock: ['M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z', 'M12 8v4l2.5 2'],
+  down: ['M12 5v14', 'm19 12-7 7-7-7'],
   download: ['M12 4v12', 'm7 11 5 5 5-5', 'M4 20h16'],
   copy: [
     'M10 8h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z',
@@ -20,6 +21,12 @@ const PATHS = Object.freeze({
     'M8 11V7a4 4 0 0 1 8 0v4',
   ],
   minus: ['M5 12h14'],
+  // EDIT-01: "Mais ações do item N".
+  more: [
+    'M5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z',
+    'M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z',
+    'M19 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z',
+  ],
   pencil: ['M12 20h9', 'M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'],
   plus: ['M12 5v14', 'M5 12h14'],
   printer: [
@@ -28,6 +35,7 @@ const PATHS = Object.freeze({
     'M6 14h12v7H6z',
   ],
   swap: ['M4 8h13', 'm14 4 4 4-4 4', 'M20 16H7', 'm10 12-4 4 4 4'],
+  up: ['M12 19V5', 'm5 12 7-7 7 7'],
   trash: ['M3 6h18', 'M8 6V4h8v2', 'm6 6 1 14h10l1-14'],
   upload: [
     'M12 16V4',

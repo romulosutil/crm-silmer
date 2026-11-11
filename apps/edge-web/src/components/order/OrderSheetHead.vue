@@ -17,6 +17,9 @@ import OrderIcon from './OrderIcon.vue';
  * named by the title alone, and "Editar <seção>" stays a sibling of the h2,
  * shown only while the section is open. While any section is in edit the
  * heads wait like the "Editar" buttons do, so nothing closes over a draft.
+ *
+ * EDIT-01 (design.md §20): a section edited in place has no "Editar"; it
+ * fills the optional `status` slot with its SaveStatus instead.
  */
 const props = defineProps({
   blocked: { type: Boolean, default: false },
@@ -135,6 +138,7 @@ async function toggle() {
     >
       Salve ou cancele a edição aberta.
     </p>
+    <slot name="status" />
     <template v-if="expanded">
       <span v-if="editing" class="op-editing-tag">Editando</span>
       <template v-else-if="canEdit">

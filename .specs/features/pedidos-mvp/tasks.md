@@ -2300,3 +2300,29 @@ validate` passou (1.393 testes aprovados, cinco ignorados); diff check
   um commit da T139 sobre a entrega documental #259. Testes PostgreSQL reais
   ampliados na suíte já executada pelo CI; indisponíveis localmente por falta
   de banco. CI e homologação remota da nova UI são gates distintos da T138.
+
+## Edição no lugar (ADR 083, 10/11/2026)
+
+Decisão do PO de 10/11/2026
+([ADR 083](../../../docs/adr/083-edicao-no-lugar.md)), a partir do protótipo
+de "Itens e especificações": campos abertos com gravação por campo no lugar
+de "Editar" + seção → Salvar/Cancelar; subtotais desde a primeira linha; sem
+botões de − e +; sem reordenar tamanhos; a meta de controles da primeira
+tela passa a contar ações. Começa por "Itens e especificações" e segue para
+as outras seções do pedido, uma task por seção. Requisitos: EDIT-01–EDIT-08
+nesta spec.
+
+### T140: Itens e especificações com edição no lugar
+
+- **Requisitos:** EDIT-01–EDIT-08; emenda PFI-17, PFI-18 e PIT-02; preserva
+  PFI-04, PFI-10, PFI-13, PFI-14, PFI-15, PFI-16, PIT-01, PIT-03, PIT-05,
+  PIT-09 e OLIST-43.
+- **Arquivos:** `apps/edge-web/src/components/order/OrderItemsSection.vue`
+  (único componente da seção; `OrderPricedItemsSection.vue` sai),
+  `OrderSheetHead.vue`, `apps/edge-web/src/lib/order-items-inline.js`,
+  estilos da tela do pedido e os testes E2E do pedido.
+- **Aceite:** nenhum "Editar itens"; um comando por alteração, em série;
+  erro no campo com o valor preservado; pendência ligada ao campo; linha em
+  branco cria tamanho; operação completa por teclado; alvos de 44 px no
+  toque; reflow a 320 px.
+- **Gate:** `npm run validate` e E2E do pedido.

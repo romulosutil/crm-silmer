@@ -248,22 +248,31 @@ function describeWriteError(cause) {
  * @param {string} section @param {unknown} value
  */
 async function saveSection(section, value) {
+  const sentVersion = editingVersion.value ?? order.value.version;
   try {
     const response = await request(
       `/api/v1/orders/${encodeURIComponent(props.orderId)}/sections/${section}`,
       {
-        body: {
-          expectedVersion: editingVersion.value ?? order.value.version,
-          value,
-        },
+        body: { expectedVersion: sentVersion, value },
         idempotencyKey: commandKey(),
         method: 'PATCH',
       },
     );
     order.value = response.data.order;
+    // EDIT-01: a save of a section edited in place may still be in flight
+    // when another section opens its editor over the same version; that
+    // editor then rides the version this answer brought, not a stale one.
+    if (editingVersion.value !== null && editingVersion.value === sentVersion) {
+      editingVersion.value = order.value?.version ?? null;
+    }
     return { ok: true };
   } catch (cause) {
-    if (Number(cause?.status) === 409) pendingLiveRefresh = true;
+    if (Number(cause?.status) === 409) {
+      // With no editor open nothing waits for Salvar or Cancelar: the page
+      // refreshes now, so the next in-place save does not meet the same 409.
+      if (editingSection.value === '') scheduleLiveRefresh();
+      else pendingLiveRefresh = true;
+    }
     return {
       code: String(/** @type {any} */ (cause)?.code ?? ''),
       fields: /** @type {any} */ (cause)?.problem?.fields ?? [],
@@ -576,6 +585,9 @@ provide('orderEditing', {
   isSectionOpen,
   openSection,
   print: () => generatePdf(),
+  // EDIT-01: the way out of a version conflict in a section edited in place.
+  // Resolves to whether the order was replaced.
+  reload: () => load(true, true),
   /** @param {string} section */
   request(section) {
     editRequest.value = { at: Date.now(), section };
@@ -608,8 +620,13 @@ provide('orderEditing', {
   toggleSection,
 });
 
-/** @param {boolean} [silent] */
-async function load(silent = false) {
+/**
+ * @param {boolean} [silent]
+ * @param {boolean} [force] EDIT-01: an explicit reload takes what the server
+ *   answers, whatever version the page holds
+ * @returns {Promise<boolean>} whether the order on the page was replaced
+ */
+async function load(silent = false, force = false) {
   controller?.abort();
   const currentController = new AbortController();
   controller = currentController;
@@ -617,12 +634,25 @@ async function load(silent = false) {
     loading.value = true;
     error.value = '';
   }
+  let replaced = false;
   try {
     const response = await request(
       `/api/v1/orders/${encodeURIComponent(props.orderId)}`,
       { signal: currentController.signal },
     );
-    order.value = response.data.order;
+    // EDIT-01: a section edited in place saves without pausing the live
+    // refresh; a refresh that left before the save must not bring the older
+    // order back, or the next save would lose to a conflict of its own.
+    const next = response.data.order;
+    if (
+      !silent ||
+      force ||
+      !order.value ||
+      !(Number(next?.version) < Number(order.value.version))
+    ) {
+      order.value = next;
+      replaced = true;
+    }
     notFound.value = false;
     error.value = '';
     // PFI-18: chosen once, with the first order read; a live refresh never
@@ -634,11 +664,11 @@ async function load(silent = false) {
       sectionChosen = true;
     }
   } catch (cause) {
-    if (cause?.name === 'AbortError') return;
+    if (cause?.name === 'AbortError') return false;
     if (Number(cause?.status) === 404) {
       notFound.value = true;
       order.value = null;
-      return;
+      return false;
     }
     error.value = order.value
       ? 'Não foi possível atualizar o pedido. Os dados exibidos podem estar desatualizados.'
@@ -661,6 +691,7 @@ async function load(silent = false) {
       }
     }
   }
+  return replaced;
 }
 
 function retryInitialLoad() {

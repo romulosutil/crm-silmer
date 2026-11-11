@@ -66,7 +66,8 @@ const SCREENS = [
       editar: 1, // (1)
       // ACT-01: four filters + five interactive queue objects, no inline commands.
       painel: { gestor: 11, vendedor: 9 },
-      pedidoPrimeiraTela: 12, // (5; documento com 1.646 px)
+      // Decisão do PO em 10/11/2026: no pedido a meta conta ações.
+      pedidoPrimeiraTela: 12,
       pedidosPrimeiraTela: 12, // (7)
     },
     name: 'celular 390×844',
@@ -79,10 +80,12 @@ const SCREENS = [
       // INBOX-UX-03: the same four compact header actions as on the phone.
       conversaCabecalho: 4,
       conversaDepois: 24, // (17)
-      editar: 5, // (5)
+      // Decisão do PO em 10/11/2026: o pedido pendente não tem "Editar itens";
+      // sobram resumo, datas, arte e observações.
+      editar: 4, // (4)
       // ACT-01: queue 9 + selected detail 3 + performance period/expander 2.
       painel: { gestor: 12, vendedor: 14 },
-      pedidoPrimeiraTela: 16, // (6)
+      pedidoPrimeiraTela: 16,
       pedidosPrimeiraTela: 19, // (10)
     },
     name: 'notebook 1366×768',
@@ -236,7 +239,7 @@ for (const screen of SCREENS) {
       }
     });
 
-    test('PFI-15 a PFI-19: o pedido pendente com um item cabe no orçamento', async ({
+    test('PFI-15 a PFI-19, EDIT-01: o pedido pendente com um item cabe no orçamento de ações', async ({
       page,
     }) => {
       await page.clock.setFixedTime(TODAY);
@@ -265,16 +268,29 @@ for (const screen of SCREENS) {
         within: 'button',
       });
       const edits = buttons.filter((name) => /^button "Editar/u.test(name));
+      // EDIT-01: os itens se editam no lugar, sem "Editar itens".
+      expect(
+        buttons.filter((name) => /^button "Editar itens/u.test(name)),
+      ).toEqual([]);
+      await expect(
+        page.getByRole('button', { name: /^Editar itens/u }),
+      ).toHaveCount(0);
       record('Pedido: botões "Editar"', edits, screen.budgets.editar);
       expect(
         edits.length,
         `"Editar" visíveis: ${edits.join('; ')}`,
       ).toBeLessThanOrEqual(screen.budgets.editar);
 
+      // Decisão do PO em 10/11/2026: só ações contam; campos de dados não.
       await budget(
         page,
-        'Pedido: primeira tela',
-        { firstScreen: true, selector: MAIN },
+        'Pedido: primeira tela (ações)',
+        { actionsOnly: true, firstScreen: true, selector: MAIN },
+        screen.budgets.pedidoPrimeiraTela,
+      );
+      record(
+        'Pedido: primeira tela (todos os controles, informativo)',
+        await listControls(page, { firstScreen: true, selector: MAIN }),
         screen.budgets.pedidoPrimeiraTela,
       );
       const primaries = await expectOnePrimaryPerRegion(page);

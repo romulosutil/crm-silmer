@@ -130,7 +130,7 @@ Leia AGENTS.md, RULES.md, spec OLC, ADRs 079/080/082 e design.md.
 
 Objetivo: no detalhe de Confirmado, clicar Gerar no Olist e acompanhar a operação na mesma página.
 
-1. Reutilize OrderOlistPanel.vue, OrderPricedItemsSection.vue, olist-feedback.js, UsersView e configuração administrativa existentes. Releia os componentes atuais antes de editar: rótulo Modelo, ficha v8 por item e melhorias do Dashboard já foram entregues. Preserve Gerar pedido, Gerar PDF, billing, loja e todos os templates/gates.
+1. Reutilize OrderOlistPanel.vue, OrderItemsSection.vue, olist-feedback.js, UsersView e configuração administrativa existentes. Releia os componentes atuais antes de editar: rótulo Modelo, ficha v8 por item e melhorias do Dashboard já foram entregues. Preserve Gerar pedido, Gerar PDF, billing, loja e todos os templates/gates.
 
 2. Corrija a separação de pendências. Cadastro completo é obrigatório no bloco Olist: mostre campos faltantes e quem pode corrigir; não apresente cadastro como opcional nem esconda o bloqueio para habilitar envio. Essas pendências não entram no progresso de fechar o Pedido ou gerar PDF. Evite motivos duplicados; o resumo visual não substitui a validação do servidor.
 

@@ -1010,8 +1010,9 @@ dela continua no modelo anterior.
   só por placeholder ou `aria-label`. Em tabela editável o cabeçalho da
   coluna é o rótulo visível e cada célula repete o nome em `aria-label`
   ("Quantidade do tamanho M, item 1").
-- Valor em caixa alta (modelo, cor, malha, gola, tamanho) é transformação de
-  exibição e de gravação; o rótulo nunca é em caixa alta.
+- O texto é gravado e mostrado como foi digitado, só sem espaços nas pontas:
+  a ficha imprime o que está gravado. `autocapitalize` apenas sugere caixa
+  alta no teclado; não há `text-transform` em campo nem em rótulo.
 
 ### Pendência no campo (`FieldGap`)
 
@@ -1035,7 +1036,13 @@ dela continua no modelo anterior.
   oferece recarregar.
 - Mudança que invalida outro dado mostra o efeito ao lado dele, com ação
   nomeada: quantidade alterada marca o subtotal com atenção e "Manter R$
-  640,00" (`RULES.md`, revisão humana do subtotal).
+  640,00" (`RULES.md`, revisão humana do subtotal). Quando a mesma mudança
+  invalida várias linhas, uma ação só resolve todas ("Manter os 8
+  subtotais").
+- Depois de salvar, o foco só é movido se a pessoa não o levou a outro
+  lugar; uma resposta atrasada nunca rouba o cursor.
+- Seção não migrada em edição deixa a seção com edição no lugar em leitura,
+  com o motivo, até Salvar ou Cancelar.
 - Totais e somas são recalculados enquanto se digita e nunca são digitados.
 
 ### Listas editáveis (`BlankRow`)
@@ -1043,6 +1050,9 @@ dela continua no modelo anterior.
 - Toda lista em que se digita termina numa linha em branco, com borda
   tracejada. Preencher e sair dela, ou Enter, cria a linha; outra em branco
   aparece no lugar. Não existe botão "Adicionar linha".
+- A linha só é criada com tudo o que o domínio exige dela (no pedido,
+  tamanho e quantidade). Sair com a linha incompleta mantém o texto e diz o
+  que falta, sem erro.
 - A `BlankRow` não tem botão de remover, não gera pendência e não entra em
   total.
 - Colar uma lista na primeira célula cria várias linhas de uma vez ("P 20 M

@@ -10,6 +10,10 @@ import {
   ONE_PIXEL_PNG,
   ownConfirmedOrder,
   pendingOrder,
+  PRICED_GROUP_ID,
+  PRICED_LINE_G,
+  PRICED_LINE_M,
+  pricedPendingOrder,
   syntheticFile,
 } from './support/orders-mock.js';
 
@@ -33,6 +37,147 @@ function fileTiles(files) {
     hasNot: files.page().getByRole('button', { name: /^Adicionar arquivo/u }),
   });
 }
+
+// EDIT-01 (ADR 083, design.md §20): "Itens e especificações" is edited in
+// place — no "Editar itens", no Salvar/Cancelar; each change is one PATCH.
+const ITEMS = 'Itens e especificações';
+
+/**
+ * The section writes the page sent, in order, as `{section, ...body}`.
+ *
+ * @param {any[]} writes
+ */
+function sectionWrites(writes) {
+  return writes
+    .filter((call) => call.section)
+    .map((call) => ({ section: call.section, ...call.body }));
+}
+
+/**
+ * Waits until the page sent `count` writes and the last one was answered:
+ * the one status region of the items reads "Salvo" (EDIT-08).
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {any[]} writes @param {number} count
+ */
+async function expectSaved(page, writes, count) {
+  await expect.poll(() => writes.length).toBe(count);
+  await expect(
+    page.getByRole('region', { name: ITEMS }).getByRole('status'),
+  ).toHaveText('Salvo');
+}
+
+/**
+ * One command of the section `size-pricing`, as the page sends it.
+ *
+ * @param {number} expectedVersion @param {Record<string, unknown>} value
+ */
+function command(expectedVersion, value) {
+  return { expectedVersion, section: 'size-pricing', value };
+}
+
+/** A new item as "Adicionar item" sends it: every key, nothing filled. */
+const BLANK_ITEM = {
+  cor: '',
+  cor_costas: '',
+  cor_frente: '',
+  cor_manga_direita: '',
+  cor_manga_esquerda: '',
+  estampa: '',
+  gola: '',
+  grade: [],
+  malhas: [],
+  modelo: '',
+  publico: '',
+  quantidade_informada: null,
+  tipo: '',
+  tipo_servico: '',
+  vies_gola: '',
+  vies_mangas: '',
+};
+
+const OTHER_SELLER = { id: 'seller-ricardo', name: 'Ricardo Lima' };
+
+// An item with the principal points only, so every optional is still to add.
+const bareItemOrder = {
+  ...pendingOrder,
+  ficha: {
+    ...pendingOrder.ficha,
+    items: [
+      {
+        cor: 'BRANCA',
+        gola: 'GOLA REDONDA',
+        grade: [
+          { quantidade: 100, tamanho: 'M' },
+          { quantidade: 50, tamanho: 'G' },
+        ],
+        malhas: ['DRY FIT 100% POLIÉSTER'],
+        tipo: 'CAMISETA',
+        tipo_servico: 'SUBLIMAÇÃO TOTAL',
+      },
+    ],
+  },
+};
+
+// Two priced items, to move and to remove.
+const SECOND_GROUP_ID = '6f0c2f0e-6f39-4c1c-9a57-0d0f0a5b7c12';
+const twoItemsOrder = {
+  ...pricedPendingOrder,
+  ficha: {
+    ...pricedPendingOrder.ficha,
+    items: [
+      pendingOrder.ficha.items[0],
+      { ...pendingOrder.ficha.items[0], tipo: 'REGATA' },
+    ],
+    sizePricing: [
+      pricedPendingOrder.ficha.sizePricing[0],
+      {
+        id: SECOND_GROUP_ID,
+        lines: [
+          {
+            id: '0b9a4d7e-3c55-4a43-8a8e-51f2c1d9e003',
+            quantity: 100,
+            size: 'M',
+            subtotalCents: 320000,
+            subtotalReviewed: true,
+          },
+          {
+            id: '0b9a4d7e-3c55-4a43-8a8e-51f2c1d9e004',
+            quantity: 50,
+            size: 'G',
+            subtotalCents: 160000,
+            subtotalReviewed: true,
+          },
+        ],
+      },
+    ],
+  },
+  finalAmountCents: 960000,
+  pricing: {
+    complete: true,
+    groups: [
+      { id: PRICED_GROUP_ID, subtotalCents: 480000 },
+      { id: SECOND_GROUP_ID, subtotalCents: 480000 },
+    ],
+    issues: [],
+    totalCents: 960000,
+  },
+  totalPieces: 300,
+};
+
+// A confirmed order reopened without subtotals by size: it keeps the
+// whole-list write of the section `items` (EDIT-07).
+const reopenedOrder = {
+  ...pendingOrder,
+  confirmedAt: '2026-09-09T19:20:00.000Z',
+  confirmedBy: { id: 'seller-marina', name: 'Marina Aguiar' },
+  finalAmountCents: 482000,
+  missingFields: [],
+  orderDate: '2026-09-09',
+  paymentCondition: 'pix',
+  reopenedAt: '2026-09-13T12:00:00.000Z',
+  reopenedBy: { id: 'seller-marina', name: 'Marina Aguiar' },
+};
 
 test('opens the order page inside Pedidos, with the trail and the sections in order', async ({
   page,
@@ -140,7 +285,18 @@ const incompleteOrder = {
   ],
 };
 
-test('lists exactly what is missing to generate, point by point (PFI-09, PFI-15, PFI-16, PIT-05, PIT-06, TEC-03)', async ({
+// The same order once priced by size, every subtotal reviewed (OLIST-43).
+const incompletePricedOrder = {
+  ...incompleteOrder,
+  ficha: {
+    ...incompleteOrder.ficha,
+    sizePricing: pricedPendingOrder.ficha.sizePricing,
+  },
+  finalAmountCents: pricedPendingOrder.finalAmountCents,
+  pricing: pricedPendingOrder.pricing,
+};
+
+test('lists exactly what is missing to generate, point by point, and fills the items in place (PFI-09, PFI-15, PFI-16, PIT-05, PIT-06, TEC-03, EDIT-04, EDIT-07)', async ({
   page,
 }) => {
   /** @type {any[]} */
@@ -198,16 +354,32 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PFI-15,
     'Falta para gerar: cor do item 1, gola do item 1 e quem faz a arte. Valor e forma de pagamento você informa ao gerar.',
   );
 
-  // The next step opens the items editor.
+  // EDIT-04: the next step opens no editor; it lands on the first pending
+  // field of the items, which saves by itself.
   await progress.getByRole('button', { name: 'Completar itens' }).click();
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await items.getByLabel('Cor', { exact: true }).fill('BRANCA');
-  await items.getByLabel('Gola', { exact: true }).fill('GOLA V');
-  await items.getByRole('button', { name: 'Salvar itens' }).click();
+  const items = page.getByRole('region', { name: ITEMS });
+  const colour = items.getByLabel('Cor', { exact: true });
+  await expect(colour).toBeFocused();
+  await colour.fill('AZUL');
+  await colour.press('Enter');
+  const collar = items.getByLabel('Gola', { exact: true });
+  await collar.fill('GOLA V');
+  await collar.press('Enter');
+  // EDIT-07: the first write started the subtotals by size, so the items
+  // now ask for them instead of the two points.
+  await expect(readiness).not.toContainText('do item 1');
+  await expect(readiness).toContainText('subtotais por tamanho a revisar');
+  await expect(count).toHaveText('1 de 3 prontos');
+  for (const [size, amount] of [
+    ['M', '3.200,00'],
+    ['G', '1.600,00'],
+  ]) {
+    const subtotal = items.getByLabel(`Subtotal do tamanho ${size}, item 1`);
+    await subtotal.fill(amount);
+    await subtotal.press('Enter');
+  }
   await expect(count).toHaveText('2 de 3 prontos');
-  await expect(readiness).toHaveText(
-    'Falta para gerar: quem faz a arte. Valor e forma de pagamento você informa ao gerar.',
-  );
+  await expect(readiness).toHaveText(/^Falta para gerar: quem faz a arte\./u);
 
   // ADR 020: the last step sends the seller to who makes the art.
   await progress
@@ -222,9 +394,7 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PFI-15,
   await expect(count).toHaveText('Tudo pronto para gerar · 3 de 3');
   await expect(progress.getByRole('listitem')).toHaveCount(0);
   await expect(progress.getByRole('button')).toHaveCount(0);
-  await expect(readiness).toHaveText(
-    'Tudo pronto. Valor e forma de pagamento você informa ao gerar.',
-  );
+  await expect(readiness).toHaveText(/^Tudo pronto\./u);
   await expect(generate).not.toHaveAttribute('aria-disabled', /./u);
   // The paid day stays empty: generating means paid until the CRM handles
   // payments.
@@ -234,9 +404,12 @@ test('lists exactly what is missing to generate, point by point (PFI-09, PFI-15,
   await closing.getByRole('button', { name: 'Gerar pedido' }).click();
   const dialog = page.getByRole('dialog', { name: 'Gerar o pedido 07-CRM?' });
   await expect(dialog).toBeVisible();
-  // PFI-19: the amount and the payment method are asked here, empty.
-  await expect(dialog.getByLabel('Valor final')).toBeFocused();
-  await expect(dialog.getByLabel('Valor final')).toHaveValue('');
+  // OLIST-43: priced by size, the dialog reads the total of the subtotals
+  // and asks only for the payment method (PFI-19), still unchosen.
+  await expect(dialog.getByRole('status')).toHaveText('R$ 4.800,00');
+  await expect(
+    dialog.getByRole('textbox', { name: 'Valor final' }),
+  ).toHaveCount(0);
   await expect(dialog.getByRole('radio', { checked: true })).toHaveCount(0);
   expect(writes.filter((call) => call.action === 'confirm')).toHaveLength(0);
 });
@@ -938,7 +1111,7 @@ test('no order component writes the company name itself (PFI-20, ADR 035)', asyn
   }
 });
 
-test('requires a technique for each item before the seller can generate the order (TEC-01)', async ({
+test('requires a technique for each item and asks for it at the field itself (TEC-01, EDIT-04)', async ({
   page,
 }) => {
   const withoutTechnique = {
@@ -954,19 +1127,31 @@ test('requires a technique for each item before the seller can generate the orde
 
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
   await expect(closing).toContainText('aplicação do item 1');
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await items.getByRole('button', { name: 'Editar' }).click();
+  const items = page.getByRole('region', { name: ITEMS });
   const technique = items.getByLabel('Aplicação', { exact: true });
+  // EDIT-04 (FieldGap): a pendência is a state of the field, not an error.
+  await expect(technique).toHaveAttribute('aria-required', 'true');
+  await expect(technique).not.toHaveAttribute('aria-invalid', /./u);
   await expect(technique).toHaveAccessibleDescription(
-    'Silk, DTF, sublimação, bordado… ou Sem estampa. Obrigatória para gerar.',
+    /^Silk, DTF, sublimação, bordado… ou Sem estampa\.\s+Falta\s+para gerar o pedido$/u,
   );
+  const gaps = items.locator('.op-field-gap');
+  await expect(gaps).toHaveText([/^Falta\s+para gerar o pedido$/u]);
+  await expect(gaps.locator('svg')).toHaveCount(1);
+  await expect(items.getByLabel('Modelo', { exact: true })).not.toHaveAttribute(
+    'aria-required',
+    /./u,
+  );
+
   await technique.fill('BORDADO');
-  await items.getByRole('button', { name: 'Salvar itens' }).click();
+  await page.keyboard.press('Tab');
   await expect(closing).not.toContainText('aplicação do item 1');
-  await expect(items).toContainText('BORDADO');
+  await expect(technique).toHaveValue('BORDADO');
+  await expect(technique).not.toHaveAttribute('aria-required', /./u);
+  await expect(gaps).toHaveCount(0);
 });
 
-test('keeps garment, colour and collar data from older fichas when saving an item', async ({
+test('keeps garment, colour and collar data from older fichas when one point is saved in place (EDIT-02)', async ({
   page,
 }) => {
   /** @type {any[]} */
@@ -985,38 +1170,102 @@ test('keeps garment, colour and collar data from older fichas when saving an ite
       ],
     },
   };
+  const { orders } = await mockOrders(page, {
+    orders: [legacy],
+    onWrite: (call) => writes.push(call),
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  // FPI-05: the one "Modelo" on the screen is item.tipo, empty here; an
+  // older ficha shows its colour and its collar from the keys it has.
+  const model = items.getByLabel('Modelo', { exact: true });
+  await expect(model).toHaveCount(1);
+  await expect(model).toHaveValue('');
+  const colour = items.getByLabel('Cor', { exact: true });
+  await expect(colour).toHaveValue('BRANCA');
+  await expect(items.getByLabel('Gola', { exact: true })).toHaveValue(
+    'OLÍMPICA - VERDE',
+  );
+  // FPI-05: the older model is its own optional field, shown while it has
+  // data (PIT-02 as amended by EDIT-05).
+  await expect(
+    items.getByLabel('Detalhe do modelo', { exact: true }),
+  ).toHaveValue('GOLA OLÍMPICA');
+
+  await model.fill('CAMISETA');
+  await model.press('Enter');
+  await expectSaved(page, writes, 2);
+  const groupId = orders[0].ficha.sizePricing[0].id;
+  // Only the point typed travelled; nothing else of the item was rewritten.
+  expect(sectionWrites(writes)).toEqual([
+    command(2, { action: 'initialize' }),
+    command(3, {
+      action: 'update_group',
+      attributes: { tipo: 'CAMISETA' },
+      groupId,
+    }),
+  ]);
+  expect(orders[0].ficha.items[0]).toMatchObject({
+    cor: '',
+    cor_frente: 'BRANCA',
+    modelo: 'GOLA OLÍMPICA',
+    tipo: 'CAMISETA',
+    vies_gola: 'OLÍMPICA - VERDE',
+  });
+  await expect(
+    items.getByRole('heading', { name: 'Item 1 CAMISETA' }),
+  ).toBeVisible();
+
+  // The colour the screen reads from the fabric is still missing as `cor`:
+  // leaving the field stores what it shows.
+  await expect(colour).toHaveAttribute('aria-required', 'true');
+  await colour.focus();
+  await page.keyboard.press('Tab');
+  await expectSaved(page, writes, 3);
+  expect(sectionWrites(writes)[2]).toEqual(
+    command(4, {
+      action: 'update_group',
+      attributes: { cor: 'BRANCA' },
+      groupId,
+    }),
+  );
+  await expect(colour).not.toHaveAttribute('aria-required', /./u);
+});
+
+test('stores the colour an older ficha shows when the seller types it again as it is (EDIT-02, EDIT-04)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  const legacy = {
+    ...pendingOrder,
+    ficha: {
+      ...pendingOrder.ficha,
+      items: [{ ...pendingOrder.ficha.items[0], cor: '' }],
+    },
+    missingFields: ['items[0].cor', 'finalAmount', 'paymentCondition'],
+  };
   await mockOrders(page, {
     orders: [legacy],
     onWrite: (call) => writes.push(call),
   });
   await page.goto('/pedidos/order-pendente');
 
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await expect(items).toContainText('Item 1 · — · 150 peças');
-  await expect(items).toContainText('OLÍMPICA - VERDE');
-  // ADR 020: the old model stays stored, without a field or a notice.
-  await expect(items).not.toContainText('GOLA OLÍMPICA');
-  // FPI-05: the one "Modelo" on the screen is item.tipo, empty here.
-  await expect(items.getByText('Modelo', { exact: true })).toHaveCount(1);
-  await items.getByRole('button', { name: 'Editar' }).click();
-  await expect(items.getByLabel('Modelo', { exact: true })).toHaveCount(1);
-  await expect(items.getByLabel('Modelo', { exact: true })).toHaveValue('');
-  await expect(items.getByLabel('Cor', { exact: true })).toHaveValue('BRANCA');
-  await expect(items.getByLabel('Gola', { exact: true })).toHaveValue(
-    'OLÍMPICA - VERDE',
-  );
-  await items.getByLabel('Modelo', { exact: true }).fill('CAMISETA');
-  await items.getByRole('button', { name: 'Salvar itens' }).click();
-  await expect(items.getByText('Modelo', { exact: true })).toHaveCount(1);
-  await expect(items).not.toContainText('GOLA OLÍMPICA');
-
-  expect(writes[0].body.value[0]).toMatchObject({
-    cor: 'BRANCA',
-    gola: 'OLÍMPICA - VERDE',
-    modelo: 'GOLA OLÍMPICA',
-    tipo: 'CAMISETA',
-    vies_gola: 'OLÍMPICA - VERDE',
+  const items = page.getByRole('region', { name: ITEMS });
+  const colour = items.getByLabel('Cor', { exact: true });
+  await expect(colour).toHaveValue('BRANCA');
+  await expect(colour).toHaveAttribute('aria-required', 'true');
+  await colour.click();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.type('BRANCA');
+  await page.keyboard.press('Tab');
+  await expectSaved(page, writes, 2);
+  expect(writes[1].body.value).toMatchObject({
+    action: 'update_group',
+    attributes: { cor: 'BRANCA' },
   });
+  await expect(colour).not.toHaveAttribute('aria-required', /./u);
 });
 
 test('keeps a confirmed order in reading mode until it is reopened (PFI-10)', async ({
@@ -1205,24 +1454,29 @@ test('names the day the server refused as invalid', async ({ page }) => {
   await expect(trail.getByRole('alert')).toHaveText('Use uma data até hoje.');
 });
 
-test('reads each item with the seven points in order and the extras closed (PFI-03, PIT-01, PIT-02)', async ({
+test('reads each item with the seven points in order and the filled extras as text, without a field (PFI-03, PFI-10, PIT-01, PIT-02, EDIT-01)', async ({
   page,
 }) => {
-  await mockOrders(page);
+  // PAU-01: whoever cannot edit reads the same card as text.
+  await mockOrders(page, {
+    orders: [{ ...pendingOrder, seller: OTHER_SELLER }],
+  });
   await page.goto('/pedidos/order-pendente');
 
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  const items = page.getByRole('region', { name: ITEMS });
+  await expect(items).toHaveAttribute('data-items-state', 'read');
   await expect(items).toContainText('1 item · 150 peças');
   const card = items.getByRole('group', {
-    name: 'Item 1 · CAMISETA · 150 peças',
+    exact: true,
+    name: 'Item 1 CAMISETA',
   });
   await expect(
-    card.getByRole('heading', {
-      level: 3,
-      name: 'Item 1 · CAMISETA · 150 peças',
-    }),
+    card.getByRole('heading', { level: 3, name: 'Item 1 CAMISETA' }),
   ).toBeVisible();
-  const points = card.locator('dl').first();
+  await expect(card.locator('.op-item-meta')).toHaveText('150 peças');
+  const points = card.locator('dl.op-points');
+  // PIT-02 (EDIT-05): no collapsible block; each extra that holds data is
+  // one more point, after the seven of the ficha.
   await expect(points.locator(':scope > div > dt')).toHaveText([
     'Modelo',
     'Cor',
@@ -1231,6 +1485,14 @@ test('reads each item with the seven points in order and the extras closed (PFI-
     'Modelo de malha',
     'Tamanhos',
     'Gola',
+    'Viés da gola',
+    'Estampa (referência)',
+    'Cor do tecido — frente',
+    'Cor do tecido — costas',
+    'Cor do tecido — manga direita',
+    'Cor do tecido — manga esquerda',
+    'Viés das mangas',
+    'Detalhe do modelo',
   ]);
   await expect(points.locator(':scope > div > dd')).toHaveText([
     'CAMISETA',
@@ -1240,139 +1502,263 @@ test('reads each item with the seven points in order and the extras closed (PFI-
     'DRY FIT 100% POLIÉSTER',
     /^M\s*100\s*peças\s*G\s*50\s*peças$/u,
     'GOLA REDONDA',
+    'OLÍMPICA - VERDE',
+    'Logo · frente',
+    'BRANCA',
+    'BRANCA',
+    'VERDE BANDEIRA',
+    'VERDE BANDEIRA',
+    'VERDE',
+    'GOLA OLÍMPICA',
   ]);
-  await expect(card.getByRole('listitem')).toHaveText([
-    /^M\s*100\s*peças$/u,
-    /^G\s*50\s*peças$/u,
-  ]);
+  await expect(
+    card
+      .getByRole('list', { name: 'Tamanhos do item 1' })
+      .getByRole('listitem'),
+  ).toHaveText([/^M\s*100\s*peças$/u, /^G\s*50\s*peças$/u]);
+  // EDIT-01: reading has no field, no action and no disabled control.
+  await expect(items.getByRole('textbox')).toHaveCount(0);
+  await expect(items.getByRole('button')).toHaveCount(0);
+  await expect(items.locator('input, select, textarea')).toHaveCount(0);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
 
-  // PIT-02: the extras start closed and do not show their values.
-  const toggle = card.getByRole('button', {
-    name: /Adicionais \(não obrigatórios\)/u,
+test('opens every point of a pending item as a field, in the order of the ficha, with no edit mode (PIT-01, PIT-02, EDIT-01, EDIT-05)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  await expect(items).toHaveAttribute('data-items-state', 'edit');
+  await expect(items).toHaveAttribute('data-items-mode', 'initialize');
+  const card = items.getByRole('group', {
+    exact: true,
+    name: 'Item 1 CAMISETA',
   });
-  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  // PIT-01: the principal points first; then each extra that holds data.
   await expect(
-    card.getByText('Cor do tecido — frente', { exact: true }),
-  ).toBeHidden();
-  await toggle.click();
-  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  await expect(
-    card.getByText('Cor do tecido — frente', { exact: true }),
-  ).toBeVisible();
-  await expect(card).not.toContainText('GOLA OLÍMPICA');
-  // ADR 020: the print is a reference; the part colours are the fabric's.
-  await expect(card.locator('dl').nth(1).locator('dt')).toHaveText([
+    card.locator('.op-specs').locator('label, .op-inline-label'),
+  ).toHaveText([
+    'Modelo',
+    'Cor',
+    'Aplicação',
+    'Modelo de malha',
+    'Gola',
+    'Viés da gola',
     'Estampa (referência)',
     'Cor do tecido — frente',
     'Cor do tecido — costas',
     'Cor do tecido — manga direita',
     'Cor do tecido — manga esquerda',
     'Viés das mangas',
+    'Detalhe do modelo',
   ]);
-  await expect(card.locator('dl').nth(1).locator('dd').first()).toHaveText(
-    'Logo · frente',
-  );
+  for (const [label, value] of [
+    ['Modelo', 'CAMISETA'],
+    ['Cor', 'BRANCA'],
+    ['Aplicação', 'SUBLIMAÇÃO TOTAL'],
+    ['Modelo de malha', 'DRY FIT 100% POLIÉSTER'],
+    ['Gola', 'GOLA REDONDA'],
+    ['Estampa (referência)', 'Logo · frente'],
+  ]) {
+    const field = card.getByLabel(label, { exact: true });
+    await expect(field).toBeEditable();
+    await expect(field).toHaveValue(value);
+  }
+  // EDIT-05: what holds no data waits behind a button with its name.
+  await expect(
+    card
+      .getByRole('group', { name: 'Adicionais do item 1, não obrigatórios' })
+      .getByRole('button'),
+  ).toHaveText(['Público', 'Quantidade informada']);
+  await expect(
+    card.getByRole('list', { name: 'Tamanhos do item 1' }),
+  ).toBeVisible();
+
+  // EDIT-01: no edit mode anywhere in the section.
+  for (const name of [
+    /^Editar itens/u,
+    /^Salvar/u,
+    'Cancelar',
+    /Adicionais \(não obrigatórios\)/u,
+    'Usar subtotais por tamanho',
+  ]) {
+    await expect(items.getByRole('button', { name })).toHaveCount(0);
+  }
+  await expect(items.locator('.op-editing-tag')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveText([
+    'Editar resumo',
+    'Editar datas',
+    'Editar arte',
+    'Editar observações',
+  ]);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('opens and closes the extras with the keyboard, keeping the focus (PIT-02)', async ({
-  page,
-}) => {
-  await mockOrders(page);
-  await page.goto('/pedidos/order-pendente');
-
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  const toggle = items.getByRole('button', {
-    name: /Adicionais \(não obrigatórios\)/u,
-  });
-  const extras = items.locator(
-    `#${await toggle.getAttribute('aria-controls')}`,
-  );
-  await toggle.focus();
-  await page.keyboard.press('Enter');
-  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  await expect(extras).toBeVisible();
-  await expect(toggle).toBeFocused();
-  await page.keyboard.press('Space');
-  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  await expect(extras).toBeHidden();
-  await expect(toggle).toBeFocused();
-
-  // While editing, the extras are closed again and open the same way.
-  await items.getByRole('button', { name: 'Editar' }).click();
-  await expect(items.getByLabel('Modelo', { exact: true })).toBeFocused();
-  const editToggle = items.getByRole('button', {
-    name: 'Adicionais (não obrigatórios)',
-  });
-  await expect(editToggle).toHaveAttribute('aria-expanded', 'false');
-  const reference = items.getByLabel('Estampa (referência)');
-  await expect(reference).toBeHidden();
-  await editToggle.focus();
-  await page.keyboard.press('Enter');
-  await expect(reference).toBeVisible();
-  await expect(reference).toHaveAccessibleDescription(
-    'O que vai estampado e onde, se ajudar a produção.',
-  );
-  await expect(editToggle).toBeFocused();
-  await page.keyboard.press('Tab');
-  await expect(reference).toBeFocused();
-});
-
-test('edits the seven points and the extras of an item (PIT-01, PIT-02, PIT-03)', async ({
+test('adds the optional points one by one, by keyboard, and keeps the ones with data (PIT-02, EDIT-05)', async ({
   page,
 }) => {
   /** @type {any[]} */
   const writes = [];
-  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [bareItemOrder],
+  });
   await page.goto('/pedidos/order-pendente');
 
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await items.getByRole('button', { name: 'Editar' }).click();
-  await expect(items.getByText('Quantidade', { exact: true })).toBeVisible();
-  await items.getByLabel('Modelo', { exact: true }).fill('REGATA');
-  await items.getByLabel('Cor', { exact: true }).fill('PRETA');
-  await items.getByLabel('Aplicação', { exact: true }).fill('SILK 4 CORES');
-  await items.getByLabel('Modelo de malha 1').fill('ALGODÃO');
-  await items.getByLabel('Gola', { exact: true }).fill('REGATA');
-  await items
-    .getByRole('button', { name: 'Adicionais (não obrigatórios)' })
-    .click();
-  await items.getByLabel('Estampa (referência)').fill('Logo · costas');
-  await items.getByLabel('Cor do tecido — frente').fill('PRETA');
-
-  // A second item stays half filled: it saves and is listed as missing.
-  await items.getByRole('button', { name: 'Adicionar item' }).click();
-  await page.locator('#item-1-tipo').fill('BONÉ');
-  await page.locator('#item-1-aplicacao').fill('BORDADO');
-  await items.getByRole('button', { name: 'Salvar itens' }).click();
-
-  await expect(
-    items.getByRole('heading', { name: 'Item 1 · REGATA · 150 peças' }),
-  ).toBeVisible();
-  await expect(
-    items.getByRole('heading', { name: 'Item 2 · BONÉ · 0 peças' }),
-  ).toBeVisible();
-  const [first, second] = writes[0].body.value;
-  expect(first).toMatchObject({
-    cor: 'PRETA',
-    cor_frente: 'PRETA',
-    estampa: 'Logo · costas',
-    gola: 'REGATA',
-    malhas: ['ALGODÃO'],
-    tipo: 'REGATA',
-    tipo_servico: 'SILK 4 CORES',
+  const items = page.getByRole('region', { name: ITEMS });
+  const adds = items.getByRole('group', {
+    name: 'Adicionais do item 1, não obrigatórios',
   });
-  expect(second).toMatchObject({
-    grade: [],
-    malhas: [],
-    tipo: 'BONÉ',
-    tipo_servico: 'BORDADO',
-  });
-  const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
-  // PFI-19: the amount and the method are asked in the dialog, not listed.
-  await expect(closing).toContainText(
-    'Falta para gerar: cor do item 2, modelo de malha do item 2, tamanhos do item 2 e gola do item 2. Valor e forma de pagamento você informa ao gerar.',
+  await expect(adds.getByRole('button')).toHaveText([
+    'Público',
+    'Estampa (referência)',
+    'Cores por parte',
+    'Viés das mangas',
+    'Detalhe do modelo',
+    'Quantidade informada',
+  ]);
+  const print = items.getByLabel('Estampa (referência)', { exact: true });
+  await expect(print).toHaveCount(0);
+
+  // One button, one field: Enter shows it and puts the focus in it.
+  const addPrint = adds.getByRole('button', { name: 'Estampa (referência)' });
+  await addPrint.focus();
+  await page.keyboard.press('Enter');
+  await expect(print).toBeFocused();
+  await expect(print).toHaveAccessibleDescription(
+    'O que vai estampado e onde, se ajudar a produção.',
   );
+  await expect(addPrint).toHaveCount(0);
+  // Showing a field is not a change.
+  expect(writes).toHaveLength(0);
+  await page.keyboard.type('Logo · costas');
+  await page.keyboard.press('Enter');
+  await expectSaved(page, writes, 2);
+  expect(writes[1].body.value).toMatchObject({
+    action: 'update_group',
+    attributes: { estampa: 'Logo · costas' },
+  });
+
+  // "Cores por parte" brings its four colours, with the focus on the first.
+  await adds.getByRole('button', { name: 'Cores por parte' }).focus();
+  await page.keyboard.press('Space');
+  await expect(
+    items.getByLabel('Cor do tecido — frente', { exact: true }),
+  ).toBeFocused();
+  for (const part of ['costas', 'manga direita', 'manga esquerda']) {
+    await expect(
+      items.getByLabel(`Cor do tecido — ${part}`, { exact: true }),
+    ).toBeVisible();
+  }
+  // Left empty, an optional sends nothing and is never a pendência.
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  await expect(items.locator('.op-field-gap')).toHaveCount(0);
+  // (This order never started its subtotals: only those fields ask.)
+  await expect(
+    items.locator('[aria-required="true"]:not([id*="-subtotal-"])'),
+  ).toHaveCount(0);
+
+  // On the next visit the one with data is a field and the others are
+  // buttons again.
+  await page.reload();
+  await expect(print).toHaveValue('Logo · costas');
+  await expect(adds.getByRole('button')).toHaveText([
+    'Público',
+    'Cores por parte',
+    'Viés das mangas',
+    'Detalhe do modelo',
+    'Quantidade informada',
+  ]);
+  expect(writes).toHaveLength(2);
+});
+
+test('saves each point of an item by itself, in series, and sends nothing for what did not change (PIT-01, PIT-03, EDIT-02)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  const { orders } = await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  /** @type {[string, string, Record<string, unknown>][]} */
+  const typed = [
+    ['Modelo', 'REGATA', { tipo: 'REGATA' }],
+    ['Cor', 'PRETA', { cor: 'PRETA' }],
+    ['Aplicação', 'SILK 4 CORES', { tipo_servico: 'SILK 4 CORES' }],
+    ['Modelo de malha', 'ALGODÃO', { malhas: ['ALGODÃO'] }],
+    ['Gola', 'REGATA', { gola: 'REGATA' }],
+  ];
+  // Typed one after the other without waiting: the saves queue up.
+  for (const [label, text] of typed) {
+    await items.getByLabel(label, { exact: true }).fill(text);
+    await page.keyboard.press('Tab');
+  }
+  await expectSaved(page, writes, 5);
+  // EDIT-02: one request per change, each over the version the last left.
+  expect(sectionWrites(writes)).toEqual(
+    typed.map(([, , attributes], index) =>
+      command(2 + index, {
+        action: 'update_group',
+        attributes,
+        groupId: PRICED_GROUP_ID,
+      }),
+    ),
+  );
+  await expect(
+    items.getByRole('heading', { name: 'Item 1 REGATA' }),
+  ).toBeVisible();
+
+  // Enter on a field as it is, and the same text typed again, send nothing.
+  const model = items.getByLabel('Modelo', { exact: true });
+  await model.press('Enter');
+  await model.fill(' REGATA ');
+  await model.press('Enter');
+  await page.keyboard.press('Tab');
+
+  // PIT-03: a second item is saved half filled and listed as missing.
+  await items.getByRole('button', { name: 'Adicionar item' }).click();
+  const secondModel = page.locator('#item-1-tipo');
+  await expect(secondModel).toBeFocused();
+  await secondModel.fill('BONÉ');
+  await secondModel.press('Enter');
+  const secondTechnique = page.locator('#item-1-aplicacao');
+  await secondTechnique.fill('BORDADO');
+  await secondTechnique.press('Enter');
+  await expectSaved(page, writes, 8);
+  const secondId = orders[0].ficha.sizePricing[1].id;
+  expect(sectionWrites(writes).slice(5)).toEqual([
+    command(7, { action: 'add_group', item: BLANK_ITEM }),
+    command(8, {
+      action: 'update_group',
+      attributes: { tipo: 'BONÉ' },
+      groupId: secondId,
+    }),
+    command(9, {
+      action: 'update_group',
+      attributes: { tipo_servico: 'BORDADO' },
+      groupId: secondId,
+    }),
+  ]);
+  await expect(items.getByRole('heading', { level: 3 })).toHaveText([
+    /^Item\s*1\s*REGATA$/u,
+    /^Item\s*2\s*BONÉ$/u,
+  ]);
+  const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
+  for (const point of [
+    'cor do item 2',
+    'modelo de malha do item 2',
+    'tamanhos do item 2',
+    'gola do item 2',
+  ]) {
+    await expect(closing).toContainText(point);
+  }
 });
 
 test('warns when the sizes differ from what the customer said, without repeating it beside the total (PIT-09, TEC-06)', async ({
@@ -1385,6 +1771,8 @@ test('warns when the sizes differ from what the customer said, without repeating
       serviceData: { ...pendingOrder.ficha.serviceData, quantity: 140 },
     },
   };
+  // PFI-10: read by whoever cannot edit, the item without sizes says what
+  // the customer told.
   const noSizes = {
     ...pendingOrder,
     ficha: {
@@ -1394,6 +1782,7 @@ test('warns when the sizes differ from what the customer said, without repeating
     },
     id: 'order-sem-tamanhos',
     missingFields: ['items[0].grade', 'finalAmount', 'paymentCondition'],
+    seller: OTHER_SELLER,
     totalPieces: 0,
   };
   await mockOrders(page, { orders: [told, noSizes] });
@@ -1410,11 +1799,32 @@ test('warns when the sizes differ from what the customer said, without repeating
   ).not.toContainText('quantidade informada');
 
   await page.goto('/pedidos/order-sem-tamanhos');
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  const items = page.getByRole('region', { name: ITEMS });
   await expect(items.locator('dl').first()).toContainText(
     '— (cliente informou 30 peças)',
   );
   await expect(summary).not.toContainText('é diferente');
+});
+
+test('says what the customer told on an item without sizes while it is edited in place (PIT-09, EDIT-01)', async ({
+  page,
+}) => {
+  const noSizes = {
+    ...pendingOrder,
+    ficha: {
+      ...pendingOrder.ficha,
+      items: [{ ...pendingOrder.ficha.items[0], grade: [] }],
+      serviceData: { quantity: '30 peças' },
+    },
+    missingFields: ['items[0].grade', 'finalAmount', 'paymentCondition'],
+    totalPieces: 0,
+  };
+  await mockOrders(page, { orders: [noSizes] });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  await expect(items).toHaveAttribute('data-items-state', 'edit');
+  await expect(items).toContainText('cliente informou 30 peças');
 });
 
 test('names the fields the way the PO asked (PIT-10)', async ({ page }) => {
@@ -1422,9 +1832,13 @@ test('names the fields the way the PO asked (PIT-10)', async ({ page }) => {
   await page.goto('/pedidos/order-pendente');
 
   const main = page.locator('main');
-  for (const label of ['Modelo', 'Tamanhos', 'Modelo de malha']) {
+  for (const label of ['Modelo', 'Modelo de malha']) {
     await expect(main.getByText(label, { exact: true }).first()).toBeVisible();
   }
+  // EDIT-06: edited in place, the sizes are a list named "Tamanhos".
+  await expect(
+    main.getByRole('list', { name: 'Tamanhos do item 1' }),
+  ).toBeVisible();
   // PFI-19: the payment method is named in the dialog "Gerar o pedido".
   await page.getByRole('button', { name: 'Gerar pedido' }).click();
   await expect(
@@ -1474,74 +1888,228 @@ test('names the fields the way the PO asked (PIT-10)', async ({ page }) => {
   ]);
 });
 
-test('edits the grade and recomputes every total from it (PFI-04)', async ({
+test('recomputes every total from the sizes, while a quantity is typed and once it is saved (PFI-04, EDIT-02, EDIT-07)', async ({
   page,
 }) => {
   /** @type {any[]} */
   const writes = [];
-  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
   await page.goto('/pedidos/order-pendente');
 
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await items.getByRole('button', { name: 'Editar' }).click();
-  await items.getByLabel('Quantidade do tamanho M').fill('120');
-  await expect(items).toContainText('170 peças');
-  await items.getByRole('button', { name: 'Salvar' }).click();
+  const items = page.getByRole('region', { name: ITEMS });
+  const quantity = items.getByLabel('Quantidade do tamanho M, item 1');
+  const subtotal = items.getByLabel('Subtotal do tamanho M, item 1');
+  await expect(items.locator('.op-items-total')).toHaveText(
+    /^Total do pedido\s*150 peças · R\$ 4\.800,00$/u,
+  );
+  // The total follows what is typed, before anything is sent.
+  await quantity.fill('120');
+  await expect(items.locator('.op-item-total')).toContainText('170 peças');
+  expect(writes).toHaveLength(0);
 
-  await expect(items).toContainText('1 item · 170 peças');
-  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
-  await expect(summary).toContainText('170');
-  expect(writes).toHaveLength(1);
-  expect(writes[0].section).toBe('items');
-  expect(writes[0].body.value[0].grade).toEqual([
-    { quantidade: 120, tamanho: 'M' },
-    { quantidade: 50, tamanho: 'G' },
+  await quantity.press('Enter');
+  await expectSaved(page, writes, 1);
+  expect(sectionWrites(writes)).toEqual([
+    command(2, {
+      action: 'change_quantity',
+      groupId: PRICED_GROUP_ID,
+      lineId: PRICED_LINE_M,
+      quantity: 120,
+    }),
   ]);
+  // Without every subtotal reviewed there is no amount to show.
+  await expect(items.locator('.op-items-total')).toHaveText(
+    /^Total do pedido\s*170 peças$/u,
+  );
+  await expect(
+    page.getByRole('region', { name: 'Resumo do pedido' }),
+  ).toContainText('170');
+
+  // EDIT-07 (OLIST-43): the subtotal stays as it was and asks for a look;
+  // Enter walked on to it, like a spreadsheet.
+  const row = items.locator(`[data-line-id="${PRICED_LINE_M}"]`);
+  await expect(row).toContainText('Confira o subtotal.');
+  await expect(subtotal).toHaveValue('3.200,00');
+  await expect(subtotal).toBeFocused();
+  await expect(subtotal).toHaveAttribute('aria-required', 'true');
+  await expect(subtotal).not.toHaveAttribute('aria-invalid', /./u);
+  await row.getByRole('button', { name: 'Manter R$ 3.200,00' }).click();
+  await expectSaved(page, writes, 2);
+  expect(sectionWrites(writes)[1]).toEqual(
+    command(3, {
+      action: 'review_subtotal',
+      groupId: PRICED_GROUP_ID,
+      lineId: PRICED_LINE_M,
+      subtotalCents: 320000,
+    }),
+  );
+  await expect(row).not.toContainText('Confira o subtotal.');
+  await expect(row).toContainText('R$ 26,67 por peça');
+  await expect(items.locator('.op-sheet-state')).toHaveText(
+    '1 item · 170 peças',
+  );
+  await expect(items.locator('.op-items-total')).toHaveText(
+    /^Total do pedido\s*170 peças · R\$ 4\.800,00$/u,
+  );
 });
 
-test('refuses a quantity that is not a whole piece, on the line (PFI-04)', async ({
+test('starts the subtotals by size on the first write of an order that never had them (EDIT-07)', async ({
   page,
 }) => {
   /** @type {any[]} */
   const writes = [];
-  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  const { orders } = await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+  });
   await page.goto('/pedidos/order-pendente');
 
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await items.getByRole('button', { name: 'Editar' }).click();
-  await items.getByLabel('Quantidade do tamanho M').fill('0');
-  await items.getByRole('button', { name: 'Salvar' }).click();
+  const items = page.getByRole('region', { name: ITEMS });
+  await expect(items).toHaveAttribute('data-items-mode', 'initialize');
+  // The subtotal is there from the first size, with no step to turn it on.
+  const subtotal = items.getByLabel('Subtotal do tamanho M, item 1');
+  await expect(subtotal).toBeEditable();
+  await expect(subtotal).toHaveValue('');
+  await expect(
+    items.getByRole('button', { name: 'Usar subtotais por tamanho' }),
+  ).toHaveCount(0);
 
-  await expect(items.getByRole('alert').first()).toContainText(
-    'Use uma quantidade inteira maior que zero.',
+  await subtotal.fill('3.200,00');
+  await subtotal.press('Enter');
+  await expectSaved(page, writes, 2);
+  const [group] = orders.find((order) => order.id === 'order-pendente').ficha
+    .sizePricing;
+  expect(sectionWrites(writes)).toEqual([
+    command(2, { action: 'initialize' }),
+    command(3, {
+      action: 'review_subtotal',
+      groupId: group.id,
+      lineId: group.lines[0].id,
+      subtotalCents: 320000,
+    }),
+  ]);
+  await expect(items).toHaveAttribute('data-items-mode', 'managed');
+  // The field in use was not rebuilt: its text stays and Enter walked on.
+  await expect(subtotal).toHaveValue('3.200,00');
+  await expect(
+    items.getByLabel('Quantidade do tamanho G, item 1'),
+  ).toBeFocused();
+
+  // The next change is one command; `initialize` is never sent again.
+  const second = items.getByLabel('Subtotal do tamanho G, item 1');
+  await second.fill('1.600,00');
+  await second.press('Enter');
+  await expectSaved(page, writes, 3);
+  expect(sectionWrites(writes)[2]).toEqual(
+    command(4, {
+      action: 'review_subtotal',
+      groupId: group.id,
+      lineId: group.lines[1].id,
+      subtotalCents: 160000,
+    }),
   );
+  await expect(items.locator('.op-items-total')).toHaveText(
+    /^Total do pedido\s*150 peças · R\$ 4\.800,00$/u,
+  );
+});
+
+test('refuses a quantity that is not a whole piece, on the line, before any request (PFI-04, EDIT-03)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  const row = items.locator(`[data-line-id="${PRICED_LINE_M}"]`);
+  const quantity = items.getByLabel('Quantidade do tamanho M, item 1');
+  for (const refused of ['0', '1,5', 'dez']) {
+    await quantity.fill(refused);
+    await quantity.press('Enter');
+    await expect(row.getByRole('alert')).toHaveText(
+      'Use uma quantidade inteira maior que zero.',
+    );
+    await expect(quantity).toHaveAttribute('aria-invalid', 'true');
+    await expect(quantity).toHaveAccessibleDescription(
+      'Use uma quantidade inteira maior que zero.',
+    );
+    // What was typed stays, with the focus, to be corrected.
+    await expect(quantity).toHaveValue(refused);
+    await expect(quantity).toBeFocused();
+  }
+  await expect(
+    items.getByLabel('Quantidade do tamanho G, item 1'),
+  ).not.toHaveAttribute('aria-invalid', /./u);
+  // Typing again takes the error away.
+  await quantity.fill('100');
+  await expect(row.getByRole('alert')).toHaveCount(0);
+  await expect(quantity).not.toHaveAttribute('aria-invalid', /./u);
+  await quantity.press('Enter');
   expect(writes).toHaveLength(0);
 });
 
-test('accepts "Não aplicável" on sleeves and viés (PFI-07)', async ({
+test('accepts "Não aplicável" on sleeves and viés with a chip beside the field, and gives the colour back (PFI-07, EDIT-05)', async ({
   page,
 }) => {
   /** @type {any[]} */
   const writes = [];
-  await mockOrders(page, { onWrite: (call) => writes.push(call) });
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
   await page.goto('/pedidos/order-pendente');
 
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await items.getByRole('button', { name: 'Editar' }).click();
-  await items
-    .getByRole('button', { name: 'Adicionais (não obrigatórios)' })
-    .click();
-  await items.getByLabel('Cor do tecido — manga direita não se aplica').check();
-  await items.getByRole('button', { name: 'Salvar' }).click();
+  const items = page.getByRole('region', { name: ITEMS });
+  const sleeve = items.getByLabel('Cor do tecido — manga direita', {
+    exact: true,
+  });
+  const chips = items.getByRole('button', { name: /^Não aplicável: /u });
+  // Only sleeves and viés take it.
+  await expect(chips).toHaveCount(3);
+  const chip = items.getByRole('button', {
+    exact: true,
+    name: 'Não aplicável: Cor do tecido — manga direita',
+  });
+  await expect(chip).toHaveText('Não aplicável');
+  await expect(chip).toHaveAttribute('aria-pressed', 'false');
 
-  await items
-    .getByRole('button', { name: /Adicionais \(não obrigatórios\)/u })
-    .click();
-  await expect(items.getByText('NÃO APLICÁVEL')).toBeVisible();
-  expect(writes[0].body.value[0].cor_manga_direita).toBe('NAO APLICAVEL');
+  await chip.focus();
+  await page.keyboard.press('Space');
+  await expectSaved(page, writes, 1);
+  expect(sectionWrites(writes)[0]).toEqual(
+    command(2, {
+      action: 'update_group',
+      attributes: { cor_manga_direita: 'NAO APLICAVEL' },
+      groupId: PRICED_GROUP_ID,
+    }),
+  );
+  await expect(chip).toHaveAttribute('aria-pressed', 'true');
+  await expect(chip).toBeFocused();
+  await expect(sleeve).toBeDisabled();
+  await expect(sleeve).toHaveValue('Não aplicável');
+
+  // Turned off, the field holds the colour it had.
+  await page.keyboard.press('Space');
+  await expectSaved(page, writes, 2);
+  expect(sectionWrites(writes)[1]).toEqual(
+    command(3, {
+      action: 'update_group',
+      attributes: { cor_manga_direita: 'VERDE BANDEIRA' },
+      groupId: PRICED_GROUP_ID,
+    }),
+  );
+  await expect(chip).toHaveAttribute('aria-pressed', 'false');
+  await expect(sleeve).toBeEnabled();
+  await expect(sleeve).toHaveValue('VERDE BANDEIRA');
 });
 
-test('keeps every summary and item field as text typed by hand (PFI-14)', async ({
+test('keeps every summary and item field as text typed by hand (PFI-14, EDIT-01)', async ({
   page,
 }) => {
   await mockOrders(page);
@@ -1554,145 +2122,655 @@ test('keeps every summary and item field as text typed by hand (PFI-14)', async 
   await expect(lists).toHaveCount(0);
   await summary.getByRole('button', { name: 'Cancelar' }).click();
 
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await items.getByRole('button', { name: 'Editar' }).click();
-  await expect(items.getByLabel('Modelo', { exact: true })).toBeEditable();
+  // The items are open as they are: every point is a text field.
+  const items = page.getByRole('region', { name: ITEMS });
+  for (const label of [
+    'Modelo',
+    'Cor',
+    'Aplicação',
+    'Modelo de malha',
+    'Gola',
+  ]) {
+    const field = items.getByLabel(label, { exact: true });
+    await expect(field).toBeEditable();
+    await expect(field).toHaveAttribute('type', 'text');
+  }
+  await expect(items.locator('select, input:not([type="text"])')).toHaveCount(
+    0,
+  );
   await expect(lists).toHaveCount(0);
 });
 
-test('adds and removes items, fabrics and grade lines', async ({ page }) => {
-  /** @type {any[]} */
-  const writes = [];
-  await mockOrders(page, { onWrite: (call) => writes.push(call) });
-  await page.goto('/pedidos/order-pendente');
-
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await items.getByRole('button', { name: 'Editar' }).click();
-  await items.getByRole('button', { name: 'Adicionar tamanho' }).click();
-  await items.getByLabel('Tamanho da linha 3').fill('GG');
-  await items.getByLabel('Quantidade do tamanho GG').fill('10');
-  await items
-    .getByRole('button', { name: 'Adicionar modelo de malha' })
-    .click();
-  await items.getByLabel('Modelo de malha 2').fill('HELANCA LIGHT');
-  await items.getByRole('button', { name: 'Salvar' }).click();
-
-  await expect(items).toContainText('1 item · 160 peças');
-  expect(writes[0].body.value[0].grade).toHaveLength(3);
-  expect(writes[0].body.value[0].malhas).toEqual([
-    'DRY FIT 100% POLIÉSTER',
-    'HELANCA LIGHT',
-  ]);
-});
-
-test('splits an item by audience with Duplicar item, by keyboard (ADR 025, PUB-01, PUB-02, PUB-06)', async ({
+test('adds and removes sizes and fabrics, each as one change (PIT-03, EDIT-02, EDIT-06)', async ({
   page,
 }) => {
   /** @type {any[]} */
   const writes = [];
-  await mockOrders(page, { onWrite: (call) => writes.push(call) });
-  await page.goto('/pedidos/order-pendente');
-
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await items.getByRole('button', { name: 'Editar' }).click();
-  await items.getByLabel('Público').selectOption('masculino');
-  await items.getByLabel('Quantidade informada').fill('150');
-
-  const duplicate = items.getByRole('button', { name: 'Duplicar item 1' });
-  await duplicate.focus();
-  await page.keyboard.press('Enter');
-  const copyAudience = items.locator('#item-1-publico');
-  await expect(copyAudience).toBeFocused();
-  await expect(
-    items.getByText('Item 2 criado como cópia do item 1.'),
-  ).toHaveCount(1);
-  await expect(copyAudience).toHaveValue('masculino');
-  await copyAudience.selectOption('feminino');
-  await expect(items.locator('#item-1-informada')).toHaveValue('');
-  await items.locator('#item-1-informada').fill('40');
-  await items.getByRole('button', { name: 'Salvar' }).click();
-
-  const [first, copy] = writes[0].body.value;
-  expect(first.publico).toBe('masculino');
-  expect(first.quantidade_informada).toBe(150);
-  expect(copy.publico).toBe('feminino');
-  expect(copy.quantidade_informada).toBe(40);
-  expect(copy.grade).toEqual([]);
-  expect(copy.tipo).toBe(first.tipo);
-  expect(copy.malhas).toEqual(first.malhas);
-
-  await expect(
-    items.getByRole('heading', { name: /^Item 2 · .* · Feminino · 0 peças$/u }),
-  ).toBeVisible();
-  await expect(items.getByText('— (cliente informou 40)')).toBeVisible();
-});
-
-test('warns under an item whose sizes differ from the quantity said for it (ADR 025, PUB-02)', async ({
-  page,
-}) => {
-  await mockOrders(page);
-  await page.goto('/pedidos/order-pendente');
-
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await items.getByRole('button', { name: 'Editar' }).click();
-  await items.getByLabel('Quantidade informada').fill('200');
-  await expect(
-    items.getByText(
-      'A soma dos tamanhos (150) é diferente da quantidade informada (200)',
-    ),
-  ).toBeVisible();
-  await items.getByLabel('Quantidade informada').fill('0');
-  await items.getByRole('button', { name: 'Salvar' }).click();
-  await expect(
-    items.getByText('Use um número inteiro de 1 a 100000.'),
-  ).toBeVisible();
-  await expect(items.getByLabel('Quantidade informada')).toHaveAttribute(
-    'aria-invalid',
-    'true',
-  );
-});
-
-test('shows the server grade error on the line it names', async ({ page }) => {
-  await mockOrders(page, {
-    writeFailure: {
-      body: { code: 'INVALID_GRADE', fields: ['items[0].grade[1]'], index: 1 },
-      status: 422,
-    },
+  const { orders } = await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
   });
   await page.goto('/pedidos/order-pendente');
 
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await items.getByRole('button', { name: 'Editar' }).click();
-  await items.getByLabel('Quantidade do tamanho G').fill('7');
-  await items.getByRole('button', { name: 'Salvar' }).click();
+  const items = page.getByRole('region', { name: ITEMS });
+  const size = page.locator('#item-0-new-size');
+  await size.fill('GG');
+  await size.press('Enter');
+  await page.keyboard.type('10');
+  await page.keyboard.press('Enter');
+  await expectSaved(page, writes, 1);
+  expect(sectionWrites(writes)[0]).toEqual(
+    command(2, {
+      action: 'add_line',
+      groupId: PRICED_GROUP_ID,
+      quantity: 10,
+      size: 'GG',
+    }),
+  );
+  await expect(items.locator('.op-item-total')).toContainText('160 peças');
+  const addedLine = orders[0].ficha.sizePricing[0].lines[2].id;
 
-  await expect(items.getByRole('alert').first()).toContainText(
+  // A second fabric is one more field of the same point.
+  await items.getByRole('button', { name: 'Outra malha' }).click();
+  const second = items.getByLabel('Modelo de malha 2');
+  await expect(second).toBeFocused();
+  await second.fill('HELANCA LIGHT');
+  await second.press('Enter');
+  await expectSaved(page, writes, 2);
+  expect(sectionWrites(writes)[1]).toEqual(
+    command(3, {
+      action: 'update_group',
+      attributes: { malhas: ['DRY FIT 100% POLIÉSTER', 'HELANCA LIGHT'] },
+      groupId: PRICED_GROUP_ID,
+    }),
+  );
+  // Emptied, it is dropped: a fabric is never a blank line (PIT-03).
+  await second.fill('');
+  await second.press('Enter');
+  await expectSaved(page, writes, 3);
+  expect(sectionWrites(writes)[2]).toEqual(
+    command(4, {
+      action: 'update_group',
+      attributes: { malhas: ['DRY FIT 100% POLIÉSTER'] },
+      groupId: PRICED_GROUP_ID,
+    }),
+  );
+
+  // Removing a size is one named button; the focus goes to the blank row.
+  await items
+    .getByRole('button', { name: 'Remover tamanho GG do item 1' })
+    .click();
+  await expectSaved(page, writes, 4);
+  expect(sectionWrites(writes)[3]).toEqual(
+    command(5, {
+      action: 'remove_line',
+      groupId: PRICED_GROUP_ID,
+      lineId: addedLine,
+    }),
+  );
+  await expect(size).toBeFocused();
+  await expect(items.getByLabel('Tamanho, linha 3 do item 1')).toHaveCount(0);
+  await expect(items.locator('.op-item-total')).toContainText('150 peças');
+});
+
+test('splits an item by audience with "Duplicar para outro público", by keyboard (ADR 025, PUB-01, PUB-02, PUB-06, EDIT-05)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  const { orders } = await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  const first = items.locator('.op-item').first();
+  // PUB-01: the audience is one of four chips, behind its own button.
+  await first
+    .getByRole('group', { name: 'Adicionais do item 1, não obrigatórios' })
+    .getByRole('button', { name: 'Público' })
+    .click();
+  const audience = first.getByRole('group', { exact: true, name: 'Público' });
+  await expect(audience.getByRole('button')).toHaveText([
+    'Masculino',
+    'Feminino',
+    'Infantil',
+    'Unissex',
+  ]);
+  const masculine = audience.getByRole('button', { name: 'Masculino' });
+  await expect(masculine).toBeFocused();
+  await expect(audience.locator('[aria-pressed="true"]')).toHaveCount(0);
+  await page.keyboard.press('Space');
+  await expectSaved(page, writes, 1);
+  await expect(masculine).toHaveAttribute('aria-pressed', 'true');
+
+  // PUB-02: the quantity said for the item, only a reference.
+  await first
+    .getByRole('button', { exact: true, name: 'Quantidade informada' })
+    .click();
+  const informed = page.locator('#item-0-informada');
+  await expect(informed).toBeFocused();
+  await expect(informed).toHaveAttribute('inputmode', 'numeric');
+  await informed.fill('150');
+  await informed.press('Enter');
+  await expectSaved(page, writes, 2);
+  expect(sectionWrites(writes)).toEqual([
+    command(2, {
+      action: 'update_group',
+      attributes: { publico: 'masculino' },
+      groupId: PRICED_GROUP_ID,
+    }),
+    command(3, {
+      action: 'update_group',
+      attributes: { quantidade_informada: 150 },
+      groupId: PRICED_GROUP_ID,
+    }),
+  ]);
+  await expect(
+    items.getByRole('heading', { name: 'Item 1 CAMISETA · Masculino' }),
+  ).toBeVisible();
+
+  // PUB-06: the copy comes right below, without sizes and without the
+  // quantity said; the focus goes to its audience and it is announced.
+  await first.getByRole('button', { name: 'Mais ações do item 1' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(
+    items.getByRole('menuitem', { name: 'Duplicar para outro público' }),
+  ).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expectSaved(page, writes, 3);
+  expect(sectionWrites(writes)[2]).toEqual(
+    command(4, {
+      action: 'add_group',
+      item: {
+        ...pendingOrder.ficha.items[0],
+        grade: [],
+        publico: 'masculino',
+        quantidade_informada: null,
+      },
+    }),
+  );
+  const copyAudience = page.locator('#item-1-publico');
+  await expect(copyAudience).toBeFocused();
+  await expect(copyAudience).toHaveText('Masculino');
+  await expect(copyAudience).toHaveAttribute('aria-pressed', 'true');
+  await expect(items.locator('[data-items-announcement]')).toHaveText(
+    'Item 2 criado como cópia do item 1.',
+  );
+  const copy = items.locator('.op-item').nth(1);
+  await expect(copy.locator('.op-size-row')).toHaveCount(1);
+  await expect(copy.locator('.op-item-meta')).toHaveText('0 peças');
+  await expect(page.locator('#item-1-informada')).toHaveCount(0);
+
+  // The seller changes the audience of the copy from where the focus is.
+  await page.keyboard.press('Tab');
+  await expect(copy.getByRole('button', { name: 'Feminino' })).toBeFocused();
+  await page.keyboard.press('Space');
+  await expectSaved(page, writes, 4);
+  const copyId = orders[0].ficha.sizePricing[1].id;
+  expect(sectionWrites(writes)[3]).toEqual(
+    command(5, {
+      action: 'update_group',
+      attributes: { publico: 'feminino' },
+      groupId: copyId,
+    }),
+  );
+  await copy
+    .getByRole('button', { exact: true, name: 'Quantidade informada' })
+    .click();
+  await page.locator('#item-1-informada').fill('40');
+  await page.keyboard.press('Enter');
+  await expectSaved(page, writes, 5);
+  expect(sectionWrites(writes)[4]).toEqual(
+    command(6, {
+      action: 'update_group',
+      attributes: { quantidade_informada: 40 },
+      groupId: copyId,
+    }),
+  );
+  await expect(items.getByRole('heading', { level: 3 })).toHaveText([
+    /^Item\s*1\s*CAMISETA · Masculino$/u,
+    /^Item\s*2\s*CAMISETA · Feminino$/u,
+  ]);
+  expect(orders[0].ficha.items[1]).toMatchObject({
+    grade: [],
+    malhas: pendingOrder.ficha.items[0].malhas,
+    publico: 'feminino',
+    quantidade_informada: 40,
+    tipo: 'CAMISETA',
+  });
+});
+
+test('warns under an item whose sizes differ from the quantity said for it (ADR 025, PUB-02, EDIT-03, EDIT-05)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  await items
+    .getByRole('button', { exact: true, name: 'Quantidade informada' })
+    .click();
+  const informed = items.getByLabel('Quantidade informada', { exact: true });
+  await expect(informed).toHaveAccessibleDescription(
+    'O que o cliente disse; não entra no total.',
+  );
+  // Refused next to the field, before any request.
+  await informed.fill('0');
+  await informed.press('Enter');
+  await expect(
+    items.getByText('Use um número inteiro de 1 a 100000.'),
+  ).toBeVisible();
+  await expect(informed).toHaveAttribute('aria-invalid', 'true');
+  await expect(informed).toHaveValue('0');
+  expect(writes).toHaveLength(0);
+
+  const warning = items.getByText(
+    'A soma dos tamanhos (150) é diferente da quantidade informada (200)',
+  );
+  await informed.fill('200');
+  await informed.press('Enter');
+  await expectSaved(page, writes, 1);
+  expect(sectionWrites(writes)[0]).toEqual(
+    command(2, {
+      action: 'update_group',
+      attributes: { quantidade_informada: 200 },
+      groupId: PRICED_GROUP_ID,
+    }),
+  );
+  await expect(warning).toBeVisible();
+  await expect(informed).not.toHaveAttribute('aria-invalid', /./u);
+
+  // Emptied, it is no quantity at all; the field in use stays on screen.
+  await informed.fill('');
+  await informed.press('Enter');
+  await expectSaved(page, writes, 2);
+  expect(sectionWrites(writes)[1].value.attributes).toEqual({
+    quantidade_informada: null,
+  });
+  await expect(warning).toHaveCount(0);
+  await expect(informed).toBeVisible();
+});
+
+test('shows a save the server refused on the line that asked for it, with what was typed (EDIT-03)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  let refuse = true;
+  const { orders } = await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+    sectionFailure: ({ body }) =>
+      refuse && body.value.action === 'change_quantity'
+        ? {
+            body: {
+              code: 'INVALID_GRADE',
+              fields: ['items[0].grade[1]'],
+              index: 1,
+            },
+            status: 422,
+          }
+        : null,
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  const row = items.locator(`[data-line-id="${PRICED_LINE_G}"]`);
+  const quantity = items.getByLabel('Quantidade do tamanho G, item 1');
+  await quantity.fill('7');
+  await quantity.press('Enter');
+
+  await expect(row.getByRole('alert')).toContainText(
     'Use uma quantidade inteira maior que zero.',
+  );
+  await expect(quantity).toHaveAttribute('aria-invalid', 'true');
+  await expect(quantity).toHaveAccessibleDescription(
+    /Use uma quantidade inteira maior que zero\./u,
+  );
+  await expect(quantity).toHaveValue('7');
+  // Nothing was saved, and the section does not say it was.
+  await expect(items.getByRole('status')).toHaveText('');
+  expect(orders[0].ficha.sizePricing[0].lines[1].quantity).toBe(50);
+  await expect(
+    items.getByLabel('Quantidade do tamanho M, item 1'),
+  ).not.toHaveAttribute('aria-invalid', /./u);
+
+  // The way out is in the message: the same change, sent again.
+  refuse = false;
+  await row.getByRole('button', { name: 'Tentar de novo' }).click();
+  await expectSaved(page, writes, 2);
+  const sent = command(2, {
+    action: 'change_quantity',
+    groupId: PRICED_GROUP_ID,
+    lineId: PRICED_LINE_G,
+    quantity: 7,
+  });
+  expect(sectionWrites(writes)).toEqual([sent, sent]);
+  await expect(row.getByRole('alert')).toHaveCount(0);
+  await expect(quantity).not.toHaveAttribute('aria-invalid', /./u);
+  await expect(quantity).toHaveValue('7');
+});
+
+test('keeps the text of a field whose save failed and does not send what was typed after it (EDIT-03)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+    sectionFailure: () => ({ body: { code: 'UNAVAILABLE' }, status: 503 }),
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  const colour = items.getByLabel('Cor', { exact: true });
+  await colour.fill('PRETA');
+  await colour.press('Enter');
+
+  const alert = page.locator('#item-0-cor-error');
+  await expect(alert).toHaveAttribute('role', 'alert');
+  await expect(alert).toContainText('Serviço indisponível no momento.');
+  await expect(
+    alert.getByRole('button', { name: 'Tentar de novo' }),
+  ).toBeVisible();
+  await expect(colour).toHaveAttribute('aria-invalid', 'true');
+  await expect(colour).toHaveAccessibleDescription(
+    /Serviço indisponível no momento\./u,
+  );
+  await expect(colour).toHaveValue('PRETA');
+  await expect(items.getByRole('status')).toHaveText('');
+  expect(writes).toHaveLength(1);
+  // Typing in the field again clears its error.
+  await colour.fill('PRETA FOSCA');
+  await expect(alert).toHaveCount(0);
+  await expect(colour).not.toHaveAttribute('aria-invalid', /./u);
+});
+
+test('says the order changed elsewhere at the field and offers "Recarregar pedido" (EDIT-03, PFI-06)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  const { orders } = await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  const colour = items.getByLabel('Cor', { exact: true });
+  await expect(colour).toHaveValue('BRANCA');
+  // Someone else wrote the order: the page holds an older version.
+  orders[0].ficha.items[0].gola = 'GOLA POLO';
+  orders[0].version += 1;
+
+  await colour.fill('PRETA');
+  await colour.press('Enter');
+  const alert = page.locator('#item-0-cor-error');
+  await expect(alert).toContainText('Este pedido mudou em outro lugar.');
+  await expect(colour).toHaveAttribute('aria-invalid', 'true');
+  await expect(colour).toHaveValue('PRETA');
+  // A conflict is not retried over the same version.
+  await expect(
+    alert.getByRole('button', { name: 'Tentar de novo' }),
+  ).toHaveCount(0);
+  expect(sectionWrites(writes)).toHaveLength(1);
+  expect(sectionWrites(writes)[0].expectedVersion).toBe(2);
+  expect(orders[0].ficha.items[0].cor).toBe('BRANCA');
+
+  const reload = alert.getByRole('button', { name: 'Recarregar pedido' });
+  await reload.focus();
+  await page.keyboard.press('Enter');
+  // The order as the server has it; the focus stays at the field.
+  await expect(alert).toHaveCount(0);
+  await expect(colour).toHaveValue('BRANCA');
+  await expect(colour).not.toHaveAttribute('aria-invalid', /./u);
+  await expect(items.getByLabel('Gola', { exact: true })).toHaveValue(
+    'GOLA POLO',
+  );
+  await expect(colour).toBeFocused();
+
+  // The next save rides the version that was read.
+  await colour.fill('PRETA');
+  await colour.press('Enter');
+  await expectSaved(page, writes, 2);
+  expect(sectionWrites(writes)[1]).toEqual(
+    command(3, {
+      action: 'update_group',
+      attributes: { cor: 'PRETA' },
+      groupId: PRICED_GROUP_ID,
+    }),
   );
 });
 
-test('opens one section at a time (PFI-06)', async ({ page }) => {
-  await mockOrders(page);
+test('reloads the order after a conflict on a chip, where no blur sends a second write (EDIT-03, PFI-06)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  const { orders } = await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  const first = items.locator('.op-item').first();
+  await first
+    .getByRole('group', { name: 'Adicionais do item 1, não obrigatórios' })
+    .getByRole('button', { name: 'Público' })
+    .click();
+  const masculine = first
+    .getByRole('group', { exact: true, name: 'Público' })
+    .getByRole('button', { name: 'Masculino' });
+  // Someone else wrote the order: the page holds an older version.
+  orders[0].ficha.items[0].gola = 'GOLA POLO';
+  orders[0].version += 1;
+
+  await masculine.click();
+  const alert = items.getByRole('alert');
+  await expect(alert).toContainText('Este pedido mudou em outro lugar.');
+  expect(sectionWrites(writes)).toHaveLength(1);
+  // A conflict is not retried over the same version.
+  await expect(
+    alert.getByRole('button', { name: 'Tentar de novo' }),
+  ).toHaveCount(0);
+  await alert.getByRole('button', { name: 'Recarregar pedido' }).click();
+  await expect(alert).toHaveCount(0);
+  await expect(items.getByLabel('Gola', { exact: true })).toHaveValue(
+    'GOLA POLO',
+  );
+  await expect(masculine).toHaveAttribute('aria-pressed', 'false');
+  expect(sectionWrites(writes)).toHaveLength(1);
+
+  // The next save rides the version that was read.
+  await masculine.click();
+  await expectSaved(page, writes, 2);
+  expect(sectionWrites(writes)[1]).toEqual(
+    command(3, {
+      action: 'update_group',
+      attributes: { publico: 'masculino' },
+      groupId: PRICED_GROUP_ID,
+    }),
+  );
+});
+
+test('keeps what is being typed, and the focus, when the order is refreshed from elsewhere (EDIT-03)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  const { orders } = await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
+  /** @type {() => void} */
+  let sendEvent = () => {};
+  const eventGate = new Promise((resolve) => {
+    sendEvent = () => resolve(null);
+  });
+  await page.route(/\/api\/v1\/events\?/u, async (route) => {
+    await eventGate;
+    return route.fulfill({
+      body: eventStreamBody({
+        payload: { orderId: 'order-pendente' },
+        type: 'inbox.order.changed',
+      }),
+      contentType: 'text/event-stream',
+      status: 200,
+    });
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  const colour = items.getByLabel('Cor', { exact: true });
+  const collar = items.getByLabel('Gola', { exact: true });
+  await colour.fill('PRE');
+  orders[0].ficha.items[0].gola = 'GOLA POLO';
+  orders[0].version += 1;
+  sendEvent();
+
+  await expect(collar).toHaveValue('GOLA POLO');
+  await expect(colour).toHaveValue('PRE');
+  await expect(colour).toBeFocused();
+  expect(writes).toHaveLength(0);
+  // What is typed is saved over the version the refresh brought.
+  await page.keyboard.type('TA');
+  await page.keyboard.press('Enter');
+  await expectSaved(page, writes, 1);
+  expect(sectionWrites(writes)[0]).toEqual(
+    command(3, {
+      action: 'update_group',
+      attributes: { cor: 'PRETA' },
+      groupId: PRICED_GROUP_ID,
+    }),
+  );
+});
+
+test('reads the items, with the reason, while a section still in the Editar model is open (PFI-06, EDIT-08)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
   await page.goto('/pedidos/order-pendente');
 
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await summary.getByRole('button', { name: 'Editar' }).click();
+  const items = page.getByRole('region', { name: ITEMS });
+  await expect(items).toHaveAttribute('data-items-state', 'edit');
+  await summary.getByRole('button', { name: 'Editar resumo' }).click();
 
-  await expect(items.getByRole('button', { name: 'Editar' })).toBeDisabled();
+  // A save here would make "Salvar resumo" lose to a conflict of versions.
+  await expect(items).toHaveAttribute('data-items-state', 'blocked');
+  await expect(
+    items.getByText('Salve ou cancele a edição aberta para alterar os itens.'),
+  ).toBeVisible();
+  await expect(items.getByRole('textbox')).toHaveCount(0);
+  await expect(items.getByRole('button')).toHaveCount(0);
+  await expect(items.locator('dl.op-points')).toBeVisible();
+  await expect(
+    items
+      .getByRole('list', { name: 'Tamanhos do item 1' })
+      .getByRole('listitem'),
+  ).toHaveText([/^M\s*100\s*peças$/u, /^G\s*50\s*peças$/u]);
+  // OLIST-43: read, an order priced by size shows what each size was sold for.
+  await expect(
+    items
+      .getByRole('table', { name: 'Tamanhos e subtotais do item 1' })
+      .locator('tbody tr'),
+  ).toHaveText([/^M\s*100\s*R\$ 3\.200,00$/u, /^G\s*50\s*R\$ 1\.600,00$/u]);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
   await summary.getByRole('button', { name: 'Cancelar' }).click();
-  await expect(items.getByRole('button', { name: 'Editar' })).toBeEnabled();
+  await expect(items).toHaveAttribute('data-items-state', 'edit');
+  await expect(
+    page.getByText('Salve ou cancele a edição aberta para alterar os itens.'),
+  ).toHaveCount(0);
+  await expect(items.getByLabel('Modelo', { exact: true })).toBeEditable();
+  expect(writes).toHaveLength(0);
 });
 
-test('heads each section with its state in words and "Editar" naming the section (PFI-17)', async ({
+test('saves the summary opened right after a change to an item, over the version that change left (PFI-06, EDIT-02)', async ({
   page,
 }) => {
-  await mockOrders(page, { orders: [incompleteOrder] });
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
+  /** @type {() => void} */
+  let release = () => {};
+  const held = new Promise((resolve) => {
+    release = () => resolve(undefined);
+  });
+  let reached = 0;
+  // Registered after the mock, so it runs first and holds the item's save.
+  await page.route(
+    '**/api/v1/orders/order-pendente/sections/size-pricing',
+    async (route) => {
+      reached += 1;
+      await held;
+      await route.fallback();
+    },
+  );
+  await page.goto('/pedidos/order-pendente');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  const items = page.getByRole('region', { name: ITEMS });
+  await items.getByLabel('Cor', { exact: true }).fill('PRETA');
+  // The click takes the focus from the field, which saves, and opens the
+  // summary while that save is still on its way.
+  await summary.getByRole('button', { name: 'Editar resumo' }).click();
+  await expect.poll(() => reached).toBe(1);
+  await summary.getByLabel('Nome do pedido').fill('Uniforme escolar 2028');
+  release();
+  await expect.poll(() => writes.length).toBe(1);
+  await summary.getByRole('button', { name: 'Salvar resumo' }).click();
+
+  await expect(
+    summary.getByRole('button', { name: 'Editar resumo' }),
+  ).toBeVisible();
+  await expect(summary.getByRole('alert')).toHaveCount(0);
+  await expect(summary).toContainText('Uniforme escolar 2028');
+  expect(sectionWrites(writes)).toEqual([
+    command(2, {
+      action: 'update_group',
+      attributes: { cor: 'PRETA' },
+      groupId: PRICED_GROUP_ID,
+    }),
+    {
+      expectedVersion: 3,
+      section: 'summary',
+      value: {
+        data_entrega_confirmada: '2026-10-24',
+        nome: 'Uniforme escolar 2028',
+      },
+    },
+  ]);
+  await expect(items.getByLabel('Cor', { exact: true })).toHaveValue('PRETA');
+});
+
+test('heads each section with its state in words, "Editar" naming the section and none on the items (PFI-17, EDIT-01, EDIT-07, EDIT-08)', async ({
+  page,
+}) => {
+  await mockOrders(page, { orders: [incompletePricedOrder] });
   await page.goto('/pedidos/order-pendente');
 
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
   const trail = page.getByRole('region', { name: 'Datas do pedido' });
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  const items = page.getByRole('region', { name: ITEMS });
   const artwork = page.getByRole('region', { name: 'Arte do pedido' });
   const observations = page.getByRole('region', {
     name: 'Observações do pedido',
@@ -1700,7 +2778,7 @@ test('heads each section with its state in words and "Editar" naming the section
 
   // The region keeps only the title as its name; the state sits beside it.
   await expect(
-    page.getByRole('region', { exact: true, name: 'Itens e especificações' }),
+    page.getByRole('region', { exact: true, name: ITEMS }),
   ).toHaveCount(1);
   const states = page.locator('main .op-sheet-state');
   await expect(states).toHaveText([
@@ -1721,23 +2799,43 @@ test('heads each section with its state in words and "Editar" naming the section
     'neutral',
   );
 
-  // Verb and object on every button; none says only "Editar".
+  // Verb and object on every button; none says only "Editar". EDIT-01: the
+  // section edited in place has none.
   await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveText([
     'Editar resumo',
     'Editar datas',
-    'Editar itens',
     'Editar arte',
     'Editar observações',
   ]);
   await expect(
     page.getByRole('button', { exact: true, name: 'Editar' }),
   ).toHaveCount(0);
+  // EDIT-08: its head has the one status region of the section instead,
+  // silent until something is saved.
+  const status = items.locator('.op-sheet-head').getByRole('status');
+  await expect(items.getByRole('status')).toHaveCount(1);
+  await expect(status).toHaveText('');
 
+  // The two points are filled where they are asked.
+  const colour = items.getByLabel('Cor', { exact: true });
+  await colour.fill('AZUL');
+  await colour.press('Enter');
+  const collar = items.getByLabel('Gola', { exact: true });
+  await collar.fill('GOLA V');
+  await collar.press('Enter');
+  await expect(status).toHaveText('Salvo');
+  // EDIT-07 (OLIST-43): a changed attribute asks a human to look at the
+  // subtotals again; one button keeps them all.
+  await expect(items.locator('.op-sheet-state')).toHaveText(
+    /Falta: subtotais por tamanho a revisar/u,
+  );
+  await expect(items.getByText('Confira o subtotal.')).toHaveCount(2);
+  await expect(page.locator('#item-0-keep-all')).toHaveText(
+    'Manter os 2 subtotais',
+  );
+  await page.locator('#item-0-keep-all').click();
+  await expect(page.locator('#item-0-keep-all')).toHaveCount(0);
   // Once the items are complete their state counts items and pieces.
-  await items.getByRole('button', { name: 'Editar itens' }).click();
-  await items.getByLabel('Cor', { exact: true }).fill('BRANCA');
-  await items.getByLabel('Gola', { exact: true }).fill('GOLA V');
-  await items.getByRole('button', { name: 'Salvar itens' }).click();
   await expect(items.locator('.op-sheet-state')).toHaveText(
     '1 item · 150 peças',
   );
@@ -1745,6 +2843,7 @@ test('heads each section with its state in words and "Editar" naming the section
     'data-tone',
     'ok',
   );
+  await expect(items.getByText('Confira o subtotal.')).toHaveCount(0);
 
   // The promised delivery and who makes the art read as done once saved.
   await summary.getByRole('button', { name: 'Editar resumo' }).click();
@@ -1765,7 +2864,7 @@ test('heads each section with its state in words and "Editar" naming the section
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('keeps the other "Editar" focusable but unavailable, with the reason, while one section is open (PFI-17, PFI-06)', async ({
+test('keeps the other "Editar" focusable but unavailable, with the reason, while one section is open (PFI-17, PFI-06, EDIT-08)', async ({
   page,
 }) => {
   /** @type {any[]} */
@@ -1774,16 +2873,17 @@ test('keeps the other "Editar" focusable but unavailable, with the reason, while
   await page.goto('/pedidos/order-pendente');
 
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  const editItems = items.getByRole('button', { name: 'Editar itens' });
-  await editItems.focus();
+  const artwork = page.getByRole('region', { name: 'Arte do pedido' });
+  const items = page.getByRole('region', { name: ITEMS });
+  // The summary is still in the Editar/Salvar model.
+  const editSummary = summary.getByRole('button', { name: 'Editar resumo' });
+  await editSummary.focus();
   await page.keyboard.press('Enter');
-  await expect(items.getByLabel('Modelo', { exact: true })).toBeFocused();
-  await items.getByLabel('Modelo', { exact: true }).fill('REGATA');
+  const name = summary.getByLabel('Nome do pedido');
+  await name.fill('RASCUNHO');
 
   const others = page.getByRole('button', { name: /^Editar\b/u });
   await expect(others).toHaveText([
-    'Editar resumo',
     'Editar datas',
     'Editar arte',
     'Editar observações',
@@ -1794,28 +2894,29 @@ test('keeps the other "Editar" focusable but unavailable, with the reason, while
       'Salve ou cancele a edição aberta.',
     );
   }
+  // EDIT-08: the items have no button to wait; they read, with the reason.
+  await expect(items).toHaveAttribute('data-items-state', 'blocked');
+  await expect(items.getByRole('textbox')).toHaveCount(0);
 
   // Enter and a click on a waiting button open nothing and keep the draft.
-  const editSummary = summary.getByRole('button', { name: 'Editar resumo' });
-  await editSummary.focus();
+  const editArtwork = artwork.getByRole('button', { name: 'Editar arte' });
+  await editArtwork.focus();
   await page.keyboard.press('Enter');
   await page.keyboard.press('Space');
-  await editSummary.dispatchEvent('click');
-  await expect(editSummary).toBeFocused();
-  await expect(summary.getByLabel('Nome do pedido')).toHaveCount(0);
-  await expect(items.getByLabel('Modelo', { exact: true })).toHaveValue(
-    'REGATA',
-  );
+  await editArtwork.dispatchEvent('click');
+  await expect(editArtwork).toBeFocused();
+  await expect(artwork.getByRole('checkbox')).toHaveCount(0);
+  await expect(name).toHaveValue('RASCUNHO');
   // After the attempt the reason shows on screen, next to the button.
   await expect(
-    summary.getByText('Salve ou cancele a edição aberta.'),
+    artwork.getByText('Salve ou cancele a edição aberta.', { exact: true }),
   ).toBeVisible();
   expect(writes).toHaveLength(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
   // Cancelling frees every "Editar" again, without the reason.
-  await items.getByRole('button', { name: 'Cancelar' }).click();
-  await expect(others).toHaveCount(5);
+  await summary.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(others).toHaveCount(4);
   for (const other of await others.all()) {
     await expect(other).not.toHaveAttribute('aria-disabled', /./u);
     await expect(other).not.toHaveAttribute('aria-describedby', /./u);
@@ -1823,16 +2924,24 @@ test('keeps the other "Editar" focusable but unavailable, with the reason, while
   await expect(page.getByText('Salve ou cancele a edição aberta.')).toHaveCount(
     0,
   );
+  await expect(items).toHaveAttribute('data-items-state', 'edit');
 });
 
-test('opens the items from the next step by keyboard, through the section itself (PFI-15, PFI-17)', async ({
+test('takes the next step to the first pending field of the items, by keyboard, wide and on a phone (PFI-15, PFI-16, PFI-17, EDIT-04)', async ({
   page,
 }) => {
   const noColour = {
     ...pendingOrder,
     ficha: {
       ...pendingOrder.ficha,
-      items: [{ ...pendingOrder.ficha.items[0], cor: '' }],
+      items: [
+        {
+          ...pendingOrder.ficha.items[0],
+          cor: '',
+          cor_costas: '',
+          cor_frente: '',
+        },
+      ],
     },
     missingFields: ['items[0].cor', 'finalAmount', 'paymentCondition'],
   };
@@ -1843,21 +2952,266 @@ test('opens the items from the next step by keyboard, through the section itself
   const next = progress.getByRole('button', { name: 'Completar itens' });
   await next.focus();
   await page.keyboard.press('Enter');
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await expect(items.getByLabel('Modelo', { exact: true })).toBeFocused();
-  await expect(
-    items.getByRole('button', { name: 'Salvar itens' }),
-  ).toBeVisible();
-  await expect(next).toHaveAttribute('aria-disabled', 'true');
+  const items = page.getByRole('region', { name: ITEMS });
+  const colour = items.getByLabel('Cor', { exact: true });
+  await expect(colour).toBeFocused();
+  await expect(colour).toBeInViewport();
+  await expect(colour).toHaveAttribute('aria-required', 'true');
+  await expect(colour).toHaveAccessibleDescription(
+    /^Falta\s+para gerar o pedido$/u,
+  );
+  // No editor opened: nothing to save or cancel, and the step is not waiting.
+  await expect(items.getByRole('button', { name: /^Salvar/u })).toHaveCount(0);
+  await expect(next).not.toHaveAttribute('aria-disabled', /./u);
 
-  // Phone: the fixed footer opens the same editor.
-  await items.getByRole('button', { name: 'Cancelar' }).click();
+  // Phone: the fixed footer opens the fold of the items on the same field,
+  // and stays where it is.
   await page.setViewportSize({ height: 844, width: 390 });
   const footer = page.locator('.op-mobile-action');
   const step = footer.getByRole('button', { name: 'Completar itens' });
   await step.focus();
   await page.keyboard.press('Enter');
-  await expect(items.getByLabel('Modelo', { exact: true })).toBeFocused();
+  await expect(colour).toBeFocused();
+  await expect(colour).toBeInViewport();
+  await expect(
+    items.getByRole('button', { name: /^Itens e especificações/u }),
+  ).toHaveAttribute('aria-expanded', 'true');
+  await expect(step).toBeVisible();
+});
+
+const emptySubtotals = pricedPendingOrder.ficha.sizePricing[0].lines.map(
+  (line) => ({ ...line, subtotalCents: null, subtotalReviewed: false }),
+);
+
+for (const pending of [
+  {
+    label: 'an order without items',
+    order: {
+      ...pendingOrder,
+      ficha: { ...pendingOrder.ficha, items: [] },
+      missingFields: ['items', 'finalAmount', 'paymentCondition'],
+      totalPieces: 0,
+    },
+    target: '#order-items-add',
+  },
+  {
+    label: 'a missing fabric',
+    order: {
+      ...pendingOrder,
+      ficha: {
+        ...pendingOrder.ficha,
+        items: [{ ...pendingOrder.ficha.items[0], malhas: [] }],
+      },
+      missingFields: ['items[0].malhas', 'finalAmount', 'paymentCondition'],
+    },
+    required: true,
+    target: '#item-0-malha-0',
+  },
+  {
+    label: 'an item without sizes',
+    order: {
+      ...pendingOrder,
+      ficha: {
+        ...pendingOrder.ficha,
+        items: [{ ...pendingOrder.ficha.items[0], grade: [] }],
+      },
+      missingFields: ['items[0].grade', 'finalAmount', 'paymentCondition'],
+      totalPieces: 0,
+    },
+    required: true,
+    target: '#item-0-new-size',
+  },
+  {
+    label: 'a size without its subtotal',
+    order: {
+      ...pricedPendingOrder,
+      ficha: {
+        ...pricedPendingOrder.ficha,
+        sizePricing: [
+          {
+            id: PRICED_GROUP_ID,
+            lines: [
+              pricedPendingOrder.ficha.sizePricing[0].lines[0],
+              emptySubtotals[1],
+            ],
+          },
+        ],
+      },
+      finalAmountCents: null,
+      missingFields: [
+        'finalAmount',
+        'paymentCondition',
+        `sizePricing.${PRICED_GROUP_ID}.${PRICED_LINE_G}`,
+      ],
+      pricing: {
+        complete: false,
+        groups: [{ id: PRICED_GROUP_ID, subtotalCents: null }],
+        issues: [
+          {
+            code: 'SIZE_SUBTOTAL_REQUIRED',
+            groupId: PRICED_GROUP_ID,
+            lineId: PRICED_LINE_G,
+          },
+        ],
+        totalCents: null,
+      },
+    },
+    required: true,
+    target: '#item-0-subtotal-1',
+  },
+  {
+    // What the server lists for an order that never started its subtotals.
+    label: 'subtotals never started',
+    order: {
+      ...pendingOrder,
+      missingFields: ['finalAmount', 'paymentCondition', 'sizePricing'],
+    },
+    required: true,
+    target: '#item-0-subtotal-0',
+  },
+]) {
+  test(`"Completar itens" lands on the control that fills the first pendência: ${pending.label} (PFI-15, EDIT-04)`, async ({
+    page,
+  }) => {
+    /** @type {any[]} */
+    const writes = [];
+    await mockOrders(page, {
+      onWrite: (call) => writes.push(call),
+      orders: [pending.order],
+    });
+    await page.goto('/pedidos/order-pendente');
+
+    await page
+      .getByRole('region', { name: 'Para gerar o pedido' })
+      .getByRole('button', { name: 'Completar itens' })
+      .click();
+    const target = page.locator(pending.target);
+    await expect(target).toBeFocused();
+    await expect(target).toBeInViewport();
+    if (pending.required) {
+      await expect(target).toHaveAttribute('aria-required', 'true');
+      await expect(target).not.toHaveAttribute('aria-invalid', /./u);
+    }
+    // Going there changes nothing.
+    expect(writes).toHaveLength(0);
+  });
+}
+
+test('marks every pending point at its field as "Falta", never as an error, in the words of the head (EDIT-04)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  const gaps = {
+    ...pricedPendingOrder,
+    ficha: {
+      ...pricedPendingOrder.ficha,
+      items: [
+        {
+          ...pendingOrder.ficha.items[0],
+          cor: '',
+          cor_costas: '',
+          cor_frente: '',
+          gola: '',
+          malhas: [],
+          tipo: '',
+          tipo_servico: '',
+          vies_gola: '',
+        },
+      ],
+    },
+    missingFields: [
+      'items[0].tipo',
+      'items[0].cor',
+      'items[0].tipo_servico',
+      'items[0].malhas',
+      'items[0].gola',
+      'paymentCondition',
+    ],
+  };
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [gaps],
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  const principal = ['Modelo', 'Cor', 'Aplicação', 'Modelo de malha', 'Gola'];
+  for (const label of principal) {
+    const field = items.getByLabel(label, { exact: true });
+    await expect(field).toHaveAttribute('aria-required', 'true');
+    await expect(field).not.toHaveAttribute('aria-invalid', /./u);
+    await expect(field).toHaveAccessibleDescription(
+      /Falta\s+para gerar o pedido$/u,
+    );
+  }
+  const badges = items.locator('.op-field-gap');
+  await expect(badges).toHaveCount(5);
+  for (const badge of await badges.all()) {
+    await expect(badge).toHaveText(/^Falta\s+para gerar o pedido$/u);
+    await expect(badge.locator('svg')).toHaveCount(1);
+  }
+  // An optional point is never a pendência.
+  await expect(
+    items.getByLabel('Estampa (referência)', { exact: true }),
+  ).not.toHaveAttribute('aria-required', /./u);
+  await expect(items.locator('[aria-invalid]')).toHaveCount(0);
+  await expect(items.getByRole('alert')).toHaveCount(0);
+
+  // The head and the progress read the same list, in the same words.
+  await expect(items.locator('.op-sheet-state')).toHaveText(
+    'Falta: modelo do item 1, cor do item 1 e mais 3 pontos',
+  );
+  await expect(
+    page
+      .getByRole('region', { name: 'Para gerar o pedido' })
+      .locator('li[aria-current="step"]'),
+  ).toContainText('falta: modelo do item 1, cor do item 1 e mais 3 pontos');
+
+  // The mark leaves with the pendência, as soon as the point is saved.
+  const model = items.getByLabel('Modelo', { exact: true });
+  await model.fill('CAMISETA');
+  await model.press('Enter');
+  await expectSaved(page, writes, 1);
+  await expect(model).not.toHaveAttribute('aria-required', /./u);
+  await expect(badges).toHaveCount(4);
+});
+
+test('names the subtotals to review once, however many sizes lack one (PFI-15, EDIT-04)', async ({
+  page,
+}) => {
+  await mockOrders(page, {
+    orders: [
+      {
+        ...pricedPendingOrder,
+        ficha: {
+          ...pricedPendingOrder.ficha,
+          sizePricing: [{ id: PRICED_GROUP_ID, lines: emptySubtotals }],
+        },
+        finalAmountCents: null,
+        missingFields: [
+          'finalAmount',
+          'paymentCondition',
+          `sizePricing.${PRICED_GROUP_ID}.${PRICED_LINE_M}`,
+          `sizePricing.${PRICED_GROUP_ID}.${PRICED_LINE_G}`,
+        ],
+        pricing: {
+          complete: false,
+          groups: [{ id: PRICED_GROUP_ID, subtotalCents: null }],
+          issues: [],
+          totalCents: null,
+        },
+      },
+    ],
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  await expect(
+    page.getByRole('region', { name: ITEMS }).locator('.op-sheet-state'),
+  ).toHaveText('Falta: subtotais por tamanho a revisar');
+  await expect(page.locator('#closing-readiness')).toHaveText(
+    /^Falta para gerar: subtotais por tamanho a revisar\./u,
+  );
 });
 
 test('counts a blocker the screen does not know as a step that leads to the closing panel (PFI-15)', async ({
@@ -1948,14 +3302,15 @@ test('keeps the section heads readable and their buttons thumb sized, light and 
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
     await page.setViewportSize({ height: 800, width: 1280 });
-    // On a wide screen every "Editar" is back, and the edit is still open.
-    await expect(edits).toHaveCount(4);
+    // On a wide screen every "Editar" is back but the one in edit (the items
+    // have none, EDIT-01), and the edit is still open.
+    await expect(edits).toHaveCount(3);
     await expect(observations.getByText('Editando')).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   }
 });
 
-test('folds the sections into an accordion on a phone, by keyboard, with the state in each head (PFI-18)', async ({
+test('folds the sections into an accordion on a phone, by keyboard, with the state in each head (PFI-18, EDIT-01)', async ({
   page,
 }) => {
   await page.setViewportSize({ height: 844, width: 390 });
@@ -2037,9 +3392,13 @@ test('folds the sections into an accordion on a phone, by keyboard, with the sta
   await expect(page.locator('#order-items-body')).toBeVisible();
   await expect(page.locator('#order-summary-body')).toBeHidden();
   await expect(page).toHaveURL(/\/pedidos\/order-pendente#itens$/u);
-  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveText([
-    'Editar itens',
-  ]);
+  // EDIT-01: the open fold has no "Editar"; it shows the fields themselves.
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(0);
+  await expect(items.getByLabel('Modelo', { exact: true })).toBeEditable();
+  await expect(items.getByLabel('Cor', { exact: true })).toHaveAttribute(
+    'aria-required',
+    'true',
+  );
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
   // Space closes it again, and opens it back.
@@ -2059,7 +3418,7 @@ test('folds the sections into an accordion on a phone, by keyboard, with the sta
   await expect(summaryHead).toHaveAttribute('aria-expanded', 'false');
 });
 
-test('opens the section of the hash and of the next step, and never folds an edit (PFI-18)', async ({
+test('opens the section of the hash and of the next step, and never folds a section in its Editar model (PFI-18, EDIT-08)', async ({
   page,
 }) => {
   /** @type {any[]} */
@@ -2127,7 +3486,7 @@ test('opens the section of the hash and of the next step, and never folds an edi
   await expect(itemsHead).toBeFocused();
   await expect(itemsHead).toHaveAttribute('aria-expanded', 'false');
   await expect(
-    items.getByText('Salve ou cancele a edição aberta.'),
+    items.getByText('Salve ou cancele a edição aberta.', { exact: true }),
   ).toBeVisible();
   await summaryHead.focus();
   await page.keyboard.press('Enter');
@@ -2139,8 +3498,10 @@ test('opens the section of the hash and of the next step, and never folds an edi
   await page.setViewportSize({ height: 800, width: 1280 });
   await expect(page.locator('main h2 button')).toHaveCount(0);
   await expect(delivery).toHaveValue('2026-11-20');
+  // EDIT-08: the items wait in reading, with the reason, and no button.
+  await expect(items).toHaveAttribute('data-items-state', 'blocked');
   await expect(
-    items.getByRole('button', { name: 'Editar itens' }),
+    items.getByText('Salve ou cancele a edição aberta para alterar os itens.'),
   ).toBeVisible();
   await page.setViewportSize({ height: 844, width: 390 });
   await expect(delivery).toHaveValue('2026-11-20');
@@ -2153,6 +3514,59 @@ test('opens the section of the hash and of the next step, and never folds an edi
   await expect(page.getByText('Salve ou cancele a edição aberta.')).toHaveCount(
     0,
   );
+});
+
+test('folds the items like any other section: nothing typed holds them open (PFI-18, EDIT-01)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await page.setViewportSize({ height: 844, width: 390 });
+  const { orders } = await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
+  await page.goto('/pedidos/order-pendente#itens');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  const items = page.getByRole('region', { name: ITEMS });
+  const summaryHead = summary.getByRole('button', {
+    name: /^Resumo do pedido/u,
+  });
+  const itemsHead = items.getByRole('button', {
+    name: /^Itens e especificações/u,
+  });
+  await expect(itemsHead).toHaveAttribute('aria-expanded', 'true');
+  const model = items.getByLabel('Modelo', { exact: true });
+  await model.fill('REGATA');
+  // There is no draft of the section, so no head waits for a Salvar.
+  for (const head of await page
+    .locator('main h2 button[aria-expanded]')
+    .all()) {
+    await expect(head).not.toHaveAttribute('aria-disabled', /./u);
+  }
+  const footer = page.locator('.op-mobile-action');
+  await expect(footer).toBeVisible();
+
+  // Another head opens its section and closes the items; leaving the field
+  // saved what was typed.
+  await summaryHead.click();
+  await expect(summaryHead).toHaveAttribute('aria-expanded', 'true');
+  await expect(itemsHead).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#order-items-body')).toBeHidden();
+  await expect.poll(() => orders[0].ficha.items[0].tipo).toBe('REGATA');
+  expect(sectionWrites(writes)).toEqual([
+    command(2, {
+      action: 'update_group',
+      attributes: { tipo: 'REGATA' },
+      groupId: PRICED_GROUP_ID,
+    }),
+  ]);
+  await expect(footer).toBeVisible();
+
+  await itemsHead.click();
+  await expect(model).toHaveValue('REGATA');
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
 test('keeps a confirmed order and a store order coherent in the accordion (PFI-18, PFI-10, LOJ-07)', async ({
@@ -2196,7 +3610,7 @@ test('keeps every section open and the heads plain on a wide screen (PFI-18)', a
   await page.goto('/pedidos/order-pendente#itens');
 
   // No accordion: no head button, no aria-expanded on a heading, every
-  // body on screen and every "Editar" in place.
+  // body on screen and every "Editar" in place (EDIT-01: none on the items).
   await expect(page.locator('main h2 button')).toHaveCount(0);
   await expect(page.locator('main h2 [aria-expanded]')).toHaveCount(0);
   for (const body of [
@@ -2208,7 +3622,11 @@ test('keeps every section open and the heads plain on a wide screen (PFI-18)', a
   ]) {
     await expect(page.locator(body)).toBeVisible();
   }
-  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(5);
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(4);
+  await expect(page.getByRole('region', { name: ITEMS })).toHaveAttribute(
+    'data-items-state',
+    'edit',
+  );
   await expect(page.locator('main .op-sheet-state')).toHaveCount(5);
   // "Dados do atendimento" keeps its own "Ver" on a wide screen.
   await expect(
@@ -3087,11 +4505,15 @@ test('keeps the main action of the order in a fixed footer on a phone', async ({
   await expect(dialog).toHaveCount(0);
   await expect(generate).toBeFocused();
 
-  // The footer steps aside while a section is edited (PFI-18: the items
-  // fold opens first on a phone).
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
+  // EDIT-01: the items are edited in place, so their open fold keeps the
+  // footer; it steps aside only for a section still in the Editar model.
+  const items = page.getByRole('region', { name: ITEMS });
   await items.getByRole('button', { name: /^Itens e especificações/u }).click();
-  await items.getByRole('button', { name: 'Editar' }).click();
+  await expect(items.getByLabel('Modelo', { exact: true })).toBeEditable();
+  await expect(generate).toBeVisible();
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  await summary.getByRole('button', { name: /^Resumo do pedido/u }).click();
+  await summary.getByRole('button', { name: 'Editar resumo' }).click();
   await expect(footer).toHaveCount(0);
 });
 
@@ -3179,39 +4601,172 @@ test('shows the reopen notice above the footer and the bottom navigation', async
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('edits the size grade with the thumb on a phone', async ({ page }) => {
-  await page.setViewportSize({ height: 844, width: 390 });
-  await mockOrders(page);
-  await page.goto('/pedidos/order-pendente');
+test.describe('the items on a phone with touch', () => {
+  test.use({ hasTouch: true, viewport: { height: 844, width: 390 } });
 
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  // PFI-18: the items are a closed fold of the accordion until opened.
-  await items.getByRole('button', { name: /^Itens e especificações/u }).click();
-  await items.getByRole('button', { name: 'Editar' }).click();
-  const quantity = items.getByLabel('Quantidade do tamanho M');
-  await expect(quantity).toHaveAttribute('inputmode', 'numeric');
-  for (const control of [
-    quantity,
-    items.getByLabel('Tamanho da linha 1'),
-    items.getByRole('button', { name: 'Uma peça a mais na linha 1' }),
-    items.getByRole('button', { name: 'Uma peça a menos na linha 1' }),
-    items.getByRole('button', { name: 'Remover linha 1' }),
-    items.getByRole('button', { name: 'Adicionar tamanho' }).first(),
-  ]) {
-    const box = await control.boundingBox();
-    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
-  }
+  test('edits the sizes with the thumb: every control of the item is 44 px, with no stepper (EDIT-06, PFI-18)', async ({
+    page,
+  }) => {
+    await mockOrders(page, { orders: [pricedPendingOrder] });
+    // PFI-18: the hash opens the fold of the items.
+    await page.goto('/pedidos/order-pendente#itens');
+
+    const items = page.getByRole('region', { name: ITEMS });
+    const quantity = items.getByLabel('Quantidade do tamanho M, item 1');
+    await expect(quantity).toHaveAttribute('inputmode', 'numeric');
+    await expect(
+      items.getByLabel('Subtotal do tamanho M, item 1'),
+    ).toHaveAttribute('inputmode', 'decimal');
+    await items
+      .getByRole('group', { name: 'Adicionais do item 1, não obrigatórios' })
+      .getByRole('button', { name: 'Público' })
+      .click();
+
+    /** @type {[string, import('@playwright/test').Locator][]} */
+    const targets = [
+      ['o tamanho', items.getByLabel('Tamanho, linha 1 do item 1')],
+      ['a quantidade', quantity],
+      ['o subtotal', items.getByLabel('Subtotal do tamanho M, item 1')],
+      ['o novo tamanho', page.locator('#item-0-new-size')],
+      ['a quantidade do novo tamanho', page.locator('#item-0-new-qty')],
+      ['Modelo', items.getByLabel('Modelo', { exact: true })],
+      ['Outra malha', items.getByRole('button', { name: 'Outra malha' })],
+      ['Adicionar item', items.getByRole('button', { name: 'Adicionar item' })],
+      [
+        '+ Quantidade informada',
+        items.getByRole('button', {
+          exact: true,
+          name: 'Quantidade informada',
+        }),
+      ],
+    ];
+    for (const chip of await items
+      .getByRole('group', { exact: true, name: 'Público' })
+      .getByRole('button')
+      .all()) {
+      targets.push([`o chip ${await chip.innerText()}`, chip]);
+    }
+    for (const chip of await items
+      .getByRole('button', { name: /^Não aplicável: /u })
+      .all()) {
+      targets.push(['o chip Não aplicável', chip]);
+    }
+    for (const [name, target] of targets) {
+      const box = await target.boundingBox();
+      expect(box?.height ?? 0, name).toBeGreaterThanOrEqual(44);
+    }
+    // The icon buttons are 44 px both ways.
+    for (const button of [
+      items.getByRole('button', { name: 'Remover tamanho M do item 1' }),
+      items.getByRole('button', { name: 'Mais ações do item 1' }),
+    ]) {
+      const box = await button.boundingBox();
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+      expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+    }
+
+    // EDIT-06: the quantity is typed; nothing steps it or adds a line.
+    for (const name of [
+      /Uma peça a mais/u,
+      /Uma peça a menos/u,
+      /^Adicionar tamanho/u,
+      /^Adicionar modelo de malha/u,
+    ]) {
+      await expect(items.getByRole('button', { name })).toHaveCount(0);
+    }
+    const overflow = await page.evaluate(
+      () =>
+        globalThis.document.documentElement.scrollWidth -
+        globalThis.document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  });
+});
+
+for (const [width, height] of [
+  [390, 844],
+  [1366, 768],
+]) {
+  test(`keeps the items in edit accessible at ${width} px, with a pendência, a review, an error and the menu on screen (EDIT-01, EDIT-04)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height, width });
+    await mockOrders(page, { orders: [incompletePricedOrder] });
+    await page.goto('/pedidos/order-pendente#itens');
+
+    const items = page.getByRole('region', { name: ITEMS });
+    await expect(items).toHaveAttribute('data-items-state', 'edit');
+    // A pendência (Cor, Gola), a subtotal to look at again and an error.
+    const collar = items.getByLabel('Gola', { exact: true });
+    await collar.fill('GOLA V');
+    await collar.press('Enter');
+    await expect(items.getByText('Confira o subtotal.')).toHaveCount(2);
+    const quantity = items.getByLabel('Quantidade do tamanho M, item 1');
+    await quantity.fill('0');
+    await quantity.press('Enter');
+    await expect(items.getByRole('alert')).toHaveCount(1);
+    await expect(items.locator('.op-field-gap')).toHaveCount(1);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+    // The menu of the item and the confirmation asked inside the card.
+    await items.getByRole('button', { name: 'Mais ações do item 1' }).click();
+    await expect(items.getByRole('menu')).toBeVisible();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await items.getByRole('menuitem', { name: 'Remover item' }).click();
+    await expect(
+      items.getByRole('group', {
+        name: 'Remover o item 1 e os tamanhos dele?',
+      }),
+    ).toBeVisible();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    expect(
+      await page.evaluate(
+        () =>
+          globalThis.document.documentElement.scrollWidth <=
+          globalThis.innerWidth,
+      ),
+    ).toBe(true);
+  });
+}
+
+test('fits the items in edit in 320 px, without scrolling sideways (EDIT-01, EDIT-06)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 780, width: 320 });
+  await mockOrders(page, { orders: [twoItemsOrder] });
+  await page.goto('/pedidos/order-pendente#itens');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  await expect(items.locator('.op-item')).toHaveCount(2);
+  // The longest things the section shows: a review on a line, the chips of
+  // the audience and the open menu.
+  const quantity = items.getByLabel('Quantidade do tamanho M, item 1');
+  await quantity.fill('1000000');
+  await quantity.press('Enter');
+  await expect(items.getByText('Confira o subtotal.')).toHaveCount(1);
   await items
-    .getByRole('button', { name: 'Uma peça a mais na linha 1' })
+    .getByRole('group', { name: 'Adicionais do item 1, não obrigatórios' })
+    .getByRole('button', { name: 'Público' })
     .click();
-  await expect(quantity).toHaveValue('101');
-  const overflow = await page.evaluate(
-    () =>
-      globalThis.document.documentElement.scrollWidth -
-      globalThis.document.documentElement.clientWidth,
-  );
-  expect(overflow).toBeLessThanOrEqual(0);
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await items.getByRole('button', { name: 'Mais ações do item 1' }).click();
+  await expect(items.getByRole('menu')).toBeVisible();
+
+  expect(
+    await page.evaluate(
+      () =>
+        globalThis.document.documentElement.scrollWidth <=
+        globalThis.innerWidth,
+    ),
+  ).toBe(true);
+  for (const control of await items
+    .locator('input, button, [role="menuitem"]')
+    .all()) {
+    const box = await control.boundingBox();
+    if (!box) continue;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(320);
+  }
 });
 
 const repeatedSizes = {
@@ -3283,42 +4838,651 @@ test('reads sizes in the canonical order, as heavy as their quantity, and flags 
   expect(fits).toBe(true);
 });
 
-test('warns about a repeated size while the seller types it', async ({
+test('never writes a size twice: the blank row adds to the line it has and a rename is refused (EDIT-06)', async ({
   page,
 }) => {
-  await mockOrders(page);
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
   await page.goto('/pedidos/order-pendente');
 
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  await items.getByRole('button', { name: 'Editar' }).click();
-  await expect(items.getByText(/aparece em mais de uma linha/u)).toHaveCount(0);
-  await items.getByRole('button', { name: 'Adicionar tamanho' }).click();
-  await items.getByLabel('Tamanho da linha 3').fill('g');
-  await expect(items).toContainText(
-    'O tamanho G aparece em mais de uma linha.',
+  const items = page.getByRole('region', { name: ITEMS });
+  const size = page.locator('#item-0-new-size');
+  // "m" is M: the quantity is added to the line the item has, with a notice.
+  await size.fill('m');
+  await size.press('Enter');
+  await page.keyboard.type('5');
+  await page.keyboard.press('Enter');
+  await expectSaved(page, writes, 1);
+  expect(sectionWrites(writes)[0]).toEqual(
+    command(2, {
+      action: 'change_quantity',
+      groupId: PRICED_GROUP_ID,
+      lineId: PRICED_LINE_M,
+      quantity: 105,
+    }),
   );
-  await items.getByLabel('Tamanho da linha 3').fill('GG');
+  await expect(items.locator('[data-items-announcement]')).toHaveText(
+    'O tamanho M já estava no item 1: a quantidade foi somada e agora é 105.',
+  );
+  await expect(items.locator('[data-items-announcement]')).toHaveAttribute(
+    'aria-live',
+    'polite',
+  );
+  await expect(items.getByLabel('Quantidade do tamanho M, item 1')).toHaveValue(
+    '105',
+  );
+  await expect(items.locator('.op-size-row')).toHaveCount(3);
+  await expect(size).toHaveValue('');
+  await expect(size).toBeFocused();
   await expect(items.getByText(/aparece em mais de uma linha/u)).toHaveCount(0);
+
+  // Renaming a line into a size the item has is refused at the line.
+  const second = items.getByLabel('Tamanho, linha 2 do item 1');
+  await second.fill('m');
+  await second.press('Enter');
+  const row = items.locator(`[data-line-id="${PRICED_LINE_G}"]`);
+  await expect(row.getByRole('alert')).toHaveText(
+    'O tamanho m já está neste item. Some a quantidade na outra linha.',
+  );
+  await expect(second).toHaveAttribute('aria-invalid', 'true');
+  await expect(second).toHaveValue('m');
+  await expect(second).toBeFocused();
+  expect(writes).toHaveLength(1);
+
+  // Another name is one command, and the subtotal asks for a look.
+  await second.fill('GG');
+  await second.press('Enter');
+  await expectSaved(page, writes, 2);
+  expect(sectionWrites(writes)[1]).toEqual(
+    command(3, {
+      action: 'rename_line',
+      groupId: PRICED_GROUP_ID,
+      lineId: PRICED_LINE_G,
+      size: 'GG',
+    }),
+  );
+  await expect(second).toHaveValue('GG');
+  await expect(row.getByRole('alert')).toHaveCount(0);
+  await expect(row).toContainText('Confira o subtotal.');
+  await expect(
+    items.getByLabel('Quantidade do tamanho GG, item 1'),
+  ).toHaveValue('50');
 });
 
-test('opens the filled extras of a confirmed order for the shop floor', async ({
+test('creates sizes from the blank row by keyboard: one with Enter, a list typed and a list pasted (EDIT-06)', async ({
+  context,
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  const blank = items.locator('[data-blank-row]');
+  const size = page.locator('#item-0-new-size');
+  const quantity = page.locator('#item-0-new-qty');
+  const hint = page.locator('#item-0-sizes-hint');
+  /** @param {string} name @param {number} pieces */
+  const added = (name, pieces) => ({
+    action: 'add_line',
+    groupId: PRICED_GROUP_ID,
+    quantity: pieces,
+    size: name,
+  });
+  // The blank row is the last one and is not a size: nothing to remove, and
+  // one line says what it does.
+  await expect(items.locator('.op-size-row').last()).toHaveAttribute(
+    'data-blank-row',
+    '',
+  );
+  await expect(blank.getByRole('button')).toHaveCount(0);
+  await expect(size).toHaveAccessibleDescription(
+    'A linha em branco é o próximo tamanho.',
+  );
+
+  // A size alone waits for its quantity: Enter walks to it and sends nothing.
+  await size.focus();
+  await page.keyboard.type('GG');
+  await page.keyboard.press('Enter');
+  await expect(quantity).toBeFocused();
+  expect(writes).toHaveLength(0);
+  await page.keyboard.type('10');
+  await page.keyboard.press('Enter');
+  await expectSaved(page, writes, 1);
+  // The new line takes the focus on its subtotal; another blank row follows.
+  await expect(
+    items.getByLabel('Subtotal do tamanho GG, item 1'),
+  ).toBeFocused();
+  await expect(size).toHaveValue('');
+  await expect(quantity).toHaveValue('');
+
+  // Without a quantity nothing is created: the same hint on leaving the row
+  // and on Enter, never an error (design.md §20, BlankRow).
+  await size.fill('XGG');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  await expect(hint).toHaveText('Informe a quantidade para criar o tamanho.');
+  await quantity.focus();
+  await page.keyboard.press('Enter');
+  await expect(hint).toHaveText('Informe a quantidade para criar o tamanho.');
+  await expect(hint.getByRole('alert')).toHaveCount(0);
+  await expect(quantity).not.toHaveAttribute('aria-invalid', /./u);
+  await expect(size).toHaveValue('XGG');
+  expect(writes).toHaveLength(1);
+  // A quantity that is typed and is not one is an error, on the quantity.
+  await quantity.fill('dez');
+  await page.keyboard.press('Enter');
+  await expect(hint.getByRole('alert')).toHaveText(
+    'Use uma quantidade inteira maior que zero.',
+  );
+  await expect(quantity).toHaveAttribute('aria-invalid', 'true');
+  await expect(size).toHaveValue('XGG');
+  expect(writes).toHaveLength(1);
+  await quantity.fill('');
+  await size.fill('');
+  await expect(hint.getByRole('alert')).toHaveCount(0);
+
+  // A size of two words, with the quantity in its own cell, is one line.
+  await size.fill('EX G');
+  await size.press('Enter');
+  await expect(quantity).toBeFocused();
+  await page.keyboard.type('4');
+  await page.keyboard.press('Enter');
+  await expectSaved(page, writes, 2);
+
+  // A list typed in the size cell creates one line per pair.
+  await size.fill('P 20 XG 7');
+  await size.press('Enter');
+  await expectSaved(page, writes, 4);
+  await expect(size).toBeFocused();
+
+  // A pasted list too, at once; a size the item has is added to its line.
+  await page.evaluate(() =>
+    globalThis.navigator.clipboard.writeText('PP 3 G 2'),
+  );
+  await page.keyboard.press('ControlOrMeta+V');
+  await expectSaved(page, writes, 6);
+  await expect(items.locator('[data-items-announcement]')).toHaveText(
+    'O tamanho G já estava no item 1: a quantidade foi somada e agora é 52.',
+  );
+  expect(sectionWrites(writes).map((write) => write.value)).toEqual([
+    added('GG', 10),
+    added('EX G', 4),
+    added('P', 20),
+    added('XG', 7),
+    added('PP', 3),
+    {
+      action: 'change_quantity',
+      groupId: PRICED_GROUP_ID,
+      lineId: PRICED_LINE_G,
+      quantity: 52,
+    },
+  ]);
+  expect(sectionWrites(writes).map((write) => write.expectedVersion)).toEqual([
+    2, 3, 4, 5, 6, 7,
+  ]);
+  await expect(items.locator('.op-size-row:not([data-blank-row])')).toHaveCount(
+    7,
+  );
+  await expect(items.locator('.op-item-total')).toContainText('196 peças');
+
+  // A list with a size lacking its quantity is refused whole, not guessed.
+  await size.fill('P 20 M');
+  await size.press('Enter');
+  await expect(hint.getByRole('alert')).toHaveText(
+    'Escreva o tamanho e a quantidade, por exemplo: M 60.',
+  );
+  await expect(size).toHaveValue('P 20 M');
+  expect(writes).toHaveLength(6);
+});
+
+test('moves, removes and keeps an item from "Mais ações", by keyboard, giving the focus back (EDIT-01, EDIT-05)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [twoItemsOrder],
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  const titles = items.getByRole('heading', { level: 3 });
+  const firstMenu = items.getByRole('button', { name: 'Mais ações do item 1' });
+  const secondMenu = items.getByRole('button', {
+    name: 'Mais ações do item 2',
+  });
+  /** @param {string} name */
+  const action = (name) => items.getByRole('menuitem', { name });
+  await expect(firstMenu).toHaveAttribute('aria-haspopup', 'menu');
+  await expect(firstMenu).toHaveAttribute('aria-expanded', 'false');
+
+  // Enter opens the menu on its first action; the arrows walk what is
+  // available and wrap; Esc closes it and gives the focus back.
+  await firstMenu.focus();
+  await page.keyboard.press('Enter');
+  await expect(firstMenu).toHaveAttribute('aria-expanded', 'true');
+  await expect(items.getByRole('menu', { name: 'Ações do item 1' })).toHaveText(
+    /Duplicar para outro público\s*Mover para cima\s*Mover para baixo\s*Remover item/u,
+  );
+  await expect(action('Duplicar para outro público')).toBeFocused();
+  await expect(action('Mover para cima')).toBeDisabled();
+  await page.keyboard.press('ArrowDown');
+  await expect(action('Mover para baixo')).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(action('Remover item')).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(action('Duplicar para outro público')).toBeFocused();
+  await page.keyboard.press('ArrowUp');
+  await expect(action('Remover item')).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(action('Duplicar para outro público')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(items.getByRole('menu')).toHaveCount(0);
+  await expect(firstMenu).toBeFocused();
+  expect(writes).toHaveLength(0);
+
+  // "Mover para baixo" is one command; the focus follows the item.
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expectSaved(page, writes, 1);
+  expect(sectionWrites(writes)[0]).toEqual(
+    command(2, {
+      action: 'reorder_groups',
+      groupIds: [SECOND_GROUP_ID, PRICED_GROUP_ID],
+    }),
+  );
+  await expect(titles).toHaveText([
+    /^Item\s*1\s*REGATA$/u,
+    /^Item\s*2\s*CAMISETA$/u,
+  ]);
+  await expect(secondMenu).toBeFocused();
+
+  // "Remover item" asks inside the card, with the focus on "Manter"; Esc
+  // and "Manter" keep the item and give the focus back.
+  const confirm = items.getByRole('group', {
+    name: 'Remover o item 2 e os tamanhos dele?',
+  });
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await expect(confirm.getByRole('button', { name: 'Manter' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(confirm).toHaveCount(0);
+  await expect(secondMenu).toBeFocused();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await expect(confirm).toHaveCount(0);
+  await expect(secondMenu).toBeFocused();
+  await expect(titles).toHaveCount(2);
+  expect(writes).toHaveLength(1);
+
+  // "Remover" is one command; the focus goes to the item that is left.
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab');
+  await expect(confirm.getByRole('button', { name: 'Remover' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expectSaved(page, writes, 2);
+  expect(sectionWrites(writes)[1]).toEqual(
+    command(3, { action: 'remove_group', groupId: PRICED_GROUP_ID }),
+  );
+  await expect(titles).toHaveText([/^Item\s*1\s*REGATA$/u]);
+  await expect(firstMenu).toBeFocused();
+  await expect(items.locator('.op-items-total')).toContainText('150 peças');
+});
+
+test('sends nothing for a field left as it was, whatever its kind (EDIT-02)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  // The same value typed again, then Enter and leaving the field.
+  for (const [label, same] of [
+    ['Modelo', 'CAMISETA'],
+    ['Modelo de malha', 'DRY FIT 100% POLIÉSTER'],
+    ['Tamanho, linha 1 do item 1', 'M'],
+    ['Quantidade do tamanho M, item 1', '100'],
+    ['Subtotal do tamanho M, item 1', '3.200,00'],
+    ['Subtotal do tamanho G, item 1', 'R$ 1.600,00'],
+  ]) {
+    const field = items.getByLabel(label, { exact: true });
+    await field.press('Enter');
+    await field.fill(same);
+    await field.press('Enter');
+    await page.keyboard.press('Tab');
+  }
+  // An empty blank row is not a size.
+  await page.locator('#item-0-new-size').press('Enter');
+  await page.locator('#item-0-new-qty').press('Enter');
+  await expect(items.getByRole('alert')).toHaveCount(0);
+  await expect(items.getByRole('status')).toHaveText('');
+
+  // The first request the page sends is the first real change.
+  const colour = items.getByLabel('Cor', { exact: true });
+  await colour.fill('PRETA');
+  await colour.press('Enter');
+  await expectSaved(page, writes, 1);
+  expect(sectionWrites(writes)).toEqual([
+    command(2, {
+      action: 'update_group',
+      attributes: { cor: 'PRETA' },
+      groupId: PRICED_GROUP_ID,
+    }),
+  ]);
+  await expect(items.getByLabel('Subtotal do tamanho G, item 1')).toHaveValue(
+    '1.600,00',
+  );
+});
+
+test('says "Salvando…" and then "Salvo" in the one status region of the head, one save at a time (EDIT-02, EDIT-08)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
+  /** @type {Array<() => void>} */
+  const held = [];
+  // Registered after the mock, so it runs first and holds each answer.
+  await page.route(
+    '**/api/v1/orders/order-pendente/sections/size-pricing',
+    async (route) => {
+      await new Promise((resolve) => {
+        held.push(() => resolve(null));
+      });
+      await route.fallback();
+    },
+  );
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  const status = items.locator('.op-sheet-head').getByRole('status');
+  await expect(items.getByRole('status')).toHaveCount(1);
+  await expect(status).toHaveText('');
+
+  const colour = items.getByLabel('Cor', { exact: true });
+  await colour.fill('PRETA');
+  await colour.press('Enter');
+  await expect.poll(() => held.length).toBe(1);
+  await expect(status).toHaveText('Salvando…');
+  await expect(status).toBeVisible();
+
+  // A second change typed meanwhile waits for the first answer; what is
+  // typed is not touched by it.
+  const collar = items.getByLabel('Gola', { exact: true });
+  await collar.fill('GOLA V');
+  await collar.press('Enter');
+  await expect(collar).toHaveValue('GOLA V');
+  expect(held).toHaveLength(1);
+  held[0]();
+  await expect.poll(() => held.length).toBe(2);
+  await expect(status).toHaveText('Salvando…');
+  await expect(collar).toHaveValue('GOLA V');
+  held[1]();
+  await expect(status).toHaveText('Salvo');
+  await expect(status.locator('svg')).toHaveCount(1);
+  expect(sectionWrites(writes)).toEqual([
+    command(2, {
+      action: 'update_group',
+      attributes: { cor: 'PRETA' },
+      groupId: PRICED_GROUP_ID,
+    }),
+    command(3, {
+      action: 'update_group',
+      attributes: { gola: 'GOLA V' },
+      groupId: PRICED_GROUP_ID,
+    }),
+  ]);
+  // The status is the only word about it: no toast.
+  await expect(page.locator('.notice-toast')).toHaveCount(0);
+
+  // "Salvo" speaks of the fields and leaves with them.
+  await page
+    .getByRole('region', { name: 'Resumo do pedido' })
+    .getByRole('button', { name: 'Editar resumo' })
+    .click();
+  await expect(status).toHaveText('');
+});
+
+test('keeps every subtotal that awaits a look with one button, one command per size (EDIT-07)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [pricedPendingOrder],
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  const keepAll = page.locator('#item-0-keep-all');
+  await expect(keepAll).toHaveCount(0);
+  // A changed attribute puts the subtotal of every size up for review.
+  const colour = items.getByLabel('Cor', { exact: true });
+  await colour.fill('PRETA');
+  await colour.press('Enter');
+  await expectSaved(page, writes, 1);
+  await expect(items.getByText('Confira o subtotal.')).toHaveCount(2);
+  await expect(keepAll).toHaveText('Manter os 2 subtotais');
+
+  await keepAll.focus();
+  await page.keyboard.press('Enter');
+  await expectSaved(page, writes, 3);
+  expect(sectionWrites(writes).slice(1)).toEqual([
+    command(3, {
+      action: 'review_subtotal',
+      groupId: PRICED_GROUP_ID,
+      lineId: PRICED_LINE_M,
+      subtotalCents: 320000,
+    }),
+    command(4, {
+      action: 'review_subtotal',
+      groupId: PRICED_GROUP_ID,
+      lineId: PRICED_LINE_G,
+      subtotalCents: 160000,
+    }),
+  ]);
+  await expect(items.getByText('Confira o subtotal.')).toHaveCount(0);
+  await expect(keepAll).toHaveCount(0);
+  await expect(items.locator('.op-items-total')).toHaveText(
+    /^Total do pedido\s*150 peças · R\$ 4\.800,00$/u,
+  );
+});
+
+test('keeps a reopened order without subtotals editable, by the whole list and without the Subtotal column (EDIT-07)', async ({
+  page,
+}) => {
+  /** @type {any[]} */
+  const writes = [];
+  await mockOrders(page, {
+    onWrite: (call) => writes.push(call),
+    orders: [reopenedOrder],
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const items = page.getByRole('region', { name: ITEMS });
+  await expect(items).toHaveAttribute('data-items-state', 'edit');
+  await expect(items).toHaveAttribute('data-items-mode', 'plain');
+  await expect(items.locator('.op-sizes-head span')).toHaveText([
+    'Tamanho',
+    'Quantidade',
+  ]);
+  await expect(
+    items.getByRole('textbox', { name: /^Subtotal do tamanho/u }),
+  ).toHaveCount(0);
+  await expect(items.getByText('Falta o subtotal')).toHaveCount(0);
+
+  const stored = {
+    ...pendingOrder.ficha.items[0],
+    publico: '',
+    quantidade_informada: null,
+  };
+  const quantity = items.getByLabel('Quantidade do tamanho M, item 1');
+  await quantity.fill('120');
+  await quantity.press('Enter');
+  await expectSaved(page, writes, 1);
+  // Without a subtotal Enter walks down the quantities.
+  await expect(
+    items.getByLabel('Quantidade do tamanho G, item 1'),
+  ).toBeFocused();
+  await page.locator('#item-0-new-size').fill('GG 10');
+  await page.locator('#item-0-new-size').press('Enter');
+  await expectSaved(page, writes, 2);
+  // One request per change still, each with the whole list of items; the
+  // subtotals by size are never started on a reopened order.
+  expect(sectionWrites(writes)).toEqual([
+    {
+      expectedVersion: 2,
+      section: 'items',
+      value: [
+        {
+          ...stored,
+          grade: [
+            { quantidade: 120, tamanho: 'M' },
+            { quantidade: 50, tamanho: 'G' },
+          ],
+        },
+      ],
+    },
+    {
+      expectedVersion: 3,
+      section: 'items',
+      value: [
+        {
+          ...stored,
+          grade: [
+            { quantidade: 120, tamanho: 'M' },
+            { quantidade: 50, tamanho: 'G' },
+            { quantidade: 10, tamanho: 'GG' },
+          ],
+        },
+      ],
+    },
+  ]);
+  await expect(items).toHaveAttribute('data-items-mode', 'plain');
+  await expect(items.locator('.op-items-total')).toHaveText(
+    /^Total do pedido\s*180 peças$/u,
+  );
+});
+
+for (const reader of [
+  {
+    label: 'a confirmed order (PFI-10)',
+    order: {
+      ...pricedPendingOrder,
+      confirmedAt: '2026-09-09T19:20:00.000Z',
+      confirmedBy: { id: 'seller-marina', name: 'Marina Aguiar' },
+      missingFields: [],
+      orderDate: '2026-09-09',
+      paymentCondition: 'pix',
+      status: 'confirmado',
+    },
+  },
+  {
+    label: 'whoever does not own the order (PAU-01)',
+    order: { ...pricedPendingOrder, seller: OTHER_SELLER },
+  },
+  {
+    label: 'a store order (LOJ-07)',
+    order: { ...pricedPendingOrder, origin: 'loja' },
+  },
+]) {
+  test(`reads the items as text, without a field or an action, for ${reader.label} (EDIT-01)`, async ({
+    page,
+  }) => {
+    /** @type {any[]} */
+    const writes = [];
+    await mockOrders(page, {
+      onWrite: (call) => writes.push(call),
+      orders: [reader.order],
+    });
+    await page.goto('/pedidos/order-pendente');
+
+    const items = page.getByRole('region', { name: ITEMS });
+    if (/** @type {any} */ (reader.order).origin === 'loja') {
+      // A store order has its own read-only page (LOJ-34): the items section,
+      // editable or not, is not part of it, and nothing can be written.
+      await expect(page.getByText(/travado, sem edição/u)).toBeVisible();
+      await expect(items).toHaveCount(0);
+      await expect(page.locator('[data-items-state]')).toHaveCount(0);
+      await expect(page.getByRole('textbox')).toHaveCount(0);
+      expect(writes).toHaveLength(0);
+      return;
+    }
+    await expect(items).toHaveAttribute('data-items-state', 'read');
+    await expect(items.getByRole('textbox')).toHaveCount(0);
+    await expect(items.getByRole('button')).toHaveCount(0);
+    await expect(items.locator('input, select, textarea')).toHaveCount(0);
+    await expect(items.getByRole('status')).toHaveText('');
+    await expect(items.locator('dl.op-points')).toBeVisible();
+    await expect(
+      items
+        .getByRole('list', { name: 'Tamanhos do item 1' })
+        .getByRole('listitem'),
+    ).toHaveText([/^M\s*100\s*peças$/u, /^G\s*50\s*peças$/u]);
+    await expect(
+      items
+        .getByRole('table', { name: 'Tamanhos e subtotais do item 1' })
+        .locator('tbody tr'),
+    ).toHaveText([/^M\s*100\s*R\$ 3\.200,00$/u, /^G\s*50\s*R\$ 1\.600,00$/u]);
+    await expect(items.locator('.op-items-total')).toHaveText(
+      /^Total do pedido\s*150 peças · R\$ 4\.800,00$/u,
+    );
+    expect(writes).toHaveLength(0);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  });
+}
+
+test('reads the filled extras of a confirmed order for the shop floor, one by one (PIT-02, EDIT-05)', async ({
   page,
 }) => {
   await mockOrders(page);
   await page.goto('/pedidos/order-confirmado');
 
-  const items = page.getByRole('region', { name: 'Itens e especificações' });
-  const toggle = items.getByRole('button', {
-    name: /Adicionais \(não obrigatórios\)/u,
-  });
-  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  const items = page.getByRole('region', { name: ITEMS });
+  await expect(items).toHaveAttribute('data-items-state', 'read');
+  // No block to open: each extra with data is a point of the item.
+  await expect(items.getByRole('button', { name: /Adicionais/u })).toHaveCount(
+    0,
+  );
+  for (const [label, value] of [
+    ['Cor do tecido — manga direita', 'VERDE BANDEIRA'],
+    ['Cor do tecido — manga esquerda', 'VERDE BANDEIRA'],
+    ['Viés das mangas', 'VERDE'],
+  ]) {
+    const point = items
+      .locator('dl.op-points > div')
+      .filter({ has: page.getByText(label, { exact: true }) });
+    await expect(point.locator('dd')).toHaveText(value);
+  }
+  // What holds no data is not listed empty.
+  await expect(items.getByText('Público', { exact: true })).toHaveCount(0);
   await expect(
-    items.getByText('Cor do tecido — manga direita', { exact: true }),
-  ).toBeVisible();
-  await expect(items).toContainText('VERDE BANDEIRA');
-  await toggle.click();
-  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  await expect(
-    items.getByText('Cor do tecido — manga direita', { exact: true }),
-  ).toBeHidden();
+    items.getByText('Quantidade informada', { exact: true }),
+  ).toHaveCount(0);
 });

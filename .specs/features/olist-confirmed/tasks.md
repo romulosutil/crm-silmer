@@ -149,22 +149,22 @@ Dono Integrações com Backend e QA.
 
 Requisitos OLC-01/03/07–12/14. Depende OLC-T01/T02. Dono Backend/Integrações.
 
-- [ ] Implementar comando por Pedido confirmado, sem endpoint/previewId
+- [x] Implementar comando por Pedido confirmado, sem endpoint/previewId
       obrigatório de prévia; validar antes de inclusões e aceitar com operação.
-- [ ] Gravar reserva, snapshot, auditoria e job transacionalmente; executar
+- [x] Gravar reserva, snapshot, auditoria e job transacionalmente; executar
       cliente → produtos/variações → venda com reservas por identidade.
-- [ ] Congelar o frete no snapshot e conferir, antes de qualquer inclusão, que o
+- [x] Congelar o frete no snapshot e conferir, antes de qualquer inclusão, que o
       total do Pedido é a soma dos subtotais mais o frete; divergência bloqueia
       a aceitação (OLC-05e). Conferir após a venda o total e o `valorFrete`
       retornados pelo ERP contra o total e o frete do Pedido (OLC-05g).
-- [ ] Revalidar status/versões/conta/checkbox/piloto antes de cada efeito;
+- [x] Revalidar status/versões/conta/checkbox/piloto antes de cada efeito;
       serializar com reabertura/correção e preservar cadastros confirmados.
       Usar revisão/fingerprint comercial relevante ou revalidar conteúdo se
       a versão global mudou só por pagamento/entrega compatíveis.
-- [ ] Implementar leitura persistida, conferência exata, falha sem efeito,
+- [x] Implementar leitura persistida, conferência exata, falha sem efeito,
       incerteza e recuperação administrativa mínima por recurso/Pedido.
       Retomada criadora só com ausência de efeito comprovada; sem retry cego.
-- [ ] Testar processos/conexões independentes, duplo clique, replay revogado,
+- [x] Testar processos/conexões independentes, duplo clique, replay revogado,
       crash, resposta perdida e falha de commit após sucesso remoto.
 
 ## OLC-T04 Botão e estados no detalhe atual
@@ -172,20 +172,20 @@ Requisitos OLC-01/03/07–12/14. Depende OLC-T01/T02. Dono Backend/Integrações
 Requisitos OLC-01–06/10/13/14/16. Depende OLC-T01–T03.
 Dono Frontend/A11y com QA.
 
-- [ ] Adicionar bloco e **Gerar no Olist** no detalhe existente; preservar
+- [x] Adicionar bloco e **Gerar no Olist** no detalhe existente; preservar
       **Gerar pedido**, **Gerar PDF**, billing, loja e shell atuais.
-- [ ] Integrar pendências por origem e composição monetária autorizada, sem
+- [x] Integrar pendências por origem e composição monetária autorizada, sem
       total livre na exportação ou edição geral liberada pelo checkbox. Exibir
       peças, frete (com origem e aviso da cotação sugerida) e total conforme a
       ADR 080, também no Pedido pendente e em **Gerar pedido**; editar o
       frete e usar a cotação sugerida só para o vendedor responsável em Pedido
       pendente, por teclado e com erro associado; Confirmado mostra o frete
       somente leitura.
-- [ ] Exibir etapas, ambos os números, erro seguro, falha de consulta e
+- [x] Exibir etapas, ambos os números, erro seguro, falha de consulta e
       conferência necessária; recuperar após reload e impedir novo envio.
-- [ ] Conectar checkbox em Usuários e administração mínima de conexão usando
+- [x] Conectar checkbox em Usuários e administração mínima de conexão usando
       padrões atuais. Sem menu/lista/busca Olist ou assistente de prévia.
-- [ ] Verificar teclado/foco/ARIA/axe, temas, 320/390 px, desktop, duas abas,
+- [x] Verificar teclado/foco/ARIA/axe, temas, 320/390 px, desktop, duas abas,
       perda de conexão e revogação. Não declarar integração por mock.
 
 ## OLC-T05 QA e preparação operacional

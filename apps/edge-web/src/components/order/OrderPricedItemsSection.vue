@@ -4,9 +4,14 @@ import {
   amountLabel,
   AUDIENCE_OPTIONS,
   formatBrl,
+  freightAmountLabel,
+  freightOriginLabel,
+  freightQuoteNoticeLabel,
   itemHeading,
   itemQuantityWarning,
+  orderAmountsView,
   parseBrl,
+  parseZeroOrPositiveBrl,
 } from '../../lib/order-format.js';
 import OrderSheetHead from './OrderSheetHead.vue';
 
@@ -58,6 +63,71 @@ const attributesForm = computed(() =>
   ['update_group', 'add_group'].includes(action.value?.action),
 );
 const total = computed(() => amountLabel(props.order.pricing?.totalCents));
+// ADR 080: pieces, freight and the calculated total, always from the server.
+const amounts = computed(() => orderAmountsView(props.order));
+const orderTotal = computed(() => amountLabel(amounts.value.totalCents));
+const freightOrigin = computed(() => freightOriginLabel(props.order));
+const freightNotice = computed(() => freightQuoteNoticeLabel(props.order));
+const canEditFreight = computed(
+  () => editing.canEditFreight?.value === true && !blocked.value,
+);
+const freightOpen = ref(false);
+const freightText = ref('');
+const freightError = ref('');
+const freightSaving = ref(false);
+const freightInput = ref(null);
+const freightTrigger = ref(null);
+async function beginFreight() {
+  if (!editing.canEditFreight?.value || blocked.value || freightSaving.value)
+    return;
+  freightText.value =
+    amounts.value.freightCents > 0 ? formatBrl(amounts.value.freightCents) : '';
+  freightError.value = '';
+  freightOpen.value = true;
+  editing.start('freight');
+  await nextTick();
+  freightInput.value?.focus();
+}
+async function cancelFreight() {
+  if (freightSaving.value) return;
+  freightOpen.value = false;
+  freightError.value = '';
+  if (editing.editingSection.value === 'freight') editing.stop();
+  await nextTick();
+  freightTrigger.value?.focus();
+}
+async function saveFreight() {
+  if (freightSaving.value || !editing.canEditFreight?.value) return;
+  const cents = parseZeroOrPositiveBrl(freightText.value);
+  if (cents === null) {
+    freightError.value = 'Use um frete em reais, como 35,00, ou 0,00 sem frete.';
+    await nextTick();
+    freightInput.value?.focus();
+    return;
+  }
+  freightSaving.value = true;
+  const result = await editing.saveFreight({ freightCents: cents });
+  freightSaving.value = false;
+  if (!result.ok) {
+    freightError.value = result.message;
+    await nextTick();
+    freightInput.value?.focus();
+    return;
+  }
+  announcement.value = `Frete salvo. Total do pedido: ${amountLabel(
+    orderAmountsView(props.order).totalCents,
+  )}.`;
+  await cancelFreight();
+}
+watch(
+  () => editing.canEditFreight?.value,
+  (allowed) => {
+    if (!allowed && freightOpen.value) {
+      freightSaving.value = false;
+      void cancelFreight();
+    }
+  },
+);
 const selectedTitle = computed(() => action.value?.title ?? 'Editar itens');
 const currentContext = computed(() => action.value?.context ?? '');
 const isQuantity = computed(() => action.value?.action === 'change_quantity');
@@ -262,7 +332,7 @@ watch(
     <OrderSheetHead
       title-id="order-items-title"
       title="Itens e especificações"
-      :state="`${groups.length} itens · total ${total}`"
+      :state="`${groups.length} itens · total ${orderTotal}`"
       :tone="order.pricing?.complete ? 'ok' : 'missing'"
       section="items"
       body-id="order-items-body"
@@ -789,9 +859,99 @@ watch(
       >
         Adicionar item
       </button>
-      <p class="op-num">
-        Total do pedido: <strong>{{ total }}</strong>
-      </p>
+      <section class="op-amounts" aria-labelledby="order-amounts-title">
+        <h3 id="order-amounts-title">Valores do pedido</h3>
+        <dl class="op-amounts-list">
+          <div>
+            <dt>Peças</dt>
+            <dd class="op-num">{{ amountLabel(amounts.piecesCents) }}</dd>
+          </div>
+          <div>
+            <dt>Frete</dt>
+            <dd class="op-num">
+              {{ freightAmountLabel(amounts.freightCents) }}
+              <span v-if="freightOrigin" class="op-hint op-amounts-origin">{{
+                freightOrigin
+              }}</span>
+            </dd>
+          </div>
+          <div class="op-amounts-total">
+            <dt>Total do pedido</dt>
+            <dd class="op-num">
+              <strong>{{ orderTotal }}</strong>
+            </dd>
+          </div>
+        </dl>
+        <p v-if="freightNotice" class="op-amounts-notice" role="status">
+          {{ freightNotice }}
+        </p>
+        <form
+          v-if="freightOpen"
+          class="op-form op-priced-form"
+          novalidate
+          aria-label="Informar frete"
+          :aria-busy="freightSaving || undefined"
+          @submit.prevent="saveFreight"
+          @keydown.esc.prevent="cancelFreight"
+        >
+          <div class="op-field">
+            <label for="order-freight-input">Frete do pedido (R$)</label>
+            <input
+              id="order-freight-input"
+              ref="freightInput"
+              v-model="freightText"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              placeholder="0,00"
+              :disabled="freightSaving"
+              :aria-invalid="Boolean(freightError) || undefined"
+              :aria-describedby="
+                freightError ? 'order-freight-error' : 'order-freight-hint'
+              "
+            />
+            <p
+              v-if="freightError"
+              id="order-freight-error"
+              role="alert"
+              class="op-field-error"
+            >
+              {{ freightError }}
+            </p>
+            <p v-else id="order-freight-hint" class="op-hint">
+              O total é recalculado pelo servidor: peças + frete. Use 0,00 para
+              pedido sem frete.
+            </p>
+          </div>
+          <div class="op-form-actions">
+            <button
+              type="button"
+              :disabled="freightSaving"
+              @click="cancelFreight"
+            >
+              Cancelar
+            </button>
+            <button type="submit" :disabled="freightSaving">
+              {{ freightSaving ? 'Salvando…' : 'Salvar frete' }}
+            </button>
+          </div>
+        </form>
+        <button
+          v-else-if="canEditFreight"
+          ref="freightTrigger"
+          type="button"
+          class="op-add-inline"
+          @click="beginFreight"
+        >
+          Informar frete
+        </button>
+        <p
+          v-else-if="order.status === 'pendente' && !order.cancelledAt"
+          class="op-hint"
+        >
+          Somente o vendedor responsável informa o frete deste pedido.
+        </p>
+      </section>
       <p v-if="!order.pricing?.complete" class="op-hint">
         O total fica pendente até todos os tamanhos terem subtotal revisado. O
         rascunho continua salvo.
@@ -891,6 +1051,53 @@ watch(
 .op-priced-form select {
   min-inline-size: 0;
   inline-size: 100%;
+}
+.op-amounts {
+  display: grid;
+  gap: var(--space-3);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--color-border);
+}
+.op-amounts h3,
+.op-amounts p {
+  margin: 0;
+}
+.op-amounts-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+.op-amounts-list > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.op-amounts-list dt {
+  color: var(--color-text-muted);
+}
+.op-amounts-list dd {
+  margin: 0;
+  text-align: end;
+  overflow-wrap: anywhere;
+}
+.op-amounts-origin {
+  display: block;
+  font-size: var(--text-sm);
+}
+.op-amounts-total {
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--color-border-subtle);
+}
+.op-amounts-notice {
+  color: var(--status-warning-text);
+  background: var(--status-warning-surface);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+}
+.op-amounts button {
+  min-block-size: var(--target-min);
+  justify-self: start;
 }
 @media (max-width: 480px) {
   .op-priced-table {

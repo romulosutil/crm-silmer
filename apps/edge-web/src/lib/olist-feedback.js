@@ -3,6 +3,23 @@
 export function olistFailure(cause) {
   const status = Number(cause?.status);
   const code = String(cause?.code ?? '');
+  if (code === 'ORDER_NOT_CONFIRMED')
+    return 'Disponível após confirmar o pedido.';
+  if (code === 'OLIST_CUSTOMER_INVALID')
+    return 'Complete os dados para gerar no Olist: o cadastro do comprador está incompleto ou inválido.';
+  if (
+    code === 'OLIST_SALE_EXACT_CENT_REQUIRED' ||
+    code === 'OLIST_EXACT_CENT_REQUIRED'
+  )
+    return 'Valor do tamanho não representável no Olist. Ajuste o subtotal antes de gerar.';
+  if (code === 'OLIST_FREIGHT_INVALID' || code === 'OLIST_TOTAL_MISMATCH')
+    return 'O frete ou o total do pedido mudou ou é inválido. Confira os valores antes de gerar.';
+  if (code === 'OLIST_ORDER_INCOMPLETE')
+    return 'Complete os dados para gerar no Olist.';
+  if (code === 'OLIST_LEGACY_REVIEW_REQUIRED')
+    return 'Venda histórica pendente de conferência. Novo envio deste pedido está bloqueado.';
+  if (code === 'OLIST_CREATION_DISABLED')
+    return 'Integração Olist indisponível.';
   if (code === 'OLIST_CUSTOMER_NOT_FOUND')
     return 'Comprador não localizado no Olist. Confira o nome e o telefone antes de revisar novamente.';
   if (code === 'OLIST_PAYMENT_DUE_REQUIRED')
@@ -46,8 +63,46 @@ export function registrationAction(action) {
   });
   return labels[action ?? 'blocked'] ?? 'conferência pendente';
 }
-/** @param {{code:string,field?:string}} issue @param {any[]} [groups] */
+const BUYER_FIELD_LABELS = /** @type {Record<string, string>} */ ({
+  'buyer.registration.personType':
+    'Cadastro do comprador: tipo de pessoa (física ou jurídica).',
+  'buyer.registration.document': 'Cadastro do comprador: CPF ou CNPJ.',
+  'buyer.registration.legalName':
+    'Cadastro do comprador: nome completo ou razão social.',
+  'buyer.registration.stateRegistration':
+    'Cadastro do comprador: inscrição estadual (obrigatória para pessoa jurídica; use ISENTO apenas quando declarado).',
+  'buyer.registration.postalCode': 'Cadastro do comprador: CEP.',
+  'buyer.registration.street':
+    'Cadastro do comprador: endereço (logradouro).',
+  'buyer.registration.number': 'Cadastro do comprador: número do endereço.',
+  'buyer.registration.district': 'Cadastro do comprador: bairro.',
+  'buyer.registration.city': 'Cadastro do comprador: cidade.',
+  'buyer.registration.state': 'Cadastro do comprador: UF.',
+  'buyer.registration.complement':
+    'Cadastro do comprador: complemento válido.',
+  'buyer.registration.instagram': 'Cadastro do comprador: Instagram válido.',
+  'buyer.phone': 'Cadastro do comprador: telefone válido.',
+  'buyer.name': 'Cadastro do comprador: nome do contato.',
+  'buyer.email': 'Cadastro do comprador: e-mail válido.',
+  document: 'Cadastro do comprador: CPF ou CNPJ.',
+  legalName: 'Cadastro do comprador: nome completo ou razão social.',
+  personType: 'Cadastro do comprador: tipo de pessoa (física ou jurídica).',
+  stateRegistration: 'Cadastro do comprador: inscrição estadual.',
+  postalCode: 'Cadastro do comprador: CEP.',
+  addressStreet: 'Cadastro do comprador: endereço (logradouro).',
+  addressNumber: 'Cadastro do comprador: número do endereço.',
+  addressDistrict: 'Cadastro do comprador: bairro.',
+  addressCity: 'Cadastro do comprador: cidade.',
+  addressState: 'Cadastro do comprador: UF.',
+});
+
+/** @param {{code:string,field?:string,label?:string}} issue @param {any[]} [groups] */
 export function olistIssueLabel(issue, groups = []) {
+  if (typeof issue === 'string') return issue;
+  if (!issue) return '';
+  if (issue.label && typeof issue.label === 'string') {
+    return issue.label;
+  }
   const field = issue.field ?? '';
   const groupIndex = groups.findIndex((group) => field.includes(group.groupId));
   const group = groups[groupIndex];
@@ -64,20 +119,36 @@ export function olistIssueLabel(issue, groups = []) {
       ? `Grupo ${ids[1]}, linha ${ids[2]}: `
       : '';
   const code = issue.code;
+  if (code === 'ORDER_NOT_CONFIRMED')
+    return 'Disponível após confirmar o pedido.';
   if (code === 'OLIST_CUSTOMER_NOT_FOUND')
     return 'Comprador não localizado no Olist. Confira o nome e o telefone antes de revisar novamente.';
   if (code === 'OLIST_PAYMENT_DUE_REQUIRED')
     return 'Informe o vencimento deste pedido antes de conferir uma nova prévia.';
   if (code === 'OLIST_PRODUCT_FISCAL_REQUIRED')
     return 'Informe NCM, origem e unidade dos produtos antes de conferir uma nova prévia.';
-  if (/FRACTION/u.test(code) || code === 'OLIST_EXACT_CENT_REQUIRED')
+  if (
+    /FRACTION|INEXACT/u.test(code) ||
+    code === 'OLIST_EXACT_CENT_REQUIRED' ||
+    code === 'OLIST_SALE_EXACT_CENT_REQUIRED' ||
+    code === 'OLIST_SIZE_PRICE_INEXACT'
+  )
     return (
       context +
-      'O subtotal exige fração de centavo por unidade. O pedido continua válido no CRM; a exportação inteira está bloqueada.'
+      'Valor do tamanho não representável no Olist: o subtotal exige fração de centavo por unidade. O pedido continua válido no CRM; a exportação inteira está bloqueada.'
     );
+  if (code === 'OLIST_FREIGHT_INVALID' || field === 'freight')
+    return 'Frete do pedido inválido para exportação.';
+  if (code === 'OLIST_TOTAL_MISMATCH' || field === 'amounts.totalCents')
+    return 'Total do pedido diverge da soma das peças e do frete.';
   if (/SUBTOTAL|REVIEW/u.test(code))
     return context + 'Informe e revise o subtotal por tamanho.';
-  if (/BUYER|CUSTOMER_FISCAL/u.test(code))
+  const buyerLabel =
+    BUYER_FIELD_LABELS[field] ||
+    BUYER_FIELD_LABELS[`buyer.registration.${field}`] ||
+    BUYER_FIELD_LABELS[code];
+  if (buyerLabel) return buyerLabel;
+  if (/BUYER|CUSTOMER_FISCAL|CUSTOMER_INVALID/u.test(code))
     return 'Cadastro do comprador incompleto ou divergente. Uma pessoa autorizada deve conferir os dados de origem.';
   if (/SETTINGS|PRODUCT_FISCAL/u.test(code))
     return 'Parâmetros comerciais ou fiscais precisam de conferência administrativa.';
@@ -111,10 +182,89 @@ export function olistIssueLabel(issue, groups = []) {
 
 /**
  * Uma linha por motivo: várias pendências com o mesmo texto não repetem a lista.
- * @param {{code:string,field?:string}[]} [issues] @param {any[]} [groups]
+ * @param {{code:string,field?:string,label?:string}[]} [issues] @param {any[]} [groups]
  */
 export function olistIssueLabels(issues = [], groups = []) {
   return [...new Set(issues.map((issue) => olistIssueLabel(issue, groups)))];
+}
+
+/**
+ * Orienta quem tem autoridade para corrigir as pendências listadas no bloco Olist.
+ * @param {{isStore?:boolean,hasSizePricing?:boolean,issues?:{code:string,field?:string}[]}} [input]
+ */
+export function olistIssueCorrectionHint(input = {}) {
+  const issues = Array.isArray(input.issues) ? input.issues : [];
+  if (input.isStore)
+    return 'Quem pode corrigir: um administrador deve completar o cadastro do comprador e os dados complementares em Complemento para o Olist.';
+  const isBuyerEntry = (entry) => {
+    const field = String(entry?.field ?? '');
+    const code = String(entry?.code ?? '');
+    return (
+      field.startsWith('buyer.') ||
+      /BUYER|CUSTOMER/u.test(code) ||
+      [
+        'document',
+        'legalName',
+        'personType',
+        'stateRegistration',
+        'postalCode',
+        'addressStreet',
+        'addressNumber',
+        'addressDistrict',
+        'addressCity',
+        'addressState',
+        'complement',
+        'instagram',
+        'phone',
+        'name',
+        'email',
+      ].includes(code) ||
+      [
+        'document',
+        'legalName',
+        'personType',
+        'stateRegistration',
+        'postalCode',
+        'addressStreet',
+        'addressNumber',
+        'addressDistrict',
+        'addressCity',
+        'addressState',
+        'complement',
+        'instagram',
+        'phone',
+        'name',
+        'email',
+      ].includes(field)
+    );
+  };
+  const hasBuyer = issues.some(isBuyerEntry);
+  const hasSettings = issues.some(
+    (entry) =>
+      String(entry?.field ?? '').startsWith('settings.') ||
+      /SETTINGS|PRODUCT_FISCAL/u.test(String(entry?.code ?? '')),
+  );
+  const hasOrder = issues.some((entry) => {
+    const field = String(entry?.field ?? '');
+    const code = String(entry?.code ?? '');
+    return (
+      !isBuyerEntry(entry) &&
+      !field.startsWith('settings.') &&
+      field !== 'connection' &&
+      !/SETTINGS|CREATION_DISABLED|NOT_CONFIGURED|RECONNECT|AUTH/u.test(code)
+    );
+  });
+  if (hasBuyer && hasOrder)
+    return 'Quem pode corrigir: o vendedor responsável pela conversa (ou um administrador) deve completar o cadastro do comprador no Inbox e revisar a composição do pedido antes de gerar no Olist.';
+  if (hasBuyer)
+    return 'Quem pode corrigir: o vendedor responsável pela conversa (ou um administrador) deve completar o cadastro obrigatório do comprador no Inbox antes de gerar no Olist.';
+  if (hasOrder && input.hasSizePricing === false)
+    return 'Quem pode corrigir: o vendedor responsável pelo pedido (ou um administrador) deve completar os subtotais em Complemento para o Olist.';
+  if (hasOrder)
+    return 'Quem pode corrigir: o vendedor responsável pelo pedido (ou um administrador) deve revisar os itens e valores do pedido.';
+  if (hasSettings)
+    return 'Quem pode corrigir: um administrador deve conferir os parâmetros comerciais da integração Olist.';
+  return 'Quem pode corrigir: o vendedor responsável pelo pedido ou um administrador deve completar os dados pendentes antes de gerar no Olist.';
 }
 
 /**
@@ -170,8 +320,21 @@ export function olistOperationReason(code, state = '') {
     OLIST_INVALID_RESPONSE: 'O Olist devolveu uma resposta inválida.',
     OLIST_CREATION_DISABLED: 'A geração de vendas está desativada.',
     ORDER_CANCELLED: 'O pedido foi cancelado antes da etapa de venda.',
+    ORDER_NOT_CONFIRMED: 'O pedido não estava confirmado antes da etapa de venda.',
+    OLIST_CUSTOMER_INVALID:
+      'O cadastro do comprador estava incompleto ou inválido para gerar no Olist.',
+    OLIST_SALE_PLAN_INVALID:
+      'Os dados comerciais do pedido mudaram ou ficaram inválidos antes do envio.',
+    OLIST_SALE_EXACT_CENT_REQUIRED:
+      'Valor do tamanho não representável no Olist sem fração de centavo.',
+    OLIST_FREIGHT_INVALID:
+      'O valor do frete do pedido estava inválido para envio ao Olist.',
+    OLIST_TOTAL_MISMATCH:
+      'O total do pedido divergiu da soma das peças e do frete.',
     OLIST_EXPORT_INVALIDATED:
       'Invalidada por uma pessoa administradora antes de qualquer venda.',
+    OLIST_EXPORT_RESUMED:
+      'Etapa interrompida sem efeito no Olist; a geração foi retomada em uma nova operação.',
   });
   if (known[value]) return known[value];
   if (state === 'rejected')

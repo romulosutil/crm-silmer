@@ -153,6 +153,102 @@ export function amountLabel(cents) {
 }
 
 /**
+ * ADR 080 (OLC-05h/j): freight accepts 0,00 as well as positive BRL amounts.
+ *
+ * @param {unknown} text
+ * @returns {number|null} integer cents >= 0, or null when malformed.
+ */
+export function parseZeroOrPositiveBrl(text) {
+  if (typeof text !== 'string' || text.length > 64) return null;
+  const trimmed = text.trim();
+  if (trimmed === '') return 0;
+  const match = BRL_AMOUNT.exec(trimmed);
+  if (!match) return null;
+  const reais = BigInt(match[1].replaceAll('.', ''));
+  const cents = BigInt((match[2] ?? '').padEnd(2, '0'));
+  const total = reais * 100n + cents;
+  return total >= 0n && total <= BigInt(Number.MAX_SAFE_INTEGER)
+    ? Number(total)
+    : null;
+}
+
+/**
+ * ADR 080: freight zero reads as R$ 0,00 rather than unset.
+ *
+ * @param {unknown} cents
+ */
+export function freightAmountLabel(cents) {
+  if (cents === 0) return 'R$ 0,00';
+  return amountLabel(cents);
+}
+
+/**
+ * ADR 080 (OLC-05a-j): pieces, freight and calculated total of an order.
+ *
+ * @param {Record<string, any>|null|undefined} order
+ * @returns {{piecesCents: number|null, freightCents: number, totalCents: number|null}}
+ */
+export function orderAmountsView(order) {
+  if (order?.amounts && typeof order.amounts === 'object') {
+    const piecesCents = Number.isSafeInteger(order.amounts.piecesCents)
+      ? Number(order.amounts.piecesCents)
+      : null;
+    const freightCents =
+      Number.isSafeInteger(order.amounts.freightCents) &&
+      Number(order.amounts.freightCents) >= 0
+        ? Number(order.amounts.freightCents)
+        : 0;
+    const totalCents = Number.isSafeInteger(order.amounts.totalCents)
+      ? Number(order.amounts.totalCents)
+      : null;
+    return { piecesCents, freightCents, totalCents };
+  }
+  const freightCents =
+    Number.isSafeInteger(order?.freight?.cents) &&
+    Number(order.freight.cents) >= 0
+      ? Number(order.freight.cents)
+      : 0;
+  const piecesCents = Number.isSafeInteger(order?.pricing?.totalCents)
+    ? Number(order.pricing.totalCents)
+    : Number.isSafeInteger(order?.finalAmountCents)
+      ? Number(order.finalAmountCents)
+      : null;
+  const totalCents = piecesCents === null ? null : piecesCents + freightCents;
+  return { piecesCents, freightCents, totalCents };
+}
+
+/**
+ * ADR 080: how the order's freight was recorded.
+ *
+ * @param {Record<string, any>|null|undefined} order
+ */
+export function freightOriginLabel(order) {
+  if (!order || isStoreOrder(order) || !order.ficha?.sizePricing) return '';
+  const source = order.freight?.source;
+  const who = order.freight?.setBy?.name;
+  if (source === 'quote')
+    return who ? `Cotação aplicada por ${who}` : 'Cotação aplicada';
+  if (source === 'seller')
+    return who ? `Informado por ${who}` : 'Informado pelo vendedor';
+  return 'Sem frete informado';
+}
+
+/**
+ * ADR 080 item 6 (OLC-05g): notice when the shipping quote applied to freight
+ * is stale or differs from a newer quote.
+ *
+ * @param {Record<string, any>|null|undefined} order
+ */
+export function freightQuoteNoticeLabel(order) {
+  const notice = order?.freight?.quoteNotice;
+  if (notice === 'stale')
+    return 'A cotação aplicada ao frete ficou desatualizada após mudanças no pedido. Confira a estimativa ou ajuste o frete.';
+  if (notice === 'divergent')
+    return 'Há uma cotação mais recente com valor diferente do frete aplicado. Confira se deseja atualizar o frete.';
+  return '';
+}
+
+/**
  * Parts of a sentence joined the Portuguese way: "a, b e c".
  *
  * @param {string[]} parts

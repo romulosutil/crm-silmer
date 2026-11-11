@@ -7,12 +7,16 @@ import {
   amountLabel,
   fichaPrintedLabel,
   formatBrl,
+  freightAmountLabel,
+  freightOriginLabel,
+  freightQuoteNoticeLabel,
   isItemGap,
   isPageGap,
   isStoreOrder,
   joinPt,
   missingFieldLabels,
   nextOrderStep,
+  orderAmountsView,
   parseBrl,
   PAYMENT_CONDITION_OPTIONS,
   paymentConditionLabel,
@@ -83,6 +87,9 @@ let opener = null;
 const confirmVersion = ref(0);
 const confirmationStale = ref(false);
 const calculatedPricing = computed(() => Boolean(props.order.pricing));
+const amounts = computed(() => orderAmountsView(props.order));
+const freightOrigin = computed(() => freightOriginLabel(props.order));
+const freightNotice = computed(() => freightQuoteNoticeLabel(props.order));
 const confirmationHint = computed(() =>
   calculatedPricing.value
     ? 'O total vem dos subtotais revisados. A forma de pagamento é conferida ao gerar.'
@@ -516,10 +523,24 @@ async function reopen() {
 
       <template v-else>
         <dl class="op-deal">
+          <div v-if="order.ficha?.sizePricing">
+            <dt>Peças</dt>
+            <dd class="op-num">{{ amountLabel(amounts.piecesCents) }}</dd>
+          </div>
+          <div v-if="order.ficha?.sizePricing">
+            <dt>Frete</dt>
+            <dd class="op-num">
+              {{ freightAmountLabel(amounts.freightCents) }}
+              <span v-if="freightOrigin" class="op-hint">{{ freightOrigin }}</span>
+            </dd>
+          </div>
           <div>
             <dt>Valor final</dt>
-            <dd class="op-num">{{ amountLabel(order.finalAmountCents) }}</dd>
+            <dd class="op-num">{{ amountLabel(amounts.totalCents ?? order.finalAmountCents) }}</dd>
           </div>
+          <p v-if="freightNotice" class="op-field-error" role="status">
+            {{ freightNotice }}
+          </p>
           <div>
             <dt>Forma de pagamento</dt>
             <dd>{{ paymentConditionLabel(order.paymentCondition) }}</dd>
@@ -646,13 +667,23 @@ async function reopen() {
         </p>
 
         <div v-if="calculatedPricing" class="op-field">
+          <span>Peças</span>
+          <output class="op-num">{{ amountLabel(amounts.piecesCents) }}</output>
+          <span>Frete</span>
+          <output class="op-num">
+            {{ freightAmountLabel(amounts.freightCents) }}
+            <span v-if="freightOrigin" class="op-hint">{{ freightOrigin }}</span>
+          </output>
+          <p v-if="freightNotice" class="op-field-error" role="status">
+            {{ freightNotice }}
+          </p>
           <span>Total calculado do pedido</span>
           <output class="op-num">{{
-            amountLabel(order.pricing.totalCents)
+            amountLabel(amounts.totalCents ?? order.pricing.totalCents)
           }}</output>
           <p class="op-hint">
-            Soma dos subtotais revisados por tamanho. Para mudar o total, revise
-            os itens antes de gerar.
+            Soma dos subtotais revisados por tamanho e frete. Para mudar o total, revise
+            os itens ou o frete antes de gerar.
           </p>
           <p v-if="fieldErrors.finalAmount" class="op-field-error" role="alert">
             {{ fieldErrors.finalAmount }}

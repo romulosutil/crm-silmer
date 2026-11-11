@@ -156,6 +156,21 @@ const statusLabel = computed(() =>
 const canEditMilestones = computed(
   () => commercialAccess.value && !order.value?.cancelledAt,
 );
+/**
+ * ADR 080 item 3 (OLC-05h/i): only the responsible seller informs or applies
+ * the freight of a pending order priced by size. An administrator reads it.
+ */
+const canEditFreight = computed(
+  () =>
+    Boolean(order.value) &&
+    isPending.value &&
+    !order.value.cancelledAt &&
+    !olistLocked.value &&
+    !isStore.value &&
+    Boolean(order.value.ficha?.sizePricing) &&
+    Boolean(sessionUser.value?.id) &&
+    order.value.seller?.id === sessionUser.value?.id,
+);
 const canConfirm = computed(
   () =>
     commercialAccess.value &&
@@ -331,6 +346,46 @@ async function revisitNextStep() {
   }
   target.scrollIntoView?.({ block: 'center' });
   target.focus({ preventScroll: true });
+}
+
+/**
+ * ADR 080 (OLC-05h/i): the freight command carries either a declared value
+ * in integer cents or the identity of a persisted estimate, never a price
+ * from the browser. The answer is the new order with the server's total.
+ *
+ * @param {{freightCents: number}|{quote: {quoteId: string, serviceId: number}}} body
+ */
+async function saveFreight(body) {
+  try {
+    const response = await request(
+      `/api/v1/orders/${encodeURIComponent(props.orderId)}/freight`,
+      {
+        body: {
+          ...body,
+          expectedVersion: editingVersion.value ?? order.value.version,
+        },
+        idempotencyKey: commandKey(),
+        method: 'POST',
+      },
+    );
+    order.value = response.data.order;
+    return { ok: true };
+  } catch (cause) {
+    const status = Number(/** @type {any} */ (cause)?.status) || 0;
+    const code = String(/** @type {any} */ (cause)?.code ?? '');
+    if (status === 409) pendingLiveRefresh = true;
+    return {
+      code,
+      ok: false,
+      status,
+      message:
+        code === 'FREIGHT_INVALID' || code === 'FREIGHT_OVERFLOW'
+          ? 'Use um frete em reais, como 35,00, sem valor negativo.'
+          : code.startsWith('FREIGHT_QUOTE')
+            ? 'A cotação mudou ou não vale mais para este pedido. Consulte o frete novamente.'
+            : describeWriteError(cause),
+    };
+  }
 }
 
 /**
@@ -568,6 +623,7 @@ provide('orderEditing', {
   canEdit,
   canConfirm,
   canEditMilestones,
+  canEditFreight,
   command: runCommand,
   editingSection,
   editRequest,
@@ -582,6 +638,7 @@ provide('orderEditing', {
   },
   revisitNextStep,
   save: saveSection,
+  saveFreight,
   saveMilestones,
   /** @param {string} section */
   start(section) {
@@ -874,6 +931,7 @@ onBeforeUnmount(() => {
           <OrderShippingEstimate
             :order-id="order.id"
             :revision="order.version"
+            :order="order"
           />
           <OrderInfoStrips :order="order" />
         </div>
@@ -901,6 +959,7 @@ onBeforeUnmount(() => {
       <OrderOlistPanel
         v-if="olistEnabled || isAdmin"
         :order-id="order.id"
+        :order="order"
         :revision="order.version"
         :cancelled="Boolean(order.cancelledAt)"
         :disabled="editingSection !== ''"

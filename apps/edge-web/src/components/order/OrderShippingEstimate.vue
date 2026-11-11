@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, inject, onBeforeUnmount, ref, watch } from 'vue';
 import { request } from '../../lib/api-client.js';
 import { amountLabel } from '../../lib/order-format.js';
 import { dateTimeBR } from '../../lib/format.js';
@@ -8,16 +8,52 @@ const props = defineProps({
   orderId: { type: String, required: true },
   revision: { type: Number, default: 0 },
   showEmpty: { type: Boolean, default: false },
+  order: { type: Object, default: null },
 });
+const emit = defineEmits(['updated']);
+const editing = inject('orderEditing', null);
 const quote = ref(null);
 const loading = ref(false);
+const applying = ref(false);
 const error = ref('');
+const applyError = ref('');
 let controller;
 const selected = computed(() =>
   quote.value?.services?.find(
     (service) => service.id === quote.value.selectedServiceId,
   ),
 );
+const canApplyQuote = computed(
+  () =>
+    editing?.canEditFreight?.value === true &&
+    Boolean(quote.value?.id) &&
+    Boolean(selected.value?.id) &&
+    !quote.value?.stale,
+);
+
+async function applyQuote() {
+  if (applying.value || !canApplyQuote.value) return;
+  applying.value = true;
+  applyError.value = '';
+  try {
+    const result = await editing.saveFreight({
+      quote: {
+        quoteId: quote.value.id,
+        serviceId: selected.value.id,
+      },
+    });
+    if (!result.ok) {
+      applyError.value = result.message || 'Não foi possível aplicar a cotação ao frete.';
+    } else {
+      emit('updated', props.order);
+    }
+  } catch {
+    applyError.value = 'Não foi possível aplicar a cotação ao frete.';
+  } finally {
+    applying.value = false;
+  }
+}
+
 async function load() {
   controller?.abort();
   controller = undefined;
@@ -83,6 +119,17 @@ onBeforeUnmount(() => controller?.abort());
       <p v-if="quote.stale" class="shipping-stale" role="status">
         Cotação desatualizada. Consulte novamente antes de combinar o frete.
       </p>
+      <div v-if="canApplyQuote" class="shipping-actions">
+        <p v-if="applyError" role="alert" class="op-alert">{{ applyError }}</p>
+        <button
+          type="button"
+          class="op-add-inline"
+          :disabled="applying"
+          @click="applyQuote"
+        >
+          {{ applying ? 'Aplicando ao frete…' : 'Usar cotação no frete' }}
+        </button>
+      </div>
       <p class="op-hint">
         Estimativa separada do valor final do pedido. Preço e prazo sujeitos a
         nova consulta.
@@ -105,5 +152,11 @@ onBeforeUnmount(() => controller?.abort());
 }
 .shipping-stale {
   font-weight: 600;
+}
+.shipping-actions {
+  margin-block: var(--space-2);
+}
+.shipping-actions button {
+  min-block-size: var(--target-min);
 }
 </style>

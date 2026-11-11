@@ -127,10 +127,35 @@ export function isAdminInvalidated(operation) {
 /** @param {any} operation */
 export function isOperationUncertain(operation) {
   if (!operation) return false;
-  if (['confirmed', 'linked'].includes(operation.state)) return false;
+  if (['confirmed', 'linked', 'succeeded'].includes(operation.state))
+    return false;
   return (
     UNCERTAIN_STATES.includes(operation.state) ||
     UNCERTAIN_CODE.test(String(operation.errorCode ?? ''))
+  );
+}
+/** Falha segura antes de efeito externo (OLC-10/OLC-14/OLC-16).
+ * @param {any} operation */
+export function isOperationFailedSafe(operation) {
+  if (!operation || isOperationUncertain(operation) || isAdminInvalidated(operation))
+    return false;
+  if (operation.state === 'failed_safe' || operation.retrySafe === true)
+    return true;
+  return (
+    ['queued', 'resolving', 'ready'].includes(operation.state) &&
+    typeof operation.errorCode === 'string' &&
+    operation.errorCode.length > 0
+  );
+}
+/** Retomada autorizada apenas quando o servidor comprova ausência de efeito.
+ * @param {any} operation */
+export function canResumeOperation(operation) {
+  if (!operation || isOperationUncertain(operation)) return false;
+  if (['confirmed', 'linked', 'succeeded', 'reserved'].includes(operation.state))
+    return false;
+  return (
+    operation.retrySafe === true ||
+    (operation.state === 'failed_safe' && operation.retrySafe !== false)
   );
 }
 /** Operação ainda andando: vale a releitura limitada do CRM.
@@ -138,9 +163,50 @@ export function isOperationUncertain(operation) {
 export function isOperationInProgress(operation) {
   return (
     Boolean(operation) &&
-    IN_PROGRESS.includes(operation.state) &&
-    !isOperationUncertain(operation)
+    (IN_PROGRESS.includes(operation.state) ||
+      ['resolving_customer', 'resolving_products', 'sending'].includes(
+        operation.state,
+      )) &&
+    !isOperationUncertain(operation) &&
+    !isOperationFailedSafe(operation)
   );
+}
+
+/** Rótulo principal de estado no detalhe do Pedido (OLC-13/OLC-16).
+ * @param {any} operation */
+export function olistOrderDetailStatus(operation) {
+  if (!operation || isAdminInvalidated(operation)) return null;
+  if (isLegacyReviewRequired(operation) || isOperationUncertain(operation))
+    return 'Conferência necessária';
+  const state = String(operation.state ?? '');
+  const stage = String(operation.stage ?? '');
+  if (['confirmed', 'linked', 'succeeded'].includes(state)) {
+    const number =
+      typeof operation.number === 'string' && operation.number.trim()
+        ? operation.number.trim()
+        : null;
+    return number ? `Gerado no Olist · Venda nº ${number}` : 'Gerado no Olist';
+  }
+  if (
+    isOperationFailedSafe(operation) ||
+    state === 'rejected' ||
+    state === 'invalidated'
+  )
+    return 'Não foi possível concluir esta etapa';
+  if (state === 'queued') return 'Aguardando processamento';
+  if (state === 'resolving_customer' || (state === 'resolving' && stage === 'customer'))
+    return 'Processando… Cliente';
+  if (
+    state === 'resolving_products' ||
+    (state === 'resolving' && ['product', 'variation'].includes(stage))
+  )
+    return 'Processando… Produtos e tamanhos';
+  if (
+    state === 'sending' ||
+    (stage === 'sale' && ['resolving', 'reserved', 'ready'].includes(state))
+  )
+    return 'Processando… Venda';
+  return 'Aguardando processamento';
 }
 
 /** Rótulo curto da operação; preserva os textos da T12.

@@ -7,11 +7,19 @@ import {
   dayLabel,
   paymentConditionLabel,
 } from '../../lib/order-format.js';
-import { olistIssueLabels, olistFailure } from '../../lib/olist-feedback.js';
+import {
+  olistIssueLabels,
+  olistIssueCorrectionHint,
+  olistFailure,
+} from '../../lib/olist-feedback.js';
 import {
   OLIST_FOLLOW_DELAYS_MS,
   isAdminInvalidated,
   isOperationInProgress,
+  isOperationUncertain,
+  isOperationFailedSafe,
+  canResumeOperation,
+  olistOrderDetailStatus,
   isLegacyReviewRequired,
 } from '../../lib/olist-progress.js';
 import OrderOlistProgress from './OrderOlistProgress.vue';
@@ -23,6 +31,8 @@ const props = defineProps({
   disabled: { type: Boolean, default: false },
   /** Pedido cancelado localmente: a geração, a conferência e o vínculo param. */
   cancelled: { type: Boolean, default: false },
+  /** Detalhe do pedido quando renderizado na página /pedidos/:id */
+  order: { type: Object, default: null },
 });
 const emit = defineEmits(['operation']);
 const user = inject('sessionUser', ref({}));
@@ -88,6 +98,43 @@ const generationAllowed = computed(
 const issueLabels = computed(() =>
   olistIssueLabels(preview.value?.issues, preview.value?.commercial?.groups),
 );
+const orderDetailIssues = computed(() => {
+  if (props.order?.status !== 'confirmado') return [];
+  const list = projection.value?.pendingFields ?? [];
+  return Array.isArray(list) ? list : [];
+});
+const orderDetailIssueLabels = computed(() =>
+  olistIssueLabels(orderDetailIssues.value, props.order?.ficha?.sizePricing ?? []),
+);
+const orderDetailCorrectionHint = computed(() =>
+  olistIssueCorrectionHint({
+    isStore: props.order?.origin === 'loja',
+    hasSizePricing: Boolean(props.order?.ficha?.sizePricing),
+    issues: orderDetailIssues.value,
+  }),
+);
+const orderDetailStatusText = computed(() =>
+  olistOrderDetailStatus(projection.value?.operation),
+);
+const queryFailed = computed(
+  () => Boolean(props.order && !projection.value && error.value),
+);
+const canResume = computed(() => {
+  if (!props.order || props.order.status !== 'confirmado') return false;
+  if (!canOperate.value || denied.value || props.cancelled || props.disabled)
+    return false;
+  if (exportState.value !== 'idle') return false;
+  return canResumeOperation(projection.value?.operation);
+});
+const canDirectGenerate = computed(() => {
+  if (!props.order || props.order.status !== 'confirmado') return false;
+  if (!canOperate.value || denied.value || props.cancelled || props.disabled)
+    return false;
+  if (exportState.value !== 'idle') return false;
+  if (hasOperation.value) return false;
+  if (orderDetailIssues.value.length > 0) return false;
+  return projection.value?.creationEnabled === true;
+});
 const expiryLabel = computed(() => {
   const stamp = Date.parse(preview.value?.expiresAt ?? '');
   return Number.isFinite(stamp)
@@ -421,6 +468,107 @@ async function requestExport(trigger) {
   if (!disposed && generationAllowed.value && reviewDialog.value)
     openDialog(reviewDialog.value, exportTrigger);
 }
+async function directGenerate() {
+  if (busy.value || !canOperate.value || denied.value || props.cancelled || props.disabled)
+    return;
+  if (
+    projection.value?.paymentDuePolicy === 'per_order' &&
+    !/^\d{4}-\d{2}-\d{2}$/u.test(paymentDueOn.value)
+  ) {
+    error.value = 'Informe o vencimento deste pedido antes de gerar no Olist.';
+    await nextTick();
+    paymentDueField.value?.focus();
+    return;
+  }
+  const own = new AbortController();
+  controller?.abort();
+  controller = own;
+  const id = props.orderId;
+  const number = projection.value?.number ?? props.order?.number;
+  attemptOrderId = id;
+  exportState.value = 'submitting';
+  busy.value = true;
+  error.value = '';
+  message.value = '';
+  try {
+    const body = {};
+    if (projection.value?.paymentDuePolicy === 'per_order')
+      body.paymentDueOn = paymentDueOn.value;
+    const response = await request(`${base.value}/export`, {
+      method: 'POST',
+      body,
+      idempotencyKey: commandKey(),
+      signal: own.signal,
+    });
+    if (
+      disposed ||
+      own.signal.aborted ||
+      controller !== own ||
+      props.orderId !== id
+    )
+      return;
+    const data = response.data;
+    if (
+      data?.orderId !== id ||
+      data?.number !== number ||
+      typeof data?.operationId !== 'string' ||
+      !data.operationId ||
+      typeof data?.state !== 'string' ||
+      typeof data?.stage !== 'string'
+    ) {
+      markUncertain();
+    } else {
+      exportState.value = 'accepted';
+      projection.value = {
+        ...projection.value,
+        operation: { state: data.state, stage: data.stage, number: null },
+      };
+      emit('operation', projection.value.operation);
+      message.value =
+        'Solicitação registrada para o pedido ' +
+        number +
+        '. Acompanhe a operação sem repetir o envio.';
+      followAttempt = 0;
+      scheduleFollow();
+    }
+  } catch (cause) {
+    if (
+      disposed ||
+      own.signal.aborted ||
+      controller !== own ||
+      props.orderId !== id
+    )
+      return;
+    const code = String(cause?.code ?? '');
+    if ([401, 403].includes(Number(cause?.status))) {
+      denied.value = true;
+      projection.value = null;
+      error.value = olistFailure(cause);
+    } else if (
+      code === 'OLIST_SALE_EXACT_CENT_REQUIRED' ||
+      code === 'OLIST_EXACT_CENT_REQUIRED' ||
+      code === 'ORDER_NOT_CONFIRMED' ||
+      code === 'ORDER_CANCELLED' ||
+      code === 'OLIST_CUSTOMER_INVALID' ||
+      code === 'OLIST_ORDER_INCOMPLETE' ||
+      code === 'OLIST_PAYMENT_DUE_REQUIRED' ||
+      code === 'OLIST_NOT_CONFIGURED' ||
+      code === 'OLIST_CREATION_DISABLED'
+    ) {
+      exportState.value = 'idle';
+      error.value = olistFailure(cause);
+      void load(false);
+    } else {
+      markUncertain();
+    }
+  } finally {
+    if (controller === own && !disposed) {
+      busy.value = false;
+      await focusNotice();
+    }
+  }
+}
+
 async function submitExport() {
   if (
     busy.value ||
@@ -623,13 +771,70 @@ onBeforeUnmount(() => {
   >
     <div class="op-sheet-head">
       <h2 :id="`olist-preparation-${orderId}`">Envio para Olist</h2>
-      <p v-if="projection">
+      <p v-if="order">
+        Pedido {{ order.number }} ·
+        {{ order.status === 'confirmado' ? 'Confirmado' : 'Pendente' }}
+      </p>
+      <p v-else-if="projection">
         Pedido {{ projection.number }} ·
         {{ projection.status === 'confirmado' ? 'Confirmado' : 'Pendente' }}
       </p>
     </div>
     <div class="op-sheet-body">
-      <p :id="`olist-generation-${orderId}`">
+      <!-- OLC-T04: Fluxo direto no detalhe do pedido -->
+      <template v-if="order">
+        <!-- 1. Pedido Pendente -->
+        <p v-if="order.status === 'pendente'" class="field-help" role="status">
+          Disponível após confirmar o pedido.
+        </p>
+
+        <!-- 2. Pedido Confirmado -->
+        <template v-else-if="order.status === 'confirmado'">
+          <!-- Falha de consulta da integração -->
+          <div v-if="queryFailed" class="olist-query-failure" role="alert">
+            <h3>Não foi possível consultar a integração</h3>
+            <p class="inline-error">{{ error }}</p>
+          </div>
+
+          <!-- Status visível da operação se houver -->
+          <div v-else-if="orderDetailStatusText" class="olist-order-detail-status" role="status">
+            <h3>{{ orderDetailStatusText }}</h3>
+          </div>
+
+          <!-- Integração Olist indisponível -->
+          <div
+            v-else-if="projection && !projection.creationEnabled && !hasOperation"
+            class="olist-detail-gaps"
+          >
+            <h3>Integração Olist indisponível</h3>
+            <p class="field-help">A integração com o Olist está desativada no momento.</p>
+          </div>
+
+          <!-- Pendências de validação interna (cadastro, exatidão centavos, etc) -->
+          <div v-else-if="orderDetailIssueLabels.length > 0 && !hasOperation" class="olist-detail-gaps">
+            <h3 v-if="orderDetailIssues.some(i => i.code === 'OLIST_SALE_EXACT_CENT_REQUIRED' || i.code === 'OLIST_EXACT_CENT_REQUIRED' || i.code === 'OLIST_SIZE_PRICE_INEXACT')">
+              Valor do tamanho não representável no Olist
+            </h3>
+            <h3 v-else-if="orderDetailIssues.some(i => i.code === 'OLIST_CREATION_DISABLED' || i.code === 'OLIST_NOT_CONFIGURED')">
+              Integração Olist indisponível
+            </h3>
+            <h3 v-else>
+              Complete os dados para gerar no Olist
+            </h3>
+            <ul class="order-source-issues">
+              <li v-for="label in orderDetailIssueLabels" :key="label">{{ label }}</li>
+            </ul>
+            <p class="field-help">{{ orderDetailCorrectionHint }}</p>
+          </div>
+
+          <p v-else-if="!hasOperation && exportState === 'idle'" class="field-help" role="status">
+            Ainda não gerado no Olist.
+          </p>
+        </template>
+      </template>
+
+      <!-- Mensagens padrão / fallback administrativo -->
+      <p v-else :id="`olist-generation-${orderId}`">
         {{
           cancelled
             ? 'Pedido cancelado. A geração está bloqueada.'
@@ -834,29 +1039,61 @@ onBeforeUnmount(() => {
         @refresh="recoveryChanged"
       />
       <div class="form-actions">
-        <button
-          v-if="exportState !== 'idle' || hasOperation"
-          type="button"
-          :disabled="busy || disabled || denied"
-          @click="load(true)"
-        >
-          Atualizar progresso
-        </button>
-        <button
-          v-if="
-            canOperate &&
-            !denied &&
-            !cancelled &&
-            !hasOperation &&
-            exportState === 'idle'
-          "
-          ref="conferButton"
-          type="button"
-          :disabled="busy || disabled"
-          @click="confer"
-        >
-          Revisar envio
-        </button>
+        <!-- OLC-T04: Botão direto Gerar no Olist no detalhe do pedido Confirmado -->
+        <template v-if="order && order.status === 'confirmado'">
+          <button
+            v-if="canResume"
+            type="button"
+            class="primary"
+            :disabled="busy || disabled"
+            @click="directGenerate"
+          >
+            {{ busy ? 'Retomando…' : 'Retomar geração' }}
+          </button>
+          <button
+            v-else-if="canDirectGenerate"
+            type="button"
+            class="primary"
+            :disabled="busy || disabled"
+            @click="directGenerate"
+          >
+            {{ busy ? 'Gerando…' : 'Gerar no Olist' }}
+          </button>
+          <button
+            v-if="error || exportState !== 'idle' || hasOperation"
+            type="button"
+            :disabled="busy || disabled || denied"
+            @click="load(true)"
+          >
+            Atualizar situação
+          </button>
+        </template>
+        <!-- Fluxo administrativo / OlistView -->
+        <template v-else>
+          <button
+            v-if="exportState !== 'idle' || hasOperation"
+            type="button"
+            :disabled="busy || disabled || denied"
+            @click="load(true)"
+          >
+            Atualizar progresso
+          </button>
+          <button
+            v-if="
+              canOperate &&
+              !denied &&
+              !cancelled &&
+              !hasOperation &&
+              exportState === 'idle'
+            "
+            ref="conferButton"
+            type="button"
+            :disabled="busy || disabled"
+            @click="confer"
+          >
+            Revisar envio
+          </button>
+        </template>
       </div>
     </div>
     <dialog

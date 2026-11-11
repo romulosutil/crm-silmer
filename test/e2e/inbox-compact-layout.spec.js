@@ -767,21 +767,27 @@ test('INBOX-UX-04: at 320px the contact identity and order actions remain separa
   await expect(
     header.getByRole('button', { name: 'Criar pedido', exact: true }),
   ).toBeVisible();
-  expect(
-    await name
-      .locator('span')
-      .evaluate((element) => element.scrollWidth <= element.clientWidth),
-  ).toBe(true);
-  const titleBox = await header.locator('.conv-title').boundingBox();
+  // INBOX-RD-04: back, name and the two icon actions share the first row, so
+  // at 320 px the name may be cut with an ellipsis; its full name stays in
+  // the accessible name above. The identity and "Criar pedido" come below.
+  const nameBox = await name.boundingBox();
+  const detailsBox = await header
+    .getByRole('button', { name: 'Detalhes do atendimento', exact: true })
+    .boundingBox();
+  const createBox = await header
+    .getByRole('button', { name: 'Criar pedido', exact: true })
+    .boundingBox();
   const identityBox = await header.locator('.conv-identity').boundingBox();
-  const actionsBox = await header.locator('.conv-actions').boundingBox();
-  if (!titleBox || !identityBox || !actionsBox)
-    throw new Error('The identity and actions must have visible bounds');
-  expect(titleBox.width).toBeGreaterThanOrEqual(180);
-  expect(titleBox.y + titleBox.height).toBeLessThanOrEqual(actionsBox.y + 1);
-  expect(identityBox.y + identityBox.height).toBeLessThanOrEqual(
-    actionsBox.y + 1,
-  );
+  if (!nameBox || !detailsBox || !createBox || !identityBox)
+    throw new Error('The header parts must have visible bounds');
+  expect(nameBox.width).toBeGreaterThanOrEqual(120);
+  expect(
+    Math.abs(
+      detailsBox.y + detailsBox.height / 2 - (nameBox.y + nameBox.height / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
+  expect(createBox.y).toBeGreaterThanOrEqual(nameBox.y + nameBox.height);
+  expect(identityBox.y).toBeGreaterThanOrEqual(createBox.y + createBox.height);
   for (const control of [
     header.getByRole('link', { name: 'Conversas', exact: true }),
     header.getByRole('button', { name: 'Criar pedido', exact: true }),

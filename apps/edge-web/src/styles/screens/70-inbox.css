@@ -342,14 +342,10 @@
 
 .conv-top {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-1) var(--space-2);
-}
-
-.conv-top {
   flex-wrap: nowrap;
+  align-items: baseline;
   justify-content: space-between;
+  gap: var(--space-1) var(--space-2);
   min-inline-size: 0;
 }
 
@@ -859,11 +855,6 @@
 .message small {
   color: var(--color-text-muted);
   font-size: var(--text-xs);
-}
-
-.message .msg-delivery {
-  color: var(--status-warning-text);
-  font-weight: 600;
 }
 
 /* CP-16/UXA-01: the question appears only on the message the agent stopped
@@ -1476,13 +1467,6 @@
   }
 
   /* "Mais" is a bottom sheet above the navigation bar, under the thumb. */
-  .conv-more-backdrop {
-    position: fixed;
-    z-index: 18;
-    inset: 0;
-    background: var(--color-overlay);
-  }
-
   .conv-more-panel {
     position: fixed;
     z-index: 19;
@@ -1524,8 +1508,7 @@
   .subject-list button,
   .subject-actions button,
   .subject-order-search button,
-  .context-section .inline-actions > *,
-  .message-subjects summary {
+  .context-section .inline-actions > * {
     min-block-size: var(--target-min);
   }
 
@@ -1533,19 +1516,37 @@
     min-inline-size: var(--target-min);
   }
 
-  .message-subjects summary {
-    display: flex;
-    align-items: center;
+  /* design.md: while typing the bar leaves and the reply sits on the
+     keyboard. That is the text field holding the focus, not any tool of the
+     composer: hiding the bar for a tap on Anexar or Gravar moved the tools
+     64 px under the finger and lost the first tap. The bar returns half a
+     second after the field loses the focus, so a tap that moves the focus
+     from the field to Enviar or a tool is not undone by the bar coming back
+     between press and release. */
+  html:has(.inbox-composer) .mobile-nav {
+    transition: visibility 0s 0.5s;
   }
 
-  /* Keep the reply steady when focus moves from the text to Send. Showing
-     navigation during that tap would move the button before its click. */
-  html:has(.inbox-composer:focus-within) .mobile-nav,
+  html:has(.inbox-composer) #main-content {
+    transition: padding-block-end 0s 0.5s;
+  }
+
+  html:has(.inbox-composer :is(textarea, input:not([type='file'])):focus)
+    .mobile-nav {
+    visibility: hidden;
+    transition-delay: 0s;
+  }
+
+  html:has(.inbox-composer :is(textarea, input:not([type='file'])):focus)
+    #main-content {
+    padding-block-end: 0;
+    transition-delay: 0s;
+  }
+
   html:has(.inbox-turn-form:focus-within) .mobile-nav {
     display: none;
   }
 
-  html:has(.inbox-composer:focus-within) #main-content,
   html:has(.inbox-turn-form:focus-within) #main-content {
     padding-block-end: 0;
   }
@@ -1756,17 +1757,6 @@
   inline-size: 0.875rem;
   block-size: 0.875rem;
   color: var(--color-text-muted);
-}
-.contact-avatar {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  inline-size: 1.5rem;
-  block-size: 1.5rem;
-  font-size: var(--text-sm);
-  background: var(--color-selected);
-  border-radius: var(--radius-pill);
 }
 .conv-head {
   gap: var(--space-2);
@@ -2137,15 +2127,49 @@
   }
 }
 @media (max-width: 768px) {
+  /* INBOX-RD-04 (design.md §9, "Cabeçalho da conversa"): back, name and the
+     two icon actions share the first row; the order link and the identity
+     take one row each; the primary text action (Assumir atendimento) is the
+     last row, full width. The wrappers dissolve so each control is a
+     grid cell of its own. */
   .inbox-page .conv-head {
     display: grid;
-    grid-template-columns: var(--target-min) minmax(0, 1fr);
+    grid-template-columns: var(--target-min) minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0 var(--space-2);
+    padding: var(--space-2) var(--space-3);
   }
-  .inbox-page .conv-actions {
-    grid-column: 2;
-    justify-self: end;
-    max-inline-size: 100%;
-    flex-wrap: wrap;
+  .inbox-page :is(.conv-title, .conv-title-row, .conv-actions, .conv-more) {
+    display: contents;
+  }
+  .inbox-page .conv-back {
+    grid-area: 1 / 1;
+  }
+  .inbox-page .conv-title h2 {
+    grid-area: 1 / 2;
+  }
+  .inbox-page .conv-more > button {
+    grid-area: 1 / 3;
+  }
+  .inbox-page .conv-actions > .conv-context-toggle {
+    grid-area: 1 / 4;
+  }
+  .inbox-page .conv-order-link {
+    grid-area: 2 / 2 / auto / -1;
+    justify-self: start;
+  }
+  .inbox-page .conv-identity {
+    grid-area: 3 / 2 / auto / -1;
+  }
+  .inbox-page .conv-actions > .primary {
+    grid-area: 4 / 1 / auto / -1;
+    margin-block-start: var(--space-2);
+  }
+  /* "Criar pedido" only shows while there is no order, so it takes the
+     place the order link would have. */
+  .inbox-page .conv-actions > button:not(.primary, .conv-context-toggle) {
+    grid-area: 2 / 2 / auto / -1;
+    justify-self: start;
   }
   .inbox-page .inbox-tabs .inbox-tab,
   .inbox-page .inbox-filters-button {

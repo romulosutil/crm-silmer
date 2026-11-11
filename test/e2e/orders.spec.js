@@ -1284,7 +1284,7 @@ test('keeps a confirmed order in reading mode until it is reopened (PFI-10)', as
   ).toBeVisible();
 });
 
-test('shows the three trail dates without repeating the summary (PLA-01..03, PLA-08)', async ({
+test('shows real milestones in chronological order without the repeated dates summary (DTL-06/07)', async ({
   page,
 }) => {
   await mockOrders(page);
@@ -1293,9 +1293,9 @@ test('shows the three trail dates without repeating the summary (PLA-01..03, PLA
   const trail = page.getByRole('region', { name: 'Datas do pedido' });
   await expect(trail).toContainText('2 de 3 datas');
   await expect(trail.getByRole('listitem')).toHaveText([
-    /Primeiro contato\s*02\/09\/2026\s*vem da conversa/u,
-    /Pago em\s*10\/09\/2026\s*informado/u,
-    /Entregue em\s*—\s*a informar/u,
+    /02\/09\/2026\s*Primeiro contato\s*Conversa iniciada/u,
+    /09\/09\/2026\s*Pedido confirmado/u,
+    /10\/09\/2026\s*Quitação registrada\s*Sem detalhamento de recebimentos/u,
   ]);
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
   await expect(summary).toContainText('Data do pedido');

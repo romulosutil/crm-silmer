@@ -65,7 +65,9 @@ flowchart LR
 
 ### T3: Ligar a interface horizontal aos dados e à entrega (DTL-T02/T03)
 
-- [ ] Concluída.
+- [x] Concluída: seis testes puros de composição, 15 E2E novos, regressões
+  de Pedidos/Cobranças e gate validate aprovados. Smoke pela API local persistiu
+  dois recebimentos e entrega. Gate global de navegador e revisão final em T4.
       **Where**: `apps/edge-web/src/components/order/OrderMilestonesSection.vue`
 
 **Depends on**: T2

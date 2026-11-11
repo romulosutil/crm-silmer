@@ -161,5 +161,6 @@ async function toggle() {
         </p>
       </template>
     </template>
+    <slot name="actions" />
   </div>
 </template>

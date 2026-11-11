@@ -1,5 +1,48 @@
 # Protótipo de envio de cobrança
 
+## Cobranças simplificadas no Pedido — BCP-P01 (11/11/2026)
+
+Proposta visual aprovada para prototipação pelo proprietário. Atende à revisão
+de apresentação de COB-12/BFUI-03/06: resumo, uma lista de operações e detalhes
+contextuais, sem os dois históricos redundantes. Não altera o contrato financeiro.
+
+```powershell
+$env:BILLING_PREVIEW_PORT = '4191'
+$env:BILLING_SIMPLIFIED_PREVIEW = 'true'
+rtk proxy node docs/prototypes/billing-chat-preview.mjs
+```
+
+Abra [Pedido com cobranças simplificadas](http://127.0.0.1:4191/pedidos/billing-preview-order#cobrancas).
+O servidor usa o App e o OrderView atuais; somente a seção de cobrança é
+substituída em memória. A aplicação e o banco reais não são modificados.
+
+- **Cenário** alterna quitado, saldo a cobrar, link pendente, conferência e vazio.
+- **Cobranças e recebimentos** mostra cada operação uma vez. **Detalhes** abre
+  comprovante/ações/movimentações relacionados à linha. O evento de criação
+  permanece identificado como criação, sem receber a legenda de pagamento.
+- Quitado não oferece emissão ou recebimento adicional. Link que supera o
+  saldo mantém alerta e conferência, sem oferecer cópia/envio desse link.
+- Cobrar/registrar/estornar mudam somente o estado local da simulação;
+  comprovante e checkout são ilustrativos. Não há cópia de link real, chamada
+  financeira, mensagem ou persistência; trocar cenário/recarregar reinicia a prévia.
+- Confira **Detalhes** pelo teclado, Escape/foco dos diálogos e celular.
+
+Verificação reproduzível em porta aleatória:
+
+```powershell
+rtk proxy node --test docs/prototypes/billing-simplified-preview.test.mjs
+```
+
+O smoke verifica cinco cenários, ausência de históricos repetidos, ações
+simuladas, Escape/foco, axe em desktop/320px e ausência de escritas `/api/`.
+O modo anterior continua sendo o padrão quando a variável não está ativada.
+
+Validação BCP-P01: smoke aprovado, oito regressões do modo anterior aprovadas,
+formatação/sintaxe e diff check aprovados. Revisão independente confirmou lista
+única e isolamento; perda de foco após emissão/estorno foi corrigida e retestada,
+incluindo recebimento que quita o pedido. Nenhuma mudança em `apps/`, contrato
+de API, banco, dependências ou fluxo financeiro de produção.
+
 ## Versão atual — Inbox da master de 08/11/2026
 
 O protótipo atual usa **o App, a Inbox, os componentes e os tokens reais** da

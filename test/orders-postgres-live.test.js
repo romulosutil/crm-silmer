@@ -658,11 +658,26 @@ if (connectionString) {
          WHERE conversation.id = $1 AND contact.id = identity.current_contact_id`,
         [conversationId, name, source],
       );
+    // The unfiltered listing sorts by (updated_at, id) and this suite runs on
+    // a fixed clock, so a random id decides where the order lands among the
+    // earlier tests' orders: walk the pages instead of trusting the first.
+    /** @param {string} orderId */
+    const inListing = async (orderId) => {
+      /** @type {string|null} */
+      let cursor = null;
+      do {
+        const page = await service.list({ cursor });
+        const listed = page.items.find(
+          (/** @type {any} */ order) => order.id === orderId,
+        );
+        if (listed) return listed;
+        cursor = page.nextCursor;
+      } while (cursor);
+      return undefined;
+    };
     /** @param {string} orderId */
     const shown = async (orderId) => {
-      const listed = (await service.list({})).items.find(
-        (/** @type {any} */ order) => order.id === orderId,
-      );
+      const listed = await inListing(orderId);
       return {
         current: (await service.currentForConversation(conversationId))?.ficha
           .summary.cliente,

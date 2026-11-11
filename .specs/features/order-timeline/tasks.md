@@ -32,6 +32,7 @@ flowchart LR
   T2 --> T3
   T3 --> T4
   T4 --> T5
+  T5 --> T6
 ```
 
 ## Task Breakdown
@@ -116,6 +117,25 @@ com dados sintéticos, gates finais e teste de regressão conforme escopo.
 
 **Gate**: checks focados e smoke local; commit/push no PR 348.
 
+### T6: Abrir detalhes pelo título em modal (DTL-T06)
+
+- [x] Concluída: os títulos substituem o chevron e abrem modal de leitura
+  com informações existentes do evento. Botões com destaque sutil e alvo de
+  44px, Fechar/Escape, foco restaurado e proteção de troca/remoção de evento.
+  Título de entrega mantém elemento estável enquanto chegam os detalhes.
+
+**Where**: OrderMilestonesSection.vue, E2E de timeline e runbook.
+
+**Depends on**: T5
+
+**Tests**: DTL-06/12; 20 E2E aprovados, lint/tipos/tokens/build aprovados;
+  novo cenário verifica modal, teclado/320px/axe, foco e nenhuma leitura/escrita
+  adicional. Revisão independente PASS após corrigir foco pós-entrega e
+  revalidar contexto antes da abertura. Smoke local sintético com recebimento
+  e reversão reais aprovado em desktop/320px, incluindo Enter/Space/Escape.
+
+**Gate**: checks focados, diff check e smoke local; commit/push no PR 348.
+
 ## Cross-check
 
 | Dependency | Diagram | Definition |
@@ -124,6 +144,7 @@ com dados sintéticos, gates finais e teste de regressão conforme escopo.
 | T2 → T3    | yes     | yes        |
 | T3 → T4    | yes     | yes        |
 | T4 → T5    | yes     | yes        |
+| T5 → T6    | yes     | yes        |
 
 Testes acompanham a camada alterada: T2 cobre backend; T3 acompanha frontend
 e entrega; T4 valida o conjunto sem substituir seus testes.

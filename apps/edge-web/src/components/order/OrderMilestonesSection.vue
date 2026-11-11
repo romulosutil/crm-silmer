@@ -8,7 +8,6 @@ import {
 import { commandKey } from '../../lib/api-client.js';
 import { billingMoney } from '../../lib/order-billing.js';
 import { orderTimeline } from '../../lib/order-timeline.js';
-import OrderIcon from './OrderIcon.vue';
 import OrderSheetHead from './OrderSheetHead.vue';
 
 const SECTION = 'milestones';
@@ -39,6 +38,45 @@ const events = computed(() =>
         : { managed: true, pendingDetails: true }),
   ),
 );
+const detailDialog = ref(null);
+const detailClose = ref(null);
+const timelineRegion = ref(null);
+const selectedEventId = ref('');
+const selectedEvent = computed(() =>
+  events.value.find((event) => event.id === selectedEventId.value),
+);
+let detailTrigger = null;
+let detailOrderId = '';
+async function showEventDetails(event, trigger) {
+  selectedEventId.value = event.id;
+  detailTrigger = trigger;
+  detailOrderId = props.order.id;
+  const orderId = props.order.id;
+  await nextTick();
+  if (
+    props.order.id !== orderId ||
+    selectedEvent.value?.id !== event.id ||
+    detailTrigger !== trigger ||
+    !trigger?.isConnected
+  )
+    return;
+  detailDialog.value?.showModal();
+  detailClose.value?.focus();
+}
+async function afterDetailClose() {
+  const trigger = detailTrigger;
+  const orderId = detailOrderId;
+  selectedEventId.value = '';
+  await nextTick();
+  if (orderId === props.order.id) {
+    if (trigger?.isConnected) trigger.focus();
+    else timelineRegion.value?.focus();
+  }
+  detailTrigger = null;
+}
+watch(selectedEvent, (event) => {
+  if (!event) detailDialog.value?.close();
+});
 const pendingRead = computed(
   () =>
     !financialState.value ||
@@ -210,6 +248,10 @@ function cancelDelivery(event) {
 watch(
   () => props.order.id,
   () => {
+    detailDialog.value?.close();
+    selectedEventId.value = '';
+    detailTrigger = null;
+    detailOrderId = '';
     deliveryDialog.value?.close();
     deliveryContext.value = null;
     deliveryError.value = '';
@@ -232,7 +274,12 @@ watch(
     }
   },
 );
-onBeforeUnmount(() => deliveryDialog.value?.close());
+onBeforeUnmount(() => {
+  detailTrigger = null;
+  detailOrderId = '';
+  detailDialog.value?.close();
+  deliveryDialog.value?.close();
+});
 </script>
 
 <template>
@@ -284,6 +331,7 @@ onBeforeUnmount(() => deliveryDialog.value?.close());
         recebimentos.
       </p>
       <div
+        ref="timelineRegion"
         class="order-timeline-scroll"
         role="region"
         aria-label="Cronologia do pedido"
@@ -306,11 +354,16 @@ onBeforeUnmount(() => deliveryDialog.value?.close());
               ><span class="timeline-dot"></span
             ></span>
             <div class="timeline-entry">
-              <strong
+              <button
                 :ref="event.kind === 'delivery' ? setDeliveryResult : undefined"
-                :tabindex="event.kind === 'delivery' ? -1 : undefined"
-                >{{ event.title }}</strong
+                type="button"
+                class="timeline-title"
+                aria-haspopup="dialog"
+                :title="event.detailLabel"
+                @click="showEventDetails(event, $event.currentTarget)"
               >
+                {{ event.title }}
+              </button>
               <strong v-if="event.amountLabel" class="op-num timeline-amount">{{
                 event.amountLabel
               }}</strong>
@@ -323,21 +376,6 @@ onBeforeUnmount(() => deliveryDialog.value?.close());
                 class="timeline-state"
                 >{{ event.statusLabel }}</span
               >
-              <details v-if="event.detailLines.length">
-                <summary
-                  :aria-label="event.detailLabel"
-                  :title="event.detailLabel"
-                >
-                  <OrderIcon name="chevron" />
-                </summary>
-                <p
-                  v-for="line in event.detailLines"
-                  :key="line"
-                  class="op-hint"
-                >
-                  {{ line }}
-                </p>
-              </details>
             </div>
           </li>
         </ol>
@@ -364,6 +402,38 @@ onBeforeUnmount(() => deliveryDialog.value?.close());
       </p>
     </div>
     <Teleport to="body">
+      <dialog
+        ref="detailDialog"
+        class="command-dialog timeline-detail-dialog"
+        aria-labelledby="timeline-detail-title"
+        @close="afterDetailClose"
+      >
+        <div v-if="selectedEvent" class="timeline-detail-content">
+          <h2 id="timeline-detail-title">{{ selectedEvent.title }}</h2>
+          <p class="op-hint">
+            {{ selectedEvent.basisLabel || 'Data do pedido' }} ·
+            <time :datetime="selectedEvent.day">{{
+              selectedEvent.dateLabel
+            }}</time>
+          </p>
+          <p v-if="selectedEvent.amountLabel" class="op-num">
+            {{ selectedEvent.amountLabel }}
+          </p>
+          <p>{{ selectedEvent.subtitle }}</p>
+          <p v-for="line in selectedEvent.detailLines" :key="line">
+            {{ line }}
+          </p>
+          <div class="op-form-actions">
+            <button
+              ref="detailClose"
+              type="button"
+              @click="detailDialog.close()"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      </dialog>
       <dialog
         ref="deliveryDialog"
         class="command-dialog order-delivery-dialog"
@@ -521,38 +591,45 @@ li:last-child .timeline-track::after {
   color: var(--color-text-muted);
   font-size: var(--text-xs);
 }
-.timeline-entry details {
-  margin-top: var(--space-1);
+.timeline-title {
+  display: block;
+  max-inline-size: 100%;
+  min-block-size: var(--target-min);
   padding: 0;
   border: 0;
   background: transparent;
-}
-summary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  inline-size: var(--target-min);
-  min-block-size: var(--target-min);
-  color: var(--color-text-muted);
-  border-radius: var(--radius-sm);
-  list-style: none;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--weight-medium);
+  text-align: start;
+  text-decoration: underline dotted;
+  text-underline-offset: var(--space-1);
   cursor: pointer;
 }
-summary::-webkit-details-marker {
-  display: none;
+.timeline-title:hover {
+  color: var(--color-link);
+  background: transparent;
+  text-decoration-style: solid;
 }
-summary:hover {
-  background: var(--color-surface-raised);
-}
-summary .op-icon {
-  transform: rotate(-90deg);
-}
-details[open] > summary .op-icon {
-  transform: none;
-}
-summary:focus-visible {
+.timeline-title:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-focus);
   outline-offset: var(--focus-ring-offset);
+}
+.timeline-detail-content {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+.timeline-detail-content h2,
+.timeline-detail-content p {
+  margin: 0;
+}
+.timeline-detail-content h2 {
+  font-size: var(--text-xl);
+}
+.timeline-detail-dialog time {
+  display: inline;
 }
 .timeline-totals {
   display: flex;

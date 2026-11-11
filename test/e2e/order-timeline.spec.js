@@ -188,6 +188,60 @@ test('DTL: mixed receipts render once in the horizontal timeline with shared bil
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
+test('DTL: event titles open read-only details in an accessible modal and restore keyboard focus', async ({
+  page,
+}) => {
+  const mock = await setup(page);
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto('/pedidos/order-confirmado');
+  const section = sectionFor(page);
+  await section.getByRole('button', { name: /Datas do pedido/ }).click();
+  await expect(section.locator('summary')).toHaveCount(0);
+  const readsBeforeDetails = mock.reads;
+  const trigger = section.getByRole('button', {
+    name: 'Pedido confirmado',
+    exact: true,
+  });
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', {
+    name: 'Pedido confirmado',
+    exact: true,
+  });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('Confirmação registrada em');
+  await expect(
+    dialog.getByRole('button', { name: 'Fechar', exact: true }),
+  ).toBeFocused();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(
+    await dialog.evaluate(
+      (el) => el.getBoundingClientRect().width <= globalThis.innerWidth,
+    ),
+  ).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+  const receiptTitle = section.getByRole('button', {
+    name: 'Pagamento confirmado',
+    exact: true,
+  });
+  await receiptTitle.focus();
+  await page.keyboard.press('Space');
+  const receiptDialog = page.getByRole('dialog', {
+    name: 'Pagamento confirmado',
+    exact: true,
+  });
+  await expect(receiptDialog).toContainText('R$ 30,00');
+  await expect(receiptDialog).toContainText('instante efetivo da transação');
+  await receiptDialog
+    .getByRole('button', { name: 'Fechar', exact: true })
+    .click();
+  await expect(receiptTitle).toBeFocused();
+  expect(mock.writes).toEqual([]);
+  expect(mock.reads).toBe(readsBeforeDetails);
+});
+
 test('DTL: delivery uses a frozen version and server day, preserving partial payment', async ({
   page,
 }) => {

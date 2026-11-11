@@ -53,7 +53,7 @@ de datas:
 
 A previsão permanece no Resumo e pode ser repetida como referência fora da
 lista de acontecimentos; uma previsão não vira evento de entrega realizada.
-Sem histórico de reaberturas consultado, chamar o marco de “Confirmação atual”,
+Conforme revisão DTL-P06, chamar o marco de “Pedido confirmado”,
 sem prometer uma história completa de todas as confirmações.
 
 Exemplo: R$ 300 confirmados via InfinitePay em 06/11 e R$ 700 recebidos
@@ -131,6 +131,11 @@ tratamento de legado, antes de mudar o significado desta data.
 | DTL-T04 | Integração e evidências de regressão, documentação de cobrança e aceite visual. Depende T03.                                                                                                        | Conferir Financeiro/Dashboard/PDF sem mudança contratual; testes backend/e2e relevantes, checks padrão, `git diff --check`, commit e push por tarefa implementada.                                                            |
 
 ## Validação deste planejamento
+
+DTL-P06 (11/11/2026): renomear o evento **Confirmação atual** para **Pedido
+confirmado**, conforme solicitação do proprietário. A data mantém a semântica
+de confirmação comercial vigente, inclusive após reabertura e reconfirmação;
+não representa confirmação de pagamento.
 
 DTL-P05 (11/11/2026): composição horizontal no protótipo conforme solicitação
 do proprietário. Remover o subtítulo “Linha do tempo” e mover **Confirmar

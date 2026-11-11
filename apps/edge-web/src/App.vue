@@ -513,13 +513,18 @@ async function observeInboxFromShell() {
   const sequence = ++unreadFetchSeq;
   try {
     const response = await request(
-      inboxListUrl({
-        bucket: 'respond',
-        consult: 'open',
-        ownerScope: 'all',
-        orderReadyOnly: false,
-        ownerFilter: '',
-      }),
+      // One default page is enough to notice an arrival: Responder is
+      // ordered by the most recent message.
+      inboxListUrl(
+        {
+          bucket: 'respond',
+          consult: 'open',
+          ownerScope: 'all',
+          orderReadyOnly: false,
+          ownerFilter: '',
+        },
+        50,
+      ),
     );
     if (sequence !== unreadFetchSeq || phase.value !== 'authenticated') return;
     const openId = String(route.params.conversationId ?? '') || null;

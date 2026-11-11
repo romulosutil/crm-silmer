@@ -31,8 +31,8 @@ flowchart LR
 ### T1: Compor operações por identidade (BCS-T01)
 
 - [x] Concluída: quatro testes aprovados, sem skips. Cobrança agrupa seus
-  pagamentos; manual é deduplicado por fonte/ID; eventos preservam vínculos
-  e registros órfãos, sem alterar totais nem fabricar datas.
+      pagamentos; manual é deduplicado por fonte/ID; eventos preservam vínculos
+      e registros órfãos, sem alterar totais nem fabricar datas.
 
 **Where**: `apps/edge-web/src/lib/order-billing-operations.js`
 
@@ -44,16 +44,21 @@ flowchart LR
 
 ### T2: Integrar lista e ações reais (BCS-T02)
 
-- [ ] Concluída.
+- [x] Concluída: cinco testes unitários, 13 E2E BCS e regressões focadas
+      aprovados. Gate validate fixado em Node24.20/npm11.19: 2.539 aprovados,
+      53 skips opcionais, zero falhas/cancelamentos. Smoke real local persistido;
+      gate global de navegador e revisão independente em T3.
 
 **Where**: `apps/edge-web/src/components/order/OrderBillingSection.vue`,
-`OrderBillingWorkspace.vue`, novo `OrderBillingOperations.vue` e E2E.
+`OrderBillingWorkspace.vue`, novo `OrderBillingOperations.vue`, `OrderView.vue`
+para suprimir substituição idêntica, helper de pendências e E2E.
 
 **Depends on**: T1
 
-**Tests**: BCS-01–08, regressão dos comandos e leitura, teclado, foco, axe e 320px.
+**Tests**: BCS-01–09, regressão dos comandos e leitura, teclado, foco, axe e
+320px; cache paginado, ausência de polling idle, ciclo silencioso e pausa em interação.
 
-**Gate**: Full e Build.
+**Gate**: Full e npm run validate (Build); gate global de navegador fechado em T3.
 
 ### T3: Revisão independente e operação local (BCS-T03)
 

@@ -1,7 +1,7 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { mockConversationShipping } from './support/conversation-shipping-mock.js';
-import { ownConfirmedOrder } from './support/orders-mock.js';
+import { ownConfirmedOrder, eventStreamBody } from './support/orders-mock.js';
 
 /** BFUI-01–06: real application components, authenticated HTTP fixture only.
  * @param {import('@playwright/test').Page} page @param {any} [options] */
@@ -104,6 +104,8 @@ async function setup(page, options = {}) {
       billing.charges.at(-1).status = 'paid';
     event(source === 'external' ? 'external_receipt' : 'receipt', amountCents, {
       status: 'paid',
+      chargeId: source === 'external' ? null : payment.chargeId,
+      externalReceiptId: source === 'external' ? payment.id : null,
     });
     return payment;
   }
@@ -230,7 +232,10 @@ async function setup(page, options = {}) {
       billing.receivedAmountCents -= receipt.amountCents;
       billing.balanceAmountCents += receipt.amountCents;
       billing.version++;
-      event('external_reversal', receipt.amountCents, { status: 'review' });
+      event('external_reversal', receipt.amountCents, {
+        status: 'review',
+        externalReceiptId: receipt.id,
+      });
     } else if (path.endsWith('/check-payment')) {
       billing.paymentChecks.unshift({
         id: 'check-1',
@@ -437,10 +442,14 @@ test('BFUI-04/05: external receipt and reversal use reviewed commands and share 
     .getByRole('button', { name: 'Confirmar recebimento externo', exact: true })
     .click();
   await expect(
-    section.getByRole('region', { name: 'Pagamentos registrados' }),
-  ).toContainText('Recebimento externo');
+    section.getByRole('region', { name: /^Cobranças e recebimentos/ }),
+  ).toContainText('Recebimento manual');
+  await section
+    .locator('summary')
+    .filter({ hasText: 'Recebimento manual' })
+    .click();
   await expect(
-    section.getByRole('region', { name: 'Pagamentos registrados' }),
+    section.getByRole('region', { name: /^Cobranças e recebimentos/ }),
   ).toContainText('Vendedora sintética');
   expect(state.billing.receivedAmountCents).toBe(100000);
   expect(state.billing.balanceAmountCents).toBe(0);
@@ -851,15 +860,11 @@ test('BFUI-03/04: external partial receipt makes an oversized outstanding link h
       exact: true,
     }),
   ).toBeEnabled();
-  await section
-    .getByRole('button', { name: 'Gerar e enviar cobrança', exact: true })
-    .click();
-  const review = page.getByRole('dialog', {
-    name: 'Gerar e enviar cobrança',
-    exact: true,
-  });
-  await review.getByRole('button', { name: 'Revisar', exact: true }).click();
-  await expect(review).toContainText('Não gere outro link');
+  // BCS-05: unsafe issuance is now absent at the operation itself.
+  await expect(section.getByRole('button', { name: /^Cobrar/ })).toHaveCount(0);
+  await expect(
+    section.getByRole('button', { name: 'Enviar cobrança', exact: true }),
+  ).toHaveCount(0);
   expect(state.calls).toHaveLength(0);
 });
 
@@ -915,6 +920,10 @@ test('BFUI-04: an unapplied external receipt remains reversible until its own re
   });
   await page.goto('/pedidos/shipping-order-1#cobrancas');
   const section = page.getByRole('region', { name: 'Cobranças', exact: true });
+  await section
+    .locator('summary')
+    .filter({ hasText: 'Recebimento manual' })
+    .click();
   await expect(
     section.getByRole('button', { name: 'Estornar registro', exact: true }),
   ).toBeEnabled();
@@ -935,9 +944,7 @@ test('BFUI-04: an unapplied external receipt remains reversible until its own re
   await expect(
     section.getByRole('button', { name: 'Estornar registro', exact: true }),
   ).toHaveCount(0);
-  await expect(section).toContainText(
-    'Motivo do estorno: Registro externo incorreto',
-  );
+  await expect(section).toContainText('Motivo: Registro externo incorreto');
 });
 
 test('COB-REL-01/BFUI-03/04: cancelled orders retain private history and receipts in chat and order without financial commands', async ({
@@ -1019,12 +1026,7 @@ test('COB-REL-01/BFUI-03/04: cancelled orders retain private history and receipt
     'novos registros e envios estão bloqueados',
   );
   await expect(section).toContainText('Recebimento anterior ao cancelamento');
-  await expect(
-    section.getByRole('button', {
-      name: 'Gerar e enviar cobrança',
-      exact: true,
-    }),
-  ).toBeDisabled();
+  await expect(section.getByRole('button', { name: /^Cobrar/ })).toHaveCount(0);
   await expect(
     section.getByRole('button', {
       name: 'Registrar recebimento externo',
@@ -1040,13 +1042,15 @@ test('COB-REL-01/BFUI-03/04: cancelled orders retain private history and receipt
   await expect(
     section.getByRole('button', { name: 'Revisar cobrança', exact: true }),
   ).toHaveCount(0);
+  await section
+    .locator('summary[data-operation-id="charge:cancelled-prior"]')
+    .click();
   await expect(
     section.getByRole('link', { name: 'Comprovante InfinitePay', exact: true }),
   ).toHaveAttribute(
     'href',
     'https://recibo.infinitepay.io/synthetic-cancelled',
   );
-  await section.getByText('Conferência e devoluções', { exact: true }).click();
   await expect(
     section.getByRole('button', {
       name: 'Registrar devolução do sinal',
@@ -1055,7 +1059,7 @@ test('COB-REL-01/BFUI-03/04: cancelled orders retain private history and receipt
   ).toBeDisabled();
   await expect(
     section.getByRole('link', {
-      name: 'Abrir cobrança anterior para conferência',
+      name: 'Abrir link anterior para conferência',
       exact: true,
     }),
   ).toBeVisible();
@@ -1092,8 +1096,760 @@ test('COB-REL-01/BFUI-04: Olist composition lock preserves external receipt regi
   expect(state.billing.balanceAmountCents).toBe(90000);
   await expect(
     section.getByRole('region', {
+      name: /^Cobranças e recebimentos/,
+    }),
+  ).toContainText('R$ 100,00');
+});
+
+test('BCS-01/02/03/08: mixed real projections render once, with contextual proof and creation distinguished from payment', async ({
+  page,
+}) => {
+  const charge = {
+    id: 'single-charge',
+    kind: 'signal',
+    status: 'paid',
+    amountCents: 30000,
+    createdAt: '2026-11-07T12:00:00Z',
+    refundableAmountCents: 30000,
+  };
+  const state = await setup(page, {
+    billing: { managed: true, percent: 30, charges: [charge] },
+  });
+  /** @type {any} */
+  const payment = state.receive(30000);
+  payment.method = 'credit_card';
+  payment.installments = 3;
+  payment.receiptUrl = 'https://recibo.infinitepay.io/synthetic-single';
+  Object.assign(state.history[0], { chargeId: charge.id });
+  const manual = state.receive(70000, 'external');
+  state.billing.externalReceipts.push({
+    ...manual,
+    note: 'Transferência conferida',
+    reversedAt: null,
+  });
+  Object.assign(state.history[0], {
+    chargeId: null,
+    externalReceiptId: manual.id,
+  });
+  state.history.push({
+    id: 'creation',
+    kind: 'charge',
+    chargeId: charge.id,
+    amountCents: 30000,
+    status: 'paid',
+    occurredAt: '2026-11-07T12:00:00Z',
+  });
+  await page.goto('/pedidos/shipping-order-1#cobrancas');
+  const section = page.getByRole('region', { name: 'Cobranças', exact: true });
+  await expect(section.locator('.billing-operation-list > li')).toHaveCount(2);
+  await expect(
+    section.locator('.billing-history, .workspace-history'),
+  ).toHaveCount(0);
+  await expect(
+    section.getByRole('region', {
       name: 'Pagamentos registrados',
       exact: true,
     }),
-  ).toContainText('R$ 100,00');
+  ).toHaveCount(0);
+  await expect(
+    section.getByRole('button', {
+      name: /^Cobrar|Gerar e enviar cobrança|Registrar recebimento externo/,
+    }),
+  ).toHaveCount(0);
+  await expect(section.locator('.billing-totals')).toContainText('R$ 0,00');
+  const manualSummary = section
+    .locator('summary')
+    .filter({ hasText: 'Recebimento manual' });
+  await manualSummary.focus();
+  await page.keyboard.press('Enter');
+  await expect(
+    section.getByText('Observação: Transferência conferida'),
+  ).toBeVisible();
+  await expect(section).toContainText('Vendedora sintética');
+  const ip = section.locator(
+    'details:has(> summary[data-operation-id="charge:single-charge"])',
+  );
+  await ip.locator('summary').click();
+  await expect(ip).toContainText('Cartão em 3x');
+  await expect(
+    ip.getByRole('link', { name: 'Comprovante InfinitePay', exact: true }),
+  ).toHaveAttribute('href', payment.receiptUrl);
+  const creation = ip
+    .locator('.billing-operation-events li')
+    .filter({ hasText: 'Cobrança criada' });
+  await expect(creation).toContainText('07/11/2026');
+  await expect(creation).not.toContainText('Pagamento confirmado');
+  expect(state.calls).toHaveLength(0);
+  await expect(
+    page
+      .getByRole('region', { name: 'Datas do pedido', exact: true })
+      .locator('.order-timeline'),
+  ).toBeVisible();
+});
+
+test('BCS-02: pagination adds movements to their operation without duplicating rows or dropping the first page', async ({
+  page,
+}) => {
+  await setup(page, {
+    billing: {
+      managed: true,
+      percent: 30,
+      charges: [
+        { id: 'paged', kind: 'signal', status: 'paid', amountCents: 30000 },
+      ],
+    },
+  });
+  let historyReads = 0;
+  let releaseOlder = () => {};
+  const olderGate = new Promise((resolve) => {
+    releaseOlder = () => resolve(null);
+  });
+  await page.route('**/api/v1/orders/*/billing/history?**', async (route) => {
+    historyReads++;
+    const older =
+      new URL(route.request().url()).searchParams.get('cursor') === 'older';
+    if (older) await olderGate;
+    return route.fulfill({
+      json: {
+        items: [
+          {
+            id: older ? 'creation' : 'receipt',
+            chargeId: 'paged',
+            kind: older ? 'charge' : 'intent',
+            intentId: older ? null : 'in-flight',
+            amountCents: 30000,
+            status: older ? 'paid' : 'queued',
+            occurredAt: older ? '2026-11-07T12:00:00Z' : '2026-11-08T12:00:00Z',
+          },
+        ],
+        nextCursor: older ? null : 'older',
+      },
+    });
+  });
+  await page.goto('/pedidos/shipping-order-1#cobrancas');
+  const section = page.getByRole('region', { name: 'Cobranças', exact: true });
+  await section.locator('summary[data-operation-id="charge:paged"]').click();
+  await expect(section.locator('.billing-operation-events li')).toHaveCount(1);
+  await section
+    .getByRole('button', {
+      name: 'Carregar movimentações anteriores',
+      exact: true,
+    })
+    .click();
+  await expect.poll(() => historyReads).toBe(2);
+  await page.waitForTimeout(5600);
+  expect(historyReads).toBe(2);
+  releaseOlder();
+  await expect(section.locator('.billing-operation-list > li')).toHaveCount(1);
+  await expect(section.locator('.billing-operation-events li')).toHaveCount(2);
+  await expect(section).toContainText('Cobrança criada');
+  await expect(section).toContainText('Envio da cobrança');
+  await expect
+    .poll(() => historyReads, { timeout: 8000 })
+    .toBeGreaterThanOrEqual(3);
+  await expect(section.locator('.billing-operation-events li')).toHaveCount(2);
+  await expect(
+    section.getByRole('button', {
+      name: 'Carregar movimentações anteriores',
+      exact: true,
+    }),
+  ).toHaveCount(0);
+});
+
+test('BCS-04/05: sending a pending balance reuses its exact charge and provider check preserves the balance', async ({
+  page,
+}) => {
+  const prior = {
+    id: 'prior',
+    kind: 'signal',
+    status: 'paid',
+    amountCents: 30000,
+  };
+  const state = await setup(page, {
+    billing: { managed: true, percent: 30, charges: [prior] },
+  });
+  state.receive(30000);
+  const pending = {
+    id: 'pending-balance',
+    kind: 'balance',
+    status: 'waiting',
+    amountCents: 70000,
+    validUntil: new Date(Date.now() + 86400000).toISOString(),
+    checkoutUrl: 'https://checkout.infinitepay.io/synthetic-balance',
+  };
+  state.billing.charges.push(pending);
+  await page.goto('/pedidos/shipping-order-1#cobrancas');
+  const section = page.getByRole('region', { name: 'Cobranças', exact: true });
+  await section
+    .getByRole('button', { name: 'Enviar cobrança', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Gerar e enviar cobrança',
+    exact: true,
+  });
+  await expect(dialog.getByLabel('O que deseja cobrar?')).toHaveValue(
+    'send_existing',
+  );
+  await dialog.getByRole('button', { name: 'Revisar', exact: true }).click();
+  await dialog
+    .getByRole('button', { name: 'Confirmar envio da cobrança', exact: true })
+    .click();
+  expect(state.calls[0].body).toMatchObject({
+    action: 'send_existing',
+    chargeId: 'pending-balance',
+    conversationId: 'shipping-conversation-1',
+    expectedVersion: state.order.version,
+    expectedBillingVersion: 1,
+  });
+  expect(state.calls[0].body).not.toHaveProperty('amountCents');
+  expect(state.calls[0].key).toBeTruthy();
+  expect(state.calls[0].csrf).toBeTruthy();
+  expect(state.billing.charges).toHaveLength(2);
+  await expect(
+    section.getByRole('button', { name: 'Enviar cobrança', exact: true }),
+  ).toHaveCount(0);
+  await section
+    .getByRole('button', { name: 'Conferir pagamento', exact: true })
+    .click();
+  const check = page.getByRole('dialog', {
+    name: 'Conferir pagamento na InfinitePay',
+    exact: true,
+  });
+  await check
+    .getByLabel('Identificador da fatura (invoice_slug)')
+    .fill('synthetic-invoice');
+  await check
+    .getByLabel('Identificador da transação (transaction_nsu)')
+    .fill('synthetic-nsu');
+  await check.getByRole('button', { name: 'Revisar', exact: true }).click();
+  await check
+    .getByRole('button', { name: 'Solicitar conferência', exact: true })
+    .click();
+  expect(state.calls[1].path).toBe(
+    '/api/v1/orders/shipping-order-1/billing/charges/pending-balance/check-payment',
+  );
+  expect(state.calls[1].body).toMatchObject({
+    invoiceSlug: 'synthetic-invoice',
+    transactionNsu: 'synthetic-nsu',
+    expectedBillingVersion: 2,
+    expectedVersion: state.order.version,
+  });
+  expect(state.billing.balanceAmountCents).toBe(70000);
+});
+
+test('BCS-04: refund from its receipt row uses the existing reviewed command and official updated totals', async ({
+  page,
+}) => {
+  const charge = {
+    id: 'refund-row',
+    kind: 'full',
+    status: 'paid',
+    amountCents: 100000,
+    refundableAmountCents: 100000,
+  };
+  const state = await setup(page, {
+    billing: { managed: true, percent: 100, charges: [charge] },
+  });
+  state.receive(100000);
+  await page.route(
+    '**/api/v1/orders/*/billing/charges/refund-row/refund',
+    async (route) => {
+      const req = route.request();
+      const body = req.postDataJSON();
+      state.calls.push({
+        body,
+        key: req.headers()['idempotency-key'],
+        csrf: req.headers()['x-csrf-token'],
+      });
+      Object.assign(charge, {
+        refundedAmountCents: body.amountCents,
+        refundableAmountCents: 100000 - body.amountCents,
+      });
+      Object.assign(state.billing, {
+        receivedAmountCents: 80000,
+        balanceAmountCents: 20000,
+        version: 2,
+      });
+      return route.fulfill({ json: { billing: state.billing } });
+    },
+  );
+  await page.goto('/pedidos/shipping-order-1#cobrancas');
+  const section = page.getByRole('region', { name: 'Cobranças', exact: true });
+  await section
+    .locator('summary[data-operation-id="charge:refund-row"]')
+    .click();
+  await section
+    .getByRole('button', {
+      name: 'Registrar devolução do pagamento integral',
+      exact: true,
+    })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Registrar devolução já realizada',
+    exact: true,
+  });
+  await dialog.getByLabel('Valor já devolvido', { exact: true }).fill('200,00');
+  await dialog
+    .getByLabel(
+      'Conferi a devolução na InfinitePay e quero conciliá-la no CRM.',
+    )
+    .check();
+  await dialog
+    .getByRole('button', { name: 'Registrar conferência', exact: true })
+    .click();
+  expect(state.calls[0].body).toEqual({
+    expectedVersion: state.order.version,
+    expectedBillingVersion: 1,
+    amountCents: 20000,
+  });
+  expect(state.calls[0].key).toBeTruthy();
+  expect(state.calls[0].csrf).toBeTruthy();
+  await expect(section.locator('.billing-totals')).toContainText('R$ 800,00');
+  await expect(section.locator('.billing-totals')).toContainText('R$ 200,00');
+  await expect(section.locator('.billing-operation-list > li')).toHaveCount(1);
+  await expect(section).toContainText('Devolução parcial');
+});
+
+test('BCS-06: history read failure exposes retry and blocks private links and writes from stale rows', async ({
+  page,
+}) => {
+  const state = await setup(page, {
+    billing: {
+      managed: true,
+      percent: 30,
+      charges: [
+        {
+          id: 'stale',
+          kind: 'signal',
+          status: 'waiting',
+          amountCents: 30000,
+          validUntil: new Date(Date.now() + 86400000).toISOString(),
+          checkoutUrl: 'https://checkout.infinitepay.io/stale',
+        },
+      ],
+    },
+  });
+  let failHistory = true;
+  await page.route('**/api/v1/orders/*/billing/history?**', (route) =>
+    failHistory
+      ? route.fulfill({ status: 503, json: { code: 'UNAVAILABLE' } })
+      : route.fulfill({ json: { items: [], nextCursor: null } }),
+  );
+  await page.goto('/pedidos/shipping-order-1#cobrancas');
+  const section = page.getByRole('region', { name: 'Cobranças', exact: true });
+  await expect(
+    section.locator('.billing-workspace').getByRole('alert'),
+  ).toBeVisible();
+  await expect(
+    section.getByRole('link', { name: 'Abrir cobrança', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    section.getByRole('button', { name: 'Conferir pagamento', exact: true }),
+  ).toBeDisabled();
+  await expect(
+    section.getByRole('button', { name: 'Atualizar cobranças', exact: true }),
+  ).toBeVisible();
+  expect(state.calls).toHaveLength(0);
+  failHistory = false;
+  await section
+    .getByRole('button', { name: 'Atualizar cobranças', exact: true })
+    .click();
+  await expect(
+    section.locator('.billing-workspace').getByRole('alert'),
+  ).toHaveCount(0);
+  await expect(
+    section.getByRole('link', { name: 'Abrir cobrança', exact: true }),
+  ).toBeVisible();
+});
+
+test('BCS-07: one list and contextual dialogues remain accessible at 320/390px and in both themes', async ({
+  page,
+}) => {
+  const state = await setup(page, {
+    billing: {
+      managed: true,
+      percent: 30,
+      charges: [
+        {
+          id: 'accessible',
+          kind: 'signal',
+          status: 'paid',
+          amountCents: 30000,
+        },
+      ],
+    },
+  });
+  state.receive(30000);
+  for (const width of [1440, 320, 390]) {
+    await page.setViewportSize({ width, height: 950 });
+    await page.goto('/pedidos/shipping-order-1#cobrancas');
+    const section = page.getByRole('region', {
+      name: 'Cobranças',
+      exact: true,
+    });
+    if (width < 600) {
+      const toggle = section.getByRole('button', { name: /^Cobranças/ });
+      if ((await toggle.getAttribute('aria-expanded')) === 'false')
+        await toggle.click();
+    }
+    if (
+      (await section.locator('details').first().getAttribute('open')) !== null
+    )
+      await section.locator('summary').first().click();
+    await section.locator('summary').first().focus();
+    await page.keyboard.press('Enter');
+    await expect(section.locator('details').first()).toHaveAttribute(
+      'open',
+      '',
+    );
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(
+        (value) => (globalThis.document.documentElement.dataset.theme = value),
+        theme,
+      );
+      expect(
+        (await new AxeBuilder({ page }).include('.billing-section').analyze())
+          .violations,
+      ).toEqual([]);
+    }
+    expect(
+      await page.evaluate(
+        () =>
+          globalThis.document.documentElement.scrollWidth >
+          globalThis.innerWidth,
+      ),
+    ).toBe(false);
+    const trigger = section.getByRole('button', {
+      name: 'Registrar recebimento externo',
+      exact: true,
+    });
+    await trigger.click();
+    const dialog = page.getByRole('dialog', {
+      name: 'Registrar recebimento externo',
+      exact: true,
+    });
+    const box = await dialog.boundingBox();
+    if (!box) throw new Error('O diálogo de recebimento deve estar visível.');
+    expect(box.width).toBeLessThan(width);
+    await page.keyboard.press('Escape');
+    await expect(trigger).toBeFocused();
+  }
+  expect(state.calls).toHaveLength(0);
+});
+
+test('BCS-08: integrated sending retains a separate reviewed link-only command', async ({
+  page,
+}) => {
+  const state = await setup(page, {
+    billing: {
+      managed: true,
+      percent: 30,
+      charges: [
+        {
+          id: 'paid-signal',
+          kind: 'signal',
+          status: 'paid',
+          amountCents: 30000,
+        },
+      ],
+    },
+  });
+  state.receive(30000);
+  await page.route('**/api/v1/orders/*/billing/charges', async (route) => {
+    const req = route.request();
+    state.calls.push({
+      body: req.postDataJSON(),
+      key: req.headers()['idempotency-key'],
+      csrf: req.headers()['x-csrf-token'],
+      path: new URL(req.url()).pathname,
+    });
+    state.billing.charges.push({
+      id: 'link-only',
+      kind: 'balance',
+      status: 'waiting',
+      amountCents: 70000,
+      validUntil: new Date(Date.now() + 86400000).toISOString(),
+      checkoutUrl: 'https://checkout.infinitepay.io/link-only',
+    });
+    state.billing.version++;
+    return route.fulfill({ json: { billing: state.billing } });
+  });
+  await page.goto('/pedidos/shipping-order-1#cobrancas');
+  const section = page.getByRole('region', { name: 'Cobranças', exact: true });
+  await section
+    .getByRole('button', { name: 'Gerar só o link', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Gerar cobrança do saldo',
+    exact: true,
+  });
+  await expect(dialog).toContainText('R$ 700,00');
+  await expect(dialog).toContainText('não envia uma mensagem');
+  expect(state.calls).toHaveLength(0);
+  await dialog
+    .getByRole('button', { name: 'Gerar link de pagamento', exact: true })
+    .click();
+  expect(state.calls).toHaveLength(1);
+  expect(state.calls[0].path).toBe(
+    '/api/v1/orders/shipping-order-1/billing/charges',
+  );
+  expect(state.calls[0].body).toEqual({
+    expectedVersion: state.order.version,
+    expectedBillingVersion: 1,
+    percent: 30,
+  });
+  expect(state.calls[0].key).toBeTruthy();
+  expect(state.calls[0].csrf).toBeTruthy();
+  await expect(
+    section.locator('summary[data-operation-id="charge:link-only"]'),
+  ).toBeVisible();
+});
+
+for (const safe of [false, true])
+  test(`BCS-04/05: contextual retry requires current server proof (${safe})`, async ({
+    page,
+  }) => {
+    const charge = {
+      id: 'failed-charge',
+      kind: 'signal',
+      status: 'waiting',
+      amountCents: 30000,
+      validUntil: new Date(Date.now() + 86400000).toISOString(),
+      checkoutUrl: 'https://checkout.infinitepay.io/failed-charge',
+    };
+    const state = await setup(page, {
+      billing: { managed: true, percent: 30, charges: [charge] },
+    });
+    state.history.push({
+      id: 'failed',
+      kind: 'intent',
+      intentId: 'failed-intent',
+      chargeId: charge.id,
+      amountCents: 30000,
+      status: 'failed',
+      occurredAt: '2026-11-11T10:00:00Z',
+    });
+    state.intents.set('failed-intent', {
+      id: 'failed-intent',
+      version: 4,
+      state: 'failed',
+      canRetry: safe,
+      amountCents: 30000,
+      chargeId: charge.id,
+    });
+    await page.goto('/pedidos/shipping-order-1#cobrancas');
+    const section = page.getByRole('region', {
+      name: 'Cobranças',
+      exact: true,
+    });
+    await expect(
+      section.getByRole('button', { name: 'Enviar cobrança', exact: true }),
+    ).toHaveCount(0);
+    await section
+      .getByRole('button', { name: 'Revisar nova tentativa', exact: true })
+      .click();
+    const dialog = page.getByRole('dialog', {
+      name: 'Gerar e enviar cobrança',
+      exact: true,
+    });
+    await expect(dialog.getByLabel('O que deseja cobrar?')).toHaveValue(
+      'retry',
+    );
+    await dialog.getByRole('button', { name: 'Revisar', exact: true }).click();
+    if (!safe) {
+      await expect(dialog).toContainText('Não reenvie sem conferência');
+      expect(state.calls).toHaveLength(0);
+    } else {
+      await dialog
+        .getByRole('button', {
+          name: 'Confirmar envio da cobrança',
+          exact: true,
+        })
+        .click();
+      expect(state.calls).toHaveLength(1);
+      expect(state.calls[0].body).toMatchObject({
+        action: 'retry',
+        intentId: 'failed-intent',
+        expectedIntentVersion: 4,
+        expectedVersion: state.order.version,
+        expectedBillingVersion: 0,
+      });
+      expect(state.calls[0].key).toBeTruthy();
+      expect(state.calls[0].csrf).toBeTruthy();
+      expect(state.billing.charges).toHaveLength(1);
+    }
+  });
+
+test('BCS-09: idle order stops both billing polling loops', async ({
+  page,
+}) => {
+  let summaries = 0,
+    histories = 0;
+  page.on('request', (req) => {
+    const path = new URL(req.url()).pathname;
+    if (req.method() === 'GET' && path.endsWith('/billing')) summaries++;
+    if (path.endsWith('/billing/history')) histories++;
+  });
+  await setup(page, { billing: { managed: true, percent: 0 } });
+  await page.goto('/pedidos/shipping-order-1#cobrancas');
+  await expect.poll(() => histories).toBe(1);
+  await expect.poll(() => summaries).toBe(2);
+  await page.waitForTimeout(11200);
+  expect({ summaries, histories }).toEqual({ summaries: 2, histories: 1 });
+});
+
+test('BCS-09: pending refresh stays silent, pauses in dialogues and hidden tabs, and preserves focus', async ({
+  page,
+}) => {
+  let summaries = 0;
+  page.on('request', (req) => {
+    if (
+      req.method() === 'GET' &&
+      new URL(req.url()).pathname.endsWith('/billing')
+    )
+      summaries++;
+  });
+  await setup(page, {
+    billing: {
+      managed: true,
+      percent: 30,
+      charges: [
+        {
+          id: 'quiet',
+          kind: 'signal',
+          status: 'waiting',
+          amountCents: 30000,
+          validUntil: new Date(Date.now() + 86400000).toISOString(),
+          checkoutUrl: 'https://checkout.infinitepay.io/quiet',
+        },
+      ],
+    },
+  });
+  await page.goto('/pedidos/shipping-order-1#cobrancas');
+  const section = page.getByRole('region', { name: 'Cobranças', exact: true });
+  await expect.poll(() => summaries).toBe(2);
+  await expect(section.locator('.billing-workspace')).not.toHaveAttribute(
+    'aria-busy',
+    'true',
+  );
+  await section
+    .getByRole('button', { name: 'Conferir pagamento', exact: true })
+    .focus();
+  await page.evaluate(() => {
+    const node = globalThis.document.querySelector('.billing-workspace');
+    if (!node) throw new Error('Cobranças devem estar carregadas.');
+    const root = globalThis.document.documentElement;
+    root.dataset.probeBusy = '0';
+    root.dataset.probeMutations = '0';
+    new globalThis.MutationObserver((items) => {
+      root.dataset.probeMutations = String(
+        Number(root.dataset.probeMutations) + items.length,
+      );
+      if (node.getAttribute('aria-busy') === 'true')
+        root.dataset.probeBusy = String(Number(root.dataset.probeBusy) + 1);
+    }).observe(node, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+  });
+  await expect.poll(() => summaries, { timeout: 8000 }).toBeGreaterThan(2);
+  await expect(
+    section.getByRole('button', { name: 'Conferir pagamento', exact: true }),
+  ).toBeFocused();
+  await expect(section.locator('details').first()).toHaveAttribute('open', '');
+  expect(
+    await page.evaluate(() => ({
+      busy: Number(globalThis.document.documentElement.dataset.probeBusy),
+      mutations: Number(
+        globalThis.document.documentElement.dataset.probeMutations,
+      ),
+    })),
+  ).toEqual({ busy: 0, mutations: 0 });
+  await section
+    .getByRole('button', { name: 'Registrar recebimento externo', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Registrar recebimento externo',
+    exact: true,
+  });
+  await dialog.getByLabel('Valor recebido (R$)').fill('12,34');
+  const before = summaries;
+  await page.waitForTimeout(5600);
+  expect(summaries).toBe(before);
+  await expect(dialog.getByLabel('Valor recebido (R$)')).toHaveValue('12,34');
+  await expect(dialog.getByLabel('Valor recebido (R$)')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await page.evaluate(() =>
+    Object.defineProperty(globalThis.document, 'visibilityState', {
+      configurable: true,
+      get: () => 'hidden',
+    }),
+  );
+  await page.waitForTimeout(5600);
+  expect(summaries).toBe(before);
+});
+
+test('BCS-09: identical live order response does not restart billing or interrupt a draft', async ({
+  page,
+}) => {
+  let billingReads = 0,
+    orderReads = 0;
+  page.on('request', (req) => {
+    const path = new URL(req.url()).pathname;
+    if (path.endsWith('/billing')) billingReads++;
+    if (path === '/api/v1/orders/shipping-order-1') orderReads++;
+  });
+  await setup(page, { billing: { managed: true, percent: 30 } });
+  let release = () => {};
+  const gate = new Promise((resolve) => {
+    release = () => resolve(null);
+  });
+  await page.route('**/api/v1/events?**', async (route) => {
+    await gate;
+    await route.fulfill({
+      contentType: 'text/event-stream',
+      body: eventStreamBody({
+        type: 'inbox.conversation.changed',
+        cursor: 'snapshot-unchanged',
+      }),
+    });
+  });
+  await page.goto('/pedidos/shipping-order-1#cobrancas');
+  const section = page.getByRole('region', { name: 'Cobranças', exact: true });
+  await expect.poll(() => billingReads).toBe(2);
+  await section
+    .getByRole('button', { name: 'Registrar recebimento externo', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Registrar recebimento externo',
+    exact: true,
+  });
+  await dialog.getByLabel('Valor recebido (R$)').fill('45,67');
+  const before = orderReads;
+  release();
+  await expect.poll(() => orderReads).toBeGreaterThan(before);
+  await expect(dialog.getByLabel('Valor recebido (R$)')).toHaveValue('45,67');
+  await expect(dialog.getByLabel('Valor recebido (R$)')).toBeFocused();
+  expect(billingReads).toBe(2);
+});
+
+test('BCS-06: failed compact read also blocks the independent link-only action', async ({
+  page,
+}) => {
+  const state = await setup(page, { billing: { managed: true, percent: 30 } });
+  await page.route('**/api/v1/orders/*/billing/history?**', (route) =>
+    route.fulfill({ status: 503, json: { code: 'UNAVAILABLE' } }),
+  );
+  await page.goto('/pedidos/shipping-order-1#cobrancas');
+  const section = page.getByRole('region', { name: 'Cobranças', exact: true });
+  await expect(
+    section.locator('.billing-workspace').getByRole('alert'),
+  ).toBeVisible();
+  await expect(
+    section.getByRole('button', { name: 'Gerar só o link', exact: true }),
+  ).toBeDisabled();
+  await expect(section.getByRole('button', { name: /^Cobrar/ })).toBeDisabled();
+  expect(state.calls).toHaveLength(0);
 });

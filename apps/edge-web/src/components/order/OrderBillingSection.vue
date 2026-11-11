@@ -33,6 +33,7 @@ const busy = ref(false);
 const modal = ref('');
 const dialog = ref(null);
 const sectionRoot = ref(null);
+const workspace = ref(null);
 const percentInput = ref(null);
 const selectedCharge = ref(null);
 const refundAmount = ref('');
@@ -54,6 +55,17 @@ const visible = computed(
     (props.order.status === 'confirmado' || billing.value?.managed),
 );
 const charges = computed(() => billing.value?.charges ?? []);
+const hasWorkspace = computed(
+  () =>
+    billing.value?.chatSendEnabled !== undefined ||
+    billing.value?.externalReceipts !== undefined,
+);
+const integratedSend = computed(() =>
+  Boolean(billing.value?.chatSendEnabled && props.order.conversationId),
+);
+const workspaceBlocked = computed(
+  () => hasWorkspace.value && workspace.value?.mutable === false,
+);
 const active = computed(() =>
   charges.value.find((charge) =>
     ['queued', 'creating', 'waiting', 'unknown', 'review'].includes(
@@ -104,6 +116,8 @@ const total = computed(() => billing.value?.totalAmountCents ?? 0);
 const paid = computed(() => total.value > 0 && balance.value === 0);
 const statusLabel = computed(() => {
   if (!billing.value) return loading.value ? 'Consultando' : 'Indisponível';
+  if (billing.value.reviewRequired || active.value?.amountCents > balance.value)
+    return 'Precisa de conferência';
   if (active.value?.status === 'review') return 'Precisa de conferência';
   if (active.value?.status === 'unknown') return 'Resultado a conferir';
   if (active.value?.status === 'waiting' && activeExpired.value)
@@ -164,6 +178,9 @@ function currentState(ready = true) {
       !unavailable.value &&
       (props.order.status === 'confirmado' || Boolean(billing.value?.managed)),
   });
+}
+async function refreshAll() {
+  await Promise.all([load(), workspace.value?.refresh()]);
 }
 function billingSignature(value) {
   return JSON.stringify([
@@ -242,7 +259,7 @@ async function load(silent = false) {
       loading.value = false;
       reading.value = false;
       currentState(!error.value);
-      if (active.value && !unavailable.value)
+      if (active.value && !unavailable.value && !hasWorkspace.value)
         timer = globalThis.setTimeout(
           () => {
             if (globalThis.document?.visibilityState === 'visible')
@@ -298,6 +315,7 @@ function cancelCondition() {
 }
 async function showDialog(mode, event, charge = null) {
   if (busy.value || otherEditing.value || cancelled.value) return;
+  if (workspaceBlocked.value && !uncertain.value) return;
   if (mode === 'share') {
     readAt.value = Date.now();
     if (!canShareActive.value || charge?.id !== active.value?.id) {
@@ -412,7 +430,13 @@ async function resumePending(event) {
   dialog.value?.showModal();
 }
 async function prepare(event) {
-  if (busy.value || !canIssue.value || otherEditing.value) return;
+  if (
+    busy.value ||
+    !canIssue.value ||
+    otherEditing.value ||
+    workspaceBlocked.value
+  )
+    return;
   fieldError.value = validatePercent();
   if (fieldError.value) {
     await nextTick();
@@ -435,6 +459,11 @@ async function prepare(event) {
 }
 async function submitDialog() {
   if (busy.value) return;
+  if (workspaceBlocked.value && !uncertain.value) {
+    dialogError.value =
+      'Atualize as cobranças antes de confirmar esta operação.';
+    return;
+  }
   if (cancelled.value) {
     dialogError.value = billingReason('ORDER_CANCELLED');
     return;
@@ -568,7 +597,7 @@ onBeforeUnmount(() => {
       title-id="order-billing-title"
       title="Cobranças"
       :state="statusLabel"
-      :tone="paid ? 'ok' : 'neutral'"
+      :tone="statusLabel === 'Quitado' ? 'ok' : 'neutral'"
       section="billing"
       body-id="order-billing-body"
       :can-edit="canMutate && !charges.length && !choosing && billing?.enabled"
@@ -588,7 +617,7 @@ onBeforeUnmount(() => {
       <p v-if="loading && !billing" role="status">Consultando cobranças…</p>
       <div v-if="error" class="op-alert" role="alert">
         <p>{{ error }}</p>
-        <button type="button" @click="load()">Atualizar cobranças</button>
+        <button type="button" @click="refreshAll">Atualizar cobranças</button>
       </div>
       <template v-if="billing">
         <div v-if="uncertain" class="op-alert" role="alert">
@@ -618,20 +647,6 @@ onBeforeUnmount(() => {
             <dd>{{ billingMoney(balance) }}</dd>
           </div>
         </dl>
-        <OrderBillingWorkspace
-          v-if="
-            billing.chatSendEnabled !== undefined ||
-            billing.externalReceipts !== undefined
-          "
-          :order="order"
-          :initial-billing="billing"
-          :disabled="busy || Boolean(otherEditing)"
-          compact
-          @changed="
-            load(true);
-            emit('changed');
-          "
-        />
         <p v-if="!billing.enabled" class="op-hint">
           {{ billingReason('BILLING_DISABLED') }}
         </p>
@@ -650,7 +665,13 @@ onBeforeUnmount(() => {
           {{ billingReason('ORDER_CANCELLED') }}
         </p>
         <div
-          v-if="active"
+          v-if="
+            active &&
+            (!hasWorkspace ||
+              active.amountCents > balance ||
+              activeExpired ||
+              ['unknown', 'review'].includes(active.status))
+          "
           class="billing-state"
           :data-attention="
             ['unknown', 'review'].includes(active.status) || undefined
@@ -690,7 +711,11 @@ onBeforeUnmount(() => {
             recebimentos externos registrados no pedido.
           </p>
         </div>
-        <div v-else-if="paid" class="billing-state" data-success="true">
+        <div
+          v-else-if="paid && !hasWorkspace"
+          class="billing-state"
+          data-success="true"
+        >
           <strong>Pedido integralmente pago</strong>
           <p>
             Não há saldo a cobrar. O status comercial do pedido continua o
@@ -826,7 +851,7 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </form>
-        <template v-else-if="canIssue">
+        <template v-else-if="canIssue && !integratedSend">
           <p class="billing-condition">
             <strong>{{ conditionLabel }}</strong>
           </p>
@@ -849,7 +874,7 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </template>
-        <div v-if="canShareActive" class="billing-link">
+        <div v-if="canShareActive && !hasWorkspace" class="billing-link">
           <p>
             <strong
               >{{ chargeName(active) }} de
@@ -883,8 +908,113 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </div>
+        <OrderBillingWorkspace
+          ref="workspace"
+          v-if="hasWorkspace"
+          :order="order"
+          :initial-billing="billing"
+          :disabled="
+            busy || Boolean(otherEditing) || uncertain || !canInspectPrivate
+          "
+          :allow-issue="!choosing || !canIssue"
+          compact
+          @snapshot="applyBilling"
+          @changed="
+            feedback = '';
+            load(true);
+            emit('changed');
+          "
+        >
+          <template #issue-actions="{ blocked }">
+            <button
+              v-if="canIssue && !choosing && integratedSend"
+              type="button"
+              class="quiet"
+              :disabled="Boolean(otherEditing) || blocked"
+              @click="prepare"
+            >
+              Gerar só o link
+            </button>
+          </template>
+          <template #charge-actions="{ charge, blocked, readable }">
+            <template v-if="canInspectPrivate && readable">
+              <template v-if="charge.id === active?.id && canShareActive">
+                <button type="button" @click="copyLink(charge)">
+                  Copiar link
+                </button>
+                <a
+                  class="button-link billing-open-link"
+                  :href="billingUrl(charge.checkoutUrl)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  referrerpolicy="no-referrer"
+                  @click="checkActiveLink"
+                  >Abrir cobrança</a
+                >
+                <button
+                  v-if="!integratedSend"
+                  type="button"
+                  class="quiet"
+                  @click="showDialog('share', $event, charge)"
+                >
+                  Preparar mensagem
+                </button>
+              </template>
+              <a
+                v-else-if="billingUrl(charge.checkoutUrl)"
+                :href="billingUrl(charge.checkoutUrl)"
+                target="_blank"
+                rel="noopener noreferrer"
+                referrerpolicy="no-referrer"
+                >Abrir link anterior para conferência</a
+              >
+              <a
+                v-if="
+                  billingUrl(charge.receiptUrl) &&
+                  !billing.payments?.some(
+                    (payment) =>
+                      payment.chargeId === charge.id &&
+                      billingUrl(payment.receiptUrl),
+                  )
+                "
+                :href="billingUrl(charge.receiptUrl)"
+                target="_blank"
+                rel="noopener noreferrer"
+                referrerpolicy="no-referrer"
+                >Comprovante InfinitePay</a
+              >
+            </template>
+            <button
+              v-if="
+                canManage &&
+                charge.id === (active?.id ?? charges[0]?.id) &&
+                (['unknown', 'review'].includes(charge.status) ||
+                  activeExpired ||
+                  billing.reviewRequired)
+              "
+              type="button"
+              :disabled="blocked || cancelled"
+              @click="showDialog('reconcile', $event, charge)"
+            >
+              Conferir cobrança
+            </button>
+            <button
+              v-if="
+                canManage &&
+                ['paid', 'review'].includes(charge.status) &&
+                charge.refundableAmountCents > 0
+              "
+              type="button"
+              :disabled="blocked || cancelled"
+              @click="showDialog('refund', $event, charge)"
+            >
+              Registrar devolução do
+              {{ chargeName(charge).toLocaleLowerCase('pt-BR') }}
+            </button>
+          </template>
+        </OrderBillingWorkspace>
         <section
-          v-if="charges.length"
+          v-if="charges.length && !hasWorkspace"
           class="billing-history"
           aria-label="Histórico de cobranças"
         >
@@ -932,7 +1062,11 @@ onBeforeUnmount(() => {
           </ol>
         </section>
         <details
-          v-if="canManage && (billing.managed || charges.length)"
+          v-if="
+            canManage &&
+            (billing.managed || charges.length) &&
+            (!hasWorkspace || (!charges.length && billing.reviewRequired))
+          "
           class="billing-review"
         >
           <summary>Conferência e devoluções</summary>
@@ -985,7 +1119,7 @@ onBeforeUnmount(() => {
             type="button"
             class="quiet"
             :aria-busy="loading || undefined"
-            @click="load()"
+            @click="refreshAll"
           >
             Atualizar cobranças
           </button>

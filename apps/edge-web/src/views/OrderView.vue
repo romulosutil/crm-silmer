@@ -699,7 +699,8 @@ async function load(silent = false, force = false) {
       !silent ||
       force ||
       !order.value ||
-      !(Number(next?.version) < Number(order.value.version))
+      (!(Number(next?.version) < Number(order.value.version)) &&
+        JSON.stringify(next) !== JSON.stringify(order.value))
     ) {
       order.value = next;
       replaced = true;

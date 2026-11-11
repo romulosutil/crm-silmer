@@ -231,7 +231,7 @@ else
           serviceData: { secret: 'CONVERSATION_SENTINEL' },
           ...(patch.legacy ? {} : { sizePricing: groups }),
         };
-        const orderStatus = patch.status ?? 'pendente';
+        const orderStatus = patch.status ?? 'confirmado';
         await pool.query(
           `WITH n AS(SELECT nextval('crm.order_number_seq') v) INSERT INTO crm.orders(id,number_sequence,number,conversation_id,contact_id,manual_owner_id,manual_create_key,status,fab_code,ficha_envelope,total_pieces,missing_fields,final_amount_cents,payment_condition,order_date,confirmed_at,confirmed_by,created_by_kind,created_by,created_at,updated_at) SELECT $1,v,lpad(v::text,2,'0')||'-CRM',NULL,$2,$3,$4,$5,'SYNTHETIC',$6::jsonb,3,'{}',$7,'pix',CASE WHEN $5='confirmado' THEN '2026-11-06'::date ELSE NULL END,$8,$9,'user',$3,$10,$10 FROM n`,
           [
@@ -749,8 +749,8 @@ else
           const otherOrderId = randomUUID();
           await pool.query(
             `WITH n AS(SELECT nextval('crm.order_number_seq') v)
-            INSERT INTO crm.orders(id,number_sequence,number,conversation_id,contact_id,manual_owner_id,manual_create_key,status,fab_code,ficha_envelope,total_pieces,final_amount_cents,payment_condition,created_by_kind,created_by,created_at,updated_at)
-            SELECT $1,v,lpad(v::text,2,'0')||'-CRM',NULL,$2,$3,$4,'pendente','SYNTHETIC',$5::jsonb,3,600,'pix','user',$3,$6,$6 FROM n`,
+            INSERT INTO crm.orders(id,number_sequence,number,conversation_id,contact_id,manual_owner_id,manual_create_key,status,fab_code,ficha_envelope,total_pieces,final_amount_cents,payment_condition,order_date,confirmed_at,confirmed_by,created_by_kind,created_by,created_at,updated_at)
+            SELECT $1,v,lpad(v::text,2,'0')||'-CRM',NULL,$2,$3,$4,'confirmado','SYNTHETIC',$5::jsonb,3,600,'pix','2026-11-06'::date,$6,$3,'user',$3,$6,$6 FROM n`,
             [
               otherOrderId,
               f.contactId,
@@ -781,7 +781,7 @@ else
           for (const mutate of [
             (/** @type {any} */ f) =>
               pool.query(
-                'UPDATE crm.orders SET version=version+1 WHERE id=$1',
+                'UPDATE crm.orders SET version=version+1,commercial_revision=commercial_revision+1 WHERE id=$1',
                 [f.orderId],
               ),
             (/** @type {any} */ f) =>

@@ -210,12 +210,14 @@ export function createOlistRepository(database, options) {
       );
     const lockedOrder = (
       await client.query(
-        'SELECT cancelled_at FROM crm.orders WHERE id=$1 FOR SHARE',
+        'SELECT status,cancelled_at FROM crm.orders WHERE id=$1 FOR SHARE',
         [target.order_id],
       )
     ).rows[0];
     if (!lockedOrder || lockedOrder.cancelled_at)
       throw new OlistError('ORDER_CANCELLED');
+    if (lockedOrder.status !== 'confirmado')
+      throw new OlistError('ORDER_NOT_CONFIRMED');
     const { rows } = await client.query(
       'SELECT * FROM crm.olist_exports WHERE id=$1 AND account_key=$2 AND context_key=$3 FOR SHARE',
       [input.exportId, input.accountKey, input.contextKey],
@@ -230,21 +232,13 @@ export function createOlistRepository(database, options) {
     )
       throw new OlistError('OLIST_EXPORT_UNAVAILABLE');
     const order = await client.query(
-      'SELECT version,contact_id,conversation_id FROM crm.orders WHERE id=$1 FOR SHARE',
+      'SELECT version,commercial_revision,contact_id,conversation_id FROM crm.orders WHERE id=$1 FOR SHARE',
       [operation.order_id],
     );
     const settings = await client.query(
       'SELECT version FROM crm.olist_settings WHERE account_key=$1 FOR SHARE',
       [input.accountKey],
     );
-    if (
-      Number(order.rows[0]?.version) !== Number(operation.order_version) ||
-      Number(settings.rows[0]?.version) !==
-        Number(operation.settings_version) ||
-      (input.settingsVersion !== undefined &&
-        Number(operation.settings_version) !== input.settingsVersion)
-    )
-      throw new OlistError('VERSION_CONFLICT');
     const snapshot = open(
       operation.snapshot_envelope,
       options.envelopeKey,
@@ -253,14 +247,35 @@ export function createOlistRepository(database, options) {
       operation.id,
     );
     const versions = snapshot?.sourceVersions;
+    const expectedOrderRevision =
+      versions?.commercialRevision !== undefined
+        ? Number(order.rows[0]?.commercial_revision)
+        : Number(order.rows[0]?.version);
+    if (
+      expectedOrderRevision !== Number(operation.order_version) ||
+      Number(settings.rows[0]?.version) !==
+        Number(operation.settings_version) ||
+      (input.settingsVersion !== undefined &&
+        Number(operation.settings_version) !== input.settingsVersion)
+    )
+      throw new OlistError('VERSION_CONFLICT');
     if (versions !== undefined) {
       if (
         !versions ||
         !Number.isSafeInteger(versions.sourceRevision) ||
         versions.sourceRevision < 0 ||
+        (versions.commercialRevision !== undefined &&
+          (!Number.isSafeInteger(versions.commercialRevision) ||
+            versions.commercialRevision < 1)) ||
         !(versions.contactId === null || typeof versions.contactId === 'string')
       )
         throw new OlistError('OLIST_EXPORT_UNAVAILABLE');
+      if (
+        versions.commercialRevision !== undefined &&
+        Number(order.rows[0]?.commercial_revision) !==
+          versions.commercialRevision
+      )
+        throw new OlistError('VERSION_CONFLICT');
       const currentOrder = order.rows[0];
       const currentContact =
         currentOrder.contact_id ??
@@ -705,6 +720,7 @@ export function createOlistRepository(database, options) {
     async recordDispatchStop(input) {
       const allowed = new Set([
         'ORDER_CANCELLED',
+        'ORDER_NOT_CONFIRMED',
         'FORBIDDEN',
         'VERSION_CONFLICT',
         'OLIST_CREATION_DISABLED',
@@ -1612,11 +1628,13 @@ export function createOlistRepository(database, options) {
       const work = async (/** @type {any} */ client) => {
         await exportCommandGuard(client, input);
         const order = await client.query(
-          'SELECT id,cancelled_at FROM crm.orders WHERE id=$1 FOR UPDATE',
+          'SELECT id,status,cancelled_at FROM crm.orders WHERE id=$1 FOR UPDATE',
           [input.orderId],
         );
         if (!order.rows[0]) throw new OlistError('ORDER_NOT_FOUND', 404);
         if (order.rows[0].cancelled_at) throw new OlistError('ORDER_CANCELLED');
+        if (order.rows[0].status !== 'confirmado')
+          throw new OlistError('ORDER_NOT_CONFIRMED');
         const row = (
           await client.query(
             "SELECT * FROM crm.olist_exports WHERE account_key=$1 AND order_id=$2 AND state<>'invalidated'",
@@ -1672,11 +1690,13 @@ export function createOlistRepository(database, options) {
       const work = async (/** @type {any} */ client) => {
         await exportCommandGuard(client, input);
         const order = await client.query(
-          'SELECT version,cancelled_at FROM crm.orders WHERE id=$1 FOR UPDATE',
+          'SELECT status,version,commercial_revision,cancelled_at FROM crm.orders WHERE id=$1 FOR UPDATE',
           [input.orderId],
         );
         if (!order.rows[0]) throw new OlistError('ORDER_NOT_FOUND', 404);
         if (order.rows[0].cancelled_at) throw new OlistError('ORDER_CANCELLED');
+        if (order.rows[0].status !== 'confirmado')
+          throw new OlistError('ORDER_NOT_CONFIRMED');
         const existing = (
           await client.query(
             "SELECT * FROM crm.olist_exports WHERE account_key=$1 AND order_id=$2 AND state<>'invalidated'",
@@ -1690,7 +1710,11 @@ export function createOlistRepository(database, options) {
             throw new OlistError('OLIST_EXPORT_CONFLICT');
           return existing;
         }
-        if (Number(order.rows[0].version) !== input.orderVersion)
+        const currentOrderVersion =
+          snapshot?.sourceVersions?.commercialRevision !== undefined
+            ? Number(order.rows[0].commercial_revision)
+            : Number(order.rows[0].version);
+        if (currentOrderVersion !== input.orderVersion)
           throw new OlistError('VERSION_CONFLICT');
         const settings = await client.query(
           'SELECT version FROM crm.olist_settings WHERE account_key=$1 FOR SHARE',
@@ -1780,12 +1804,14 @@ export function createOlistRepository(database, options) {
             );
           const activeOrder = (
             await client.query(
-              'SELECT cancelled_at FROM crm.orders WHERE id=$1 FOR SHARE',
+              'SELECT status,cancelled_at FROM crm.orders WHERE id=$1 FOR SHARE',
               [targetOrder.order_id],
             )
           ).rows[0];
           if (!activeOrder || activeOrder.cancelled_at)
             throw new OlistError('ORDER_CANCELLED');
+          if (activeOrder.status !== 'confirmado')
+            throw new OlistError('ORDER_NOT_CONFIRMED');
         }
         const { rows } = await client.query(
           'SELECT * FROM crm.' +

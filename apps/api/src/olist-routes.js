@@ -3,6 +3,7 @@ import { OlistError, assertOlistOrderCommercialRead } from '@crm-silmer/olist';
 const CODES = new Set([
   'OLIST_LEGACY_REVIEW_REQUIRED',
   'ORDER_CANCELLED',
+  'ORDER_NOT_CONFIRMED',
   'FORBIDDEN',
   'CSRF_INVALID',
   'INVALID_CREDENTIALS',
@@ -190,7 +191,7 @@ export function registerOlistRoutes(api, runtime, contextFor) {
   for (const [path, method, fields] of [
     ['/preview', 'preview', []],
     ['/preview/check', 'checkPreview', ['previewToken']],
-    ['/export', 'exportOrder', ['previewToken']],
+    ['/export', 'exportOrder', []],
   ]) {
     api.post(
       '/api/v1/orders/:orderId/olist' + path,
@@ -207,8 +208,18 @@ export function registerOlistRoutes(api, runtime, contextFor) {
           const body = strictBody(
             request.body,
             /** @type {string[]} */ (fields),
-            method === 'preview' ? ['paymentDueOn', 'productFiscal'] : [],
+            method === 'preview'
+              ? ['paymentDueOn', 'productFiscal']
+              : method === 'exportOrder'
+                ? ['previewToken', 'paymentDueOn']
+                : [],
           );
+          if (
+            method === 'exportOrder' &&
+            body.previewToken !== undefined &&
+            body.paymentDueOn !== undefined
+          )
+            throw new OlistError('INVALID_REQUEST', 400);
           if (method === 'exportOrder') reply.code(202);
           return runtime[/** @type {string} */ (method)]({
             ...input,

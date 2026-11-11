@@ -135,7 +135,7 @@ export function createOlistApiRuntime(database, options) {
       // `invalidated` history. Prefer the active row, else the latest
       // invalidated one (the panel explains why a new preview is possible).
       const exports = await client.query(
-        "SELECT state,stage,remote_number,last_error_code FROM crm.olist_exports WHERE account_key=$1 AND order_id=$2 ORDER BY (state='invalidated'),created_at DESC,id DESC LIMIT 1",
+        "SELECT id,state,stage,remote_number,last_error_code FROM crm.olist_exports WHERE account_key=$1 AND order_id=$2 ORDER BY (state='invalidated'),created_at DESC,id DESC LIMIT 1",
         [config.accountKey, order.id],
       );
       const operation = exports.rows[0];
@@ -164,6 +164,7 @@ export function createOlistApiRuntime(database, options) {
         )
       ).rows[0];
       const creationEnabled = Boolean(
+        order.status === 'confirmado' &&
         config.configured &&
         actor.olistEnabled &&
         config.pilotUserIds.includes(actor.id) &&
@@ -173,25 +174,111 @@ export function createOlistApiRuntime(database, options) {
         !availability?.exchange_nonce &&
         !availability?.reconnect_required,
       );
+      const paymentDuePolicy = settings?.paymentDuePolicy ?? 'fixed_date';
+      /** @type {Array<{code:string,field?:string,label:string}>} */
+      let pendingFields = creationEnabled
+        ? []
+        : [
+            {
+              code: 'OLIST_CREATION_DISABLED',
+              label: 'Geração Olist ainda indisponível.',
+            },
+          ];
+      // OLC-T04: the Order detail shows every local pendency of a confirmed
+      // order (buyer registration, composition, exact cents) without any ERP
+      // call. The administrative lookup keeps its minimal projection.
+      if (input.lookup !== true && order.status === 'confirmado') {
+        await client.query('SAVEPOINT olist_local_plan');
+        try {
+          const { plan } = await preview.localPlan({
+            ...input,
+            transaction: client,
+            action: input.action ?? 'olist.read',
+          });
+          const relevant = (plan.issues ?? []).filter(
+            (/** @type {any} */ issue) =>
+              !(
+                paymentDuePolicy === 'per_order' &&
+                issue.field === 'commercial.paymentDueOn'
+              ) &&
+              !(
+                !creationEnabled &&
+                String(issue.field ?? '').startsWith('settings.')
+              ),
+          );
+          if (relevant.length > 0) {
+            pendingFields = relevant.map((/** @type {any} */ issue) => ({
+              code: issue.code,
+              field: issue.field,
+              label: 'Pendência para gerar no Olist.',
+            }));
+            if (!creationEnabled) {
+              pendingFields.push({
+                code: 'OLIST_CREATION_DISABLED',
+                field: 'connection',
+                label: 'Geração Olist ainda indisponível.',
+              });
+            }
+          }
+          await client.query('RELEASE SAVEPOINT olist_local_plan');
+        } catch {
+          // Keep the fallback pendingFields; the server still validates the
+          // export command itself. Undo whatever the failed read touched.
+          await client.query('ROLLBACK TO SAVEPOINT olist_local_plan');
+        }
+      }
+      let retrySafe = false;
+      if (
+        operation?.id &&
+        ['queued', 'resolving', 'ready'].includes(operation.state) &&
+        operation.last_error_code &&
+        !/OUTCOME_UNKNOWN|UNCERTAIN|RECONCILIATION_REQUIRED|DIVERGENT|AMBIGUOUS/u.test(
+          String(operation.last_error_code),
+        )
+      ) {
+        await client.query('SAVEPOINT olist_retry_safe');
+        try {
+          const check = (
+            await client.query(
+              `SELECT (e.remote_id IS NOT NULL OR e.observed_sale_id IS NOT NULL) AS sale_id,
+                EXISTS (SELECT 1 FROM crm.olist_attempts a WHERE a.export_id=e.id AND a.stage='sale') AS sale_attempt,
+                EXISTS (SELECT 1 FROM crm.olist_export_resources x JOIN crm.olist_resources r ON r.id=x.resource_id AND r.account_key=x.account_key
+                  WHERE x.export_id=e.id AND r.state IN ('reserved','uncertain')) AS resource_open,
+                EXISTS (SELECT 1 FROM crm.olist_export_resources x JOIN crm.olist_attempts a ON a.resource_id=x.resource_id AND a.account_key=x.account_key
+                  JOIN crm.olist_resources r ON r.id=a.resource_id AND r.account_key=a.account_key
+                  WHERE x.export_id=e.id AND (a.outcome='reserved'
+                    OR (a.outcome='uncertain' AND NOT (r.state='confirmed' AND r.remote_id IS NOT NULL)))) AS attempt_open,
+                EXISTS (SELECT 1 FROM crm.outbox_jobs j WHERE j.olist_export_id=e.id AND j.status IN ('pending','processing')) AS job_active
+               FROM crm.olist_exports e WHERE e.id=$1 AND e.account_key=$2`,
+              [operation.id, config.accountKey],
+            )
+          ).rows[0];
+          retrySafe = Boolean(
+            check &&
+              !check.sale_id &&
+              !check.sale_attempt &&
+              !check.resource_open &&
+              !check.attempt_open &&
+              !check.job_active,
+          );
+          await client.query('RELEASE SAVEPOINT olist_retry_safe');
+        } catch {
+          retrySafe = false;
+          await client.query('ROLLBACK TO SAVEPOINT olist_retry_safe');
+        }
+      }
       return {
         orderId: order.id,
         number: order.number,
         status: order.status,
         creationEnabled:
           creationEnabled && operation?.state !== 'legacy_review_required',
-        paymentDuePolicy: settings?.paymentDuePolicy ?? 'fixed_date',
+        paymentDuePolicy,
         productFiscalRequired: false,
         productFiscalDeferred:
           settings?.productFiscal === null ||
           settings?.productFiscal === undefined,
-        pendingFields: creationEnabled
-          ? []
-          : [
-              {
-                code: 'OLIST_CREATION_DISABLED',
-                label: 'Geração Olist ainda indisponível.',
-              },
-            ],
+        pendingFields,
         operation: operation
           ? {
               state: operation.state,
@@ -200,6 +287,7 @@ export function createOlistApiRuntime(database, options) {
               ...(operation.last_error_code
                 ? { errorCode: operation.last_error_code }
                 : {}),
+              ...(retrySafe ? { retrySafe: true } : {}),
             }
           : null,
       };
@@ -266,7 +354,7 @@ export function createOlistApiRuntime(database, options) {
           return rows[0].id;
         },
       );
-      return project({ ...input, orderId, action: 'olist.read' });
+      return project({ ...input, orderId, action: 'olist.read', lookup: true });
     },
     /** @param {any} input */
     async lookups(input) {

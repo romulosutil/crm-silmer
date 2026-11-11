@@ -108,7 +108,7 @@ test('T16 a historical buyer proof cannot substitute for canonical buyer registr
       sourceRevision: 0,
       issues: [],
       order: {
-        status: 'pendente',
+        status: 'confirmado',
         origin: 'atendimento',
         finalAmountCents: 600,
         paymentCondition: 'pix',

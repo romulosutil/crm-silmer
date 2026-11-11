@@ -24,6 +24,7 @@ const RETRYABLE_CODES = new Set([
 function safeCode(value) {
   const codes = new Set([
     'ORDER_CANCELLED',
+    'ORDER_NOT_CONFIRMED',
     'OLIST_DISPATCH_DISABLED',
     'OLIST_JOB_INVALID',
     'OLIST_JOB_LEASE_LOST',

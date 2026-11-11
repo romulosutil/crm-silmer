@@ -267,7 +267,7 @@ else
           serviceData: { secret: 'CONVERSATION_SENTINEL' },
           ...(patch.legacy ? {} : { sizePricing: groups }),
         };
-        const orderStatus = patch.status ?? 'pendente';
+        const orderStatus = patch.status ?? 'confirmado';
         await pool.query(
           `WITH n AS(SELECT nextval('crm.order_number_seq') v) INSERT INTO crm.orders(id,number_sequence,number,conversation_id,contact_id,manual_owner_id,manual_create_key,status,fab_code,ficha_envelope,total_pieces,missing_fields,final_amount_cents,payment_condition,order_date,confirmed_at,confirmed_by,created_by_kind,created_by,created_at,updated_at) SELECT $1,v,lpad(v::text,2,'0')||'-CRM',NULL,$2,$3,$4,$5,'SYNTHETIC',$6::jsonb,3,'{}',$7,'pix',CASE WHEN $5='confirmado' THEN '2026-11-06'::date ELSE NULL END,$8,$9,'user',$3,$10,$10 FROM n`,
           [
@@ -1210,7 +1210,7 @@ else
       await t.test(
         'LIVENESS API reads wait briefly for a busy shared quota window instead of failing the request (preview)',
         async () => {
-          const f = await fixture({ status: 'pendente' });
+          const f = await fixture({ status: 'confirmado' });
           await pool.query(
             "INSERT INTO crm.olist_quotas(account_key,blocked_until) VALUES($1,now()+interval '1300 milliseconds') ON CONFLICT (account_key) DO UPDATE SET blocked_until=EXCLUDED.blocked_until",
             [config.accountKey],
@@ -1227,61 +1227,74 @@ else
       );
 
       await t.test(
-        'complete pending and confirmed orders of another owner are previewed by an enabled seller without effects or private notes',
+        'OLC-01 confirmed orders are previewed without effects or private notes while pendente is blocked before HTTP',
         async () => {
-          for (const status of ['pendente', 'confirmado']) {
-            const f = await fixture({ status });
-            const before = await counts();
-            const preview = await f.runtime.preview(f.input);
-            assert.equal(
-              preview.eligible,
-              true,
-              JSON.stringify(preview.issues),
-            );
-            assert.ok(preview.previewToken);
-            assert.ok(preview.registrations);
-            assert.equal(preview.creationEnabled, false);
-            assert.equal(preview.commercial.totalCents, 600);
-            assert.equal(
-              preview.commercial.groups[0].lines[0].unitLexeme,
-              '2.00',
-            );
-            assert.equal(preview.commercial.orderDate, '2026-11-06');
-            assert.equal(preview.registrations.customer.action, 'reuse');
-            assert.equal(
-              preview.registrations.groups[0].lines[0].action,
-              'reuse',
-            );
-            assert.doesNotMatch(
-              JSON.stringify(preview),
-              /INTERNAL_SENTINEL|CONVERSATION_SENTINEL|52998224725|buyer@example|Rua de Teste|artwork|observations|serviceData/,
-            );
-            const raw = Buffer.from(preview.previewToken, 'base64url').toString(
-              'utf8',
-            );
-            assert.doesNotMatch(raw, /Comprador|529982|Rua de Teste/);
-            assert.equal(
-              (
-                await f.runtime.checkPreview({
-                  ...f.input,
-                  previewToken: preview.previewToken,
-                })
-              ).valid,
-              true,
-            );
-            assert.deepEqual(await counts(), before);
-            assert.ok(f.calls.length > 0);
-            assert.ok(f.calls.every((call) => call.method === 'GET'));
-            assert.equal(
-              (
-                await pool.query(
-                  'SELECT status,order_date::text AS order_date FROM crm.orders WHERE id=$1',
-                  [f.orderId],
-                )
-              ).rows[0].order_date,
-              status === 'confirmado' ? '2026-11-06' : null,
-            );
-          }
+          const pendingFixture = await fixture({ status: 'pendente' });
+          const pendingBefore = await counts();
+          const pendingPreview = await pendingFixture.runtime.preview(
+            pendingFixture.input,
+          );
+          assert.equal(pendingPreview.eligible, false);
+          assert.equal(pendingPreview.previewToken, null);
+          assert.equal(pendingPreview.registrations, null);
+          assert.equal(pendingPreview.creationEnabled, false);
+          assert.ok(
+            pendingPreview.issues.some((i) => i.code === 'ORDER_NOT_CONFIRMED'),
+          );
+          assert.equal(pendingFixture.calls.length, 0);
+          assert.deepEqual(await counts(), pendingBefore);
+
+          const f = await fixture({ status: 'confirmado' });
+          const before = await counts();
+          const preview = await f.runtime.preview(f.input);
+          assert.equal(
+            preview.eligible,
+            true,
+            JSON.stringify(preview.issues),
+          );
+          assert.ok(preview.previewToken);
+          assert.ok(preview.registrations);
+          assert.equal(preview.creationEnabled, false);
+          assert.equal(preview.commercial.totalCents, 600);
+          assert.equal(
+            preview.commercial.groups[0].lines[0].unitLexeme,
+            '2.00',
+          );
+          assert.equal(preview.commercial.orderDate, '2026-11-06');
+          assert.equal(preview.registrations.customer.action, 'reuse');
+          assert.equal(
+            preview.registrations.groups[0].lines[0].action,
+            'reuse',
+          );
+          assert.doesNotMatch(
+            JSON.stringify(preview),
+            /INTERNAL_SENTINEL|CONVERSATION_SENTINEL|52998224725|buyer@example|Rua de Teste|artwork|observations|serviceData/,
+          );
+          const raw = Buffer.from(preview.previewToken, 'base64url').toString(
+            'utf8',
+          );
+          assert.doesNotMatch(raw, /Comprador|529982|Rua de Teste/);
+          assert.equal(
+            (
+              await f.runtime.checkPreview({
+                ...f.input,
+                previewToken: preview.previewToken,
+              })
+            ).valid,
+            true,
+          );
+          assert.deepEqual(await counts(), before);
+          assert.ok(f.calls.length > 0);
+          assert.ok(f.calls.every((call) => call.method === 'GET'));
+          assert.equal(
+            (
+              await pool.query(
+                'SELECT status,order_date::text AS order_date FROM crm.orders WHERE id=$1',
+                [f.orderId],
+              )
+            ).rows[0].order_date,
+            '2026-11-06',
+          );
         },
       );
       await t.test(
@@ -1795,7 +1808,10 @@ else
         'order, customer, settings, connection and resource revisions invalidate a previously complete receipt',
         async () => {
           for (const [sql, target] of [
-            ['UPDATE crm.orders SET version=version+1 WHERE id=$1', 'orderId'],
+            [
+              'UPDATE crm.orders SET version=version+1,commercial_revision=commercial_revision+1 WHERE id=$1',
+              'orderId',
+            ],
             [
               'UPDATE crm.contacts SET version=version+1 WHERE id=$1',
               'contactId',

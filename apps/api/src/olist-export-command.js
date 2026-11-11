@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   PostgresIdempotencyRecordStore,
   fingerprintCommand,
@@ -10,6 +11,7 @@ import {
   identityHash,
   OlistError,
   olistSettings,
+  olistNewSendBuyerBlocked,
 } from '@crm-silmer/olist';
 import { operationalDay } from '@crm-silmer/orders';
 
@@ -82,11 +84,13 @@ export function createOlistExportCommand(
   return Object.freeze({
     /** @param {any} input */
     async exportOrder(input) {
+      const hasPreviewToken =
+        input.previewToken !== undefined && input.previewToken !== null;
       if (
-        Object.hasOwn(input, 'paymentDueOn') ||
         Object.hasOwn(input, 'productFiscal') ||
         Object.hasOwn(input, 'buyerSource') ||
-        Object.hasOwn(input, 'productFiscalDeferred')
+        Object.hasOwn(input, 'productFiscalDeferred') ||
+        (hasPreviewToken && Object.hasOwn(input, 'paymentDueOn'))
       )
         throw new OlistError('INVALID_REQUEST', 400);
       assertOlistPilotActor(config.pilotUserIds, input);
@@ -98,9 +102,11 @@ export function createOlistExportCommand(
         typeof input.orderId !== 'string' ||
         input.orderId.length < 1 ||
         input.orderId.length > 200 ||
-        typeof input.previewToken !== 'string' ||
-        input.previewToken.length > 262144 ||
-        !/^[A-Za-z0-9_-]+$/u.test(input.previewToken)
+        (hasPreviewToken &&
+          (typeof input.previewToken !== 'string' ||
+            input.previewToken.length > 262144 ||
+            !/^[A-Za-z0-9_-]+$/u.test(input.previewToken))) ||
+        input.previewToken === null
       )
         throw new OlistError('INVALID_REQUEST', 400);
       /** @type {any} */
@@ -127,11 +133,14 @@ export function createOlistExportCommand(
             // so snapshot reads never invert that order or upgrade a shared lock.
             const order = (
               await tx.query(
-                'SELECT number,conversation_id FROM crm.orders WHERE id=$1',
+                'SELECT number,status,cancelled_at,conversation_id FROM crm.orders WHERE id=$1',
                 [input.orderId],
               )
             ).rows[0];
             if (!order) throw new OlistError('ORDER_NOT_FOUND', 404);
+            if (order.cancelled_at) throw new OlistError('ORDER_CANCELLED', 409);
+            if (order.status !== 'confirmado')
+              throw new OlistError('ORDER_NOT_CONFIRMED', 409);
             if (order.conversation_id)
               await tx.query(
                 'SELECT id FROM crm.conversations WHERE id=$1 FOR SHARE',
@@ -169,12 +178,26 @@ export function createOlistExportCommand(
           scope:
             'olist:' + config.contextKey + ':' + input.actor.id + ':export',
           key: input.idempotencyKey,
-          fingerprint: identityHash(config.hmacKey, 'export-request', [
-            input.actor.id,
-            input.sessionBinding,
-            input.orderId,
-            input.previewToken,
-          ]),
+          fingerprint: identityHash(
+            config.hmacKey,
+            'export-request',
+            hasPreviewToken
+              ? [
+                  input.actor.id,
+                  input.sessionBinding,
+                  input.orderId,
+                  input.previewToken,
+                ]
+              : [
+                  input.actor.id,
+                  input.sessionBinding,
+                  input.orderId,
+                  'direct-order-export-v1',
+                  fingerprintCommand({
+                    paymentDueOn: input.paymentDueOn ?? null,
+                  }),
+                ],
+          ),
           actor: input.actor.id,
           action: 'olist.export.request',
           target: { type: 'order', id: input.orderId },
@@ -183,18 +206,92 @@ export function createOlistExportCommand(
           correlationId: input.correlationId,
         },
         async (tx) => {
-          const receipt = preview.readReceipt(input);
+          const acceptedAt = clock();
+          let receipt;
+          let current;
+          if (hasPreviewToken) {
+            receipt = preview.readReceipt(input);
+            if (olistNewSendBuyerBlocked(receipt))
+              throw new OlistError('OLIST_CUSTOMER_INVALID', 409);
+            const semantic = operationFingerprint(input, receipt);
+            if (existing) {
+              if (existing.command_fingerprint !== semantic)
+                throw new OlistError('OLIST_EXPORT_CONFLICT', 409);
+              return response(existing, number);
+            }
+            current = await preview.assertFreshReceipt(
+              { ...input, transaction: tx },
+              receipt,
+            );
+          } else {
+            ({ current, receipt } = await preview.prepareDirectReceipt(
+              { ...input, transaction: tx },
+              acceptedAt,
+            ));
+          }
           const semantic = operationFingerprint(input, receipt);
+          if (
+            existing &&
+            !hasPreviewToken &&
+            ['queued', 'resolving', 'ready'].includes(existing.state) &&
+            existing.last_error_code &&
+            !/OUTCOME_UNKNOWN|UNCERTAIN|RECONCILIATION_REQUIRED|DIVERGENT|AMBIGUOUS/u.test(
+              String(existing.last_error_code),
+            )
+          ) {
+            const safe = (
+              await tx.query(
+                `SELECT (e.remote_id IS NOT NULL OR e.observed_sale_id IS NOT NULL) AS sale_id,
+                  EXISTS (SELECT 1 FROM crm.olist_attempts a WHERE a.export_id=e.id AND a.stage='sale') AS sale_attempt,
+                  EXISTS (SELECT 1 FROM crm.olist_export_resources x JOIN crm.olist_resources r ON r.id=x.resource_id AND r.account_key=x.account_key
+                    WHERE x.export_id=e.id AND r.state IN ('reserved','uncertain')) AS resource_open,
+                  EXISTS (SELECT 1 FROM crm.olist_export_resources x JOIN crm.olist_attempts a ON a.resource_id=x.resource_id AND a.account_key=x.account_key
+                    JOIN crm.olist_resources r ON r.id=a.resource_id AND r.account_key=a.account_key
+                    WHERE x.export_id=e.id AND (a.outcome='reserved'
+                      OR (a.outcome='uncertain' AND NOT (r.state='confirmed' AND r.remote_id IS NOT NULL)))) AS attempt_open,
+                  EXISTS (SELECT 1 FROM crm.outbox_jobs j WHERE j.olist_export_id=e.id AND j.status IN ('pending','processing')) AS job_active
+                 FROM crm.olist_exports e WHERE e.id=$1 AND e.account_key=$2 FOR UPDATE OF e`,
+                [existing.id, config.accountKey],
+              )
+            ).rows[0];
+            if (
+              safe &&
+              !safe.sale_id &&
+              !safe.sale_attempt &&
+              !safe.resource_open &&
+              !safe.attempt_open &&
+              !safe.job_active
+            ) {
+              // OLC-10/OLC-16: the stopped generation provably had no effect
+              // (no sale attempt, no open resource, no active job). It is
+              // retired as terminal history and a new generation is queued;
+              // confirmed resources are reused by identity, never re-posted.
+              const retired = (
+                await tx.query(
+                  "UPDATE crm.olist_exports SET state='invalidated',last_error_code='OLIST_EXPORT_RESUMED',version=version+1,updated_at=$2 WHERE id=$1 AND state IN ('queued','resolving','ready') RETURNING id,version",
+                  [existing.id, acceptedAt],
+                )
+              ).rows[0];
+              if (!retired) throw new OlistError('OLIST_EXPORT_CONFLICT', 409);
+              await tx.query(
+                "INSERT INTO crm.audit_events(id,actor_id,action,target_type,target_id,version,reason,correlation_id,occurred_at) VALUES($1,$2,'olist.export.resume','olist-export',$3,$4,'OLIST_EXPORT_RESUMED',$5,$6)",
+                [
+                  randomUUID(),
+                  input.actor.id,
+                  retired.id,
+                  String(retired.version),
+                  String(input.correlationId ?? '').slice(0, 128) || 'olist-resume',
+                  acceptedAt,
+                ],
+              );
+              existing = null;
+            }
+          }
           if (existing) {
             if (existing.command_fingerprint !== semantic)
               throw new OlistError('OLIST_EXPORT_CONFLICT', 409);
             return response(existing, number);
           }
-          const current = await preview.assertFreshReceipt(
-            { ...input, transaction: tx },
-            receipt,
-          );
-          const acceptedAt = clock();
           const proposedDay = receipt.binding.proposedDay;
           if (proposedDay && proposedDay !== operationalDay(acceptedAt))
             throw new OlistError('OLIST_PREVIEW_STALE', 409);

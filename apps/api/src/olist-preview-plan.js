@@ -234,6 +234,8 @@ export function buildOlistPreviewPlan(input) {
   else {
     if (!['pendente', 'confirmado'].includes(order.status))
       issue('OLIST_ORDER_INVALID', 'status');
+    else if (!input.historicalLink && order.status !== 'confirmado')
+      issue('ORDER_NOT_CONFIRMED', 'status');
     if (order.cancelledAt) issue('OLIST_ORDER_CANCELLED', 'cancelledAt');
     try {
       validateItems(order.ficha.items);

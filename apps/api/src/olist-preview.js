@@ -203,6 +203,7 @@ export function createOlistPreview(database, options) {
       // sets its own reference on the returned snapshot (ADR 073).
       const buyerSource = null;
       const creationEnabled = Boolean(
+        (action !== 'olist.export' || order.status === 'confirmado') &&
         config.configured &&
         config.pilotUserIds?.includes(actor.id) &&
         account?.creation_enabled &&
@@ -239,6 +240,26 @@ export function createOlistPreview(database, options) {
               ? input.paymentDueOn
               : null
             : (settings?.paymentDueOn ?? null);
+      const orderRevision =
+        action === 'olist.export'
+          ? Number(order.commercialRevision ?? order.version)
+          : Number(order.version);
+      const hashedSource =
+        action === 'olist.export' && source.order
+          ? {
+              ...source,
+              order: {
+                ...source.order,
+                version: orderRevision,
+                paidOn: null,
+                deliveredOn: null,
+                paymentReviewRequired: false,
+                fichaFirstPrintedAt: null,
+                fichaFirstPrintedBy: null,
+                updatedAt: null,
+              },
+            }
+          : source;
       const binding = {
         actorId: actor.id,
         authorizationVersion: actor.olistAuthorizationVersion,
@@ -249,7 +270,7 @@ export function createOlistPreview(database, options) {
         connectionGeneration: Number(row?.generation ?? 0),
         connected,
         settingsVersion: Number(settingsRow?.version ?? 0),
-        orderVersion: order.version,
+        orderVersion: orderRevision,
         proposedDay: order.orderDate ? null : operationalDay(clock()),
         sourceRevision: source.sourceRevision,
         buyerVersion,
@@ -259,7 +280,7 @@ export function createOlistPreview(database, options) {
         buyerSourceDigest: null,
         // Hash contents as well as versions: a malformed/stale writer cannot reuse a receipt.
         contents: identityHash(config.hmacKey, 'preview-source', [
-          source,
+          hashedSource,
           buyer,
           [buyerContactId, buyerVersion, source.sourceRevision],
           settings,
@@ -291,6 +312,9 @@ export function createOlistPreview(database, options) {
           contactId: buyerContactId,
           contactVersion: buyerVersion,
           sourceRevision: source.sourceRevision,
+          ...(action === 'olist.export'
+            ? { commercialRevision: orderRevision }
+            : {}),
         },
       };
     };
@@ -496,9 +520,28 @@ export function createOlistPreview(database, options) {
     // Server-only administration reads share the source fence, not export authority.
     snapshotForAdministration: (/** @type {any} */ input) =>
       snapshot(input, 'olist.link', false),
+    /** Local read-only eligibility evaluation for GET /api/v1/orders/:orderId/olist (OLC-T04).
+     * Never calls the ERP.
+     * @param {any} input */
+    async localPlan(input) {
+      const current = await snapshot(
+        input,
+        input.action ?? 'order.read',
+        false,
+      );
+      const plan = buildOlistPreviewPlan({
+        source: current.source,
+        buyer: current.buyer,
+        settings: current.settings,
+        now: clock(),
+        paymentDueOn: input.paymentDueOn,
+      });
+      return { current, plan };
+    },
     // Server-only reader: the caller has already locked current authority.
     readReceipt,
     assertFreshReceipt,
+    prepareDirectReceipt,
     /** Re-read current authority and all local versions; no remote call or reservation.
      * @param {any} input */
     async checkPreview(input) {
@@ -507,6 +550,8 @@ export function createOlistPreview(database, options) {
       const receipt = readReceipt(input);
       const source = receiptSource(input, receipt);
       const current = source === input ? initial : await snapshot(source);
+      if (current.order?.status !== 'confirmado')
+        throw new OlistError('ORDER_NOT_CONFIRMED', 409);
       assertBuyerRegistration(current, receipt);
       validateFresh(current, receipt);
       return {
@@ -622,8 +667,71 @@ export function createOlistPreview(database, options) {
    * @param {any} input @param {any} receipt */
   async function assertFreshReceipt(input, receipt) {
     const current = await snapshot(receiptSource(input, receipt));
+    if (current.order?.status !== 'confirmado')
+      throw new OlistError('ORDER_NOT_CONFIRMED', 409);
     assertBuyerRegistration(current, receipt);
     validateFresh(current, receipt);
     return current;
+  }
+  /** Direct order-level export command without a prior preview receipt (OLC-01,
+   * OLC-04, OLC-09). Runs inside the command transaction with zero HTTP calls.
+   * @param {any} input @param {Date} [acceptedAt] */
+  async function prepareDirectReceipt(input, acceptedAt = clock()) {
+    const current = await snapshot(input, 'olist.export', false);
+    if (current.operation?.state === 'legacy_review_required')
+      throw new OlistError('OLIST_LEGACY_REVIEW_REQUIRED', 409);
+    if (current.order?.status !== 'confirmado')
+      throw new OlistError('ORDER_NOT_CONFIRMED', 409);
+    const plan = buildOlistPreviewPlan({
+      source: current.source,
+      buyer: current.buyer,
+      settings: current.settings,
+      now: acceptedAt,
+      paymentDueOn: input.paymentDueOn,
+    });
+    if (plan.issues.some((entry) => entry.code === 'OLIST_ORDER_CANCELLED'))
+      throw new OlistError('ORDER_CANCELLED', 409);
+    if (plan.issues.some((entry) => entry.code === 'ORDER_NOT_CONFIRMED'))
+      throw new OlistError('ORDER_NOT_CONFIRMED', 409);
+    if (
+      (current.buyer !== null &&
+        current.buyer !== undefined &&
+        olistBuyerRegistrationIssues(current.buyer).length > 0) ||
+      plan.issues.some(
+        (entry) =>
+          entry.code.startsWith('OLIST_BUYER_') ||
+          entry.code.startsWith('OLIST_CUSTOMER_'),
+      )
+    )
+      throw new OlistError('OLIST_CUSTOMER_INVALID', 409);
+    if (plan.issues.some((entry) => entry.code === 'OLIST_PAYMENT_DUE_REQUIRED'))
+      throw new OlistError('OLIST_PAYMENT_DUE_REQUIRED', 409);
+    if (
+      plan.issues.some(
+        (entry) =>
+          entry.code === 'OLIST_FRACTIONAL_CENT_UNIT' ||
+          entry.code === 'OLIST_EXACT_CENT_REQUIRED',
+      )
+    )
+      throw new OlistError('OLIST_SALE_EXACT_CENT_REQUIRED', 409);
+    if (!plan.eligible || plan.issues.length > 0 || !plan.customer)
+      throw new OlistError('OLIST_ORDER_INCOMPLETE', 409);
+    const receipt = {
+      binding: current.binding,
+      createdAt: acceptedAt.toISOString(),
+      expiresAt: new Date(acceptedAt.getTime() + TTL).toISOString(),
+      commercial: plan.commercial,
+      customer: plan.customer,
+      buyerSource: null,
+      settings: current.settings,
+      productFiscal: current.productFiscal,
+      productFiscalDeferred: current.productFiscalDeferred,
+      policy: 'exact-cent-v1',
+      sourceVersions: current.sourceVersions,
+      registrations: null,
+    };
+    if (olistNewSendBuyerBlocked(receipt))
+      throw new OlistError('OLIST_CUSTOMER_INVALID', 409);
+    return { current, receipt };
   }
 }

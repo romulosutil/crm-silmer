@@ -15,6 +15,12 @@
 
 Esta fatia é documental; não publica workflow nem envia mensagens.
 
+## Datas do pedido horizontais — DTL (11/11/2026)
+
+Plano e evidências em [order-timeline](../order-timeline/tasks.md), DTL-01–12.
+Implementação autorizada pelo proprietário após protótipo DTL-P01–P06;
+controle de conclusão e gates no plano específico. Sem ativação de produção.
+
 ## INBOX-PDF-01 — corrigir PDF recebido na Inbox (11/11/2026)
 
 INB-01, MSG-01–03 e PRV-03; correção do fluxo existente, sem nova arquitetura.

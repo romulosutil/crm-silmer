@@ -85,17 +85,17 @@ infraestrutura. Não é um histórico de todas as reaberturas do pedido.
 
 ## Requirement Traceability
 
-| ID     | Task  | Status       |
-| ------ | ----- | ------------ |
-| DTL-01 | T2/T3 | implementing |
-| DTL-02 | T2/T3 | implementing |
-| DTL-03 | T2/T3 | implementing |
-| DTL-04 | T2/T3 | implementing |
-| DTL-05 | T2/T3 | implementing |
-| DTL-06 | T3    | implementing |
-| DTL-07 | T3    | implementing |
-| DTL-08 | T3    | implementing |
-| DTL-09 | T2/T3 | implementing |
-| DTL-10 | T3    | implementing |
-| DTL-11 | T3    | implementing |
-| DTL-12 | T3    | implementing |
+| ID     | Task  | Status   |
+| ------ | ----- | -------- |
+| DTL-01 | T2/T3 | verified |
+| DTL-02 | T2/T3 | verified |
+| DTL-03 | T2/T3 | verified |
+| DTL-04 | T2/T3 | verified |
+| DTL-05 | T2/T3 | verified |
+| DTL-06 | T3    | verified |
+| DTL-07 | T3    | verified |
+| DTL-08 | T3    | verified |
+| DTL-09 | T2/T3 | verified |
+| DTL-10 | T3    | verified |
+| DTL-11 | T3    | verified |
+| DTL-12 | T3    | verified |

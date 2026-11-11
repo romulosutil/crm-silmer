@@ -2,6 +2,11 @@
 
 ## Decisão de 11/11/2026
 
+- [085 — Recuperação de leads por modo de atendimento](085-recuperacao-de-leads-por-modo-de-atendimento.md),
+  [RFC 063](../rfc/063-recuperacao-de-leads-sem-retorno-no-n8n.md) / REC-01–12:
+  n8n dedicado após Sem retorno, sugestão nas conversas humanas e envio
+  automático apenas com o agente. Decisão documental, sem ativação.
+
 - [084 — Caixa de Entrada refinada](084-caixa-de-entrada-refinada.md),
   INBOX-RD-01–09 / `design.md` §21: lista de 300 px, aviso de mensagem nova
   por navegador, histórico em coluna com grupos de mensagens, compositor em

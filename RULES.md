@@ -213,6 +213,16 @@ recebimento integral; salvar entrega não o libera (FINQ-17–19).
 
 ## Regras de produto
 
+A [ADR 085](docs/adr/085-recuperacao-de-leads-por-modo-de-atendimento.md) /
+[RFC 063](docs/rfc/063-recuperacao-de-leads-sem-retorno-no-n8n.md), decidida
+em 11/11/2026, autoriza a capacidade de recuperação após Sem retorno por
+workflow n8n dedicado: sugestão interna ao vendedor no atendimento humano e
+envio automático somente no modo agente, sob contrato próprio do CRM. Não
+altera as regras 5 e 19 para conversas humanas: não envia, não muda dono e não
+retoma o bot. A observação da ficha continua independente. Requisitos
+[REC-01–12](.specs/features/lead-recovery/spec.md); implementação e ativação
+pendentes em [REC-T01–T04](.specs/features/lead-recovery/tasks.md).
+
 1. Toda mensagem válida entra na Caixa de Entrada e dispara automaticamente o n8n; a UI não inicia a automação.
 2. Cliente é `Contact` com zero ou mais `ContactIdentity`: o cadastro humano pode preceder o canal. A chegada resolve contato e conversa, mas não confirma venda. Identidades só são ligadas por correlação verificável.
 3. Kanban e Negócio estão aposentados (ADR 004); novas capacidades não reutilizam tabelas ou módulos históricos desse domínio.

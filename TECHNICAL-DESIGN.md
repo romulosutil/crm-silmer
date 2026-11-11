@@ -1,5 +1,18 @@
 # TDD — CRM Silmer MVP
 
+## Recuperação de leads após Sem retorno (11/11/2026)
+
+[ADR 085](docs/adr/085-recuperacao-de-leads-por-modo-de-atendimento.md) /
+[RFC 063](docs/rfc/063-recuperacao-de-leads-sem-retorno-no-n8n.md), REC-01–12:
+n8n dedicado consulta elegibilidade pelo CRM e gera sugestão interna em modo
+humano; somente modo agente admite envio automático sob reserva própria.
+A classificação continua a da ADR 065, derivada em leitura. A proposta prevê
+poll de cinco minutos, ledger por ciclo, revalidação de contexto e transporte
+existente, sem replay/fabricação de inbound ou reutilização de revisão consumida.
+Endpoints, capacidade, ledger, UI, workflow e gates estão em
+[REC-T01–T04](.specs/features/lead-recovery/tasks.md), ainda pendentes.
+Esta decisão documental não altera API, worker, schema, flags ou produção.
+
 ## Cadastro do comprador no envio Olist em 10/11/2026
 
 [ADR 082](docs/adr/082-cadastro-obrigatorio-somente-no-envio-olist.md), OLC-04/07:

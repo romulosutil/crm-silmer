@@ -1,5 +1,18 @@
 # Arquitetura — baseline do CRM Silmer
 
+## Recuperação após Sem retorno (11/11/2026)
+
+[ADR 085](docs/adr/085-recuperacao-de-leads-por-modo-de-atendimento.md) /
+[RFC 063](docs/rfc/063-recuperacao-de-leads-sem-retorno-no-n8n.md),
+[REC-01–12](.specs/features/lead-recovery/spec.md): workflow n8n dedicado,
+sugestão interna no atendimento humano e envio automático só com o agente.
+A aba segue derivada e o CRM controla elegibilidade, contexto, reserva e
+auditoria; a recuperação não simula nova inbound nem reabre revisão consumida.
+Preserva handoff definitivo, posse e o transporte existente. Poll periódico,
+ledger por ciclo e guardas estão propostos na RFC. REC-T00 documental;
+[REC-T01–T04](.specs/features/lead-recovery/tasks.md) pendentes, sem runtime,
+workflow publicado ou efeito em clientes.
+
 ## Cadastro obrigatório somente para exportação Olist em 10/11/2026
 
 [ADR 082](docs/adr/082-cadastro-obrigatorio-somente-no-envio-olist.md) corrige a

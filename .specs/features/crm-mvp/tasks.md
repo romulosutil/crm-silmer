@@ -15,6 +15,12 @@
 
 Esta fatia é documental; não publica workflow nem envia mensagens.
 
+## Cobranças simplificadas — BCS (11/11/2026)
+
+[Contrato e tarefas](../billing-simplified/tasks.md), BCS-01–09: lista única,
+comandos existentes e correção do polling visual. Implementação autorizada
+após BCP-P01; gates e evidências no plano específico. Sem ativação de produção.
+
 ## Datas do pedido horizontais — DTL (11/11/2026)
 
 Plano e evidências em [order-timeline](../order-timeline/tasks.md), DTL-01–12.

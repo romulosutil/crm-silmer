@@ -76,9 +76,15 @@ F2, vínculo do recebimento externo ao ledger preservado por assertion explícit
 
 **Gate**: Full, unit e E2E BCS, typecheck/lint e diff check.
 
+O aviso de granularidade do validador é aceito nesta tarefa: a propriedade
+de pausa exige o contrato do pai e do filho na mesma entrega verificável.
+
 ### T4: Revisão independente e operação local (BCS-T04)
 
-- [ ] Concluída.
+- [x] Concluída: revisão independente PASS 9/9, sensor 3/3, gate validate
+      final aprovado, 14 E2E BCS e smoke persistido. Global Windows: 923 aprovados,
+      sete skips e duas falhas de ambiente cobertas por reteste inalterado (um caso)
+      e fallback Linux documentado (dois casos). Evidências no relatório.
 
 **Where**: `.specs/features/billing-simplified/validation.md` e runbook.
 

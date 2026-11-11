@@ -55,22 +55,23 @@ Open questions: none for this implementation.
 - BCS-09: WHILE o Pedido não tem operação financeira em andamento, THE UI
   SHALL evitar polling contínuo; WHILE uma operação aguarda atualização,
   THE UI SHALL usar um único ciclo silencioso, pausar em diálogo/edição/aba
-  oculta e preservar foco, rascunho e detalhes. WHEN a resposta é idêntica,
+  oculta e preservar foco, rascunho e detalhes. WHEN a resposta é idêntica
+  e não há passagem da validade conhecida de um link,
   THE UI SHALL conservar o snapshot e não ativar carregamento ou redesenho.
 
 ## Requirement Traceability
 
-| ID     | Task        | Status   |
-| ------ | ----------- | -------- |
-| BCS-01 | T1/T2/T3/T4 | verified |
-| BCS-02 | T1/T2/T3/T4 | verified |
-| BCS-03 | T2/T4       | verified |
-| BCS-04 | T2/T4       | verified |
-| BCS-05 | T2/T4       | verified |
-| BCS-06 | T2/T4       | verified |
-| BCS-07 | T2/T4       | verified |
-| BCS-08 | T2/T4       | verified |
-| BCS-09 | T2/T3/T4    | verified |
+| ID     | Task           | Status   |
+| ------ | -------------- | -------- |
+| BCS-01 | T1/T2/T3/T4    | verified |
+| BCS-02 | T1/T2/T3/T4    | verified |
+| BCS-03 | T2/T4          | verified |
+| BCS-04 | T2/T4          | verified |
+| BCS-05 | T2/T4/T5/T6    | verified |
+| BCS-06 | T2/T4          | verified |
+| BCS-07 | T2/T4          | verified |
+| BCS-08 | T2/T4          | verified |
+| BCS-09 | T2/T3/T4/T5/T6 | verified |
 
 ## Out of Scope
 

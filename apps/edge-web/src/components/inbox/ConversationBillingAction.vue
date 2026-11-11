@@ -104,12 +104,13 @@ onBeforeUnmount(() => {
   <div class="conversation-billing-action">
     <button
       type="button"
+      class="quiet"
       title="Cobranças e pagamentos"
       aria-label="Cobranças e pagamentos"
       :disabled="disabled"
       @click="open"
     >
-      <AppIcon name="credit-card" /><span class="sr-only"
+      <AppIcon name="credit-card" /><span class="composer-label"
         >Cobranças e pagamentos</span
       >
     </button>

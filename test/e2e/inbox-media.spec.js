@@ -762,7 +762,12 @@ for (const viewport of [
       page.getByRole('button', { name: 'Anexar arquivo', exact: true }),
     ).toBeFocused();
     await page.keyboard.press('Tab');
-    // COB-REL-01 and T139 share the toolbar's native keyboard order.
+    // INBOX-RD-05: the focus order is the visual one, media group first
+    // (Anexar, Gravar), then the order group (COB-REL-01 and T139), then send.
+    await expect(
+      page.getByRole('button', { name: 'Gravar áudio', exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
     const billing = page.getByRole('button', {
       name: 'Cobranças e pagamentos',
       exact: true,
@@ -772,10 +777,6 @@ for (const viewport of [
     await page.keyboard.press('Tab');
     await expect(
       page.getByRole('button', { name: 'Cotar frete', exact: true }),
-    ).toBeFocused();
-    await page.keyboard.press('Tab');
-    await expect(
-      page.getByRole('button', { name: 'Gravar áudio', exact: true }),
     ).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(send).toBeFocused();

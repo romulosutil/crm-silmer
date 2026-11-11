@@ -9,6 +9,12 @@ const props = defineProps({
   expectedVersion: { type: Number, required: true },
   disabled: { type: Boolean, default: false },
   recording: { type: Object, default: null },
+  // INBOX-RD-05: `disabled` for a reason shown beside the field (who may reply)
+  // renders aria-disabled: still focusable, described by `reasonId`, inert.
+  unavailable: { type: Boolean, default: false },
+  reasonId: { type: String, default: '' },
+  // The "Pedido" group exists only when someone has one of its tools.
+  orderTools: { type: Boolean, default: false },
 });
 const emit = defineEmits(['sent', 'sending-change', 'recording-dismissed']);
 const inputId = useId(),
@@ -50,6 +56,11 @@ watch(
   (sending) => emit('sending-change', sending),
   { immediate: true },
 );
+const softDisabled = computed(() => props.disabled && props.unavailable);
+function attach() {
+  if (props.disabled) return;
+  fileInput.value?.click();
+}
 const sendAllowed = computed(
   () =>
     !props.disabled &&
@@ -539,18 +550,36 @@ watch(
     <p v-if="error" role="alert" class="media-composer__error">{{ error }}</p>
     <div class="media-composer__toolbar">
       <div class="media-composer__tools">
-        <button
-          ref="attachButton"
-          type="button"
-          title="Anexar arquivo"
-          aria-label="Anexar arquivo"
-          :disabled="disabled || state === 'sending'"
-          :aria-describedby="status ? statusId : undefined"
-          @click="fileInput?.click()"
-        >
-          <AppIcon name="paperclip" />
-        </button>
-        <slot name="tools" />
+        <div class="composer-group" role="group" aria-label="Mídia">
+          <button
+            ref="attachButton"
+            type="button"
+            class="quiet"
+            title="Anexar arquivo"
+            aria-label="Anexar arquivo"
+            :disabled="(disabled && !unavailable) || state === 'sending'"
+            :aria-disabled="
+              softDisabled && state !== 'sending' ? 'true' : undefined
+            "
+            :aria-describedby="
+              softDisabled && reasonId
+                ? reasonId
+                : status
+                  ? statusId
+                  : undefined
+            "
+            @click="attach"
+          >
+            <AppIcon name="paperclip" />
+          </button>
+          <slot name="media-tools" />
+        </div>
+        <template v-if="orderTools">
+          <span class="composer-divider" aria-hidden="true"></span>
+          <div class="composer-group" role="group" aria-label="Pedido">
+            <slot name="tools" />
+          </div>
+        </template>
       </div>
       <div class="media-composer__actions">
         <button
@@ -691,10 +720,23 @@ watch(
 .media-composer__file-heading,
 .media-composer__toolbar,
 .media-composer__tools,
+.composer-group,
 .media-composer__actions {
   display: flex;
   align-items: center;
+  gap: var(--space-2);
+}
+.media-composer__file-heading {
   gap: var(--space-3);
+}
+.composer-group {
+  flex-wrap: wrap;
+}
+/* A rule between the two groups: 8 px of gap on each side of it. */
+.composer-divider {
+  inline-size: 1px;
+  block-size: var(--space-6);
+  background: var(--color-border);
 }
 .media-composer__file-heading,
 .media-composer__toolbar {

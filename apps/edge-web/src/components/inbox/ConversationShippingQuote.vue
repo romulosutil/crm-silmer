@@ -306,12 +306,13 @@ defineExpose({ open });
   <div class="conversation-shipping-action">
     <button
       type="button"
+      class="quiet"
       title="Cotar frete"
       aria-label="Cotar frete"
       :disabled="disabled"
       @click="open($event.currentTarget)"
     >
-      <AppIcon name="truck" /><span class="sr-only">Cotar frete</span>
+      <AppIcon name="truck" /><span class="composer-label">Cotar frete</span>
     </button>
     <!-- The composer styles every button inside it; the dialog lives on <body>. -->
     <Teleport to="body">

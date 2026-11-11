@@ -280,12 +280,14 @@ export function turnClock(conversation, now) {
 
 /** @typedef {'error'|'warning'|'success'|'info'} BadgeTone */
 /** @typedef {{key: string, label: string, tone?: BadgeTone}} Badge */
-/** @typedef {{bucket?: string, actorId?: string, ownerName?: string, reminderLabel?: (instant: unknown) => string}} BadgeContext */
+/** @typedef {{bucket?: string, actorId?: string, ownerName?: string, reminderLabel?: (instant: unknown) => string, isUnread?: (conversationId: string) => boolean}} BadgeContext */
 /**
  * One seal of the card, declared once. `priority` orders the seals by default
  * (lower first: what blocks the reply, then what helps decide, then who has
  * it); `leadsIn` names the tabs where this seal goes first, so it never falls
- * into "+N" (P1-B). `tone` is fixed or computed; no tone means a neutral seal.
+ * into "+N" (P1-B). Only "Mensagem nova" (INBOX-RD-02), with a negative
+ * priority, goes before a tab's leader. `tone` is fixed or computed; no tone
+ * means a neutral seal.
  *
  * @typedef {object} BadgeRule
  * @property {string} key
@@ -347,6 +349,16 @@ function ownerSeal(conversation, context) {
  * @type {ReadonlyArray<BadgeRule>}
  */
 export const BADGE_RULES = Object.freeze([
+  {
+    // INBOX-RD-02: the customer wrote and nobody opened it in this browser.
+    // Always the first seal, so it counts in the two visible ones.
+    key: 'unread',
+    priority: -10,
+    tone: 'info',
+    applies: (conversation, context) =>
+      context.isUnread?.(conversation.id) === true,
+    label: () => 'Mensagem nova',
+  },
   {
     key: 'delivery',
     priority: 10,
@@ -440,6 +452,27 @@ export function conversationBadges(conversation, context = {}) {
     ranked.push({ badge, rank: leads ? -1 : rule.priority });
   }
   return ranked.sort((a, b) => a.rank - b.rank).map((item) => item.badge);
+}
+
+/**
+ * INBOX-RD-03 (design.md §8 Badge): a seal with a tone shows the icon of its
+ * tone next to the words; a neutral seal (who has it, the loss reason) has
+ * none. The icon is decorative: the label carries the state.
+ */
+const TONE_ICONS = Object.freeze({
+  success: 'check',
+  warning: 'alert',
+  error: 'alert',
+  info: 'info',
+});
+
+/**
+ * @param {Badge} badge
+ * @returns {string} the AppIcon name for the seal, or '' for a neutral one.
+ */
+export function badgeIcon(badge) {
+  if (badge?.key === 'unread') return 'message';
+  return (badge?.tone && TONE_ICONS[badge.tone]) || '';
 }
 
 /**

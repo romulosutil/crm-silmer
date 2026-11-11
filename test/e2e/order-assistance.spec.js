@@ -192,7 +192,7 @@ async function openAssistanceDetails(page) {
     .getByRole('button', { name: 'Detalhes do atendimento', exact: true })
     .click();
   await page
-    .getByRole('button', { name: 'Pedidos e assuntos', exact: true })
+    .getByRole('tab', { name: 'Pedidos e assuntos', exact: true })
     .click();
   return page.locator('.context-assistance');
 }

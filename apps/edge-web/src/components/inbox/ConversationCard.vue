@@ -1,14 +1,15 @@
 <script setup>
+import { computed } from 'vue';
 import AppIcon from '../AppIcon.vue';
 import { CHANNEL_LABELS, messageText } from '../../lib/format.js';
-import { previewAuthor } from '../../lib/inbox-turn.js';
+import { badgeIcon, previewAuthor } from '../../lib/inbox-turn.js';
 
 /**
  * RFC 052 card: who and how long; what was said; up to two seals. The time
  * and the seals are computed by the list (they depend on the clock, the tab
  * and the owner scope); the card only draws them.
  */
-defineProps({
+const props = defineProps({
   /** @type {import('vue').PropType<Record<string, any>>} */
   conversation: { type: Object, required: true },
   /**
@@ -24,6 +25,14 @@ defineProps({
 });
 /** `open(conversationId)`: the row was activated. */
 const emit = defineEmits(['open']);
+
+/**
+ * INBOX-RD-02: the "Mensagem nova" seal comes from the list's seals, so the
+ * card never decides on its own; its accessible name starts with it.
+ */
+const unread = computed(() =>
+  props.badges.visible.some((badge) => badge.key === 'unread'),
+);
 </script>
 
 <template>
@@ -31,9 +40,11 @@ const emit = defineEmits(['open']);
     type="button"
     class="conversation-row"
     :data-conversation-id="conversation.id"
+    :data-unread="unread ? 'true' : undefined"
     :aria-current="current ? 'true' : undefined"
     @click="emit('open', conversation.id)"
   >
+    <span v-if="unread" class="sr-only">Mensagem nova. </span>
     <span class="conv-top">
       <span class="conv-name" :title="conversation.contact.label">{{
         conversation.contact.label
@@ -70,7 +81,9 @@ const emit = defineEmits(['open']);
         :key="badge.key"
         class="badge"
         :data-tone="badge.tone"
-        ><AppIcon v-if="badge.key === 'delivery'" name="alert" />{{
+        :data-badge="badge.key"
+        :aria-hidden="badge.key === 'unread' ? 'true' : undefined"
+        ><AppIcon v-if="badgeIcon(badge)" :name="badgeIcon(badge)" />{{
           badge.label
         }}</span
       ><span v-if="badges.hidden.length" class="badge" data-overflow="true"

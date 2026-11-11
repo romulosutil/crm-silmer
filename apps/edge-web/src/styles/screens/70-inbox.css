@@ -402,8 +402,22 @@
   white-space: nowrap;
 }
 
+/* INBOX-RD-02: the customer wrote and nobody opened it. The seal says so in
+   words; the preview reads like unread text, never color alone. */
+.conversation-row[data-unread='true'] .conv-preview {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+
+/* The notice of marks out of sight sits between the summary and the list. */
+.inbox-list-pane > .inbox-unread-notice {
+  flex: none;
+  margin: var(--space-2) var(--space-2) 0;
+}
+
 /* At most two seals and a "+N" that names the rest (design.md §18). A seal
-   never breaks inside; in the 14rem column the second one wraps whole. */
+   never breaks inside; in the narrowest list column the second one wraps
+   whole. */
 .conv-badges {
   display: flex;
   flex-wrap: wrap;
@@ -491,9 +505,9 @@
   flex: none;
   align-items: center;
   gap: var(--space-2);
-  min-block-size: var(--control-height-sm);
+  min-block-size: var(--control-height);
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   white-space: nowrap;
   text-decoration: none;
   border-radius: var(--radius-md);
@@ -507,6 +521,20 @@
 
 .conv-order-link:hover .conv-order-number {
   text-decoration-thickness: 2px;
+}
+
+/* INBOX-RD-03 (design.md §8 Badge): a status seal is icon and words; the
+   icon is decorative. The same in the list, the header and the panel. */
+.conv-order-link .badge,
+.subject-list .badge {
+  gap: var(--space-1);
+}
+
+.conv-order-link .badge .app-icon,
+.subject-list .badge .app-icon {
+  flex: none;
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
 }
 
 .conv-identity {
@@ -525,12 +553,12 @@
 
 .conv-actions > button,
 .conv-more > button {
-  min-block-size: var(--control-height-sm);
+  min-block-size: var(--control-height);
   padding: var(--space-1) var(--space-3);
 }
 
 .conv-actions > .conv-context-toggle {
-  min-inline-size: var(--control-height-sm);
+  min-inline-size: var(--control-height);
   gap: var(--space-2);
   padding-inline: var(--space-3);
   white-space: nowrap;
@@ -678,14 +706,17 @@
   }
 }
 
+/* INBOX-RD-03: a centered reading column. The inline padding grows so the
+   messages never spread wider than the column, whatever the pane's width. */
 .thread {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--space-3);
-  min-block-size: 3rem;
+  gap: 0;
+  min-block-size: var(--space-12);
   margin: 0;
-  padding: var(--space-4);
+  padding: var(--space-4)
+    max(var(--space-4), calc((100% - var(--inbox-thread-max-inline-size)) / 2));
   overflow-y: auto;
   overscroll-behavior-y: contain;
   scrollbar-gutter: stable;
@@ -700,67 +731,97 @@
   outline-offset: -2px;
 }
 
+/* INBOX-RD-03 (RD-04): one row per message, grouped by author. The row is
+   the side and the width; the bubble inside it carries the surface. 4 px
+   between messages of a group, 16 px before a new group. */
 .message {
   display: grid;
+  justify-items: start;
   align-self: flex-start;
   gap: var(--space-1);
-  max-inline-size: min(36rem, 88%);
+  inline-size: 100%;
+}
+
+.thread > li + li {
+  margin-block-start: var(--space-1);
+}
+
+.thread > li + li[data-group-start='true'] {
+  margin-block-start: var(--space-4);
+}
+
+.message[data-side='out'] {
+  justify-items: end;
+}
+
+.msg-bubble {
+  /* The containing block of the message's screen-reader text, so it never
+     escapes the history's scroller. */
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  max-inline-size: min(var(--inbox-message-max-inline-size), 88%);
+  min-inline-size: 0;
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-lg);
-  border-end-start-radius: var(--radius-sm);
 }
 
-.message[data-side='out'] {
-  align-self: flex-end;
-  border-end-start-radius: var(--radius-lg);
-  border-end-end-radius: var(--radius-sm);
+/* Text and time share a line when they fit; everything else takes a row. */
+.msg-bubble > * {
+  flex: 1 0 100%;
+  min-inline-size: 0;
 }
 
-.message[data-from='agente'] {
+.msg-bubble > .msg-text {
+  flex: 1 1 auto;
+}
+
+.msg-bubble > .msg-time {
+  flex: none;
+  margin-inline-start: auto;
+}
+
+.message[data-from='agente'] .msg-bubble {
   background: var(--status-info-surface);
   border-color: transparent;
 }
 
-.message[data-from='humano'] {
+.message[data-from='humano'] .msg-bubble {
   background: var(--color-selected);
   border-color: transparent;
 }
 
+/* Metadata: --text-xs, muted, 400/500. Identity: 600. */
 .msg-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-1) var(--space-3);
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-}
-
-.msg-sender {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   min-inline-size: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
 }
 
 .msg-author {
   color: var(--color-text);
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
 }
 
 .message-avatar {
   display: grid;
   flex: none;
   place-items: center;
-  inline-size: 1.375rem;
-  block-size: 1.375rem;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
   color: var(--color-text-muted);
   font-size: var(--text-xs);
-  font-weight: 700;
+  font-weight: var(--weight-medium);
   line-height: 1;
-  background: var(--color-surface);
+  background: var(--color-selected);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
 }
@@ -780,12 +841,17 @@
 }
 
 .msg-time {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
   font-variant-numeric: tabular-nums;
 }
 
+/* Content: --text-sm on a notebook, --text-base on a phone, 400. */
 .message p {
   margin: 0;
   font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
   overflow-wrap: anywhere;
   white-space: pre-line;
 }
@@ -1067,8 +1133,8 @@
 }
 
 .inbox-context-head button {
-  min-inline-size: var(--control-height-sm);
-  min-block-size: var(--control-height-sm);
+  min-inline-size: var(--control-height);
+  min-block-size: var(--control-height);
   padding: 0;
 }
 
@@ -1436,8 +1502,13 @@
     padding: var(--space-3);
   }
 
-  .message {
+  .msg-bubble {
     max-inline-size: 92%;
+  }
+
+  .message .msg-text,
+  .message .message-media-caption {
+    font-size: var(--text-base);
   }
 
   .inbox-composer {
@@ -1495,25 +1566,55 @@
   margin-inline: var(--space-5);
   border-block-end: 1px solid var(--color-border-subtle);
 }
-.context-tabs button {
+/* INBOX-RD-08 (design.md §8 Tabs): real tabs, neutral selection. */
+.context-tabs [role='tab'] {
   min-block-size: var(--control-height);
   padding: var(--space-2) 0;
   color: var(--color-text-muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   background: transparent;
   border: 0;
-  border-block-end: 2px solid transparent;
+  border-block-end: var(--focus-ring-width) solid transparent;
   border-radius: 0;
   box-shadow: none;
 }
-.context-tabs button[aria-pressed='true'] {
+.context-tabs [role='tab']:hover:not(:disabled) {
   color: var(--color-text);
+  background: transparent;
+}
+.context-tabs [role='tab'][aria-selected='true'] {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
   border-block-end-color: var(--color-focus);
 }
 .inbox-context .context-section,
 .inbox-context .subject-panel {
   gap: var(--space-4);
   padding: var(--space-5);
+}
+/* 24 px between the sections of a panel, 8 px inside each one. */
+.inbox-context .context-panel {
+  display: grid;
+  align-content: start;
+  gap: var(--space-6);
+  padding: var(--space-5);
+}
+.inbox-context .context-panel:focus-visible {
+  outline-offset: calc(var(--focus-ring-offset) * -1);
+}
+.inbox-context .context-panel > .context-section,
+.inbox-context .context-panel > .subject-panel {
+  gap: var(--space-2);
+  padding: 0;
+  border-block-end: 0;
+}
+.inbox-context .context-panel .context-section h3,
+.inbox-context .context-panel .subject-panel h3 {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.context-assistance:empty {
+  display: none;
 }
 .inbox-context .context-facts {
   gap: 0;
@@ -1605,8 +1706,7 @@
   block-size: 0.875rem;
   color: var(--color-text-muted);
 }
-.contact-avatar,
-.message .message-avatar {
+.contact-avatar {
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -1616,11 +1716,6 @@
   font-size: var(--text-sm);
   background: var(--color-selected);
   border-radius: var(--radius-pill);
-}
-.message .message-avatar {
-  inline-size: 1.25rem;
-  block-size: 1.25rem;
-  font-size: var(--text-xs);
 }
 .conv-head {
   gap: var(--space-2);
@@ -1634,7 +1729,7 @@
 }
 .conv-actions {
   flex: none;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 .conv-actions > .conv-context-toggle,
 .conv-more > button {

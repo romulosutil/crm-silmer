@@ -45,3 +45,24 @@ export function factoryContent(ficha) {
   });
   return [...observations, ...complementary];
 }
+
+// About 1 MB of data URI text, counted in characters.
+const ART_PREVIEW_MAX = 1_000_000;
+const ART_PREVIEW =
+  /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/u;
+
+/**
+ * The art preview of an item (FPI-11): only an inline raster image goes to
+ * the paper, so the PDF renderer never fetches remote content and no SVG
+ * reaches the document. Anything else is not a preview and returns ''.
+ *
+ * @param {unknown} value
+ * @returns {string}
+ */
+export function safeArtPreview(value) {
+  return typeof value === 'string' &&
+    value.length <= ART_PREVIEW_MAX &&
+    ART_PREVIEW.test(value)
+    ? value
+    : '';
+}

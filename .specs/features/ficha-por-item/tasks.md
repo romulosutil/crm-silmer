@@ -30,7 +30,7 @@ Requisitos: [spec.md](spec.md). Decisão:
 ### FPI-T03: assinatura física e produção
 
 - [ ] Imprimir as amostras na impressora laser da fábrica e escrever à caneta nas
-      linhas pautadas, na linha "Conferido" e nas caixas.
+      linhas pautadas e na linha "Conferido".
 - [ ] Conferir a legibilidade do visual do design system nessa impressora e se a
       margem esquerda serve para arquivar em pasta.
 - [ ] Confirmar com Rose e Operação se as cores da arte precisam de outro registro.

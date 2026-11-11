@@ -1,7 +1,7 @@
 # Revisão visual da ficha v8
 
 Rastreabilidade: [ADR 078](../adr/078-ficha-impressa-por-item.md),
-[RFC 061](../rfc/061-ficha-impressa-por-item.md), `FPI-01` a `FPI-10`,
+[RFC 061](../rfc/061-ficha-impressa-por-item.md), `FPI-01` a `FPI-11`,
 `FPI-T01`. O pacote usa só dados sintéticos.
 
 ## Estado
@@ -18,26 +18,28 @@ amostras, aprovações e hashes não foram alterados.
 
 ## O que muda da v7 para a v8
 
-| Onde                  | v7                                | v8                                            |
-| --------------------- | --------------------------------- | --------------------------------------------- |
-| Formato               | A4 paisagem, itens agrupados      | A4 retrato, uma folha por item                |
-| Ponto 1               | Tipo de roupa                     | Modelo                                        |
-| `item.modelo`         | Modelo, em Adicionais             | Detalhe do modelo                             |
-| Controle de produção  | 14 campos em página própria       | 7 campos em cada folha, com Anotações         |
-| Cores da arte         | 7 campos                          | Removidas                                     |
-| Grade                 | Tamanhos e quantidades            | Linha Conferido em branco para a contagem     |
-| Conferência           | Sem caixas                        | Sete caixas, uma por ponto                    |
-| Quantidade divergente | Linha em Adicionais               | Selo e aviso em estado de atenção             |
-| Observações           | Última página comercial           | Em cada folha, com folha extra se preciso     |
-| Instruções do bot     | Fora do papel                     | Impressas e identificadas como complementares |
-| Visual                | Arial, cartões, 5,25 pt no mínimo | Design system do CRM, 13 px no mínimo         |
-| Rodapé                | Sem versão                        | Folha, versão do pedido e hora da impressão   |
+| Onde                  | v7                                | v8                                                                    |
+| --------------------- | --------------------------------- | --------------------------------------------------------------------- |
+| Formato               | A4 paisagem, itens agrupados      | A4 retrato, uma folha por item                                        |
+| Ponto 1               | Tipo de roupa                     | Modelo                                                                |
+| `item.modelo`         | Modelo, em Adicionais             | Detalhe do modelo                                                     |
+| Controle de produção  | 14 campos em página própria       | 7 campos em cada folha, com Anotações                                 |
+| Cores da arte         | 7 campos                          | Removidas                                                             |
+| Grade                 | Tamanhos e quantidades            | Linha Conferido em branco para a contagem                             |
+| Cabeçalho             | Pedido, previsão e item           | Faixa com o público; marca, pedido e datas                            |
+| Campos                | Texto corrido                     | Rótulo pequeno sobre valor em negrito, na escala de 4 px do design.md |
+| Quantidade divergente | Linha em Adicionais               | Não vai ao papel                                                      |
+| Observações           | Última página comercial           | Só na folha final, com apontamento nas folhas                         |
+| Arte                  | Não havia                         | Prévia em metade da largura, ao lado das Anotações                    |
+| Instruções do bot     | Fora do papel                     | Impressas e identificadas como complementares                         |
+| Visual                | Arial, cartões, 5,25 pt no mínimo | Design system do CRM, 13 px no mínimo                                 |
+| Rodapé                | Sem versão                        | Folha, versão do pedido e hora da impressão                           |
 
 Nenhum valor em dinheiro entra na ficha. Observação editável com indicação
 financeira explícita bloqueia a geração para revisão no CRM (`422`,
 `PRINT_FINANCIAL_TEXT_REVIEW_REQUIRED`); dado do atendimento com valor sai
 mascarado, com aviso para conferir no CRM. O título "Lastro do pedido" sai; os
-campos Primeiro contato e Entregue em continuam.
+campo Entregue em continua; Primeiro contato, FAB e "Arte do pedido" saem.
 
 ## Como a folha é montada
 
@@ -52,12 +54,20 @@ impressão admite o hash dela e `data:` em `font-src`, somente nessa rota
 ## Pacote sintético
 
 - [`ficha-pdf-synthetic-v8.json`](ficha-pdf-synthetic-v8.json): pedido sintético
-  com um item por público, quantidade divergente, 16 tamanhos, detalhe do modelo,
-  gola "NÃO APLICÁVEL", textos longos e instruções complementares do atendimento.
+  com um item por público, 16 tamanhos, detalhe do modelo, gola "NÃO APLICÁVEL",
+  textos longos, instruções complementares do atendimento e prévia da arte nos
+  itens 1 e 4 (itens 2 e 3 mostram "Sem arte anexada").
 - [`../../output/pdf/ficha-canonica-sintetica-v8.pdf`](../../output/pdf/ficha-canonica-sintetica-v8.pdf):
   cinco folhas A4 retrato, quatro de itens e uma de observações.
 - `scripts/ficha-pdf-preview-v8.mjs` gera o PDF e trava os hashes enquanto a
   revisão está pendente; recusa regenerar depois da aprovação.
+
+Revisão do PO em 2026-11-11: o cabeçalho passou a destacar o público, a ficha
+perdeu Primeiro contato, FAB, passos numerados, caixas, o título "Tamanhos" e
+o aviso de divergência, as observações foram para a folha final e a prévia da
+arte entrou ao lado das Anotações (FPI-11). A v8 continua sem aprovação
+registrada, por isso os hashes mudaram no lugar.
+
 - `scripts/ficha-pdf-review-v8.mjs` valida amostra, HTML, PDF, revisão do PO
   pendente e assinatura física pendente.
 - `test/ficha-print-v8.test.js` cobre conteúdo, rótulos, campos, avisos, XSS e o

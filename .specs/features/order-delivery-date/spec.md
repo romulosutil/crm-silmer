@@ -43,10 +43,10 @@ DTL-12/PLA na apresentação; as APIs legadas de pagamento não são removidas.
 
 | ID     | Task     | Status  |
 | ------ | -------- | ------- |
-| DDE-01 | T2/T3    | implemented |
-| DDE-02 | T1/T2/T3 | implemented |
-| DDE-03 | T1/T2/T3 | implemented |
-| DDE-04 | T2/T3    | implemented |
+| DDE-01 | T2/T3    | verified |
+| DDE-02 | T1/T2/T3 | verified |
+| DDE-03 | T1/T2/T3 | verified |
+| DDE-04 | T2/T3    | verified |
 
 ## Out of Scope
 

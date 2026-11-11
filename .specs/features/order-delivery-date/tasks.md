@@ -57,7 +57,10 @@ flowchart LR
 
 ### T3: Verificar e disponibilizar localmente (DDE-T03)
 
-- [ ] Concluída.
+- [x] Concluída: revisão independente 4/4 critérios e sensor isolado 2/2;
+  smoke local persistido confirmar → alterar → reload, mantendo pagamento,
+  recebimento/saldo e ficha. Runbook e contratos atualizados; gate completo,
+  validate_state e diff check aprovados. Entrega no PR 348, sem merge/deploy.
 
 **Where**: `.specs/features/order-delivery-date/validation.md` e runbook.
 

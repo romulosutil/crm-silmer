@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 14,
+  "next_id": 15,
   "lessons": [
     {
       "id": "L-001",
@@ -238,6 +238,24 @@
       ],
       "created": "2026-11-11T14:10:49Z",
       "last_seen": "2026-11-11T14:10:49Z"
+    },
+    {
+      "id": "L-014",
+      "key": "ac_gap::preserve the newest loaded order version when a command response arrives after an sse refresh",
+      "text": "Preserve the newest loaded order version when a command response arrives after an SSE refresh.",
+      "signal": "ac_gap",
+      "scope": "edge-web",
+      "status": "candidate",
+      "features": [
+        "order-delivery-date"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "DDE-04 OrderView.vue:408; validation.md P2 (edge-web)"
+      ],
+      "created": "2026-11-11T17:11:42Z",
+      "last_seen": "2026-11-11T17:11:42Z"
     }
   ]
 }

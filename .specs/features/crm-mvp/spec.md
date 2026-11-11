@@ -11,6 +11,14 @@ ORC-03/05/07, posse e handoff definitivo; não altera a observação da ficha.
 Contrato de implementação e gates em [REC-T00–T04](../lead-recovery/tasks.md).
 Entrega atual documental, sem ativação ou endpoint novo.
 
+## Ação única de entrega — DDE (11/11/2026)
+
+O proprietário autorizou [DDE-01–04](../order-delivery-date/spec.md):
+Confirmar entrega passa a Alterar data de entrega após o registro, sem Editar
+datas. A correção muda somente uma entrega existente, preservando pagamento,
+status e ficha, com autorização, versão, auditoria e idempotência do comando.
+Primeira confirmação mantém o dia de São Paulo; correção exige dia até hoje.
+
 ## Cobranças simplificadas — BCS (11/11/2026)
 
 O proprietário aprovou o protótipo BCP-P01 e autorizou

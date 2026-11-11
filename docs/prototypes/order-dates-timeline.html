@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="pt-BR">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>Datas do pedido — proposta</title>
+  <body>
+    <div id="silmer-dates-preview" class="viz-dotted-background">
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+        #silmer-dates-preview {
+          color-scheme: light dark;
+          padding: 20px 0;
+        }
+        #silmer-dates-preview .silmer {
+          --s-bg: light-dark(#fff, #202122);
+          --s-text: light-dark(#202124, #f1f1f1);
+          --s-sub: light-dark(#62656b, #b9bcc0);
+          --s-line: light-dark(#e4e5e7, #424448);
+          --s-soft: light-dark(#f5f5f6, #2b2d30);
+          --s-link: light-dark(#31577b, #9dc5ed);
+          --s-green: light-dark(#276547, #99d6b5);
+          --s-red: light-dark(#a12d2d, #ffa7a7);
+          --s-orange: light-dark(#c94300, #ff9d6a);
+          font:
+            400 14px/1.6 Poppins,
+            Arial,
+            sans-serif;
+          background: var(--s-bg);
+          color: var(--s-text);
+          border: 1px solid var(--s-line);
+          border-radius: 14px;
+          max-width: 850px;
+          margin: auto;
+          overflow-wrap: anywhere;
+        }
+        #silmer-dates-preview .bar {
+          padding: 18px 24px;
+          background: var(--s-soft);
+          border-radius: 14px 14px 0 0;
+          display: flex;
+          gap: 16px;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          border-bottom: 1px solid var(--s-line);
+        }
+        #silmer-dates-preview .brand {
+          color: var(--s-orange);
+          font-weight: 600;
+          letter-spacing: 0.04em;
+        }
+        #silmer-dates-preview .caption {
+          font-size: 12px;
+          color: var(--s-sub);
+        }
+        #silmer-dates-preview .body {
+          padding: 24px;
+        }
+        #silmer-dates-preview h2 {
+          font:
+            500 20px/1.4 Poppins,
+            Arial,
+            sans-serif;
+          margin: 0;
+        }
+        #silmer-dates-preview h3 {
+          font:
+            500 15px/1.5 Poppins,
+            Arial,
+            sans-serif;
+          margin: 0;
+        }
+        #silmer-dates-preview p {
+          margin: 0;
+        }
+        #silmer-dates-preview .heading {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-bottom: 20px;
+        }
+        #silmer-dates-preview label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          font-size: 12px;
+          color: var(--s-sub);
+        }
+        #silmer-dates-preview select {
+          font: inherit;
+          font-size: 14px;
+          color: var(--s-text);
+          background: var(--s-bg);
+          border: 1px solid var(--s-sub);
+          border-radius: 6px;
+          padding: 8px;
+          max-width: 100%;
+          min-height: 44px;
+        }
+        #silmer-dates-preview select:focus-visible,
+        #silmer-dates-preview summary:focus-visible {
+          outline: 2px solid var(--s-link);
+          outline-offset: 4px;
+        }
+        #silmer-dates-preview .milestones {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 16px;
+          margin: 0 0 24px;
+          padding: 16px 0;
+          border-top: 1px solid var(--s-line);
+          border-bottom: 1px solid var(--s-line);
+        }
+        #silmer-dates-preview dt {
+          color: var(--s-sub);
+          font-size: 12px;
+          margin-bottom: 4px;
+        }
+        #silmer-dates-preview dd {
+          margin: 0;
+          font-weight: 500;
+          font-variant-numeric: tabular-nums;
+        }
+        #silmer-dates-preview .section-title {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-bottom: 20px;
+        }
+        #silmer-dates-preview ol {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+        }
+        #silmer-dates-preview li {
+          display: grid;
+          grid-template-columns: 82px 20px minmax(0, 1fr);
+          gap: 12px;
+          position: relative;
+          min-height: 72px;
+        }
+        #silmer-dates-preview .day {
+          font-size: 12px;
+          font-variant-numeric: tabular-nums;
+          color: var(--s-sub);
+          padding-top: 2px;
+        }
+        #silmer-dates-preview .track {
+          position: relative;
+          display: flex;
+          justify-content: center;
+        }
+        #silmer-dates-preview .track:after {
+          content: '';
+          position: absolute;
+          top: 17px;
+          bottom: 0;
+          width: 1px;
+          background: var(--s-line);
+        }
+        #silmer-dates-preview li:last-child .track:after {
+          display: none;
+        }
+        #silmer-dates-preview .dot {
+          width: 9px;
+          height: 9px;
+          margin-top: 6px;
+          border-radius: 50%;
+          background: var(--s-sub);
+        }
+        #silmer-dates-preview .receipt .dot {
+          background: var(--s-green);
+        }
+        #silmer-dates-preview .correction .dot {
+          background: var(--s-red);
+          border-radius: 2px;
+        }
+        #silmer-dates-preview .entry {
+          padding-bottom: 24px;
+          min-width: 0;
+        }
+        #silmer-dates-preview .entryhead {
+          display: flex;
+          gap: 8px;
+          justify-content: space-between;
+          align-items: baseline;
+          flex-wrap: wrap;
+          font-weight: 500;
+        }
+        #silmer-dates-preview .money {
+          font-variant-numeric: tabular-nums;
+          white-space: nowrap;
+        }
+        #silmer-dates-preview .tag {
+          font-size: 11px;
+          font-weight: 400;
+          color: var(--s-sub);
+          border: 1px solid var(--s-line);
+          border-radius: 4px;
+          padding: 1px 5px;
+          display: inline-block;
+          margin-top: 4px;
+        }
+        #silmer-dates-preview .sub {
+          color: var(--s-sub);
+          font-size: 12px;
+        }
+        #silmer-dates-preview details {
+          margin-top: 8px;
+          font-size: 12px;
+          color: var(--s-sub);
+        }
+        #silmer-dates-preview summary {
+          color: var(--s-link);
+          min-height: 28px;
+          display: list-item;
+          cursor: pointer;
+          width: fit-content;
+        }
+        #silmer-dates-preview .detail {
+          padding: 8px 0 0;
+        }
+        #silmer-dates-preview .foot {
+          padding-top: 16px;
+          border-top: 1px solid var(--s-line);
+          display: flex;
+          gap: 12px;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          font-size: 12px;
+        }
+        #silmer-dates-preview .error {
+          color: var(--s-red);
+          padding-bottom: 20px;
+        }
+        #silmer-dates-preview .notice {
+          font-size: 12px;
+          color: var(--s-sub);
+          margin-bottom: 20px;
+        }
+        #silmer-dates-preview .silmer-sr {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip-path: inset(50%);
+          white-space: nowrap;
+          border: 0;
+        }
+        @media (max-width: 520px) {
+          #silmer-dates-preview .body {
+            padding: 18px 14px;
+          }
+          #silmer-dates-preview .bar {
+            padding: 14px;
+          }
+          #silmer-dates-preview .milestones {
+            gap: 8px;
+          }
+          #silmer-dates-preview li {
+            grid-template-columns: 65px 14px minmax(0, 1fr);
+            gap: 8px;
+          }
+          #silmer-dates-preview .money {
+            font-size: 14px;
+          }
+          #silmer-dates-preview select {
+            font-size: 16px;
+          }
+          #silmer-dates-preview summary {
+            min-height: 44px;
+          }
+        }
+      </style>
+      <section class="silmer" aria-label="Protótipo da seção Datas do pedido">
+        <div class="bar">
+          <div>
+            <span class="brand">SILMER</span
+            ><span class="caption"> / Pedido 024-CRM</span>
+          </div>
+          <span class="caption">Protótipo · dados sintéticos</span>
+        </div>
+        <div class="body">
+          <div class="heading">
+            <h2>Datas do pedido</h2>
+            <label
+              >Exemplo
+              <select id="silmer-example">
+                <option value="full">Pagamento misto · quitado</option>
+                <option value="partial">InfinitePay · sinal recebido</option>
+                <option value="reverse">Manual · registro revertido</option>
+                <option value="legacy">Pagamento legado</option>
+                <option value="error">Falha ao consultar histórico</option>
+              </select></label
+            >
+          </div>
+          <dl class="milestones">
+            <div>
+              <dt>Primeiro contato</dt>
+              <dd>04/11/2026</dd>
+            </div>
+            <div>
+              <dt>Pago em</dt>
+              <dd id="silmer-paid">09/11/2026</dd>
+              <p class="caption">Quitação integral</p>
+            </div>
+            <div>
+              <dt>Entregue em</dt>
+              <dd id="silmer-delivered">10/11/2026</dd>
+            </div>
+          </dl>
+          <div class="section-title">
+            <h3>Linha do tempo</h3>
+            <span class="caption">Do início até a entrega</span>
+          </div>
+          <div id="silmer-notice"></div>
+          <ol id="silmer-events" aria-label="Acontecimentos do pedido"></ol>
+          <div class="foot" id="silmer-totals"></div>
+          <p class="silmer-sr" id="silmer-announcement" aria-live="polite"></p>
+        </div>
+      </section>
+      <script>
+        (() => {
+          const root = document.getElementById('silmer-dates-preview');
+          const select = root.querySelector('#silmer-example');
+          const state = { scenario: 'full', expanded: false };
+          const options = ['full', 'partial', 'reverse', 'legacy', 'error'];
+          const restored = window.openai?.widgetState;
+          if (options.includes(restored?.modelContent?.scenario))
+            state.scenario = restored.modelContent.scenario;
+          state.expanded = Boolean(restored?.privateContent?.expanded);
+          const beginning = [
+            {
+              day: '04 nov',
+              title: 'Primeiro contato',
+              sub: 'Conversa iniciada',
+              date: '2026-11-04',
+            },
+            {
+              day: '05 nov',
+              title: 'Confirmação atual do pedido',
+              sub: 'Valor final: R$ 1.000,00',
+              date: '2026-11-05',
+            },
+          ];
+          const signal = {
+            day: '06 nov',
+            date: '2026-11-06',
+            title: 'Sinal confirmado',
+            sub: 'InfinitePay · Pix',
+            amount: 'R$ 300,00',
+            tag: 'Confirmado pela InfinitePay',
+            type: 'receipt',
+            detail:
+              'Confirmação no CRM: 06/11/2026 às 14:32 (São Paulo). O horário da transação no provedor não está disponível.',
+          };
+          const manual = {
+            day: '09 nov',
+            date: '2026-11-09',
+            title: 'Saldo recebido',
+            sub: 'Registro manual · Transferência bancária',
+            amount: 'R$ 700,00',
+            tag: 'Recebimento confirmado',
+            type: 'receipt',
+            detail:
+              'Recebido em 09/11/2026. Registrado por Vendedor de demonstração em 10/11/2026 às 09:15 (São Paulo).',
+          };
+          function render(announce = false) {
+            select.value = state.scenario;
+            let events = [...beginning],
+              paid = 'Ainda não quitado',
+              delivered = 'Ainda não entregue',
+              received = 'R$ 300,00',
+              balance = 'R$ 700,00',
+              notice = '';
+            if (state.scenario === 'full') {
+              events.push(signal, manual, {
+                day: '10 nov',
+                date: '2026-11-10',
+                title: 'Pedido entregue',
+                sub: 'Entrega confirmada pelo responsável',
+              });
+              paid = '09/11/2026';
+              delivered = '10/11/2026';
+              received = 'R$ 1.000,00';
+              balance = 'R$ 0,00';
+            } else if (state.scenario === 'partial') {
+              events.push(signal);
+            } else if (state.scenario === 'reverse') {
+              events.push(
+                signal,
+                {
+                  ...manual,
+                  tag: 'Registro revertido · não compõe o saldo',
+                  detail:
+                    manual.detail +
+                    ' Este lançamento foi revertido; o histórico original foi preservado.',
+                },
+                {
+                  day: '10 nov',
+                  date: '2026-11-10',
+                  title: 'Registro manual revertido',
+                  sub: 'Correção de lançamento · sem devolução pelo CRM',
+                  amount: '− R$ 700,00',
+                  tag: 'Correção registrada',
+                  type: 'correction',
+                  detail:
+                    'Registrado em 10/11/2026 às 11:05 (São Paulo). Vinculado ao recebimento manual de 09/11. O saldo exibido vem do sistema de cobrança.',
+                },
+              );
+            } else if (state.scenario === 'legacy') {
+              events.push({
+                day: '09 nov',
+                date: '2026-11-09',
+                title: 'Quitação registrada',
+                sub: 'Sem detalhamento de recebimentos',
+                tag: 'Histórico legado',
+              });
+              paid = '09/11/2026';
+              received = 'Sem detalhamento';
+              balance = 'Sem detalhamento';
+              notice =
+                '<p class="notice">A data foi preservada. A origem e os valores dos recebimentos não estão disponíveis.</p>';
+            } else {
+              paid = '09/11/2026';
+              received = 'Indisponível';
+              balance = 'Indisponível';
+              notice =
+                '<p class="error" role="status">Não foi possível carregar os recebimentos. As datas do pedido continuam disponíveis.</p>';
+            }
+            root.querySelector('#silmer-paid').textContent = paid;
+            root.querySelector('#silmer-delivered').textContent = delivered;
+            root.querySelector('#silmer-notice').innerHTML = notice;
+            root.querySelector('#silmer-events').innerHTML = events
+              .map(
+                (e) =>
+                  `<li class="${e.type || 'milestone'}"><time class="day" datetime="${e.date}">${e.day}<br>2026</time><span class="track" aria-hidden="true"><span class="dot"></span></span><div class="entry"><div class="entryhead"><span>${e.title}</span>${e.amount ? `<span class="money">${e.amount}</span>` : ''}</div><p class="sub">${e.sub}</p>${e.tag ? `<span class="tag">${e.tag}</span>` : ''}${e.detail ? `<details ${state.expanded ? 'open' : ''}><summary>Ver detalhes do recebimento</summary><p class="detail">${e.detail}</p></details>` : ''}</div></li>`,
+              )
+              .join('');
+            root.querySelector('#silmer-totals').innerHTML =
+              `<span>Recebido: <strong>${received}</strong></span><span>Falta receber: <strong>${balance}</strong></span>`;
+            if (announce)
+              root.querySelector('#silmer-announcement').textContent =
+                select.selectedOptions[0].textContent +
+                '. Pago em: ' +
+                paid +
+                '. Falta receber: ' +
+                balance +
+                '.';
+          }
+          function save() {
+            window.openai
+              ?.setWidgetState({
+                modelContent: { scenario: state.scenario },
+                privateContent: { expanded: state.expanded },
+              })
+              .catch(() => {});
+          }
+          select.addEventListener('change', () => {
+            state.scenario = select.value;
+            render(true);
+            save();
+          });
+          window.addEventListener('openai:set_globals', (event) => {
+            const saved = event.detail?.globals?.widgetState;
+            if (options.includes(saved?.modelContent?.scenario)) {
+              state.scenario = saved.modelContent.scenario;
+              state.expanded = Boolean(saved.privateContent?.expanded);
+              render();
+            }
+          });
+          render();
+          if (globalThis.Tweak) {
+            const tweak = new Tweak({
+              container: root.querySelector('.silmer'),
+              onChange: () => {
+                render();
+                save();
+              },
+            });
+            tweak.addToggle(state, 'expanded', { label: 'Detalhes abertos' });
+          }
+        })();
+      </script>
+    </div>
+  </body>
+</html>

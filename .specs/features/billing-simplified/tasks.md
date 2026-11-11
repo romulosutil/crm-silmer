@@ -25,6 +25,8 @@ flowchart LR
   T1 --> T2
   T2 --> T3
   T3 --> T4
+  T4 --> T5
+  T5 --> T6
 ```
 
 ## Task Breakdown
@@ -59,7 +61,7 @@ para suprimir substituição idêntica, helper de pendências e E2E.
 **Tests**: BCS-01–09, regressão dos comandos e leitura, teclado, foco, axe e
 320px; cache paginado, ausência de polling idle, ciclo silencioso e pausa em interação.
 
-**Gate**: Full e npm run validate (Build); gate global de navegador fechado em T3.
+**Gate**: Full e npm run validate (Build); gate global de navegador fechado em T4.
 
 ### T3: Fechar achados da revisão independente (BCS-T03)
 
@@ -94,6 +96,35 @@ de pausa exige o contrato do pai e do filho na mesma entrega verificável.
 
 **Gate**: Build e validate_state.py.
 
+### T5: Concluir integração e validade silenciosa dos links (BCS-T05)
+
+- [x] Concluída: base c1124fbc integrada; 2.559 unit aprovados, 53 skips
+      opcionais, zero falhas/cancelamentos. E2E de billing/PDF: 91 aprovados;
+      cobrança/timeline após relógio: 64 aprovados; BCS final: 15 aprovados.
+
+**Where**: `OrderBillingWorkspace.vue`, `OrderBillingOperations.vue` e E2E BCS.
+
+**Depends on**: T4
+
+**Tests**: rebase sobre c1124fbc, preservação das duas seções da documentação,
+fontes BCS/DTL idênticas no rebase antes do delta de validade, validate e E2E BCS/PDF afetados.
+Passagem de validade é uma mudança real: atualiza estado/ações uma vez,
+mantendo consultas idênticas silenciosas antes e depois dessa transição.
+
+**Gate**: Build e E2E das fronteiras afetadas, complementando o checkpoint global anterior.
+
+### T6: Registrar a verificação final da integração (BCS-T06)
+
+- [ ] Concluída.
+
+**Where**: `.specs/features/billing-simplified/validation.md`
+
+**Depends on**: T5
+
+**Tests**: revisão independente do delta final, evidências dos gates e diffs.
+
+**Gate**: validate_state.py, formato, diff check e publicação do relatório/PR.
+
 ## Cross-check
 
 | Dependency | Diagram | Definition |
@@ -101,3 +132,5 @@ de pausa exige o contrato do pai e do filho na mesma entrega verificável.
 | T1 → T2    | yes     | yes        |
 | T2 → T3    | yes     | yes        |
 | T3 → T4    | yes     | yes        |
+| T4 → T5    | yes     | yes        |
+| T5 → T6    | yes     | yes        |

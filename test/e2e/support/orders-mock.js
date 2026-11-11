@@ -535,6 +535,8 @@ export async function mockOrders(page, options = {}) {
   );
   let listCalls = 0;
   let detailCalls = 0;
+  /** @type {Map<string, {fingerprint:string, order:any}>} */
+  const deliveryCommands = new Map();
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -638,6 +640,86 @@ export async function mockOrders(page, options = {}) {
         ),
       });
       return;
+    }
+
+    const delivery =
+      /^\/api\/v1\/orders\/([^/]+)\/delivery-confirmation$/u.exec(path);
+    if (delivery && request.method() === 'POST') {
+      const body = request.postDataJSON();
+      options.onWrite?.({ action: 'delivery-confirmation', body });
+      const key = request.headers()['idempotency-key'];
+      expect(key).toBeTruthy();
+      const current = orders.find((candidate) => candidate.id === delivery[1]);
+      const json = (/** @type {number} */ status, /** @type {any} */ value) =>
+        route.fulfill({ status, json: value });
+      if (options.writeFailure) {
+        if (options.writeFailure.persist)
+          Object.assign(current, options.writeFailure.persist);
+        return json(options.writeFailure.status, {
+          error: options.writeFailure.body,
+        });
+      }
+      const user = { ...session.user, ...options.user };
+      const admin = /** @type {string[]} */ (user.capabilities).includes(
+        'COMMERCIAL_ADMIN',
+      );
+      if (!current || (!admin && current.seller?.id !== user.id))
+        return json(403, { error: { code: 'FORBIDDEN' } });
+      if (
+        current.origin === 'loja' ||
+        current.status !== 'confirmado' ||
+        current.cancelledAt ||
+        current.isTest
+      )
+        return json(409, { error: { code: 'ORDER_STATUS_CONFLICT' } });
+      const fingerprint = JSON.stringify({ orderId: delivery[1], ...body });
+      const replay = deliveryCommands.get(key);
+      if (replay)
+        return replay.fingerprint === fingerprint
+          ? json(200, { order: replay.order })
+          : json(409, { error: { code: 'IDEMPOTENCY_CONFLICT' } });
+      if (
+        Object.keys(body).some(
+          (name) => !['expectedVersion', 'deliveredOn'].includes(name),
+        )
+      )
+        return json(400, { error: { code: 'INVALID_REQUEST' } });
+      if (body.expectedVersion !== current.version)
+        return json(409, { error: { code: 'VERSION_CONFLICT' } });
+      const today = await page.evaluate(() =>
+        new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'America/Sao_Paulo',
+        }).format(new Date()),
+      );
+      const correction = Object.hasOwn(body, 'deliveredOn');
+      if (correction && !current.deliveredOn)
+        return json(409, { error: { code: 'ORDER_STATUS_CONFLICT' } });
+      const value = correction
+        ? body.deliveredOn
+        : (current.deliveredOn ?? today);
+      const parsed =
+        typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/u.test(value)
+          ? new Date(value + 'T00:00:00.000Z')
+          : null;
+      if (
+        !parsed ||
+        Number.isNaN(parsed.getTime()) ||
+        parsed.toISOString().slice(0, 10) !== value ||
+        value > today
+      )
+        return json(422, {
+          error: { code: 'INVALID_DATE', fields: ['deliveredOn'] },
+        });
+      if (current.deliveredOn !== value)
+        Object.assign(current, {
+          deliveredOn: value,
+          version: current.version + 1,
+        });
+      deliveryCommands.set(key, {
+        fingerprint,
+        order: JSON.parse(JSON.stringify(current)),
+      });
+      return json(200, { order: current });
     }
 
     const milestones = /^\/api\/v1\/orders\/([^/]+)\/milestones$/u.exec(path);

@@ -42,7 +42,10 @@ flowchart LR
 
 ### T2: Unificar ação da seção (DDE-T02)
 
-- [ ] Concluída.
+- [x] Concluída: 149 cenários E2E cobertos (147 aprovados na execução
+  integrada e os dois ajustes de expectativas legadas aprovados em reteste).
+  Gate completo aprovado: 2561 testes, zero falhas e 53 integrações opcionais
+  sem ambiente; format/tipos/lint/boundaries/configuração/build aprovados.
 
 **Where**: OrderMilestonesSection.vue, OrderView.vue e E2E.
 

@@ -8,11 +8,9 @@ import {
 import { commandKey } from '../../lib/api-client.js';
 import { billingMoney } from '../../lib/order-billing.js';
 import { orderTimeline } from '../../lib/order-timeline.js';
-import OrderIcon from './OrderIcon.vue';
 import OrderSheetHead from './OrderSheetHead.vue';
 
 const SECTION = 'milestones';
-const FUTURE_DAY_MESSAGE = 'Use uma data até hoje.';
 
 const props = defineProps({
   order: { type: Object, required: true },
@@ -20,35 +18,7 @@ const props = defineProps({
 
 const editing = inject('orderEditing');
 const billingState = inject('orderBillingState', null);
-const billingReadonly = computed(() =>
-  Boolean(
-    billingState && (!billingState.value.ready || billingState.value.managed),
-  ),
-);
-const firstField = ref(null);
-const draft = ref({ deliveredOn: '', paidOn: '' });
-const paymentReviewed = ref(false);
-/** @type {import('vue').Ref<Record<string, string>>} */
-const fieldErrors = ref({});
-const saving = ref(false);
-const errorMessage = ref('');
-const today = ref('');
-
-const isEditing = computed(() => editing.editingSection.value === SECTION);
-const isManual = computed(
-  () => props.order.origin === 'atendimento' && !props.order.conversationId,
-);
-// ADR 008: unlike the ficha sections, the trail stays open after the order
-// is generated — payment and delivery usually come later — and never needs a
-// reopen.
-const canEdit = computed(
-  () =>
-    (editing.canEditMilestones ?? editing.canEdit).value &&
-    !(isManual.value && billingReadonly.value),
-);
-const otherSectionOpen = computed(
-  () => editing.editingSection.value !== '' && !isEditing.value,
-);
+const otherSectionOpen = computed(() => editing.editingSection.value !== '');
 // PFI-18: on a phone the body is shown only while the accordion opens it.
 const open = computed(() => editing.isSectionOpen?.(SECTION) ?? true);
 const steps = computed(() => orderMilestones(props.order));
@@ -86,15 +56,23 @@ const showSummary = computed(
     !financialState.value?.unavailable &&
     (snapshot.value.managed || !props.order.paidOn),
 );
-const deliveryAllowed = computed(
+const deliveryEditable = computed(
   () =>
     Boolean((editing.canEditMilestones ?? editing.canEdit).value) &&
     props.order.origin === 'atendimento' &&
     props.order.status === 'confirmado' &&
     !props.order.isTest &&
     !props.order.cancelledAt &&
-    !props.order.deliveredOn &&
     typeof editing.confirmDelivery === 'function',
+);
+const deliveryMode = ref('confirm');
+const deliveryDay = ref('');
+const deliveryDayInput = ref(null);
+const today = ref('');
+const deliveryTitle = computed(() =>
+  deliveryMode.value === 'change'
+    ? 'Alterar data de entrega'
+    : 'Confirmar entrega',
 );
 const deliveryDialog = ref(null);
 const deliveryTrigger = ref(null);
@@ -105,29 +83,33 @@ const deliveryBusy = ref(false);
 const deliveryError = ref('');
 const deliveryNotice = ref('');
 const deliveryUncertain = ref(false);
+const deliveryFrozen = ref(false);
 const deliveryNeedsReview = ref(false);
 let deliveryCompleted = false;
 const canSubmitDelivery = computed(
   () =>
-    deliveryAllowed.value &&
+    deliveryEditable.value &&
     !deliveryBusy.value &&
     !deliveryUncertain.value &&
     !deliveryNeedsReview.value &&
     deliveryContext.value?.orderId === props.order.id &&
-    deliveryContext.value?.expectedVersion === props.order.version,
+    deliveryContext.value?.expectedVersion === props.order.version &&
+    (deliveryMode.value !== 'change' ||
+      Boolean(
+        deliveryDay.value && deliveryDay.value !== props.order.deliveredOn,
+      )),
 );
 
 async function askDelivery() {
-  if (
-    !deliveryAllowed.value ||
-    otherSectionOpen.value ||
-    isEditing.value ||
-    deliveryBusy.value
-  )
+  if (!deliveryEditable.value || otherSectionOpen.value || deliveryBusy.value)
     return;
   deliveryCompleted = false;
   deliveryNotice.value = '';
   if (!deliveryUncertain.value) {
+    deliveryFrozen.value = false;
+    deliveryMode.value = props.order.deliveredOn ? 'change' : 'confirm';
+    deliveryDay.value = props.order.deliveredOn ?? '';
+    today.value = operationalDay(new Date());
     deliveryContext.value = {
       orderId: props.order.id,
       expectedVersion: props.order.version,
@@ -139,21 +121,40 @@ async function askDelivery() {
   if (!open.value) editing.toggleSection?.(SECTION);
   await nextTick();
   deliveryDialog.value?.showModal();
-  deliveryCancel.value?.focus();
+  (deliveryMode.value === 'change'
+    ? deliveryDayInput.value
+    : deliveryCancel.value
+  )?.focus();
 }
 async function confirmDelivery() {
   if (!canSubmitDelivery.value) return;
+  if (deliveryMode.value === 'change') {
+    if (!deliveryDay.value || deliveryDay.value > operationalDay(new Date())) {
+      deliveryError.value = 'Informe uma data de entrega até hoje.';
+      deliveryDayInput.value?.focus();
+      return;
+    }
+    deliveryContext.value = {
+      ...deliveryContext.value,
+      deliveredOn: deliveryDay.value,
+    };
+  }
   const context = deliveryContext.value;
+  deliveryFrozen.value = true;
   deliveryBusy.value = true;
   deliveryError.value = '';
   const result = await editing.confirmDelivery(context);
   deliveryBusy.value = false;
   if (props.order.id !== context.orderId) return;
-  if (result.ok && result.order?.deliveredOn) {
+  if (
+    result.ok &&
+    result.order?.deliveredOn &&
+    (!context.deliveredOn || result.order.deliveredOn === context.deliveredOn)
+  ) {
     deliveryCompleted = true;
     deliveryUncertain.value = false;
     deliveryContext.value = null;
-    deliveryNotice.value = `Entrega confirmada em ${dayLabel(result.order.deliveredOn)}.`;
+    deliveryNotice.value = `Entrega ${deliveryMode.value === 'change' ? 'alterada para' : 'confirmada em'} ${dayLabel(result.order.deliveredOn)}.`;
     deliveryDialog.value?.close();
     return;
   }
@@ -175,7 +176,10 @@ async function refreshDelivery() {
       'Não foi possível atualizar o pedido. A entrega ainda precisa de conferência.';
     return;
   }
-  if (result.order?.deliveredOn) {
+  if (
+    result.order?.deliveredOn &&
+    (!context.deliveredOn || result.order.deliveredOn === context.deliveredOn)
+  ) {
     deliveryCompleted = true;
     deliveryUncertain.value = false;
     deliveryNotice.value = `Entrega registrada em ${dayLabel(result.order.deliveredOn)}.`;
@@ -187,7 +191,7 @@ async function refreshDelivery() {
   deliveryNeedsReview.value = context.expectedVersion !== result.order?.version;
   deliveryError.value = deliveryNeedsReview.value
     ? 'O pedido mudou. Feche esta confirmação e revise o pedido atualizado.'
-    : 'Pedido atualizado sem entrega registrada. Revise e confirme novamente para tentar com a mesma solicitação.';
+    : 'A alteração solicitada ainda não foi registrada. Revise e confirme novamente para tentar com a mesma solicitação.';
 }
 async function afterDeliveryClose() {
   await nextTick();
@@ -228,87 +232,10 @@ watch(
   },
 );
 onBeforeUnmount(() => deliveryDialog.value?.close());
-
-async function startEditing() {
-  if (!canEdit.value) return;
-  paymentReviewed.value = false;
-  draft.value = {
-    deliveredOn: props.order.deliveredOn ?? '',
-    paidOn: props.order.paidOn ?? '',
-  };
-  today.value = operationalDay(new Date());
-  fieldErrors.value = {};
-  errorMessage.value = '';
-  editing.start(SECTION);
-  await nextTick();
-  firstField.value?.focus();
-}
-
-function cancel() {
-  fieldErrors.value = {};
-  errorMessage.value = '';
-  editing.stop();
-}
-
-/**
- * PLA-05: a day after today is caught here, next to the field; the server
- * checks it again on São Paulo time and answers 422 INVALID_DATE.
- */
-async function save() {
-  errorMessage.value = '';
-  /** @type {Record<string, string>} */
-  const errors = {};
-  const fields = isManual.value ? ['paidOn'] : ['paidOn', 'deliveredOn'];
-  for (const field of fields) {
-    if (draft.value[field] !== '' && draft.value[field] > today.value) {
-      errors[field] = FUTURE_DAY_MESSAGE;
-    }
-  }
-  if (
-    props.order.paymentReviewRequired &&
-    paymentReviewed.value &&
-    !draft.value.paidOn
-  )
-    errors.paidOn = 'Informe a data em que o valor integral foi recebido.';
-  fieldErrors.value = errors;
-  if (Object.keys(errors).length > 0) return;
-
-  saving.value = true;
-  const result = await editing.saveMilestones({
-    ...(isManual.value ? {} : { deliveredOn: draft.value.deliveredOn || null }),
-    paidOn: billingReadonly.value
-      ? (props.order.paidOn ?? null)
-      : draft.value.paidOn || null,
-    ...(props.order.paymentReviewRequired &&
-    paymentReviewed.value &&
-    !billingReadonly.value
-      ? { paymentReviewed: true }
-      : {}),
-  });
-  saving.value = false;
-  if (result.ok) {
-    editing.stop();
-    return;
-  }
-  if (result.code === 'INVALID_DATE') {
-    fieldErrors.value = Object.fromEntries(
-      result.fields.map((/** @type {string} */ field) => [
-        field,
-        FUTURE_DAY_MESSAGE,
-      ]),
-    );
-    return;
-  }
-  errorMessage.value = result.message;
-}
 </script>
 
 <template>
-  <section
-    class="op-sheet"
-    :data-editing="isEditing || undefined"
-    aria-labelledby="order-milestones-title"
-  >
+  <section class="op-sheet" aria-labelledby="order-milestones-title">
     <!-- PFI-17, PLA-07: the dates never block "Gerar" (PLA-06), so their
          state is a plain count. PFI-20: "Datas do pedido" on the screen; the
          printed ficha keeps "Lastro do pedido". -->
@@ -316,141 +243,25 @@ async function save() {
       title-id="order-milestones-title"
       title="Datas do pedido"
       :state="`${recordedCount} de ${steps.length} datas`"
-      edit-label="Editar datas"
-      :can-edit="canEdit"
-      :blocked="otherSectionOpen"
-      :editing="isEditing"
       section="milestones"
       body-id="order-milestones-body"
-      @edit="startEditing"
     >
       <template #actions>
         <button
-          v-if="deliveryAllowed && !isEditing"
+          v-if="deliveryEditable"
           ref="deliveryTrigger"
           type="button"
           :disabled="deliveryBusy || otherSectionOpen"
           @click="askDelivery"
         >
-          Confirmar entrega
+          {{
+            order.deliveredOn ? 'Alterar data de entrega' : 'Confirmar entrega'
+          }}
         </button>
       </template>
     </OrderSheetHead>
 
-    <p v-if="errorMessage" role="alert" class="op-alert" :hidden="!open">
-      {{ errorMessage }}
-    </p>
-
-    <form
-      v-if="isEditing"
-      id="order-milestones-body"
-      class="op-form"
-      novalidate
-      :hidden="!open"
-      @submit.prevent="save"
-    >
-      <div class="op-form-grid">
-        <div class="op-field">
-          <label for="milestone-paid">Pago em</label>
-          <input
-            id="milestone-paid"
-            ref="firstField"
-            v-model="draft.paidOn"
-            type="date"
-            :disabled="billingReadonly"
-            :max="today"
-            :aria-invalid="Boolean(fieldErrors.paidOn) || undefined"
-            :aria-describedby="
-              fieldErrors.paidOn
-                ? 'milestone-paid-error'
-                : 'milestone-paid-hint'
-            "
-          />
-          <p
-            v-if="fieldErrors.paidOn"
-            id="milestone-paid-error"
-            role="alert"
-            class="op-field-error"
-          >
-            {{ fieldErrors.paidOn }}
-          </p>
-          <p v-else id="milestone-paid-hint" class="op-hint">
-            {{
-              billingReadonly
-                ? 'A quitação é calculada pelos recebimentos registrados.'
-                : 'O dia em que o valor integral do pagamento entrou.'
-            }}
-          </p>
-          <p v-if="order.paymentReviewRequired" class="op-hint">
-            Confirme o recebimento integral e salve a data de pagamento.
-          </p>
-          <label
-            v-if="order.paymentReviewRequired && !billingReadonly"
-            class="op-check"
-          >
-            <input
-              v-model="paymentReviewed"
-              type="checkbox"
-              :disabled="saving"
-            />
-            <span>Confirmo que o valor integral foi recebido</span>
-          </label>
-        </div>
-
-        <div v-if="!isManual" class="op-field">
-          <label for="milestone-delivered">Entregue em</label>
-          <input
-            id="milestone-delivered"
-            v-model="draft.deliveredOn"
-            type="date"
-            :max="today"
-            :aria-invalid="Boolean(fieldErrors.deliveredOn) || undefined"
-            :aria-describedby="
-              fieldErrors.deliveredOn
-                ? 'milestone-delivered-error'
-                : 'milestone-delivered-hint'
-            "
-          />
-          <p
-            v-if="fieldErrors.deliveredOn"
-            id="milestone-delivered-error"
-            role="alert"
-            class="op-field-error"
-          >
-            {{ fieldErrors.deliveredOn }}
-          </p>
-          <p v-else id="milestone-delivered-hint" class="op-hint">
-            O dia em que o cliente recebeu o pedido.
-          </p>
-        </div>
-      </div>
-
-      <p class="op-locked-note">
-        <OrderIcon name="lock" />
-        {{
-          isManual
-            ? 'Primeiro contato é preenchido na criação. Confirme a entrega nos seus afazeres do Dashboard.'
-            : 'Primeiro contato vem da conversa.'
-        }}
-        Data do pedido e previsão de entrega ficam no Resumo do pedido.
-      </p>
-
-      <div class="op-form-actions">
-        <button type="button" :disabled="saving" @click="cancel">
-          Cancelar
-        </button>
-        <button type="submit" class="op-save" :disabled="saving">
-          {{ saving ? 'Salvando…' : 'Salvar datas' }}
-        </button>
-      </div>
-    </form>
-
-    <div
-      v-else
-      id="order-milestones-body"
-      class="op-sheet-body"
-      :hidden="!open"
-    >
+    <div id="order-milestones-body" class="op-sheet-body" :hidden="!open">
       <p v-if="pendingRead" role="status" class="op-hint">
         Consultando recebimentos…
       </p>
@@ -540,19 +351,6 @@ async function save() {
       <p v-if="deliveryNotice" role="status" class="op-hint">
         {{ deliveryNotice }}
       </p>
-      <p v-if="order.paymentReviewRequired && !billingReadonly" class="op-hint">
-        Confirme o recebimento integral e salve a data de pagamento.
-      </p>
-      <p class="op-hint">
-        {{
-          billingReadonly
-            ? 'Pago em é calculado pelos recebimentos registrados; receber um sinal não registra quitação integral.'
-            : isManual
-              ? 'Pago em é informado aqui. Confirme a entrega no cabeçalho desta seção ou nos afazeres do Dashboard.'
-              : 'Pago em e Entregue em são informados no pedido.'
-        }}
-        Essas datas não mudam o status nem a ficha já gerada.
-      </p>
     </div>
     <Teleport to="body">
       <dialog
@@ -564,11 +362,28 @@ async function save() {
         @close="afterDeliveryClose"
       >
         <form @submit.prevent="confirmDelivery">
-          <h2 id="order-delivery-title">Confirmar entrega</h2>
+          <h2 id="order-delivery-title">{{ deliveryTitle }}</h2>
           <p id="order-delivery-description">
-            Confirma que o cliente recebeu o pedido {{ order.number }}?
+            {{
+              deliveryMode === 'change'
+                ? `Informe a data em que o cliente recebeu o pedido ${order.number}.`
+                : `Confirma que o cliente recebeu o pedido ${order.number}?`
+            }}
           </p>
-          <p>
+          <div v-if="deliveryMode === 'change'" class="op-field">
+            <label for="delivery-day">Entregue em</label>
+            <input
+              id="delivery-day"
+              ref="deliveryDayInput"
+              v-model="deliveryDay"
+              type="date"
+              :max="today"
+              required
+              :disabled="deliveryBusy || deliveryFrozen"
+            />
+            <p class="op-hint">Use a data real da entrega, até hoje.</p>
+          </div>
+          <p v-else>
             A entrega será registrada com o dia atual de São Paulo. O pagamento
             e o saldo permanecem iguais.
           </p>
@@ -597,7 +412,13 @@ async function save() {
               class="op-save"
               :disabled="!canSubmitDelivery"
             >
-              {{ deliveryBusy ? 'Confirmando…' : 'Sim, confirmar entrega' }}
+              {{
+                deliveryBusy
+                  ? 'Salvando…'
+                  : deliveryMode === 'change'
+                    ? 'Salvar data de entrega'
+                    : 'Sim, confirmar entrega'
+              }}
             </button>
           </div>
         </form>

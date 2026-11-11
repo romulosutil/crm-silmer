@@ -388,7 +388,7 @@ for (const scenario of [
   });
 }
 
-test('billing-managed dates cannot be marked manually, while delivery stays editable', async ({
+test('billing-managed orders expose only the dedicated delivery command, without a payment form (DDE-01)', async ({
   page,
 }) => {
   await setup(page, { billing: { managed: true, percent: 0 } });
@@ -396,16 +396,25 @@ test('billing-managed dates cannot be marked manually, while delivery stays edit
     name: 'Datas do pedido',
     exact: true,
   });
-  await expect(dates).toContainText(
-    'receber um sinal não registra quitação integral',
-  );
   const toggle = dates.getByRole('button', { name: /Datas do pedido/u });
   if (await toggle.count()) await toggle.click();
+  await expect(
+    dates.getByRole('button', { name: 'Editar datas', exact: true }),
+  ).toHaveCount(0);
+  await expect(dates.getByLabel('Pago em', { exact: true })).toHaveCount(0);
   await dates
-    .getByRole('button', { name: 'Editar datas', exact: true })
+    .getByRole('button', { name: 'Confirmar entrega', exact: true })
     .click();
-  await expect(dates.getByLabel('Pago em', { exact: true })).toBeDisabled();
-  await expect(dates.getByLabel('Entregue em', { exact: true })).toBeEnabled();
+  const dialog = page.getByRole('dialog', {
+    name: 'Confirmar entrega',
+    exact: true,
+  });
+  await expect(dialog.getByLabel('Pago em', { exact: true })).toHaveCount(0);
+  await expect(dialog.getByLabel('Entregue em', { exact: true })).toHaveCount(
+    0,
+  );
+  await dialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await expect(dialog).not.toBeVisible();
 });
 
 test('read-only users see amounts without a checkout link or financial commands', async ({

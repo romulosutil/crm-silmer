@@ -20,6 +20,7 @@ const editing = inject('orderEditing', null);
 const billing = ref(null);
 const readAt = ref(Date.now());
 const loading = ref(false);
+const reading = ref(false);
 const unavailable = ref(false);
 const error = ref('');
 const feedback = ref('');
@@ -149,7 +150,14 @@ const shareText = computed(() => {
 
 function currentState(ready = true) {
   emit('state', {
+    orderId: props.order.id,
     ready,
+    loading: loading.value,
+    refreshing: reading.value,
+    error: error.value,
+    unavailable: unavailable.value,
+    data: billing.value,
+    refresh: () => load(false),
     managed: Boolean(billing.value?.managed),
     available:
       Boolean(billing.value) &&
@@ -201,16 +209,19 @@ async function load(silent = false) {
   globalThis.clearTimeout(timer);
   const own = new AbortController();
   controller = own;
+  const orderId = props.order.id;
+  reading.value = true;
   if (!silent) {
     loading.value = true;
     error.value = '';
   }
+  currentState(Boolean(billing.value) && !error.value);
   try {
     const response = await request(
-      `/api/v1/orders/${encodeURIComponent(props.order.id)}/billing`,
+      `/api/v1/orders/${encodeURIComponent(orderId)}/billing`,
       { signal: own.signal },
     );
-    if (own.signal.aborted) return;
+    if (own.signal.aborted || props.order.id !== orderId) return;
     unavailable.value = false;
     error.value = '';
     applyBilling(response.data.billing);
@@ -229,6 +240,8 @@ async function load(silent = false) {
   } finally {
     if (own === controller) {
       loading.value = false;
+      reading.value = false;
+      currentState(!error.value);
       if (active.value && !unavailable.value)
         timer = globalThis.setTimeout(
           () => {

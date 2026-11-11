@@ -374,6 +374,52 @@ async function saveMilestones(value) {
   }
 }
 
+/** DTL-10/11: the dialog freezes the target, version and idempotency key.
+ * @param {{orderId:string,expectedVersion:number,idempotencyKey:string}} context
+ */
+async function confirmDelivery(context) {
+  if (props.orderId !== context.orderId || order.value?.id !== context.orderId)
+    return {
+      ok: false,
+      status: 409,
+      message:
+        'O pedido selecionado mudou. Feche a confirmação e revise o pedido atual.',
+    };
+  try {
+    const response = await request(
+      `/api/v1/orders/${encodeURIComponent(context.orderId)}/delivery-confirmation`,
+      {
+        method: 'POST',
+        body: { expectedVersion: context.expectedVersion },
+        idempotencyKey: context.idempotencyKey,
+      },
+    );
+    if (props.orderId !== context.orderId)
+      return {
+        ok: false,
+        status: 409,
+        message: 'O pedido selecionado mudou. Confira o pedido atual.',
+      };
+    order.value = response.data.order;
+    return { ok: true, order: response.data.order };
+  } catch (cause) {
+    const status = Number(cause?.status) || 0;
+    if (status === 409) scheduleLiveRefresh();
+    return {
+      ok: false,
+      status,
+      message:
+        status === 409
+          ? 'Este pedido mudou. Atualize os dados e revise a entrega antes de confirmar novamente.'
+          : status === 403
+            ? 'Sua permissão para confirmar esta entrega mudou. Atualize o pedido.'
+            : status === 0 || status >= 500
+              ? 'Não foi possível confirmar o resultado. Atualize o pedido antes de tentar novamente.'
+              : 'Não foi possível confirmar a entrega. Atualize o pedido e revise os dados.',
+    };
+  }
+}
+
 /** PIM-13: download the approved ficha as a PDF, or offer the mobile share sheet. */
 async function generatePdf(share = false) {
   if (pdfBusy.value || isPending.value || !order.value) return;
@@ -595,6 +641,11 @@ provide('orderEditing', {
   revisitNextStep,
   save: saveSection,
   saveMilestones,
+  confirmDelivery,
+  async refresh() {
+    await load(true);
+    return { ok: !error.value, order: order.value };
+  },
   /** @param {string} section */
   start(section) {
     if (refreshTimer) {

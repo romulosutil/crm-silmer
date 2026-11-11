@@ -32,7 +32,7 @@ interromper diálogo/foco. Operação no
 ## Datas do pedido horizontais — DTL (11/11/2026)
 
 O proprietário aprovou [DTL-01–12](../order-timeline/spec.md) e a composição
-horizontal da [RFC 063](../../../docs/rfc/063-linha-do-tempo-dos-recebimentos-do-pedido.md).
+horizontal da [RFC 064](../../../docs/rfc/064-linha-do-tempo-dos-recebimentos-do-pedido.md).
 Emenda a apresentação PLA: contato, confirmação, recebimentos reais,
 correções e entrega compartilham a sequência, sem resumo repetido. O botão
 Confirmar entrega no cabeçalho reutiliza ACT-04/PLA-11. Quitação, status,

@@ -1,7 +1,7 @@
 # Datas do pedido: eventos horizontais e entrega real
 
 Autorizado pelo proprietário em 11/11/2026, após avaliação dos protótipos
-DTL-P01–P06 da [RFC 063](../../../docs/rfc/063-linha-do-tempo-dos-recebimentos-do-pedido.md).
+DTL-P01–P06 da [RFC 064](../../../docs/rfc/064-linha-do-tempo-dos-recebimentos-do-pedido.md).
 Base: origin/master `760f7924`, com os artefatos de planejamento preservados.
 Continua PLA-01–12, ACT-04, COB/BFIN e ADR 077 sem mudar quitação ou status.
 

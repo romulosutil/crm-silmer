@@ -33,6 +33,7 @@ flowchart LR
   T3 --> T4
   T4 --> T5
   T5 --> T6
+  T6 --> T7
 ```
 
 ## Task Breakdown
@@ -48,7 +49,7 @@ flowchart LR
 
 **Gate**: Quick, validate_spec.py e validate_tasks.py aprovados.
 
-- Entrega: requisitos e plano, com RFC 063 ligada à autorização do proprietário.
+- Entrega: requisitos e plano, com RFC 064 ligada à autorização do proprietário.
 
 ### T2: Projetar eventos financeiros autorizados (DTL-T01)
 
@@ -136,6 +137,23 @@ com dados sintéticos, gates finais e teste de regressão conforme escopo.
 
 **Gate**: checks focados, diff check e smoke local; commit/push no PR 348.
 
+### T7: Conciliar a documentação com a master atual (DTL-T07)
+
+- [x] Concluída: rebase em 85946ce7 preserva a recuperação de leads e as
+  alterações de ficha da master. Os conflitos restringiam-se às inserções
+  de seções no catálogo de requisitos/tarefas; ambos os conteúdos foram mantidos.
+  A RFC da timeline passou para 064 porque a 063 foi integrada antes na master
+  para recuperação de leads. Conteúdo e contratos da proposta não mudaram.
+
+**Where**: RFC da timeline, índice e referências documentais.
+
+**Depends on**: T6
+
+**Tests**: range-diff mantém patches de produto idênticos; referências locais,
+  ausência de marcadores de conflito e diff check verificados.
+
+**Gate**: CI completo do head integrado antes do merge autorizado do PR 348.
+
 ## Cross-check
 
 | Dependency | Diagram | Definition |
@@ -145,6 +163,7 @@ com dados sintéticos, gates finais e teste de regressão conforme escopo.
 | T3 → T4    | yes     | yes        |
 | T4 → T5    | yes     | yes        |
 | T5 → T6    | yes     | yes        |
+| T6 → T7    | yes     | yes        |
 
 Testes acompanham a camada alterada: T2 cobre backend; T3 acompanha frontend
 e entrega; T4 valida o conjunto sem substituir seus testes.

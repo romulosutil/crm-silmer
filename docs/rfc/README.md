@@ -2,6 +2,10 @@
 
 ## Decisão de 11/11/2026
 
+- [064 — Linha do tempo dos recebimentos do pedido](064-linha-do-tempo-dos-recebimentos-do-pedido.md),
+  protótipo aprovado e implementado em DTL/DDE/BCS, com recebimentos reais,
+  entrega e detalhes em modal; evidências nos respectivos planos de execução.
+
 - [063 — Recuperação de leads sem retorno no n8n](063-recuperacao-de-leads-sem-retorno-no-n8n.md),
   decidida na [ADR 085](../adr/085-recuperacao-de-leads-por-modo-de-atendimento.md)
   quanto à orquestração e aos modos: sugestão para atendimento humano e envio

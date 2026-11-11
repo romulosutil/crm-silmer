@@ -83,3 +83,40 @@ export function billingOperations(billing, history = []) {
       a.id.localeCompare(b.id),
   );
 }
+
+/** Only unresolved operations need background reconciliation reads.
+ * @param {any} billing @param {any[]} history */
+export function billingNeedsRefresh(billing, history) {
+  if (
+    (billing?.charges ?? []).some((/** @type {any} */ charge) =>
+      ['queued', 'creating', 'waiting', 'unknown', 'review'].includes(
+        charge.status,
+      ),
+    )
+  )
+    return true;
+  if (
+    (billing?.paymentChecks ?? []).some(
+      (/** @type {any} */ check) =>
+        ['queued', 'checking'].includes(check.state) || check.nextCheckAt,
+    )
+  )
+    return true;
+  const intents = new Map();
+  const pendingStates = ['waiting_link', 'queued', 'sending'];
+  for (const event of history) {
+    if (!event.intentId) continue;
+    const previous = intents.get(event.intentId);
+    if (
+      !previous ||
+      String(event.occurredAt) > String(previous.occurredAt) ||
+      (event.occurredAt === previous.occurredAt &&
+        pendingStates.includes(previous.status) &&
+        !pendingStates.includes(event.status))
+    )
+      intents.set(event.intentId, event);
+  }
+  return [...intents.values()].some((event) =>
+    pendingStates.includes(event.status),
+  );
+}

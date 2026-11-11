@@ -52,19 +52,25 @@ Open questions: none for this implementation.
   pagamentos redundantes do Pedido, manter a timeline, condições 0/X/100%,
   geração de link sem envio e Inbox existentes; nenhuma migration, alteração
   de saldo, endpoint financeiro, transporte ou dependência SHALL ser criada.
+- BCS-09: WHILE o Pedido não tem operação financeira em andamento, THE UI
+  SHALL evitar polling contínuo; WHILE uma operação aguarda atualização,
+  THE UI SHALL usar um único ciclo silencioso, pausar em diálogo/edição/aba
+  oculta e preservar foco, rascunho e detalhes. WHEN a resposta é idêntica,
+  THE UI SHALL conservar o snapshot e não ativar carregamento ou redesenho.
 
 ## Requirement Traceability
 
-| ID     | Task  | Status  |
-| ------ | ----- | ------- |
-| BCS-01 | T1/T2 | planned |
-| BCS-02 | T1/T2 | planned |
-| BCS-03 | T2    | planned |
-| BCS-04 | T2    | planned |
-| BCS-05 | T2    | planned |
-| BCS-06 | T2    | planned |
-| BCS-07 | T2/T3 | planned |
-| BCS-08 | T2/T3 | planned |
+| ID     | Task  | Status      |
+| ------ | ----- | ----------- |
+| BCS-01 | T1/T2 | implemented |
+| BCS-02 | T1/T2 | implemented |
+| BCS-03 | T2    | implemented |
+| BCS-04 | T2    | implemented |
+| BCS-05 | T2    | implemented |
+| BCS-06 | T2    | implemented |
+| BCS-07 | T2/T3 | implemented |
+| BCS-08 | T2/T3 | implemented |
+| BCS-09 | T2/T3 | implemented |
 
 ## Out of Scope
 

@@ -10,6 +10,8 @@ import {
 import { parseBrl } from '../../lib/order-format.js';
 import { dateTimeBR } from '../../lib/format.js';
 import { openDialog } from '../../lib/ui.js';
+import OrderBillingOperations from './OrderBillingOperations.vue';
+import { billingNeedsRefresh } from '../../lib/order-billing-operations.js';
 
 const props = defineProps({
   order: { type: Object, required: true },
@@ -18,9 +20,10 @@ const props = defineProps({
   destinationLabel: { type: String, default: '' },
   initialBilling: { type: Object, default: null },
   compact: { type: Boolean, default: false },
+  allowIssue: { type: Boolean, default: true },
   disabled: { type: Boolean, default: false },
 });
-const emit = defineEmits(['changed']);
+const emit = defineEmits(['changed', 'snapshot']);
 const uid = useId();
 const billing = ref(props.initialBilling);
 const history = ref([]);
@@ -61,6 +64,7 @@ let controller;
 let timer;
 let generation = 0;
 let disposed = false;
+let historyPaged = false;
 
 const base = computed(
   () => `/api/v1/orders/${encodeURIComponent(props.order.id)}/billing`,
@@ -91,6 +95,8 @@ const cancelled = computed(
 const mutable = computed(
   () =>
     billing.value?.canManage &&
+    (!props.compact ||
+      Number(billing.value?.orderVersion) === Number(props.order.version)) &&
     !cancelled.value &&
     !props.disabled &&
     !loading.value &&
@@ -100,9 +106,12 @@ const mutable = computed(
 const privateReadable = computed(() =>
   Boolean(
     billing.value?.canManage &&
+    (!props.compact ||
+      Number(billing.value?.orderVersion) === Number(props.order.version)) &&
     !props.disabled &&
     !loading.value &&
-    !error.value,
+    !error.value &&
+    !pending.value,
   ),
 );
 const canSend = computed(
@@ -215,12 +224,12 @@ function versions() {
     expectedBillingVersion: billing.value.version,
   };
 }
-async function load(append = false) {
+async function load(append = false, silent = false) {
   controller?.abort();
   const own = new AbortController();
   controller = own;
   const target = props.order.id;
-  loading.value = true;
+  if (!silent) loading.value = true;
   try {
     const [summary, events] = await Promise.all([
       request(base.value, { signal: own.signal }),
@@ -230,25 +239,35 @@ async function load(append = false) {
       ),
     ]);
     if (own.signal.aborted || props.order.id !== target) return;
-    billing.value = summary.data.billing;
-    history.value = append
-      ? [
-          ...new Map(
-            [...history.value, ...(events.data.items ?? [])].map((item) => [
-              item.id,
-              item,
-            ]),
-          ).values(),
-        ]
-      : (events.data.items ?? []);
-    nextCursor.value = events.data.nextCursor ?? null;
+    const changed =
+      JSON.stringify(billing.value) !== JSON.stringify(summary.data.billing);
+    if (changed) billing.value = summary.data.billing;
+    const nextHistory =
+      append || props.compact
+        ? [
+            ...new Map(
+              [...history.value, ...(events.data.items ?? [])].map((item) => [
+                item.id,
+                item,
+              ]),
+            ).values(),
+          ]
+        : (events.data.items ?? []);
+    if (JSON.stringify(history.value) !== JSON.stringify(nextHistory))
+      history.value = nextHistory;
+    if (append || !props.compact || !historyPaged)
+      nextCursor.value = events.data.nextCursor ?? null;
+    if (append && props.compact) historyPaged = true;
     error.value = '';
+    if (props.compact && changed) emit('snapshot', billing.value);
   } catch (cause) {
     if (!own.signal.aborted) {
       error.value = billingError(cause);
       if ([401, 403, 404].includes(Number(cause?.status))) {
         billing.value = null;
         history.value = [];
+        nextCursor.value = null;
+        historyPaged = false;
       }
     }
   } finally {
@@ -294,15 +313,18 @@ async function show(nextMode, event, item = null) {
         'Não foi possível conferir a conversa. Atualize os dados antes de enviar.';
     }
     action.value =
-      received.value > 0
-        ? 'balance'
-        : existing.value.length
-          ? 'send_existing'
-          : 'issue';
+      item && existing.value.some((charge) => charge.id === item.id)
+        ? 'send_existing'
+        : received.value > 0
+          ? 'balance'
+          : existing.value.length
+            ? 'send_existing'
+            : 'issue';
     percent.value = String(
       billing.value?.percent > 0 ? billing.value.percent : 100,
     );
-    chargeId.value = existing.value[0]?.id ?? corrected.value[0]?.id ?? '';
+    chargeId.value =
+      item?.id ?? existing.value[0]?.id ?? corrected.value[0]?.id ?? '';
   }
   if (nextMode === 'check')
     chargeId.value = item?.id ?? charges.value[0]?.id ?? '';
@@ -314,16 +336,33 @@ async function selectRetry() {
   selectedIntent.value = null;
   if (!intentId.value) return;
   retryLoading.value = true;
+  const ownGeneration = generation;
+  const target = intentId.value;
   try {
     const response = await request(
       `${base.value}/send-intents/${encodeURIComponent(intentId.value)}`,
     );
-    selectedIntent.value = response.data;
+    if (ownGeneration === generation && target === intentId.value)
+      selectedIntent.value = response.data;
   } catch (cause) {
-    dialogError.value = billingError(cause);
+    if (ownGeneration === generation && target === intentId.value)
+      dialogError.value = billingError(cause);
   } finally {
     retryLoading.value = false;
   }
+}
+async function showRetry(event, intent) {
+  const ownGeneration = generation;
+  await show('send', event);
+  if (
+    ownGeneration !== generation ||
+    !dialog.value?.open ||
+    mode.value !== 'send'
+  )
+    return;
+  action.value = 'retry';
+  intentId.value = intent.intentId;
+  await selectRetry();
 }
 function review() {
   dialogError.value = '';
@@ -537,6 +576,7 @@ async function submit() {
           conversation.value = null;
         }),
       ]);
+      if (props.compact) emit('changed');
       dialogError.value =
         'Os dados do pedido ou da conversa mudaram. Confira as informações atualizadas e revise novamente antes de confirmar.';
       await nextTick();
@@ -587,6 +627,7 @@ watch(
       notice.value = '';
       error.value = '';
       history.value = [];
+      historyPaged = false;
       billing.value = props.initialBilling;
       dialog.value?.close();
     }
@@ -615,10 +656,20 @@ watch(cancelled, (value) => {
 });
 async function poll() {
   if (disposed) return;
-  await load();
+  if (
+    !props.compact ||
+    (!mode.value &&
+      !busy.value &&
+      !loading.value &&
+      !props.disabled &&
+      globalThis.document?.visibilityState === 'visible' &&
+      billingNeedsRefresh(billing.value, history.value))
+  )
+    await load(false, props.compact);
   if (!disposed) timer = globalThis.setTimeout(poll, 5000);
 }
 timer = globalThis.setTimeout(poll, 5000);
+defineExpose({ refresh: () => load(), mutable });
 onBeforeUnmount(() => {
   disposed = true;
   generation++;
@@ -661,31 +712,30 @@ onBeforeUnmount(() => {
       </dl>
       <div class="workspace-actions">
         <button
-          v-for="charge in compact &&
-          billing.canManage &&
-          billing.paymentCheckEnabled
-            ? charges
-            : []"
-          :key="`check-${charge.id}`"
-          type="button"
-          :disabled="!mutable"
-          @click="show('check', $event, charge)"
-        >
-          Conferir pagamento de {{ billingMoney(charge.amountCents) }}
-        </button>
-        <button
           v-if="
-            billing.canManage && billing.chatSendEnabled && targetConversationId
+            billing.canManage &&
+            billing.chatSendEnabled &&
+            targetConversationId &&
+            (!compact ||
+              (allowIssue &&
+                balance > 0 &&
+                !activeCharge &&
+                !billing.reviewRequired))
           "
           type="button"
           class="primary"
           :disabled="!mutable || balance <= 0"
           @click="show('send', $event)"
         >
-          Gerar e enviar cobrança
+          {{
+            compact
+              ? `Cobrar ${received > 0 ? 'saldo de ' : ''}${billingMoney(balance)}`
+              : 'Gerar e enviar cobrança'
+          }}
         </button>
+        <slot name="issue-actions" :blocked="!mutable" />
         <button
-          v-if="billing.canManage"
+          v-if="billing.canManage && (!compact || balance > 0)"
           type="button"
           :disabled="!mutable || balance <= 0 || billing.reviewRequired"
           @click="show('external', $event)"
@@ -762,7 +812,28 @@ onBeforeUnmount(() => {
           </li>
         </ol>
       </section>
-      <section v-if="payments.length" aria-label="Pagamentos registrados">
+      <OrderBillingOperations
+        v-if="compact"
+        :billing="billing"
+        :history="history"
+        :has-more="Boolean(nextCursor)"
+        :loading="loading"
+        :mutable="Boolean(mutable)"
+        :private-readable="privateReadable"
+        @send="(event, charge) => show('send', event, charge)"
+        @retry="showRetry"
+        @check="(event, charge) => show('check', event, charge)"
+        @reverse="(event, receipt) => show('reverse', event, receipt)"
+        @load-more="load(true)"
+      >
+        <template #charge-actions="slotProps"
+          ><slot name="charge-actions" v-bind="slotProps"
+        /></template>
+      </OrderBillingOperations>
+      <section
+        v-if="!compact && payments.length"
+        aria-label="Pagamentos registrados"
+      >
         <h3>Pagamentos registrados</h3>
         <ol class="workspace-list">
           <li v-for="payment in payments" :key="payment.id">
@@ -831,7 +902,7 @@ onBeforeUnmount(() => {
           {{ dateTimeBR(checks[0].nextCheckAt) }}.</template
         >
       </p>
-      <details v-if="history.length" class="workspace-history">
+      <details v-if="!compact && history.length" class="workspace-history">
         <summary>Histórico de cobranças, envios e pagamentos</summary>
         <ol class="workspace-list">
           <li v-for="item in history" :key="item.id">

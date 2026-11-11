@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { billingOperations } from '../apps/edge-web/src/lib/order-billing-operations.js';
+import {
+  billingOperations,
+  billingNeedsRefresh,
+} from '../apps/edge-web/src/lib/order-billing-operations.js';
 
 test('BCS-01: a charge owns its receipts; external collections do not duplicate a receipt', () => {
   const billing = {
@@ -68,11 +71,15 @@ test('BCS-02: paged movements remain attached by exact source and operation ID',
     },
   ]);
   assert.deepEqual(
-    rows.find((row) => row.id === 'charge:c').events.map((item) => item.id),
+    rows
+      .find((row) => row.id === 'charge:c')
+      .events.map((/** @type {any} */ item) => item.id),
     ['three', 'one'],
   );
   assert.deepEqual(
-    rows.find((row) => row.id === 'external:c').events.map((item) => item.id),
+    rows
+      .find((row) => row.id === 'external:c')
+      .events.map((/** @type {any} */ item) => item.id),
     ['two'],
   );
   assert.equal(billingOperations(billing, []).length, 2);
@@ -122,4 +129,46 @@ test('BCS-02: independent external records survive missing ledger entries withou
   assert.equal(rows[0].date, '2026-11-01');
   assert.equal(rows[0].external.recordedAt, '2026-11-11T10:00:00Z');
   assert.deepEqual(rows[0].payments, []);
+});
+
+test('BCS-09: idle and settled operations stop polling; unresolved charges, checks and latest send states keep reconciliation', () => {
+  assert.equal(
+    billingNeedsRefresh({ charges: [], paymentChecks: [] }, []),
+    false,
+  );
+  assert.equal(
+    billingNeedsRefresh(
+      { charges: [{ status: 'paid' }, { status: 'closed' }] },
+      [],
+    ),
+    false,
+  );
+  assert.equal(
+    billingNeedsRefresh({ charges: [{ status: 'waiting' }] }, []),
+    true,
+  );
+  assert.equal(
+    billingNeedsRefresh({ paymentChecks: [{ state: 'queued' }] }, []),
+    true,
+  );
+  const queued = {
+    intentId: 'one',
+    status: 'queued',
+    occurredAt: '2026-11-11T10:00:00Z',
+  };
+  const delivered = {
+    ...queued,
+    status: 'delivered',
+    occurredAt: '2026-11-11T10:01:00Z',
+  };
+  assert.equal(billingNeedsRefresh({}, [queued]), true);
+  assert.equal(billingNeedsRefresh({}, [delivered, queued]), false);
+  assert.equal(billingNeedsRefresh({}, [queued, delivered]), false);
+  assert.equal(
+    billingNeedsRefresh({}, [
+      queued,
+      { ...delivered, occurredAt: queued.occurredAt },
+    ]),
+    false,
+  );
 });

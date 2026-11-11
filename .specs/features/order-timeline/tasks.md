@@ -50,7 +50,8 @@ flowchart LR
 
 ### T2: Projetar eventos financeiros autorizados (DTL-T01)
 
-- [ ] Concluída.
+- [x] Concluída: projeção aditiva, seis testes unitários e oito PostgreSQL
+  aprovados, sem skips; typecheck, ESLint focado e diff check aprovados.
       **Where**: `apps/api/src/order-billing-runtime.js`
 
 **Depends on**: T1

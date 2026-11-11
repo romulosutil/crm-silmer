@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import { authorize } from '@crm-silmer/identity-access';
+import { orderTimelineEvents } from './order-timeline-projection.js';
 import {
   fingerprintCommand,
   PostgresIdempotencyRecordStore,
@@ -158,7 +159,7 @@ export function createOrderBillingRuntime(database, options) {
   async function paymentsFor(client, orderId) {
     return (
       await client.query(
-        `SELECT p.* FROM crm.order_billing_receipt_ledger p WHERE p.order_id=$1 ORDER BY p.verified_at,p.id`,
+        `SELECT p.*,p.received_on::text AS received_on FROM crm.order_billing_receipt_ledger p WHERE p.order_id=$1 ORDER BY p.verified_at,p.id`,
         [orderId],
       )
     ).rows;
@@ -210,13 +211,46 @@ export function createOrderBillingRuntime(database, options) {
     const canManage = owns(actor, order);
     const external = (
       await client.query(
-        `SELECT e.*,u.name AS recorded_by_name,r.recorded_at AS reversed_at,r.recorded_by AS reversed_by,ru.name AS reversed_by_name,r.reason_envelope
+        `SELECT e.*,e.received_on::text AS received_on,u.name AS recorded_by_name,r.id AS reversal_id,r.recorded_at AS reversed_at,r.recorded_by AS reversed_by,ru.name AS reversed_by_name,r.reason_envelope
       FROM crm.order_billing_external_receipts e LEFT JOIN crm.order_billing_external_reversals r ON r.receipt_id=e.id
       JOIN crm.users u ON u.id=e.recorded_by LEFT JOIN crm.users ru ON ru.id=r.recorded_by
       WHERE e.order_id=$1 ORDER BY e.recorded_at,e.id`,
         [order.id],
       )
     ).rows;
+    const refunds = canManage
+      ? (
+          await client.query(
+            `SELECT r.id,r.payment_id,r.amount_cents,r.created_at,u.name AS actor_name
+       FROM crm.order_billing_refunds r
+       JOIN crm.order_billing_payments p ON p.id=r.payment_id
+       JOIN crm.order_billing_charges c ON c.id=p.charge_id
+       LEFT JOIN crm.users u ON u.id=r.actor_id
+       WHERE c.order_id=$1 ORDER BY r.created_at,r.id`,
+            [order.id],
+          )
+        ).rows
+      : [];
+    // A real milestones event distinguishes a delivered write from an audited no-op.
+    const deliveryConfirmation =
+      canManage && order.delivered_on
+        ? ((
+            await client.query(
+              `SELECT o.delivered_on::text AS day,d.occurred_at AS confirmed_at,u.name AS actor_name
+       FROM crm.orders o JOIN crm.audit_events a ON a.target_type='order' AND a.target_id=o.id
+       JOIN crm.domain_events d ON d.aggregate_type='order' AND d.aggregate_id=o.id
+         AND d.event_type='order.milestones_saved' AND d.correlation_id=a.correlation_id
+         AND a.version=(d.aggregate_version-1)::text
+       LEFT JOIN crm.users u ON u.id=a.actor_id
+       WHERE o.id=$1 AND a.action='order.delivery.confirm'
+         AND (d.occurred_at AT TIME ZONE 'America/Sao_Paulo')::date=o.delivered_on
+         AND NOT EXISTS (SELECT 1 FROM crm.audit_events later WHERE later.target_type='order'
+           AND later.target_id=o.id AND later.action='order.milestones' AND later.occurred_at>a.occurred_at)
+       ORDER BY d.aggregate_version DESC,a.occurred_at,a.id LIMIT 1`,
+              [order.id],
+            )
+          ).rows[0] ?? null)
+        : null;
     const checks = (
       await client.query(
         `SELECT k.*,j.status AS job_status FROM crm.order_billing_payment_checks k
@@ -250,6 +284,21 @@ export function createOrderBillingRuntime(database, options) {
             ? 'BILLING_DISABLED'
             : blocked(order, plan, charges, paid),
         reviewRequired: Boolean(plan?.review_required),
+        timelineEvents: canManage
+          ? orderTimelineEvents({
+              payments,
+              external,
+              refunds,
+              reviewRequired: Boolean(plan?.review_required),
+            })
+          : [],
+        deliveryConfirmation: deliveryConfirmation
+          ? {
+              day: deliveryConfirmation.day,
+              confirmedAt: iso(deliveryConfirmation.confirmed_at),
+              actorName: deliveryConfirmation.actor_name ?? null,
+            }
+          : null,
         externalReceipts: external.map((/** @type {any} */ e) => ({
           id: e.id,
           amountCents: Number(e.amount_cents),

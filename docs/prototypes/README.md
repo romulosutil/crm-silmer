@@ -1,4 +1,35 @@
-# Protótipo de envio de cobrança
+# Protótipos de cobrança e datas do pedido
+
+## Datas do pedido — DTL-P02
+
+Prévia da RFC 063 dentro do App e OrderView atuais. O harness substitui a
+seção Datas do pedido apenas no servidor local; o código da aplicação e os
+dados do ambiente de cobrança permanecem intactos. Nesta prévia focada em
+datas, a seção financeira é omitida para evitar misturar os exemplos de dois
+simuladores diferentes.
+
+```powershell
+$env:ORDER_DATES_PREVIEW = 'true'
+$env:BILLING_PREVIEW_PORT = '4190'
+rtk proxy node docs/prototypes/billing-chat-preview.mjs
+```
+
+Abra http://127.0.0.1:4190/pedidos/billing-preview-order e a seção **Datas do
+pedido**. O seletor **Exemplo** compara quitação mista, sinal InfinitePay,
+reversão manual, legado e falha. **Ver detalhes do recebimento** opera por
+teclado. Dados são fictícios e trocar cenário não registra recebimentos.
+O servidor permanece ativo durante a avaliação; Ctrl+C encerra a prévia.
+
+Verificação reproduzível:
+
+```powershell
+rtk proxy node --test docs/prototypes/order-dates-preview.test.mjs
+```
+
+O teste abre uma porta própria, verifica os cinco cenários no contexto do
+pedido, operação dos detalhes por teclado, largura mobile e preservação do
+estado financeiro. Sem `ORDER_DATES_PREVIEW=true`, o harness mantém seu
+comportamento anterior de Inbox/cobrança.
 
 ## Versão atual — Inbox da master de 08/11/2026
 

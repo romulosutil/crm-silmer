@@ -43,8 +43,15 @@ simulação enquanto a tela está aberta; atualizar a página reinicia os exempl
 Nenhum comando é enviado ao backend. O teste acima também verifica este fluxo
 no desktop e o diálogo no celular.
 
-DTL-P04: o resumo horizontal de datas foi removido por solicitação do
-proprietário; os marcos e recebimentos aparecem somente na linha do tempo.
+DTL-P04: o resumo duplicado de datas foi removido por solicitação do
+proprietário; os marcos e recebimentos aparecem somente na sequência de eventos.
+
+DTL-P05: a sequência agora é horizontal. **Confirmar entrega** fica na mesma
+linha do cabeçalho **Datas do pedido**; o subtítulo “Linha do tempo” foi
+removido. Cada evento prioriza data, título, valor e origem; **Detalhes**
+expande as informações complementares. No celular e quando necessário no
+desktop, a rolagem fica dentro da seção e também pode ser usada por teclado.
+O fluxo de confirmação e os dados financeiros fictícios permanecem iguais.
 
 ## Versão atual — Inbox da master de 08/11/2026
 

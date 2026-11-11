@@ -20,6 +20,7 @@ const pendingDelivery = ref(null);
 const deliveryNotice = ref('');
 
 async function askDelivery() {
+  if (!open.value) editing?.toggleSection?.('milestones');
   const instant = new Date();
   pendingDelivery.value = {
     day: operationalDay(instant),
@@ -85,7 +86,7 @@ const paymentEvents = computed(() => {
       id: 'confirmed',
       day: '08 nov',
       date: '2026-11-08',
-      title: 'Confirmação atual do pedido',
+      title: 'Confirmação atual',
       subtitle: 'Valor final: R$ 1.200,00',
     },
   ];
@@ -120,11 +121,9 @@ const paymentEvents = computed(() => {
       day: '10 nov',
       date: '2026-11-10',
       title: 'Saldo recebido',
-      subtitle: 'Registro manual · Transferência bancária',
+      subtitle: 'Manual · Transferência',
       amount: 'R$ 840,00',
-      badge: reversed.value
-        ? 'Revertido · não compõe o saldo'
-        : 'Recebimento confirmado',
+      badge: reversed.value ? 'Revertido · não compõe o saldo' : null,
       type: 'receipt',
       detail:
         'Recebido em 10/11/2026. Registrado por Vendedor de demonstração em 11/11/2026 às 09:15 (São Paulo).',
@@ -134,8 +133,8 @@ const paymentEvents = computed(() => {
       id: 'reversal',
       day: '11 nov',
       date: '2026-11-11',
-      title: 'Registro manual revertido',
-      subtitle: 'Correção do lançamento · sem devolução pelo CRM',
+      title: 'Registro revertido',
+      subtitle: 'Correção do lançamento',
       amount: '− R$ 840,00',
       badge: 'Correção registrada',
       type: 'correction',
@@ -174,14 +173,25 @@ const events = computed(() => {
 
 <template>
   <section class="op-sheet" aria-labelledby="dates-preview-title">
-    <OrderSheetHead
-      title-id="dates-preview-title"
-      title="Datas do pedido"
-      state="Protótipo"
-      :can-edit="false"
-      section="milestones"
-      body-id="dates-preview-body"
-    />
+    <div class="preview-section-header">
+      <OrderSheetHead
+        title-id="dates-preview-title"
+        title="Datas do pedido"
+        state=""
+        :can-edit="false"
+        section="milestones"
+        body-id="dates-preview-body"
+      />
+      <button
+        v-if="!delivery"
+        ref="deliveryTrigger"
+        type="button"
+        class="preview-delivery-button"
+        @click="askDelivery"
+      >
+        Confirmar entrega
+      </button>
+    </div>
     <div
       id="dates-preview-body"
       class="op-sheet-body dates-preview"
@@ -207,18 +217,6 @@ const events = computed(() => {
           </select>
         </div>
       </div>
-      <div class="preview-timeline-heading">
-        <h3>Linha do tempo</h3>
-        <button
-          v-if="!delivery"
-          ref="deliveryTrigger"
-          type="button"
-          class="preview-delivery-button"
-          @click="askDelivery"
-        >
-          Confirmar entrega
-        </button>
-      </div>
       <p v-if="failed" role="status" class="op-alert">
         Não foi possível carregar os recebimentos. As datas do pedido continuam
         disponíveis.
@@ -227,40 +225,62 @@ const events = computed(() => {
         A data foi preservada. A origem e os valores dos recebimentos não estão
         disponíveis.
       </p>
-      <ol
-        class="preview-timeline"
-        aria-label="Acontecimentos de demonstração do pedido"
+      <div
+        class="preview-timeline-scroll"
+        role="region"
+        aria-label="Cronologia do pedido, deslize para ver os eventos"
+        tabindex="0"
       >
-        <li v-for="event in events" :key="event.id" :data-kind="event.type">
-          <time :datetime="event.date"
-            >{{ event.day }}<span>{{ event.year ?? '2026' }}</span></time
-          >
-          <span class="preview-track" aria-hidden="true"
-            ><span class="preview-dot"></span
-          ></span>
-          <div class="preview-entry">
-            <div class="preview-entry-head">
-              <strong
-                :ref="event.id === 'delivered' ? setDeliveryResult : undefined"
-                :tabindex="event.id === 'delivered' ? -1 : undefined"
-                >{{ event.title }}</strong
-              ><strong v-if="event.amount" class="op-num">{{
-                event.amount
-              }}</strong>
+        <ol
+          class="preview-timeline"
+          aria-label="Acontecimentos de demonstração do pedido"
+        >
+          <li v-for="event in events" :key="event.id" :data-kind="event.type">
+            <time :datetime="event.date"
+              >{{ event.day }}<span>{{ event.year ?? '2026' }}</span></time
+            >
+            <span class="preview-track" aria-hidden="true"
+              ><span class="preview-dot"></span
+            ></span>
+            <div class="preview-entry">
+              <div class="preview-entry-head">
+                <strong
+                  :ref="
+                    event.id === 'delivered' ? setDeliveryResult : undefined
+                  "
+                  :tabindex="event.id === 'delivered' ? -1 : undefined"
+                  >{{ event.title }}</strong
+                ><strong v-if="event.amount" class="op-num">{{
+                  event.amount
+                }}</strong>
+              </div>
+              <p class="op-hint">{{ event.subtitle }}</p>
+              <span
+                v-if="
+                  event.badge &&
+                  (event.type !== 'receipt' || event.id === 'manual')
+                "
+                class="preview-badge"
+                >{{ event.badge }}</span
+              >
+              <details v-if="event.detail">
+                <summary
+                  :aria-label="
+                    event.detailLabel ??
+                    `Ver detalhes do recebimento: ${event.title}`
+                  "
+                >
+                  Detalhes
+                </summary>
+                <p class="op-hint">{{ event.detail }}</p>
+              </details>
             </div>
-            <p class="op-hint">{{ event.subtitle }}</p>
-            <span v-if="event.badge" class="preview-badge">{{
-              event.badge
-            }}</span>
-            <details v-if="event.detail">
-              <summary>
-                {{ event.detailLabel ?? 'Ver detalhes do recebimento' }}
-              </summary>
-              <p class="op-hint">{{ event.detail }}</p>
-            </details>
-          </div>
-        </li>
-      </ol>
+          </li>
+        </ol>
+      </div>
+      <p class="op-hint preview-scroll-hint">
+        Deslize para ver os próximos eventos.
+      </p>
       <div class="preview-totals">
         <span
           >Recebido: <strong>{{ received }}</strong></span
@@ -324,7 +344,6 @@ const events = computed(() => {
   justify-content: space-between;
   gap: var(--space-4);
   flex-wrap: wrap;
-  margin-bottom: var(--space-5);
 }
 .preview-toolbar > p {
   max-inline-size: 40ch;
@@ -335,46 +354,59 @@ const events = computed(() => {
 .preview-toolbar select {
   max-inline-size: 100%;
 }
-.preview-timeline-heading {
+.preview-section-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--space-3);
-  margin-bottom: var(--space-5);
+  gap: var(--space-2);
+  padding-inline-end: var(--space-4);
+  border-block-end: 1px solid var(--color-border-subtle);
+}
+.preview-section-header :deep(.op-sheet-head) {
+  flex: 1;
+  min-inline-size: 0;
+  border-block-end: 0;
+}
+.preview-timeline-scroll {
+  max-inline-size: 100%;
+  overflow-x: auto;
+  padding-block: 0 var(--space-4);
+  overscroll-behavior-inline: contain;
+}
+.preview-timeline-scroll:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
 }
 time {
   color: var(--color-text-muted);
   font-size: var(--text-xs);
 }
-h3 {
-  font-size: var(--text-base);
-  font-weight: var(--weight-semibold);
-  margin: 0;
-}
 .preview-timeline {
+  display: flex;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 .preview-timeline li {
   display: grid;
-  grid-template-columns: 5rem 1rem minmax(0, 1fr);
-  gap: var(--space-3);
+  flex: 1 0 8.5rem;
+  grid-template-rows: auto var(--space-6) 1fr;
+  min-inline-size: 0;
+  align-content: start;
 }
 time span {
-  display: block;
+  margin-inline-start: var(--space-1);
 }
 .preview-track {
   display: flex;
-  justify-content: center;
+  align-items: center;
   position: relative;
 }
 .preview-track::after {
   content: '';
   position: absolute;
-  inset-block: var(--space-4) 0;
-  inline-size: 1px;
+  inset-inline: var(--space-2) 0;
+  block-size: 1px;
   background: var(--color-border);
 }
 li:last-child .preview-track::after {
@@ -383,7 +415,6 @@ li:last-child .preview-track::after {
 .preview-dot {
   inline-size: var(--space-2);
   block-size: var(--space-2);
-  margin-top: var(--space-2);
   background: var(--color-text-muted);
   border-radius: var(--radius-pill);
 }
@@ -395,16 +426,14 @@ li:last-child .preview-track::after {
   border-radius: 0;
 }
 .preview-entry {
-  padding-bottom: var(--space-6);
+  padding-inline-end: var(--space-4);
   min-inline-size: 0;
   overflow-wrap: anywhere;
 }
 .preview-entry-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
 }
 .preview-entry-head strong {
   font-weight: var(--weight-medium);
@@ -419,7 +448,10 @@ li:last-child .preview-track::after {
   margin-top: var(--space-2);
 }
 details {
-  margin-top: var(--space-2);
+  margin-top: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 summary {
   color: var(--color-link);
@@ -441,14 +473,17 @@ summary:focus-visible {
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
 }
-@media (max-width: 480px) {
-  .preview-timeline li {
-    grid-template-columns: 3.5rem 0.75rem minmax(0, 1fr);
-    gap: var(--space-2);
-  }
-}
 .preview-delivery-button {
   white-space: normal;
+  margin-block: var(--space-2);
+}
+.preview-scroll-hint {
+  display: none;
+}
+@media (max-width: 767px) {
+  .preview-scroll-hint {
+    display: block;
+  }
 }
 .preview-delivery-dialog form {
   display: grid;

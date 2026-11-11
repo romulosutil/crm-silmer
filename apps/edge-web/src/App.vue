@@ -18,6 +18,19 @@ import { brand } from './brand/index.js';
 import { ApiError, request } from './lib/api-client.js';
 import { LiveEventStream } from './lib/event-stream.js';
 import { canReadHealthErrors } from './lib/health-errors.js';
+import {
+  INBOX_UNREAD_STORAGE_KEY,
+  emptyUnreadState,
+  isConversationUnread,
+  markConversationRead,
+  observeConversations,
+  parseUnreadState,
+  serializeUnreadState,
+  unreadCount,
+  unreadNoticeText,
+  unreadTitle,
+} from './lib/inbox-unread.js';
+import { inboxListUrl, inboxStateFromRoute } from './lib/inbox-turn.js';
 import { RETURN_QUERY, safeReturnPath } from './lib/return-path.js';
 
 const router = useRouter();
@@ -122,15 +135,29 @@ const canAccessCurrentRoute = computed(() => {
   if (route.meta.requiresHealthErrors) return canAccessHealthErrors.value;
   return route.meta.requiresAdmin !== true || isAdmin.value;
 });
-// One list feeds the sidebar and the mobile menu, so both always offer the
-// same places (Usuários and Sair included on a phone).
+// One list feeds the sidebar, the rail and the mobile menu, so all of them
+// always offer the same places (Usuários and Sair included on a phone). INBOX-RD-07:
+// each item names its group; a group with no visible item leaves no gap.
+const NAV_GROUPS = Object.freeze(['operacao', 'integracoes', 'admin', 'conta']);
 const navItems = computed(() =>
   isFinance.value
     ? [
         ...(canOperateOlist.value
-          ? [{ to: '/olist', label: 'Olist', icon: 'orders' }]
+          ? [
+              {
+                to: '/olist',
+                label: 'Olist',
+                icon: 'package',
+                group: 'integracoes',
+              },
+            ]
           : []),
-        { to: '/conta', label: 'Minha conta', icon: 'account' },
+        {
+          to: '/conta',
+          label: 'Minha conta',
+          icon: 'account',
+          group: 'conta',
+        },
       ]
     : [
         {
@@ -138,35 +165,78 @@ const navItems = computed(() =>
           label: 'Dashboard',
           short: 'Início',
           icon: 'dashboard',
+          group: 'operacao',
         },
         {
           to: '/inbox',
           label: 'Caixa de Entrada',
           short: 'Caixa',
           icon: 'inbox',
+          group: 'operacao',
+          count: inboxUnreadCount,
+          countLabel: inboxUnreadLabel,
         },
         {
           to: '/pedidos',
           label: 'Pedidos',
           icon: 'orders',
+          group: 'operacao',
           count: storeNewCount,
+          countLabel: storeCountLabel,
         },
-        { to: '/clientes', label: 'Clientes', icon: 'clients' },
+        {
+          to: '/clientes',
+          label: 'Clientes',
+          icon: 'clients',
+          group: 'operacao',
+        },
         ...(canAccessOlist.value
-          ? [{ to: '/olist', label: 'Olist', icon: 'orders' }]
+          ? [
+              {
+                to: '/olist',
+                label: 'Olist',
+                icon: 'package',
+                group: 'integracoes',
+              },
+            ]
           : []),
         ...(isAdmin.value
           ? [
-              { to: '/melhor-envio', label: 'Melhor Envio', icon: 'orders' },
-              { to: '/usuarios', label: 'Usuários', icon: 'team' },
+              {
+                to: '/melhor-envio',
+                label: 'Melhor Envio',
+                icon: 'truck',
+                group: 'integracoes',
+              },
+              {
+                to: '/usuarios',
+                label: 'Usuários',
+                icon: 'team',
+                group: 'admin',
+              },
             ]
           : []),
         ...(canAccessHealthErrors.value
-          ? [{ to: '/saude-erros', label: 'Saúde e erros', icon: 'panel' }]
+          ? [
+              {
+                to: '/saude-erros',
+                label: 'Saúde e erros',
+                icon: 'panel',
+                group: 'admin',
+              },
+            ]
           : []),
-        { to: '/conta', label: 'Conta', icon: 'account' },
+        { to: '/conta', label: 'Conta', icon: 'account', group: 'conta' },
       ],
 );
+/** @param {Array<{group: string}>} items @returns {Array<{id: string, items: any[]}>} */
+function groupNavItems(items) {
+  return NAV_GROUPS.map((id) => ({
+    id,
+    items: items.filter((item) => item.group === id),
+  })).filter((group) => group.items.length > 0);
+}
+const navGroups = computed(() => groupNavItems(navItems.value));
 
 // Mobile-first: sellers live on the phone. The four daily places sit in a
 // bottom bar under the thumb; the rest opens from "Mais".
@@ -181,17 +251,18 @@ const mobileMore = computed(() =>
     ? []
     : navItems.value.filter((item) => !MOBILE_TABS.has(item.to)),
 );
+const mobileMoreGroups = computed(() => groupNavItems(mobileMore.value));
 const moreActive = computed(() =>
   mobileMore.value.some((item) => sectionCurrent(item.to)),
 );
-/** @param {{label: string, count?: import('vue').Ref<number>}} item */
+/** @param {{label: string, count?: import('vue').Ref<number>, countLabel?: import('vue').Ref<string>}} item */
 function tabName(item) {
   // The visible word must start the accessible name (WCAG 2.5.3): "Caixa"
   // reads "Caixa de Entrada"; "Início" stands for the Dashboard on its own.
   const base =
     item.short && !item.label.startsWith(item.short) ? item.short : item.label;
   const count = item.count?.value ?? 0;
-  return count > 0 ? `${base}, ${count}${storeCountLabel.value}` : base;
+  return count > 0 ? `${base}, ${count}${item.countLabel?.value ?? ''}` : base;
 }
 
 // PGE-01: the order page belongs to Pedidos. RouterLink only marks a link it
@@ -338,6 +409,169 @@ watch(liveEvent, (event) => {
   }
 });
 
+// INBOX-RD-02: "mensagem nova" in the Caixa. The shell owns the state (the
+// same pattern as the reply drafts) so the count shows on every screen; only
+// ids and message ids are stored, never names or message text. Without
+// storage (private mode, quota, blocked) it works in memory only.
+const BASE_TITLE = globalThis.document?.title || 'CRM Silmer';
+const UNREAD_FETCH_DELAY_MS = 1000;
+const NEW_MESSAGE_ANNOUNCEMENT = 'Mensagem nova na Caixa de Entrada.';
+
+/** @returns {import('./lib/inbox-unread.js').UnreadState} */
+function readUnreadState() {
+  try {
+    return parseUnreadState(
+      globalThis.localStorage?.getItem(INBOX_UNREAD_STORAGE_KEY),
+    );
+  } catch {
+    return emptyUnreadState();
+  }
+}
+
+/** @param {import('./lib/inbox-unread.js').UnreadState} state */
+function persistUnreadState(state) {
+  try {
+    globalThis.localStorage?.setItem(
+      INBOX_UNREAD_STORAGE_KEY,
+      serializeUnreadState(state),
+    );
+  } catch {
+    // The marks keep working in memory when browser storage is unavailable.
+  }
+}
+
+const unreadState = shallowRef(readUnreadState());
+const inboxUnreadCount = computed(() => unreadCount(unreadState.value));
+const inboxUnreadLabel = computed(() =>
+  inboxUnreadCount.value === 1
+    ? ' conversa com mensagem nova'
+    : ' conversas com mensagem nova',
+);
+let unreadFetchTimer = 0;
+let unreadFetchSeq = 0;
+
+/** @param {import('./lib/inbox-unread.js').UnreadState} next */
+function commitUnreadState(next) {
+  if (next === unreadState.value) return;
+  unreadState.value = next;
+  persistUnreadState(next);
+}
+
+/** @param {unknown[]} arrived */
+function announceArrival(arrived) {
+  if (Array.isArray(arrived) && arrived.length > 0)
+    announce(NEW_MESSAGE_ANNOUNCEMENT);
+}
+
+provide('inboxUnread', {
+  count: inboxUnreadCount,
+  /** @param {string} conversationId */
+  isUnread: (conversationId) =>
+    isConversationUnread(unreadState.value, conversationId),
+  /**
+   * @param {any[]} conversations
+   * @param {{openId?: string|null}} [options]
+   * @returns {string[]} the ids that just arrived
+   */
+  observe(conversations, options = {}) {
+    const result = observeConversations(
+      unreadState.value,
+      conversations,
+      options,
+    );
+    commitUnreadState(result.state);
+    return result.arrived;
+  },
+  /** @param {any} conversation */
+  markRead(conversation) {
+    commitUnreadState(markConversationRead(unreadState.value, conversation));
+  },
+  announceArrival,
+});
+
+function clearUnreadState() {
+  unreadFetchSeq += 1;
+  if (unreadFetchTimer) globalThis.clearTimeout(unreadFetchTimer);
+  unreadFetchTimer = 0;
+  unreadState.value = emptyUnreadState();
+  try {
+    globalThis.localStorage?.removeItem(INBOX_UNREAD_STORAGE_KEY);
+  } catch {
+    // Nothing else to clear.
+  }
+}
+
+/** The Inbox view observes its own Responder list; the shell must not repeat it. */
+function inboxViewObservesRespond() {
+  if (!route.path.startsWith('/inbox')) return false;
+  const state = inboxStateFromRoute(route.query);
+  return state.bucket === 'respond' && state.consult === 'open';
+}
+
+async function observeInboxFromShell() {
+  if (
+    phase.value !== 'authenticated' ||
+    isFinance.value ||
+    globalThis.document?.visibilityState === 'hidden' ||
+    inboxViewObservesRespond()
+  )
+    return;
+  const sequence = ++unreadFetchSeq;
+  try {
+    const response = await request(
+      inboxListUrl({
+        bucket: 'respond',
+        consult: 'open',
+        ownerScope: 'all',
+        orderReadyOnly: false,
+        ownerFilter: '',
+      }),
+    );
+    if (sequence !== unreadFetchSeq || phase.value !== 'authenticated') return;
+    const openId = String(route.params.conversationId ?? '') || null;
+    const result = observeConversations(
+      unreadState.value,
+      response.data?.items,
+      { openId },
+    );
+    commitUnreadState(result.state);
+    announceArrival(result.arrived);
+  } catch {
+    // A failed read keeps the last marks; the next event tries again.
+  }
+}
+
+function scheduleUnreadObserve() {
+  if (unreadFetchTimer) globalThis.clearTimeout(unreadFetchTimer);
+  unreadFetchTimer = globalThis.setTimeout(() => {
+    unreadFetchTimer = 0;
+    void observeInboxFromShell();
+  }, UNREAD_FETCH_DELAY_MS);
+}
+
+function onVisibilityChange() {
+  if (globalThis.document.visibilityState === 'visible')
+    scheduleUnreadObserve();
+}
+globalThis.document?.addEventListener('visibilitychange', onVisibilityChange);
+
+watch(liveEvent, (event) => {
+  if (event?.reset || event?.type === 'inbox.conversation.changed') {
+    scheduleUnreadObserve();
+  }
+});
+
+watch(
+  [inboxUnreadCount, phase],
+  ([count, current]) => {
+    globalThis.document.title = unreadTitle(
+      BASE_TITLE,
+      current === 'authenticated' ? count : 0,
+    );
+  },
+  { immediate: true },
+);
+
 watch(liveTopic, (topic) => {
   if (phase.value !== 'authenticated') return;
   if (topic) stream.start(topic);
@@ -365,6 +599,11 @@ watch(
 
 void restoreSession();
 onBeforeUnmount(() => {
+  globalThis.document?.removeEventListener(
+    'visibilitychange',
+    onVisibilityChange,
+  );
+  if (unreadFetchTimer) globalThis.clearTimeout(unreadFetchTimer);
   inboxReplyDrafts.value.clear();
   stream.close();
   if (storeCountTimer) globalThis.clearTimeout(storeCountTimer);
@@ -430,6 +669,8 @@ async function showSession(value, announceLogin = true) {
   if (liveTopic.value) stream.start(liveTopic.value);
   else stream.close();
   void refreshStoreCount();
+  // Baseline: the first time a conversation is seen nothing gets marked.
+  void observeInboxFromShell();
   if (announceLogin) announce('Sessão iniciada com segurança.');
 }
 
@@ -450,6 +691,7 @@ async function showSignedOut(focus = true, keepReturn = false) {
   session.value = null;
   phase.value = 'signed-out';
   storeNewCount.value = 0;
+  clearUnreadState();
   stream.close();
   activeView.value?.dispose();
   activeView.value = null;
@@ -614,32 +856,32 @@ function onCursor(cursor) {
         ></span>
       </button>
       <nav id="main-navigation" aria-label="Navegação principal">
-        <RouterLink
-          v-for="item in navItems"
-          :key="item.to"
-          v-slot="{ href, navigate }"
-          :to="item.to"
-          custom
-        >
-          <a
-            :href="href"
-            :aria-current="sectionCurrent(item.to)"
-            :title="item.label"
-            @click="navigate"
-          >
-            <AppIcon :name="item.icon" />
-            <span class="nav-label">{{ item.label }}</span>
-            <span
-              class="sidebar-tooltip"
-              :data-label="item.label"
-              aria-hidden="true"
-            ></span>
-            <span v-if="item.count?.value > 0" class="nav-count"
-              >{{ item.count.value
-              }}<span class="sr-only">{{ storeCountLabel }}</span></span
-            >
-          </a>
-        </RouterLink>
+        <ul v-for="group in navGroups" :key="group.id" class="nav-group">
+          <li v-for="item in group.items" :key="item.to">
+            <RouterLink v-slot="{ href, navigate }" :to="item.to" custom>
+              <a
+                :href="href"
+                :aria-current="sectionCurrent(item.to)"
+                :title="item.label"
+                @click="navigate"
+              >
+                <AppIcon :name="item.icon" />
+                <span class="nav-label">{{ item.label }}</span>
+                <span
+                  class="sidebar-tooltip"
+                  :data-label="item.label"
+                  aria-hidden="true"
+                ></span>
+                <span v-if="item.count?.value > 0" class="nav-count"
+                  >{{ item.count.value
+                  }}<span class="sr-only">{{
+                    item.countLabel?.value
+                  }}</span></span
+                >
+              </a>
+            </RouterLink>
+          </li>
+        </ul>
       </nav>
       <div class="sidebar-footer">
         <div class="sidebar-account">
@@ -789,22 +1031,24 @@ function onCursor(cursor) {
               <span>{{ sessionSummary }}</span>
             </span>
           </div>
-          <RouterLink
-            v-for="item in mobileMore"
-            :key="item.to"
-            v-slot="{ href, navigate }"
-            :to="item.to"
-            custom
+          <ul
+            v-for="group in mobileMoreGroups"
+            :key="group.id"
+            class="nav-group"
           >
-            <a
-              class="mobile-more-link"
-              :href="href"
-              :aria-current="sectionCurrent(item.to)"
-              @click="navigate"
-            >
-              <AppIcon :name="item.icon" />{{ item.label }}
-            </a>
-          </RouterLink>
+            <li v-for="item in group.items" :key="item.to">
+              <RouterLink v-slot="{ href, navigate }" :to="item.to" custom>
+                <a
+                  class="mobile-more-link"
+                  :href="href"
+                  :aria-current="sectionCurrent(item.to)"
+                  @click="navigate"
+                >
+                  <AppIcon :name="item.icon" />{{ item.label }}
+                </a>
+              </RouterLink>
+            </li>
+          </ul>
           <div class="mobile-more-theme">
             <span>Aparência</span>
             <ThemeSwitcher />

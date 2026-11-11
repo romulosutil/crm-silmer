@@ -698,7 +698,7 @@ export function createOrderRuntime(options) {
       );
     },
 
-    /** @param {OrderCommand & {orderId: string, expectedVersion: number}} input */
+    /** @param {OrderCommand & {orderId: string, deliveredOn?: string, expectedVersion: number}} input */
     async confirmDelivery(input) {
       if (options.withMilestoneTransaction)
         return options.withMilestoneTransaction('confirmDelivery', input);
@@ -706,7 +706,9 @@ export function createOrderRuntime(options) {
         input,
         {
           action: 'order.delivery.confirm',
-          command: {},
+          command: Object.hasOwn(input, 'deliveredOn')
+            ? { deliveredOn: input.deliveredOn }
+            : {},
           expectedVersion: input.expectedVersion,
           target: { id: input.orderId, type: 'order' },
         },

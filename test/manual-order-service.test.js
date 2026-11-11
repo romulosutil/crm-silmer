@@ -227,6 +227,53 @@ test('a pending manual order cannot be marked delivered', async () => {
   );
 });
 
+test('DDE-02/03: changing an existing delivery preserves money and requires a valid explicit day', async () => {
+  const { service } = setup();
+  const confirmed = await confirmedManual(service, 'change-delivery-date');
+  const command = {
+    actor: OWNER,
+    correlationId: 'change-delivery',
+    orderId: confirmed.id,
+    expectedVersion: confirmed.version,
+  };
+  await assert.rejects(
+    service.confirmDelivery({ ...command, deliveredOn: '2026-10-20' }),
+    { code: 'ORDER_STATUS_CONFLICT' },
+  );
+  const delivered = await service.confirmDelivery(command);
+  const change = {
+    ...command,
+    expectedVersion: delivered.version,
+    deliveredOn: '2026-10-20',
+  };
+  await assert.rejects(service.confirmDelivery({ ...change, actor: OTHER }), {
+    code: 'FORBIDDEN',
+  });
+  for (const day of [null, '', '2026-02-30', '2026-10-22'])
+    await assert.rejects(
+      service.confirmDelivery({ ...change, deliveredOn: day }),
+      { code: 'INVALID_DATE' },
+    );
+  const changed = await service.confirmDelivery(change);
+  assert.equal(changed.deliveredOn, '2026-10-20');
+  assert.equal(changed.paidOn, delivered.paidOn);
+  assert.equal(changed.status, delivered.status);
+  assert.deepEqual(changed.ficha, delivered.ficha);
+  assert.equal(changed.version, delivered.version + 1);
+  assert.equal(
+    (
+      await service.confirmDelivery({
+        ...change,
+        expectedVersion: changed.version,
+      })
+    ).version,
+    changed.version,
+  );
+  await assert.rejects(service.confirmDelivery(change), {
+    code: 'VERSION_CONFLICT',
+  });
+});
+
 test('an administrator can confirm delivery but their own afazeres exclude another seller', async () => {
   const { service } = setup();
   const confirmed = await confirmedManual(service, 'admin-delivery');

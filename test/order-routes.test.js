@@ -1923,14 +1923,28 @@ test('manual delivery afazeres are scoped and confirmation is idempotent with no
     headers: { ...writeHeaders, 'idempotency-key': 'delivery-stale' },
   });
   assert.equal(stale.statusCode, 409);
-  const clientDate = await api.inject({
+  const correction = {
     ...confirmation,
+    headers: { ...writeHeaders, 'idempotency-key': 'delivery-correction' },
     payload: {
       expectedVersion: first.json().order.version,
       deliveredOn: '2026-09-11',
     },
-  });
-  assert.equal(clientDate.statusCode, 400);
+  };
+  const clientDate = await api.inject(correction);
+  assert.equal(clientDate.statusCode, 200);
+  assert.equal(clientDate.json().order.deliveredOn, '2026-09-11');
+  assert.equal(clientDate.json().order.paidOn, '2026-09-10');
+  assert.deepEqual((await api.inject(correction)).json(), clientDate.json());
+  assert.equal(
+    (
+      await api.inject({
+        ...correction,
+        payload: { ...correction.payload, deliveredOn: '2026-09-10' },
+      })
+    ).statusCode,
+    409,
+  );
   const editDelivery = await api.inject({
     method: 'PATCH',
     headers: { ...writeHeaders, 'idempotency-key': 'edit-delivery' },
@@ -1969,6 +1983,69 @@ test('manual delivery tasks require session and another seller cannot confirm', 
     url: '/api/v1/orders/delivery-tasks',
   });
   assert.equal(denied.statusCode, 403);
+});
+
+test('DDE-02/03: HTTP correction accepts only valid dates after delivery for manual and conversation orders', async (t) => {
+  for (const conversationId of [null, 'conversation-1']) {
+    const { api, runtime } = orderHarness();
+    t.after(() => api.close());
+    const order = await createConfirmed(runtime, conversationId);
+    const endpoint = `/api/v1/orders/${order.id}/delivery-confirmation`;
+    /** @param {any} payload @param {string} key */
+    const post = (payload, key) =>
+      api.inject({
+        method: 'POST',
+        url: endpoint,
+        headers: { ...writeHeaders, 'idempotency-key': key },
+        payload,
+      });
+    assert.equal(
+      (
+        await post(
+          { expectedVersion: order.version, deliveredOn: '2026-09-10' },
+          'premature',
+        )
+      ).statusCode,
+      409,
+    );
+    const first = await post({ expectedVersion: order.version }, 'original');
+    const delivered = first.json().order;
+    assert.equal(delivered.deliveredOn, '2026-09-12');
+    for (const [day, status] of [
+      [null, 400],
+      ['', 422],
+      ['2026-02-30', 422],
+      ['2026-09-13', 422],
+    ]) {
+      const response = await post(
+        { expectedVersion: delivered.version, deliveredOn: day },
+        `invalid-${String(day)}`,
+      );
+      assert.equal(response.statusCode, status);
+    }
+    assert.equal(
+      (
+        await post(
+          {
+            expectedVersion: delivered.version,
+            deliveredOn: '2026-09-11',
+            paidOn: null,
+          },
+          'financial-field',
+        )
+      ).statusCode,
+      400,
+    );
+    const changed = await post(
+      { expectedVersion: delivered.version, deliveredOn: '2026-09-11' },
+      'valid-day',
+    );
+    assert.equal(changed.statusCode, 200);
+    assert.equal(changed.json().order.deliveredOn, '2026-09-11');
+    assert.equal(changed.json().order.paidOn, delivered.paidOn);
+    assert.equal(changed.json().order.status, delivered.status);
+    assert.deepEqual(changed.json().order.ficha, delivered.ficha);
+  }
 });
 
 test('ACT: payment and delivery confirmations preserve each other on conversation orders', async (t) => {

@@ -687,7 +687,12 @@ export function registerOrderRoutes(
           'ORDER_ID',
         );
         const body = requireObject(request.body);
-        rejectUnknownKeys(body, ['expectedVersion']);
+        rejectUnknownKeys(body, ['expectedVersion', 'deliveredOn']);
+        if (
+          Object.hasOwn(body, 'deliveredOn') &&
+          typeof body.deliveredOn !== 'string'
+        )
+          throw new OrderRequestError(400, 'INVALID_REQUEST');
         const expectedVersion = requireVersion(body.expectedVersion);
         const command = await authorizeCommand(
           request,
@@ -697,6 +702,9 @@ export function registerOrderRoutes(
         );
         const order = await orders.confirmDelivery({
           ...command,
+          ...(Object.hasOwn(body, 'deliveredOn')
+            ? { deliveredOn: body.deliveredOn }
+            : {}),
           orderId,
           expectedVersion,
         });

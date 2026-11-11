@@ -3479,11 +3479,13 @@ paths:
   /orders/{orderId}/delivery-confirmation:
     post:
       operationId: confirmManualOrderDelivery
-      summary: Confirma a entrega e registra o dia de hoje em São Paulo
+      summary: Confirma a entrega hoje ou altera a data de uma entrega registrada
       description: >-
         PLA-11 / T136. Autoriza com order.milestones, restrito ao responsável ou
-        COMMERCIAL_ADMIN. Apenas pedido manual confirmado e fora de teste.
-        Preserva Pago em, status e snapshot; não aceita data do cliente.
+        COMMERCIAL_ADMIN. Pedido de atendimento confirmado e fora de teste.
+        Sem deliveredOn, confirma com hoje em São Paulo. Com deliveredOn,
+        exige entrega já registrada e permite corrigir somente o dia, até hoje.
+        Não permite apagar a entrega. Preserva Pago em, status e snapshot.
         Auditoria order.delivery.confirm, controle de versão e replay idempotente.
       security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
       parameters:
@@ -3499,9 +3501,13 @@ paths:
               required: [expectedVersion]
               properties:
                 expectedVersion: { type: integer, minimum: 1 }
+                deliveredOn:
+                  type: string
+                  format: date
+                  description: Apenas para alterar uma entrega já registrada; dia válido até hoje em São Paulo.
       responses:
         '200':
-          description: Entrega confirmada ou replay idempotente
+          description: Entrega confirmada, data alterada ou replay idempotente
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OrderResponse' }
@@ -3509,6 +3515,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/OrderNotFound' }
         '409': { $ref: '#/components/responses/OrderConflict' }
+        '422': { $ref: '#/components/responses/OrderUnprocessable' }
   /orders/{orderId}/milestones:
     patch:
       operationId: recordOrderMilestones

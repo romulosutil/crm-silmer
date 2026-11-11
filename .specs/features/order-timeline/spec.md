@@ -59,6 +59,9 @@ infraestrutura. Não é um histórico de todas as reaberturas do pedido.
   horizontais em ordem estável e o rótulo Pedido confirmado, sem o antigo
   resumo horizontal de três datas e sem subtítulo Linha do tempo; detalhes
   SHALL preservar informações completas com nomes acessíveis.
+  No ajuste DTL-T06 aprovado pelo proprietário, os próprios títulos abrem
+  essas informações em modal de leitura; fechar/Escape devolvem foco ao título,
+  sem ícone adicional, consultas extras ou comandos de escrita.
 - DTL-07: WHEN só existe paidOn legado THEN a UI SHALL mostrar quitação
   registrada sem inventar valor/fonte/identificador de pagamento; os marcos
   sem data SHALL não ganhar datas ou instantes fictícios.

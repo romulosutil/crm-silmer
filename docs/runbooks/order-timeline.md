@@ -14,8 +14,10 @@ A seção compartilha o snapshot do endpoint de cobrança existente, sem
 adicionar consulta ao ciclo de resumo/workspace já usado por Cobranças.
 Abrir o histórico não gera link, mensagem ou recebimento.
 
-Os detalhes de cada evento abrem pelo chevron discreto, com nome acessível
-contextual, teclado e alvo de 44px. O texto Registro revertido não se repete
+Os títulos de cada evento são botões discretos que abrem os detalhes em modal
+de leitura, com teclado e alvo de 44px. Fechar/Escape devolvem foco ao título;
+trocar de pedido ou remover o evento fecha o modal. A abertura usa os dados já
+carregados, sem consulta adicional ou escrita. O texto Registro revertido não se repete
 abaixo do recebimento: o estado permanece nos detalhes e a reversão continua
 como evento próprio na sequência.
 

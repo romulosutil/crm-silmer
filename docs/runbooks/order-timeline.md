@@ -1,7 +1,7 @@
 # Datas do pedido e confirmação de entrega
 
 Contrato: [DTL-01–12](../../.specs/features/order-timeline/spec.md),
-[RFC 063](../rfc/063-linha-do-tempo-dos-recebimentos-do-pedido.md).
+[RFC 064](../rfc/064-linha-do-tempo-dos-recebimentos-do-pedido.md).
 
 ## Leitura
 

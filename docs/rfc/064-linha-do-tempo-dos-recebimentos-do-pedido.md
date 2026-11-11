@@ -1,4 +1,4 @@
-# RFC 063: linha do tempo dos recebimentos do pedido
+# RFC 064: linha do tempo dos recebimentos do pedido
 
 Status: composição e implementação local aprovadas pelo proprietário em
 11/11/2026, após DTL-P01–P06. Implantação permanece fora desta autorização.

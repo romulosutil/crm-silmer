@@ -60,17 +60,17 @@ Open questions: none for this implementation.
 
 ## Requirement Traceability
 
-| ID     | Task  | Status      |
-| ------ | ----- | ----------- |
-| BCS-01 | T1/T2 | implemented |
-| BCS-02 | T1/T2 | implemented |
-| BCS-03 | T2    | implemented |
-| BCS-04 | T2    | implemented |
-| BCS-05 | T2    | implemented |
-| BCS-06 | T2    | implemented |
-| BCS-07 | T2/T3 | implemented |
-| BCS-08 | T2/T3 | implemented |
-| BCS-09 | T2/T3 | implemented |
+| ID     | Task        | Status   |
+| ------ | ----------- | -------- |
+| BCS-01 | T1/T2/T3/T4 | verified |
+| BCS-02 | T1/T2/T3/T4 | verified |
+| BCS-03 | T2/T4       | verified |
+| BCS-04 | T2/T4       | verified |
+| BCS-05 | T2/T4       | verified |
+| BCS-06 | T2/T4       | verified |
+| BCS-07 | T2/T4       | verified |
+| BCS-08 | T2/T4       | verified |
+| BCS-09 | T2/T3/T4    | verified |
 
 ## Out of Scope
 

@@ -11,6 +11,16 @@ ORC-03/05/07, posse e handoff definitivo; não altera a observação da ficha.
 Contrato de implementação e gates em [REC-T00–T04](../lead-recovery/tasks.md).
 Entrega atual documental, sem ativação ou endpoint novo.
 
+## Cobranças simplificadas — BCS (11/11/2026)
+
+O proprietário aprovou o protótipo BCP-P01 e autorizou
+[BCS-01–09](../billing-simplified/spec.md): uma lista de cobranças/recebimentos
+com detalhes e ações reais por operação, preservando COB/BAPI/BFIN/BFUI e DTL.
+A correção solicitada de atualização automática usa um ciclo silencioso
+somente para pendências, sem consultas contínuas em pedidos ociosos e sem
+interromper diálogo/foco. Operação no
+[runbook](../../../docs/runbooks/order-billing-simplified.md).
+
 ## Datas do pedido horizontais — DTL (11/11/2026)
 
 O proprietário aprovou [DTL-01–12](../order-timeline/spec.md) e a composição

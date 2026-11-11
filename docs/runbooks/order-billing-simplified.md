@@ -47,6 +47,11 @@ Com pendência, o ciclo existente de cinco segundos é silencioso: não altera
 `aria-busy`, foco, campos ou referências de snapshots idênticos. Ele pausa em
 diálogo, escrita, leitura manual, edição de outra seção e aba oculta.
 
+A passagem da validade conhecida de um link é uma mudança real de estado,
+mesmo se o HTTP for idêntico: o relógio invalida as ações e o texto uma vez,
+sem forçar redesenhos nos demais ciclos. O preflight de uma ação revalida esse
+relógio e alinha o resumo do pai antes de apresentar o diálogo.
+
 Mudança real de snapshot atualiza resumo/timeline e relê o Pedido se a versão
 avançou. SSE continua ativo. Resposta idêntica do Pedido não substitui seu
 objeto nem reinicia leituras dos componentes. Mudança de dados sem avanço de

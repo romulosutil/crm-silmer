@@ -115,7 +115,8 @@ mantendo consultas idênticas silenciosas antes e depois dessa transição.
 
 ### T6: Registrar a verificação final da integração (BCS-T06)
 
-- [ ] Concluída.
+- [x] Concluída: revisão independente 3 aprovada na fonte c2478c20,
+      nove critérios aceitos, gates por revisão identificados e PR348 revisável.
 
 **Where**: `.specs/features/billing-simplified/validation.md`
 

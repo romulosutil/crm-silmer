@@ -205,9 +205,12 @@ desenhada primeiro para 390×844.
 - **Celular (≤ 768 px):** topo de 56 px com o logotipo e o estado da conexão;
   barra inferior fixa de `--mobile-nav-block-size` (64 px + safe-area) com
   Início, Caixa, Pedidos, Clientes e Mais. "Mais" abre uma folha inferior com
-  conta, Vendedores (admin), Conta, aparência e Sair; Escape fecha e devolve o
-  foco. As telas reservam a barra no fim da rolagem e acima de rodapés fixos.
-  Campos usam 16 px para o iOS não dar zoom.
+  a conta (nome e função), os destinos que não estão na barra (Olist, Melhor
+  Envio, Usuários, Saúde e erros e Conta, conforme a permissão), Aparência e
+  Sair; Escape fecha e devolve o foco. O perfil Financeiro vê na barra só
+  Olist (quando habilitado) e Minha conta, sem "Mais". As telas reservam a
+  barra no fim da rolagem e acima de rodapés fixos. Campos usam 16 px para o
+  iOS não dar zoom.
 
 - Sidebar de `248px` no canvas, sem borda; item ativo usa superfície branca,
   peso semibold e ícone na cor da marca, sem sombra. Recolhe para rail de `72px` entre 769 e
@@ -218,7 +221,22 @@ desenhada primeiro para 390×844.
 - O trabalho fica num painel inset (`--color-page`, raio `xl`) com topbar de
   `56px`: trilha "Empresa › Tela", função, estado da conexão e tema.
 - Uma lista de rotas alimenta a sidebar, a barra inferior e a folha "Mais";
-  todos oferecem os mesmos destinos, inclusive Vendedores (admin) e Sair.
+  todos oferecem os mesmos destinos, inclusive Usuários (admin) e Sair.
+- **Destinos (código em 11/11/2026):** Dashboard, Caixa de Entrada, Pedidos
+  (com o contador de pedidos novos do site), Clientes, Olist (administrador
+  ou usuário habilitado no Olist), Melhor Envio e Usuários (administrador),
+  Saúde e erros (quem pode ler) e Conta. Hoje Pedidos, Olist e Melhor Envio
+  usam o mesmo ícone e os itens do rail têm 2 px entre si.
+- **Grupos (INBOX-RD-07, §21):** os mesmos destinos, na mesma ordem, em
+  quatro grupos separados só por espaço: operação (Dashboard, Caixa de
+  Entrada, Pedidos, Clientes), integrações (Olist, Melhor Envio),
+  administração (Usuários, Saúde e erros) e Conta. 4 px entre itens e 16 px
+  entre grupos, sem título nem divisor de grupo. Cada destino tem ícone
+  próprio: Melhor Envio usa `truck` e Olist ganha `package`. Grupo sem
+  destino visível para o perfil não deixa espaço vazio. A folha "Mais" do
+  celular segue os mesmos grupos. A Caixa de Entrada ganha contador de
+  conversas com mensagem nova, no mesmo padrão do contador de Pedidos
+  (INBOX-RD-02).
 - Cabeçalho de página: h1 de 24 px (20 px no celular), uma linha de contexto e
   a ação primária da tela, que no celular ocupa a largura toda. Sem eyebrow.
 - Conexão: verde discreto quando ativa, atenção durante reconexão, erro só
@@ -270,9 +288,148 @@ Componentes de domínio devem compor os primitivos acima, sem duplicar estilo ou
 - `AgentActivity`, `HandoffSummary` e `AuditTimeline`;
 - `OrderSheetSection`, `OrderValidationSummary` e `OrderSendStatus`;
 - `SalesKpi`, `SalesFilterBar`, `SalesDataTable`, `ActionRow`,
-  `ActionDetail`, `ReasonSheet` e `Meter` (regras na §18, ACT-T04).
+  `ActionDetail`, `ReasonSheet` e `Meter` (regras na §18, ACT-T04);
+- casca de jornada, grupo de mensagens, compositor, selo de status com ícone
+  e aviso de mensagem nova (regras abaixo e na §21, INBOX-RD).
 
 Cada componente precisa documentar: propósito, anatomia, variantes, estados, comportamento responsivo, teclado, ARIA e exemplos de uso/não uso.
+
+### Componentes da Caixa de Entrada — INBOX-RD (11/11/2026)
+
+Decisão do PO em 11/11/2026 ([ADR 084](docs/adr/084-caixa-de-entrada-refinada.md),
+§21). Compõem os primitivos acima e os da §20; não criam estilo novo de
+botão, campo, selo ou painel (§15).
+
+#### Casca de jornada
+
+- **Propósito:** dar uma só forma às tarefas que comprometem algo (gerar,
+  enviar, vincular) e precisam de foco protegido.
+- **Deriva de:** `Dialog`. Os campos de dentro são o `Field` da §20 e o
+  retorno de cada ação segue o `SaveStatus` da §20.
+- **Anatomia:** `dialog` modal em três faixas: cabeçalho com título
+  (`--text-lg`, peso 600) e fechar em botão de ícone com o nome que o produto
+  já usa ("Fechar cotação"); corpo rolável; rodapé com as ações, uma só
+  primária por etapa. Elevação `--elevation-floating` e largura
+  `--journey-inline-size` (40rem no protótipo). No corpo, grupos por
+  proximidade (8 px dentro, 24 px entre regiões) e listas em linhas com
+  divisor; nenhuma caixa com borda dentro da casca.
+- **Estados:** uma etapa por vez, com o título acompanhando a etapa;
+  carregando, vazio, erro e retorno desenhados (§16).
+- **Responsivo:** no celular, folha inferior de largura total, com os botões
+  do rodapé empilhados.
+- **Teclado/ARIA:** `aria-labelledby` no título; foco contido; ao abrir, o
+  foco vai ao primeiro campo da etapa; Esc numa etapa interna volta à etapa
+  anterior com o foco no botão que a abriu; Esc na primeira etapa fecha e
+  devolve o foco ao acionador. Erro recebe foco em `role="alert"`; retorno
+  recebe foco em `role="status"`.
+- **Usar:** frete na conversa (INBOX-RD-06). A cobrança entra depois do
+  PR 348 (§16).
+- **Não usar:** diálogo sobre diálogo (§15), caixa com borda para cada grupo,
+  botão de texto para fechar no cabeçalho, duas primárias no rodapé.
+
+#### Grupo de mensagens
+
+- **Propósito:** ler o histórico sem repetir quem falou em cada mensagem.
+- **Deriva de:** composição do `ConversationPanel`; nenhum primitivo da §20.
+- **Anatomia:** mensagens seguidas do mesmo autor formam um grupo: avatar e
+  nome uma vez (`--text-sm`, peso 600), balões com 4 px entre si e a hora em
+  `--text-xs` atenuada dentro de cada balão; 16 px entre grupos. A coluna do
+  histórico é centralizada e não passa de `--inbox-thread-max-inline-size`
+  (48rem no protótipo); o balão não passa de
+  `--inbox-message-max-inline-size` (34rem no protótipo).
+- **Estados:** cliente à esquerda; vendedor e agente à direita, com a cor de
+  cada autor que o produto já usa. A mensagem do cliente com CEP mantém o
+  atalho "Cotar para CEP 00000-000".
+- **Responsivo:** no celular a coluna ocupa a largura da conversa; a largura
+  máxima do balão continua valendo.
+- **Teclado/ARIA:** continua a lista ordenada "Histórico da conversa". O
+  cabeçalho visível do grupo fica fora da leitura; cada mensagem começa com
+  autor e hora em texto só para leitor de tela, então nada se perde ao
+  agrupar.
+- **Usar:** sempre que duas ou mais mensagens seguidas têm o mesmo autor.
+- **Não usar:** para juntar autores diferentes do mesmo lado (vendedor e
+  agente ficam em grupos separados) nem para esconder a hora.
+
+#### Compositor
+
+- **Propósito:** escrever e enviar a resposta, com as ferramentas da
+  conversa à mão.
+- **Deriva de:** `Field` da §20 para o campo de resposta e `IconButton` para
+  as ferramentas.
+- **Anatomia:** duas linhas. Em cima, o campo "Responder" com borda
+  `--color-border-strong`, fundo `--color-surface`, raio `--radius-md`, foco
+  e erro do `Field`; o texto do campo usa `--text-sm` no notebook e
+  `--text-base` no celular, com peso 400, porque é o texto que o cliente lê.
+  Embaixo, dois grupos separados por divisor: mídia (Anexar arquivo, Gravar
+  áudio) e pedido (Cobranças e pagamentos, Cotar frete), com 8 px entre
+  botões; à direita, "Enviar resposta", a única primária. Com 40rem ou mais
+  de largura, as duas ferramentas do pedido e o envio mostram ícone e texto;
+  abaixo disso, só ícone.
+- **Estados:** ocioso (Enviar indisponível até haver texto); gravando
+  ("Gravando áudio. Pare para revisar.", "N de 300 segundos", Parar gravação
+  e Descartar gravação, o resto indisponível); indisponível (campo e
+  ferramentas com `aria-disabled`, ainda focáveis, e o motivo visível, como
+  "Somente o vendedor responsável pode responder."). As ferramentas do pedido
+  não aparecem para quem não pode usá-las. Antes de assumir não há
+  compositor (PCX-15).
+- **Responsivo:** no celular a barra inferior sai e o compositor encosta no
+  teclado (§9); se ela sai ao focar o campo ou só enquanto se digita está
+  pendente (§21). Se o rótulo "Responder" fica visível ou continua só para
+  leitor de tela também está pendente (§21).
+- **Teclado/ARIA:** Enter envia e Shift+Enter quebra a linha; no toque, só o
+  botão envia. Cada botão mantém `aria-label` e `title`. Ao gravar o foco vai
+  para Parar gravação; Esc descarta e devolve o foco a Gravar áudio. O motivo
+  da indisponibilidade é a descrição acessível de cada controle.
+- **Usar:** no rodapé da conversa, depois que alguém a assume.
+- **Não usar:** campo sem borda, uma caixa em volta de tudo, uma segunda
+  primária, ferramenta que some sem explicação.
+
+#### Selo de status com ícone
+
+- **Propósito:** dizer o estado de pedido, assunto, cobrança ou frete sem
+  depender de cor.
+- **Deriva de:** o `Badge` de atenção do `FieldGap` da §20 (ícone de 14 px e
+  4 px até o texto).
+- **Anatomia:** `.badge` com tom, ícone e o rótulo literal do domínio
+  ("Confirmado", "Pendente", "Em foco").
+- **Estados:** sucesso (`check`), atenção (`alert`), informação (`info`),
+  erro (`alert`) e neutro.
+- **Responsivo:** o rótulo não trunca; o selo quebra para a linha seguinte.
+- **Teclado/ARIA:** não é controle. O ícone é decorativo (`aria-hidden`); o
+  texto carrega o estado.
+- **Usar:** na lista, no cabeçalho da conversa e no painel Atendimento
+  (INBOX-RD-04).
+- **Não usar:** só cor, só ícone, ou como botão. O mapa de tom e ícone dos
+  estados de cobrança espera o PR 348 (§21, pendências).
+
+#### Aviso de mensagem nova
+
+- **Propósito:** avisar que um cliente escreveu e ninguém abriu a conversa
+  neste navegador.
+- **Anatomia:** quatro peças que leem a mesma marca: o selo "Mensagem nova"
+  (tom informação, ícone e texto), sempre o primeiro selo do card, com a
+  prévia em `--color-text` peso 500; o contador `nav-count` no item Caixa de
+  Entrada do rail e no item Caixa da barra inferior; "(N) " no início do
+  título do documento; a faixa `.inbox-notice.inbox-live-notice` "N conversas
+  com mensagem nova em Responder" com o botão `quiet` "Ver mensagens novas".
+- **Estados:** com marca e sem marca. O selo conta no limite de dois selos
+  visíveis do card; os demais vão para "+N". O contador e o "(N) " somem em
+  zero e contam conversas, não mensagens. A faixa só aparece quando há marca
+  fora da vista (outra aba selecionada, lista rolada ou busca que esconde o
+  card) e some quando a última marca é aberta.
+- **Responsivo:** igual em todas as larguras; no celular o contador fica no
+  ícone da barra inferior.
+- **Teclado/ARIA:** o nome acessível do card começa com "Mensagem nova."; o
+  selo visível fica fora da leitura para não repetir. O número entra no nome
+  do link da navegação ("Caixa de Entrada, 2 conversas com mensagem nova").
+  "Ver mensagens novas" vai para a aba Responder, limpa a busca, rola a lista
+  ao topo e leva o foco ao primeiro card marcado. A faixa não é região viva:
+  o anúncio sai uma vez por chegada, pela região `role="status"` do shell.
+- **Usar:** só para mensagem do cliente numa conversa que não está aberta.
+- **Não usar:** bolinha colorida sozinha, a palavra "Nova" sozinha (é nome de
+  estado de conversa), negrito no nome do contato, marca para mensagem do
+  vendedor ou do agente, som, ação primária na faixa ou foco roubado na
+  chegada.
 
 ## 9. Padrões por superfície do CRM
 
@@ -281,6 +438,10 @@ Cada componente precisa documentar: propósito, anatomia, variantes, estados, co
 > O texto abaixo foi alinhado na T133 ao que as fatias entregaram em
 > `ux/jornadas`: filtros e cabeçalho da Caixa de Entrada, link do pedido no
 > lugar da gaveta, "Assumir atendimento" no composer e a página do pedido.
+> Em 11/11/2026 (ADR 084, INBOX-RD-T00) a "Caixa de Entrada" abaixo foi
+> conferida contra o código: as abas são as da ADR 065, "Assumir
+> atendimento" fica no cabeçalho (PCX-15) e "Mais" é ancorado em todas as
+> larguras. O refinamento aprovado nessa data está na §21.
 
 ### Caixa de Entrada
 
@@ -291,22 +452,26 @@ acionador usa só ícone, nome acessível, dica e estado. Ampliar conversa liber
 a coluna da lista sem remontar histórico nem perder rascunho. Demais telas
 preservam seus tamanhos de shell.
 
-INBOX-UX-06 (05/11/2026, PCX-18) substitui a disposição lateral e a aplicação
-imediata dos filtros de PCX-16a: Atender / Fechar pedidos / Todas formam uma
-barra horizontal acima do workspace no desktop, seguida pelo botão textual
-Filtros. A busca permanece na lista. Todas é a
-entrada padrão sem filtro explícito (INBOX-UX-05, PCX-17); mostra o universo
-não arquivado, com outros vendedores, agente e encerradas, por urgência
-calculada na API. Filtros refinam a lista sem restrições implícitas. Ver mais
-conversas percorre as páginas oficiais sem trocar a seleção ou o rascunho;
-a busca informa seu alcance nas conversas carregadas. Os atalhos têm rótulos
-estáveis, contagens alinhadas e seleção por peso, superfície e marca; o botão
-Filtros sinaliza abertura ou filtro aplicado. Em celular, a barra pertence à
-lista e se adapta à largura, com alvos de toque legíveis; não ocupa a tela da
-conversa. Filtros abre a folha modal existente com Situação/Responsável:
-Ver resultados aplica o rascunho, Limpar prepara a remoção e Escape ou fechar
-descartam edições não aplicadas, devolvendo foco ao botão. Mais ações é ancorado
-nas larguras móvel e desktop, sem alterar capacidades ou confirmações.
+Abas por vez de responder ([ADR 065](docs/adr/065-caixa-de-entrada-por-vez-de-responder.md),
+RFC 052, PCX-19, 08/11/2026) substituem os atalhos Atender / Fechar pedidos
+/ Todas de INBOX-UX-06 (PCX-18) e Todas · Aguardando vendedor · Meus
+atendimentos de PCX-14. Responder, Aguardando, Sem retorno e Perdidos formam
+um `tablist` ("Vez de responder") acima do workspace, com setas, Home e End;
+a contagem entra no nome acessível ("Responder, 12 conversas") e o número de
+Responder ganha tom de atenção quando há conversa. A ordem da aba aparece no
+resumo da lista ("· Mais recentes primeiro"). Seguem o botão `soft` Filtros,
+com o número de filtros ativos, e o resumo "Filtro:" com um chip por filtro
+e "Limpar filtros" quando há mais de um. No celular o botão Filtros vai para
+a linha da busca. Filtros abre a folha "Filtrar conversas" com Responsável
+(Todos, Minhas, Sem dono; a escolha fica no navegador), Pedido ("Só pedidos
+prontos", só para conversas em andamento) e Consultar (Em andamento (abas),
+Encerradas, Arquivadas); consultar encerradas ou arquivadas esconde as abas.
+Ver resultados aplica o rascunho, "Limpar filtros" prepara a remoção e
+Escape ou fechar descartam edições não aplicadas, devolvendo foco ao botão.
+A busca fica na lista e vale só para as conversas carregadas, por contato,
+telefone ou última mensagem. Ver mais conversas percorre as páginas
+oficiais sem trocar a seleção ou o rascunho. Mais ações é ancorado em todas
+as larguras, sem alterar capacidades ou confirmações.
 Sugestões ficam fora das mensagens, abertas quando pendentes e recolhíveis;
 histórico/omissão/bloqueios ficam em Atendimento, com uma única instância
 persistente. Resumo inicia compacto, preservando aviso comercial, vendedor
@@ -322,13 +487,18 @@ coluna rola por dentro.
   somente sob demanda, em painéis modais sobrepostos em todas as larguras;
   não comprimem o histórico nem reabrem por preferência antiga. O ícone
   Detalhes abre Atendimento; o nome abre Cadastro. Escape fecha e devolve
-  foco ao acionador. Atendimento separa Pedidos e assuntos de Resumo.
+  foco ao acionador. Atendimento separa Pedidos e assuntos de Resumo; hoje
+  com dois botões `aria-pressed` num grupo, que INBOX-RD-08 troca por `Tabs`.
+- **Ampliar conversa:** fora do celular, um botão de ícone na barra da tela
+  ("Ampliar conversa" / "Mostrar lista de conversas", com `aria-pressed`)
+  esconde e devolve a lista (PCX-16e).
 - **Celular primeiro (ADR 035):** desenhada para 390×844 e ampliada. Lista e
   conversa são telas separadas, com voltar; o cabeçalho mantém só o voltar,
-  o nome clicável, o link do pedido quando há pedido, `Criar pedido` quando cabe (ver
-  "Cabeçalho da conversa"), o ícone Detalhes e `Mais`, que abre uma folha
-  inferior acima da barra de navegação (Criar pedido
-  quando não cabe no cabeçalho, Transferir atendimento, Arquivar/Desarquivar, Encerrar). A
+  o nome clicável, o link do pedido quando há pedido, `Assumir atendimento`
+  ou `Criar pedido` quando cabe (ver "Cabeçalho da conversa"), `Mais` e o
+  ícone Detalhes. `Mais` abre um menu ancorado ao botão, como no notebook,
+  com Criar pedido quando não cabe no cabeçalho, Transferir atendimento,
+  Arquivar ou Desarquivar conversa e Encerrar conversa. A
   resposta fica acima da barra; ao digitar, a barra sai e a resposta encosta
   no teclado (`interactive-widget=resizes-content`). Alvos de 44 px; nada
   depende de hover.
@@ -337,50 +507,79 @@ coluna rola por dentro.
   aberta mesmo fora do filtro, arquivada ou além das 100 carregadas; trocar de
   conversa muda o endereço sem recarregar a lista, a busca ou os filtros. No
   celular o endereço decide entre a lista e a conversa (voltar = `Conversas`).
-- **Filtros (PCX-14):** a busca no topo da lista, três atalhos com contagem
-  e seleção neutra (`Todas · Aguardando vendedor · Meus atendimentos`) e o botão `Filtros`, que
-  abre a folha "Filtrar conversas" com Situação
-  (`Todas · Aguardando vendedor · Com o agente · Com vendedor · Arquivadas`)
-  e Responsável (`Todas · Minhas · Sem responsável`). Um par fora dos atalhos aparece no
-  resumo "Filtro:", cada filtro com botão de remover e `Limpar filtros`
-  quando há dois. Os links `?situacao=` e `?fila=` do Painel abrem com o
-  atalho marcado ou com o resumo. Vazio por filtro ("Nenhuma conversa com
-  esse filtro" + `Limpar filtros`) é diferente do vazio inicial. As abas de
-  estado e o seletor "Fila" deixaram de existir.
-- **Lista:** nome, horário curto (hora hoje, dia no ano, data antes; a data
-  completa no tooltip), trecho de uma linha, canal, estado, motivo e tempo
-  parado. O item aberto usa `--color-selected`, sem borda lateral colorida.
+- **Filtros e links (PCX-19, RFC 052):** abas, busca e folha como descrito
+  acima. Os links do Painel continuam valendo, mapeados para as abas: `?aba=`
+  escolhe a aba, `?fila=` o responsável, `?situacao=` as filas antigas e
+  `?responsavel=` as conversas de um vendedor (PNL-06). Vazio por busca
+  ("Nenhuma conversa encontrada"), vazio por filtro ("Nenhuma conversa com
+  esse filtro" + `Limpar filtros`) e vazio da aba ("Ninguém esperando
+  resposta" em Responder) são diferentes. Os atalhos de PCX-14 e PCX-18, a
+  Situação da folha, as abas de estado e o seletor "Fila" deixaram de
+  existir.
+- **Lista (card da RFC 052):** quem e há quanto tempo (nome, ícone do canal e
+  tempo da vez, com a frase completa para leitor de tela e na dica), o que
+  foi dito (prévia com o autor) e até dois selos, com os demais em "+N". Só
+  o selo de falha de envio tem ícone hoje (INBOX-RD-04 dá ícone a todos). O
+  item aberto usa `--color-selected` e `aria-current`, sem borda lateral
+  colorida.
 - **Cabeçalho da conversa:** compacto, nome clicável, o link do pedido e uma
   linha com canal e atendimento. Telefone e cadastro ficam no painel do nome;
   metadados ficam em Atendimento › Resumo. Assumir é a única primária antes
   da tomada humana (PCX-15); depois Enviar é a primária no compositor. Com pedido, o link
-  "Pedido NN-CRM" com o status em selo de texto abre `/pedidos/:id?conversa=`
+  "Pedido NN-CRM" com o status em selo de texto (sucesso para Confirmado,
+  atenção para os demais; hoje sem ícone) abre `/pedidos/:id?conversa=`
   e acompanha `inbox.order.changed` (PCX-10); sem pedido, nada aparece.
   `Criar pedido` fica no cabeçalho só para o dono de conversa humana, sem
   handoff pendente e sem pedido; os outros casos que a API aceita
   (administrador, agente ainda atendendo, pedido já confirmado) vão para
-  `Mais` (PCX-11). Depois vêm `Mais` (Repassar, Arquivar/Desarquivar,
-  Encerrar conversa em todas as larguras, PCX-13) e o botão `Detalhes`.
-  `Mais` abre pelo teclado no primeiro item e Esc devolve o foco. A gaveta do
-  pedido e o botão "Pedido · status" foram removidos (T126).
+  `Mais` (PCX-11). Depois vêm `Mais` (Transferir atendimento,
+  Arquivar/Desarquivar conversa e Encerrar conversa em todas as larguras,
+  PCX-13) e o botão de ícone Detalhes do atendimento. `Mais` abre pelo
+  teclado no primeiro item e Esc devolve o foco. "Transferir atendimento"
+  abre, abaixo do cabeçalho, o formulário "Transferir atendimento para" com
+  o seletor, "Confirmar transferência" (hoje primária) e Cancelar. A gaveta
+  do pedido e o botão "Pedido · status" foram removidos (T126).
 - **Atendimento › Pedidos e assuntos (PCX-12):** número, status, itens,
   total, valor e `Abrir pedido`, só para leitura; as pendências aparecem em
   disclosure, agrupadas por item e pedido. Dados ainda indefinidos mostram
   A definir, sem sugerir quantidade ou valor zero. Mantém carregando, erro
-  com `Tentar novamente` e "Sem pedido nesta conversa." uma vez só.
+  com `Tentar novamente` e "Sem pedido nesta conversa." uma vez só. Hoje a
+  avaliação das sugestões de pedido vem antes do resumo do pedido, e depois
+  vêm os Assuntos do atendimento; INBOX-RD-08 põe o resumo em primeiro.
 - **Histórico:** abre na última mensagem e acompanha as novas, salvo quando a
   pessoa rolou para ler algo antigo; conversa curta fica junto da resposta.
+  Hoje cada mensagem repete avatar, autor, papel e hora, e os balões ocupam
+  a largura do painel (INBOX-RD-03 agrupa e limita a coluna). Na mensagem do
+  cliente que traz um CEP, quem pode cotar frete vê o atalho "Cotar para CEP
+  00000-000", que abre a cotação com o CEP de destino preenchido.
 - **Assumir no cabeçalho (PCX-15):** enquanto ninguém assumiu e quem
   abre pode agir, a região abaixo do cabeçalho mostra o motivo da parada e o tempo parado
   (PCX-03), ou que o agente está atendendo e não volta depois (ADR 015), com
   `Assumir atendimento` como única primária da conversa. Depois de assumir,
   o campo de resposta aparece com `Enviar resposta` como única primária e
   recebe o foco; o resultado é anunciado em `role="status"`. Quem não pode
-  agir vê o composer desabilitado com o motivo.
+  agir vê o aviso "Esta conversa está sob responsabilidade de outro
+  vendedor…" e o composer desabilitado com o motivo.
+- **Faixa da vez (INBOX-VEZ-03, RFC 052):** acima da resposta. Em Sem
+  retorno, diz há quanto tempo o cliente não responde (e o lembrete, se
+  houver) e oferece `Lembrar depois`, que abre o formulário "Quando lembrar
+  você?" (data e horário de São Paulo, até 90 dias, sem mensagem ao cliente;
+  `Salvar lembrete` e `Cancelar`, Esc fecha), e `Marcar perdido`, que abre o
+  diálogo de motivo e fica com `aria-disabled` e o motivo quando não é
+  possível. Em Perdidos, "Marcada como perdida · motivo · quando" e
+  `Reabrir`. Retomar é a própria resposta; fora desses estados a faixa não
+  aparece.
 - **Resposta:** visível no rodapé da conversa assim que alguém a assume. Enter envia, Shift+Enter
-  quebra a linha; em teclado de toque Enter só quebra a linha. Sem espaço,
-  Anexar, Cotar frete, Gravar e Enviar ficam só com ícone (nome acessível e
-  dica mantidos), dentro de uma única caixa. O hint de envio fica sob demanda.
+  quebra a linha; em teclado de toque Enter só quebra a linha. Hoje é uma
+  caixa única: o campo "Responder" (rótulo só para leitor de tela,
+  placeholder "Escreva uma mensagem…", até 2000 caracteres, sem borda
+  própria) e, numa linha, Anexar arquivo, Cobranças e pagamentos, Cotar
+  frete, Gravar áudio e Enviar resposta, todos só com ícone, nome acessível e
+  dica, com 4 px entre eles. Gravando, aparecem Parar gravação e Descartar
+  gravação. Cotar frete aparece para quem tem a função Vendedor e é o dono da
+  conversa ou administrador; Cobranças e pagamentos também para administrador
+  que pode responder. Controles indisponíveis usam `disabled`. O hint de
+  envio fica sob demanda. INBOX-RD-05 (§21) redesenha o compositor.
 - Conversa encerrada informa Atendimento concluído ou Sem pedido neste
   atendimento; isso não altera status nem dados de pedidos (CP-07..10).
 
@@ -554,6 +753,17 @@ alterada e completam a §3 (baixa carga cognitiva) e a §11 (acessibilidade).
 
 - No máximo uma ação primária e duas secundárias visíveis por região; o resto
   vai para "Mais".
+- **Exceção do compositor (ADR 084, INBOX-RD-05, 11/11/2026):** o
+  compositor da conversa pode ter uma primária ("Enviar resposta") e até
+  quatro ferramentas, em dois grupos separados por divisor: mídia (Anexar
+  arquivo, Gravar áudio) e pedido (Cobranças e pagamentos, Cotar frete).
+  Gravando áudio, Parar gravação e Descartar gravação entram e as demais
+  ficam indisponíveis. A exceção vale só para o compositor; nenhuma outra
+  região a herda, e uma quinta ferramenta exige nova decisão.
+- **Jornadas da conversa:** a casca de jornada da §8 vale para o frete
+  (INBOX-RD-06). A jornada de cobrança aguarda o PR 348
+  (`codex/order-timeline`, contratos BCS-01–09), que reescreve a cobrança do
+  pedido; a casca será aplicada a ela depois da mesclagem, em tarefa própria.
 - Rótulo de botão é verbo + objeto: "Assumir atendimento", "Editar itens",
   "Limpar filtro"; nunca só "Assumir" ou "Editar".
 - Alvos de toque de 44 px ou mais, com 8 px entre eles. Como entregue: nos
@@ -1097,3 +1307,135 @@ dela continua no modelo anterior.
 - Salvar a cada tecla.
 - Esconder que salvou: sem `SaveStatus` a seção não está pronta.
 - Um segundo modelo na mesma tela migrada.
+
+## 21. Caixa de Entrada refinada — INBOX-RD (11/11/2026)
+
+Decisão do PO em 11/11/2026, a partir do protótipo
+`output/prototipos/caixa-de-entrada/` (local, não versionado). Registro:
+[ADR 084](docs/adr/084-caixa-de-entrada-refinada.md), sem RFC, como na
+ADR 083. Requisitos e cenários em
+[Caixa de Entrada refinada](.specs/features/inbox-redesign/spec.md); tarefas
+INBOX-RD-T00 a T09 em [tasks.md](.specs/features/inbox-redesign/tasks.md).
+Completa as §7, §8, §9 e §16; mantém as abas da ADR 065, a tomada humana de
+PCX-15 e a anatomia do `Field` da §20. Até cada tarefa ser entregue, a §9
+descreve o que o código faz.
+
+### Por que mudar (produção, 11/11/2026)
+
+| Medida                 | Antes                                                                  | No protótipo aprovado                                                                       |
+| ---------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Lista                  | 224 px; 47% das prévias e 4 nomes cortados em 70 conversas             | 300 px; 31% das prévias e nenhum nome cortados                                              |
+| Mensagem nova          | nenhum aviso                                                           | selo, contador, título e faixa                                                              |
+| Texto da conversa      | 74% dos nós em 13 px; 48% em peso 600 ou 700                           | 59% em 13 px; 37% em 600; nenhum 700                                                        |
+| Espaços fora da escala | 3 px, 3,2 px, 6 px e 5,6 px                                            | nenhum                                                                                      |
+| Histórico              | painel de 1612 px, balões nas duas bordas; autor em 19 de 19 mensagens | coluna de 753 px centralizada; maior balão 544 px; autor em 5 de 9 mensagens (um por grupo) |
+| Compositor             | campo sem borda nem fundo; cinco botões de 44×44 com 4 px entre eles   | campo com borda e fundo; dois grupos, 8 px entre botões                                     |
+| Rail                   | 9 itens com 2 px entre eles; três com o mesmo ícone                    | 4 px entre itens e 16 px entre grupos; 9 ícones diferentes                                  |
+
+O "Antes" foi medido em produção a 1920 px; o protótipo, a 1920×945, com o
+mesmo método (tamanho e peso de fonte de cada elemento visível com texto
+direto; paddings e gaps de todo elemento visível; texto só para leitor de
+tela fora da conta).
+
+### Regras
+
+- **Lista (INBOX-RD-01):** coluna da lista com
+  `clamp(14rem, 24vw, 18.75rem)` no desktop, 300 px a partir de cerca de
+  1250 px, num token (hoje `--inbox-list-inline-size: 14rem`). O celular continua com lista e
+  conversa em telas separadas. O tablet (769 a 1199 px) hoje usa o mesmo
+  token; com a fórmula, ficaria entre 224 e 288 px (pendência abaixo).
+- **Mensagem nova (INBOX-RD-02):** as quatro peças do "Aviso de mensagem
+  nova" da §8 leem uma marca só. A marca nasce quando chega mensagem do
+  cliente numa conversa que não está aberta, depois da primeira carga da
+  Caixa; a primeira carga não marca nada. Abrir a conversa apaga a marca; a
+  conversa aberta não ganha marca. A marca é por navegador e guarda só o
+  identificador da conversa e o instante da mensagem, nunca nome, telefone
+  ou texto (UX-FUNC-01). Sem armazenamento disponível, a marca dura a visita,
+  sem erro e sem aviso de falha. Um anúncio por chegada na região
+  `role="status"` do shell; nunca som nem foco roubado. Limite declarado: a
+  marca não acompanha a pessoa entre aparelhos ou navegadores; um marcador
+  de lido no servidor fica para decisão futura. A faixa reaproveita o padrão
+  `.inbox-notice.inbox-live-notice` que hoje dá o estado das atualizações
+  automáticas, como elemento próprio e sem `role="status"`.
+- **Histórico (INBOX-RD-03):** coluna de leitura centralizada até
+  `--inbox-thread-max-inline-size` (48rem) e balão até
+  `--inbox-message-max-inline-size` (34rem), com o "Grupo de mensagens" da
+  §8. Autor e hora continuam disponíveis a leitor de tela em cada mensagem.
+- **Selos e cabeçalho (INBOX-RD-04):** todo selo de status da lista, do
+  cabeçalho da conversa e do painel Atendimento segue o "Selo de status com
+  ícone" da §8. No cabeçalho, 8 px entre ações (hoje 4 px) e botões na altura
+  de controle: 40 px com mouse e 44 px no toque, inclusive Assumir, Criar
+  pedido e o link do pedido.
+- **Compositor (INBOX-RD-05):** o "Compositor" da §8, dentro da exceção ao
+  orçamento da §16. Ação indisponível usa `aria-disabled`, continua focável e
+  mostra o motivo (§16, "Ação indisponível"); ativá-la não faz nada nem perde
+  o rascunho.
+- **Jornada do frete (INBOX-RD-06):** "Cotar frete" abre a "Casca de
+  jornada" da §8, sem borda no fieldset, em cada serviço ou na estimativa;
+  CEPs lado a lado; peso e medidas numa linha. "Consultar frete" é a
+  primária até haver frete vinculado; depois, "Escrever resposta com o
+  frete" ("Acrescentar resposta com o frete" quando já há rascunho) passa a
+  ser a primária e "Consultar frete" vira secundária. A jornada de cobrança
+  fica como está até o PR 348 (§16).
+- **Navegação (INBOX-RD-07):** os grupos e ícones da §7.
+- **Painel Atendimento (INBOX-RD-08):** "Pedidos e assuntos" e "Resumo" são
+  `Tabs` da §8 (`tablist`, `tab` com `aria-selected` e `aria-controls`,
+  `tabpanel`, setas, Home e End, `tabindex` móvel). Em "Pedidos e assuntos",
+  o resumo do pedido é o primeiro bloco; depois vêm a avaliação das
+  sugestões de pedido e os Assuntos do atendimento. Título de seção em
+  `--text-sm` peso 600 e 24 px entre seções.
+- **Limpeza (INBOX-RD-09):** na Caixa e no shell, 3 px, 3,2 px (padding do
+  `.badge`), 6 px, 5,6 px e os 2 px entre itens de navegação e entre abas
+  viram `--space-1` ou `--space-2`; as larguras literais viram token
+  (`--journey-inline-size` 40rem, hoje 46rem solto nos diálogos de frete e
+  cobrança; `--inbox-context-inline-size` 24rem; `--menu-inline-size`
+  17rem). Regras CSS sem marcação correspondente saem.
+
+### Movimento
+
+- Rolar até a primeira marca com "Ver mensagens novas" não anima com
+  `prefers-reduced-motion: reduce`.
+- Selo, contador e faixa não piscam nem pulsam (§10).
+
+### Pendências (dependem do PO)
+
+Da seção "Decisões pendentes" do protótipo, sem decisão nesta data:
+
+- "Confirmar transferência" como secundária e a transferência no modelo do
+  `InlineConfirm` (emenda PCX-13/PCX-15); retorno de ação com ícone no modelo
+  do `SaveStatus` fora do pedido.
+- Selo "Frete vinculado" no lugar do botão desabilitado (MEVQ-06/08).
+- Tom e ícone dos estados de cobrança e a casca na cobrança, depois do
+  PR 348; emenda de BFUI-01 (etapas numa casca só, Esc voltando uma etapa).
+- Rótulo visível "Responder" no campo de resposta: o protótipo o mantém só
+  para leitor de tela, com o placeholder visível, o que a §15 proíbe; falta
+  decidir entre rótulo visível e exceção registrada.
+- Peso 400 e `--text-sm` no notebook para o texto do compositor, que diverge
+  do `Field` da §20 (`--text-base`, peso 500); o protótipo justifica por ser
+  o texto que o cliente lê.
+- Papéis de texto da conversa na §5 (metadado, conteúdo, identidade; sem
+  peso 700).
+- Meta da §16 para Caixa e Conversa: passar a contar ações, como no pedido.
+  Gravando áudio, a conversa soma 13 ações no celular, contra a meta de 12;
+  decidir se as ferramentas do pedido saem da linha durante a gravação.
+- No celular, a barra inferior sai quando o foco entra no compositor, o que
+  move as ferramentas 64 px antes do toque; no protótipo ela só sai enquanto
+  se digita. Não verificado em aparelho real.
+- Conjunto de ícones: `AppIcon.vue` e `OrderIcon.vue` têm sete nomes em
+  comum com desenhos diferentes; levar `FieldGap` e `SaveStatus` à Caixa
+  obriga a escolher um. Os valores fora da escala no CSS desses primitivos em
+  `40-order.css` se alinham na mesma decisão.
+- Lista no tablet (769 a 1199 px): adotar a mesma fórmula de INBOX-RD-01 ou
+  manter 14rem. O protótipo e a decisão tratam só do desktop e do celular.
+- Título do documento: o protótipo mostra "(2) Caixa de Entrada · CRM
+  Silmer", mas hoje o título é "CRM Silmer" em todas as rotas;
+  INBOX-RD-02 só acrescenta "(N) ".
+
+### Não usar
+
+- Aviso de mensagem nova só com cor, com som ou que rouba o foco.
+- Marca de mensagem nova para mensagem do vendedor ou do agente.
+- Dado de cliente no armazenamento do navegador.
+- Uma segunda primária no compositor ou na casca de jornada.
+- Diálogo sobre diálogo ou caixa com borda dentro da casca.
+- O mesmo ícone para dois destinos da navegação.

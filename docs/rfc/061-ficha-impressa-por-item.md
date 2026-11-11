@@ -34,20 +34,31 @@ depender da integração daquela branch.
 
 Criar o template `ficha-canonical-v8`, com uma folha A4 retrato por item.
 
-| Bloco da folha       | Conteúdo                                                                                                   |
-| -------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Cabeçalho            | Pedido, Previsão de entrega e etiqueta "Item N de M" com o público                                         |
-| Dados do pedido      | Cliente, Nome do pedido, Vendedor, Data do pedido, Primeiro contato, Entregue em, FAB e Arte do pedido     |
-| Observações          | Observações do pedido em todas as folhas                                                                   |
-| Item                 | Sete pontos, grade com linha "Conferido", sete caixas de conferência, adicionais e estado de divergência   |
-| Controle de produção | Sete campos: Conferido para arrematar e Data, Arrematado e Data, OBS arremate, Conferido / Embalado e Data |
-| Anotações            | Linhas pautadas no espaço que sobra                                                                        |
+| Bloco da folha       | Conteúdo                                                                                                                                                                                                    |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cabeçalho            | Faixa de borda a borda com o público do item em destaque (laranja primário, letras pesadas) e "Item N de M" ao lado; abaixo, marca, Pedido, Data do pedido e Previsão de entrega na grade de quatro colunas |
+| Dados do pedido      | Cliente, Nome do pedido, Vendedor e Entregue em, com a linha "Observações do pedido na folha N" quando há observações                                                                                       |
+| Dados do item        | Três grupos na mesma grade de quatro colunas (produto, acabamento, tecidos) e a grade de tamanhos com a linha "Conferido"; o Total da grade carrega a quantidade                                            |
+| Controle de produção | Sete campos: Conferido para arrematar e Data, Arrematado e Data, OBS arremate, Conferido / Embalado e Data                                                                                                  |
+| Anotações e arte     | Metade do painel para sete linhas pautadas e metade para a prévia da arte (ou "Sem arte anexada"), com a Estampa (referência) como texto de apoio                                                           |
 
-O título "Lastro do pedido" deixa de aparecer, e os campos continuam nos dados
-do pedido. "Pago em" é a exceção: a data de pagamento fica fora do papel.
+Todo bloco tem título na mesma escala (título de seção, rótulo pequeno e
+discreto, valor em negrito) e todo campo é um rótulo sobre um valor em negrito.
+Saem da folha: Primeiro contato, FAB, "Arte do pedido", a numeração de passos e
+as caixas de conferência, o título "Tamanhos" e o aviso de quantidade
+divergente. "Lastro do pedido" deixa de aparecer. "Pago em" é a exceção: a data
+de pagamento fica fora do papel.
 
-Observações que não couberem na folha vão para uma folha extra com a lista
-completa, e cada folha imprime o aviso. Nada é descartado sem aviso.
+As observações do pedido ficam só numa folha final de observações, que existe
+apenas quando há observações; as folhas de item só apontam para ela. Um valor
+que não couber na folha de item vai para uma folha de continuação, com aviso.
+Nada é descartado sem aviso.
+
+A prévia da arte (`artPreview`, por item, com reserva no pedido) só aceita
+imagem inline `data:image/png|jpeg|webp;base64,...` de até cerca de 1 MB de texto
+(1.000.000 de caracteres): URL, SVG e valor maior são descartados
+para o gerador de PDF nunca buscar conteúdo remoto. Envio e armazenamento da
+arte ficam fora desta proposta.
 
 "Tipo de roupa" vira "Modelo" e "Tipo de roupa informado" vira "Modelo
 informado". Muda só o rótulo: a chave `item.tipo`, a API, os snapshots e o bot
@@ -95,6 +106,8 @@ condição, cobrança, Olist e data de pagamento ficam fora do papel.
    que o compõem e daria à folha 1 um papel diferente das demais.
 3. **Observações do pedido só na folha 1.** Rejeitada. Uma folha pode ser
    separada das demais, e quem ficar com outro item não veria a instrução.
+   Revisão do PO (2026-11-11): as observações saem de todas as folhas de item e
+   ficam só na folha final, apontada por uma linha em cada folha de item.
 4. **Preto puro em vez do design system.** Rejeitada. O proprietário decidiu
    pelo visual do CRM. O preto puro reduziria o risco em impressora
    monocromática; por isso o estado de divergência não depende de cor, e a

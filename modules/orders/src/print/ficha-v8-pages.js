@@ -4,34 +4,64 @@
 // Poppins 400, 500 and 600, rounded up, so a line is never estimated narrower
 // than it prints: the estimate costs a ruled line, not a page.
 
-/** A4 portrait body: 1120px minus 32px of top and bottom padding. */
-export const SHEET_BODY = 1056;
+/** A4 portrait body: 1120px minus 24px of top and bottom padding. */
+export const SHEET_BODY = 1072;
 
-const FOOT = 24;
-const PANEL_GAP = 8;
-const PANEL_PADDING = 24;
-const ROW_GAP = 8;
+// Lengths follow the 4px scale of design.md §6 and mirror the stylesheet of
+// ficha-canonical-v8.js: panel padding and gaps are 20px, or 12px on a compact
+// sheet; a label is 20px of line plus 4px over its value.
+const FOOT = 28;
+const PANEL_GAP = 20;
+// Padding of 20px on both sides and the 1px border of a panel.
+const PANEL_PADDING = 42;
+const ROW_GAP = 20;
 const LINE = 20;
-const LABEL = 16;
-const NOTES_MAX = 160;
+const LABEL = 20;
 const NOTES_WIDTH = 668;
-const CONTROL_FIXED = PANEL_PADDING + 32 + 88 + 12;
-// The plan keeps this much ruled area; the stylesheet allows less. The gap
-// absorbs what the renderer lays out taller than estimated, on any platform.
-const FREE_MIN = 96;
-const FREE_MIN_COMPACT = 72;
+// A section title: 24px of line and 8px to the first field.
+const SECTION_TITLE = 32;
+// The compact sheet tightens only vertical spacing: panel padding (12px),
+// gaps between panels (8px) and between rows (12px, still 3x the 4px between
+// a label and its value). Its sides and columns are those of every sheet.
+const COMPACT = Object.freeze({
+  chrome: 26,
+  gap: 8,
+  row: 12,
+  line: 20,
+  band: 48,
+  stages: 88,
+});
+const NORMAL = Object.freeze({
+  chrome: PANEL_PADDING,
+  gap: PANEL_GAP,
+  row: ROW_GAP,
+  line: 20,
+  band: 56,
+  stages: 88,
+});
+// The art preview column of the control panel: half its width, a box of at
+// least 96px and the estampa as helper text (13px on 20px lines).
+const ART_COLUMN = 340;
+const ART_BOX_MIN = 96;
+// The annotations: a 24px heading line and seven ruled lines.
+const ANNOTATIONS_HEAD = 20;
+const ANNOTATION_LINES = 7;
 // Continuation sheets may have no ruled area to give back.
 const CONTINUATION_SLACK = 16;
-const FREE_PANEL_MIN = PANEL_GAP + PANEL_PADDING + 16 + 56;
-const CHECK_COLUMN = 32;
+const FREE_PANEL_MIN = PANEL_GAP + PANEL_PADDING + ANNOTATIONS_HEAD + 56;
 const CONTINUATION_TITLE = PANEL_GAP + PANEL_PADDING + 24;
 const GRADE_NOTICE = 4 + LINE;
-const LIST_TABLE_TOP = 4 + 2 + 24;
+const LIST_TABLE_TOP = 2 + 24;
 const LIST_TOTAL = 33;
 const NOTE_PIECE_CHARS = 600;
 const NOTE_PIECE_BREAKS = 20;
 
-/** Pixels of n of the twelve 50px columns with their 8px gutters. */
+/**
+ * Pixels of n of the twelve columns with their 8px gutters. The sheet is
+ * 729.7px wide inside its margins and 687.7px inside a panel, so a column is
+ * 49.97px: rounding it to 50 is wider by under a pixel in three columns, and the
+ * text estimates carry a larger margin than that.
+ */
 const span = (/** @type {number} */ columns) =>
   50 * columns + 8 * (columns - 1);
 
@@ -44,16 +74,14 @@ const span = (/** @type {number} */ columns) =>
  *   estampa: string, gola: string, viesGola: string, viesMangas: string,
  *   modelo: string, frente: string, costas: string, mangaDireita: string,
  *   mangaEsquerda: string, grade: GradeLine[], total: number,
- *   informed: number | null,
  * }} SheetItem
  * @typedef {{
  *   numero?: string, previsao?: string, orderTotal?: number,
  *   cliente: string, nome: string, vendedor: string, data: string,
- *   primeiro: string, entregue: string, fab: string, items: SheetItem[],
- *   notes: string[],
+ *   entregue: string, items: SheetItem[], notes: string[],
  * }} SheetOrder
- * @typedef {'r1' | 'r2' | 'r3' | 'r4'} RowKey
- * @typedef {{itemIndex: number, compact: boolean, kept: number, moved: RowKey[], gradeKept: number}} ItemPlan
+ * @typedef {'r1' | 'r2' | 'r3'} RowKey
+ * @typedef {{itemIndex: number, compact: boolean, moved: RowKey[], gradeKept: number}} ItemPlan
  * @typedef {{itemIndex: number, compact: boolean, rows: RowKey[], grade: {from: number, to: number} | null}} CarriedSection
  * @typedef {{carries: boolean, compact: boolean, sections: CarriedSection[], notes: number[], free: boolean}} ExtraPlan
  */
@@ -260,16 +288,6 @@ export function splitNotes(notes) {
   return notes.flatMap(notePieces);
 }
 
-/** @param {SheetOrder} order */
-export function clientIsLong(order) {
-  return [...order.vendedor].length > 40 || textWidth(order.fab, 14) > span(1);
-}
-
-/** @param {SheetItem} item */
-export function itemDiverges(item) {
-  return item.informed !== null && item.informed !== item.total;
-}
-
 /** A printed label wider than this reads as a list, not as a column. */
 export const GRADE_LABEL_LIST = 14;
 
@@ -313,7 +331,13 @@ export function gradeLayout(grade) {
     );
     units.push({
       lines,
-      height: 2 + Math.max(24, heads * 16) + Math.max(28, counts * LINE) + 34,
+      height:
+        2 +
+        Math.max(24, heads * LINE) +
+        1 +
+        Math.max(32, counts * LINE) +
+        1 +
+        32,
     });
   }
   return { list: false, units };
@@ -325,247 +349,190 @@ export function gradeLayout(grade) {
  */
 function gradeHeight(item, keep = Number.POSITIVE_INFINITY) {
   const { list, units } = gradeLayout(item.grade);
-  if (units.length === 0) return 24 + LINE;
+  if (units.length === 0) return LINE;
   const kept = Math.min(keep, units.length);
   const notice = kept < units.length ? GRADE_NOTICE : 0;
-  if (kept === 0) return 24 + notice;
+  if (kept === 0) return notice;
   const printed = units.slice(0, kept);
   if (list) {
     const rows = printed.reduce((sum, unit) => sum + unit.height, 0);
     return (
-      24 +
-      LIST_TABLE_TOP +
-      rows +
-      (kept === units.length ? LIST_TOTAL : 0) +
-      notice
+      LIST_TABLE_TOP + rows + (kept === units.length ? LIST_TOTAL : 0) + notice
     );
   }
   return (
-    24 +
     printed.reduce(
-      (sum, unit, index) => sum + (index === 0 ? 4 : 8) + unit.height,
+      (sum, unit, index) => sum + (index === 0 ? 0 : 8) + unit.height,
       0,
-    ) +
-    notice
+    ) + notice
   );
 }
 
-/** @param {string} text @param {number} width @param {number} font */
-const field = (text, width, font) =>
-  LABEL + textLines(text, width, font) * LINE;
+/** A label over its value: 16px of label, 4px, then the lines of the value. */
+const field = (
+  /** @type {string} */ text,
+  /** @type {number} */ width,
+  /** @type {number} */ font,
+) => LABEL + textLines(text, width, font) * LINE;
 
 /**
- * The quantity line wraps its badge when the numbers are long.
- *
- * @param {SheetItem} item
- * @param {number} orderTotal
- * @param {boolean} compact
- */
-function quantityHeight(item, orderTotal, compact) {
-  const width = (compact ? span(4) : span(3) * 2 + 8) - CHECK_COLUMN;
-  const figures =
-    textWidth(String(item.total), 18) +
-    4 +
-    textWidth(`de ${orderTotal} no pedido`, 14);
-  const lines = figures > width ? 2 : 1;
-  if (!itemDiverges(item)) return LABEL + lines * LINE;
-  if (compact) return LABEL + lines * LINE + 36;
-  const badge = 8 + 16 + 4 + textWidth(`Informada ${item.informed}`, 13) + 16;
-  return LABEL + (figures + badge > width ? lines + 1 : lines) * LINE;
-}
-
-/** @param {SheetItem} item @param {boolean} compact @param {number} orderTotal */
-function firstRow(item, compact, orderTotal) {
-  const font = compact ? 13 : 14;
-  const width = (compact ? span(4) : span(3)) - CHECK_COLUMN;
-  return Math.max(
-    field(item.tipo, width, font),
-    field(item.cor, width, font),
-    quantityHeight(item, orderTotal, compact),
-  );
-}
-
-/**
- * The height of each block of the item, as the sheet draws it.
+ * The height of each block of the item, as the sheet draws it: three rows of
+ * four fields on the same four-column grid, then the size table, whose Total
+ * carries the quantity.
  *
  * @param {SheetItem} item
  * @param {boolean} compact
- * @param {number} [orderTotal]
  * @param {number} [gradeKeep]
  */
-export function itemBlocks(item, compact, orderTotal = 0, gradeKeep) {
+export function itemBlocks(item, compact, gradeKeep) {
   const font = compact ? 13 : 14;
-  const point = (compact ? span(4) : span(3)) - CHECK_COLUMN;
-  const reference = compact ? span(4) : span(6);
-  const third = span(3);
-  const alert = !compact && itemDiverges(item) ? ROW_GAP + 36 : 0;
+  const column = span(3);
   return {
-    r1: firstRow(item, compact, orderTotal),
+    r1: Math.max(
+      field(item.tipo, column, font),
+      field(item.cor, column, font),
+      field(item.malha, column, font),
+      field(item.aplicacao, column, font),
+    ),
     r2: Math.max(
-      field(item.aplicacao, point, font),
-      field(item.malha, point, font),
-      field(item.estampa, reference, font),
+      field(item.gola, column, font),
+      field(item.viesGola, column, font),
+      field(item.viesMangas, column, font),
+      field(item.modelo, column, font),
     ),
-    grade: gradeHeight(item, gradeKeep) + alert,
     r3: Math.max(
-      field(item.gola, third - CHECK_COLUMN, font),
-      field(item.viesGola, third, font),
-      field(item.viesMangas, third, font),
-      field(item.modelo, third, font),
+      field(item.frente, column, font),
+      field(item.costas, column, font),
+      field(item.mangaDireita, column, font),
+      field(item.mangaEsquerda, column, font),
     ),
-    r4: Math.max(
-      field(item.frente, third, font),
-      field(item.costas, third, font),
-      field(item.mangaDireita, third, font),
-      field(item.mangaEsquerda, third, font),
-    ),
+    grade: gradeHeight(item, gradeKeep),
   };
 }
 
-/** @param {SheetOrder} order */
-function headHeight(order) {
-  return (
-    Math.max(
-      48,
-      LABEL + textLines(order.numero || '—', span(3), 24) * 32,
-      LABEL + textLines(order.previsao || '—', span(3), 18) * 24,
-    ) + 12
+/**
+ * The control panel's free area: the annotations (a heading and seven ruled
+ * lines) beside the art column (a box and, with a reference text, its helper
+ * line). The taller of the two sets the height.
+ *
+ * @param {SheetItem} item
+ * @param {boolean} compact
+ */
+function freeHeight(item, compact) {
+  const lines = compact ? COMPACT.line : NORMAL.line;
+  const caption = item.estampa
+    ? 4 +
+      textLines(`Estampa (referência): ${item.estampa}`, ART_COLUMN, 13) * LINE
+    : 0;
+  return Math.max(
+    ANNOTATIONS_HEAD + ANNOTATION_LINES * lines,
+    ART_BOX_MIN + caption,
   );
 }
-
-/** @param {SheetOrder} order @param {boolean} compact */
-function clientHeight(order, compact) {
-  const font = compact ? 13 : 14;
-  const halves =
-    LABEL +
-    Math.max(
-      textLines(order.cliente, span(6), font),
-      textLines(order.nome, span(6), font),
-    ) *
-      LINE;
-  if (clientIsLong(order)) {
-    return (
-      halves +
-      ROW_GAP +
-      LABEL +
-      Math.max(
-        textLines(order.vendedor, span(6), font),
-        textLines(order.fab, span(6), font),
-      ) *
-        LINE +
-      ROW_GAP +
-      LABEL +
-      LINE
-    );
-  }
-  return (
-    halves +
-    ROW_GAP +
-    LABEL +
-    Math.max(
-      textLines(order.vendedor, span(3), font),
-      textLines(order.data, span(3), font),
-      textLines(order.primeiro, span(3), font),
-      textLines(order.entregue, span(2), font),
-      textLines(order.fab, span(1), font),
-    ) *
-      LINE
-  );
-}
-
-const CONTINUE_LINE = LINE + 4;
 
 /**
- * @param {number[]} heights
- * @param {number} kept
+ * The header: the audience band, then brand, order and dates on one row.
+ *
+ * @param {SheetOrder} order
+ * @param {boolean} [compact]
  */
-function notesBlock(heights, kept) {
-  if (heights.length === 0) return 12 + 20 + LINE;
-  let body = 0;
-  for (let index = 0; index < kept; index += 1) body += heights[index];
-  return 12 + 20 + body + (kept < heights.length ? CONTINUE_LINE : 0);
+function headHeight(order, compact = false) {
+  const meta = Math.max(
+    48,
+    LABEL + textLines(order.numero || '—', span(3), 24) * 28,
+    LABEL + textLines(order.data || '—', span(3), 24) * 28,
+    LABEL + textLines(order.previsao || '—', span(3), 24) * 28,
+  );
+  const sizes = compact ? COMPACT : NORMAL;
+  return sizes.band + (compact ? 8 : 12) + meta + sizes.gap;
 }
 
-const ROW_ORDER = /** @type {RowKey[]} */ (['r4', 'r3', 'r2', 'r1']);
+/**
+ * The "Dados do pedido" section: title (the pointer to the observations
+ * sheet shares its line) and the four fields of one row.
+ *
+ * @param {SheetOrder} order
+ * @param {boolean} compact
+ */
+function clientHeight(order, compact) {
+  const font = compact ? 13 : 14;
+  return (
+    SECTION_TITLE +
+    LABEL +
+    Math.max(
+      textLines(order.cliente, span(3), font),
+      textLines(order.nome, span(3), font),
+      textLines(order.vendedor, span(3), font),
+      textLines(order.entregue, span(3), font),
+    ) *
+      LINE
+  );
+}
+
+const ROW_ORDER = /** @type {RowKey[]} */ (['r3', 'r2', 'r1']);
 
 /**
  * Item sheets first; one that cannot hold its data sends whole rows and then
  * whole blocks of the grade to a continuation sheet, always with a notice.
+ * The order observations never stay on an item sheet (FPI-02).
  *
  * @param {SheetOrder} order
  * @param {SheetItem} item
  * @param {number} itemIndex
- * @param {number[]} noteHeights
  * @returns {ItemPlan}
  */
-function planItem(order, item, itemIndex, noteHeights) {
+function planItem(order, item, itemIndex) {
   const unitCount = gradeLayout(item.grade).units.length;
   /**
    * @param {boolean} compact
-   * @param {number} kept
    * @param {Set<RowKey>} present
    * @param {number} gradeKeep
    */
-  const total = (compact, kept, present, gradeKeep) => {
-    const blocks = itemBlocks(item, compact, order.orderTotal, gradeKeep);
+  const total = (compact, present, gradeKeep) => {
+    const blocks = itemBlocks(item, compact, gradeKeep);
+    const sizes = compact ? COMPACT : NORMAL;
     const rows = [...present].map((key) => blocks[key]);
-    const movedNotice = present.size < 4 ? ROW_GAP + LINE : 0;
-    const body =
+    const movedNotice = present.size < 3 ? sizes.row + LINE : 0;
+    // Title, then each row and the grade, with a row gap between them.
+    const item$ =
+      sizes.chrome +
+      SECTION_TITLE +
       rows.reduce((sum, height) => sum + height, 0) +
       blocks.grade +
-      rows.length * ROW_GAP +
+      rows.length * sizes.row +
       movedNotice;
+    const control =
+      sizes.chrome +
+      SECTION_TITLE +
+      sizes.stages +
+      sizes.gap +
+      freeHeight(item, compact);
     return (
-      headHeight(order) +
-      PANEL_PADDING +
+      headHeight(order, compact) +
+      sizes.chrome +
       clientHeight(order, compact) +
-      12 +
-      notesBlock(noteHeights, kept) +
-      PANEL_GAP +
-      PANEL_PADDING +
-      body +
-      PANEL_GAP +
-      CONTROL_FIXED +
-      (compact ? FREE_MIN_COMPACT : FREE_MIN) +
+      sizes.gap +
+      item$ +
+      sizes.gap +
+      control +
       FOOT
     );
   };
   const all = new Set(ROW_ORDER);
-  let compact = false;
-  let kept = noteHeights.length;
-  for (const mode of [false, true]) {
-    compact = mode;
-    kept = noteHeights.length;
-    while (
-      kept > 0 &&
-      (total(compact, kept, all, unitCount) > SHEET_BODY ||
-        notesBlock(noteHeights, kept) > NOTES_MAX)
-    ) {
-      kept -= 1;
-    }
-    if (
-      total(compact, kept, all, unitCount) <= SHEET_BODY &&
-      (kept > 0 || noteHeights.length === 0)
-    ) {
-      break;
-    }
-  }
+  const compact = total(false, all, unitCount) > SHEET_BODY;
   /** @type {RowKey[]} */
   const moved = [];
   const present = new Set(ROW_ORDER);
   for (const key of ROW_ORDER) {
-    if (total(compact, kept, present, unitCount) <= SHEET_BODY) break;
+    if (total(compact, present, unitCount) <= SHEET_BODY) break;
     present.delete(key);
     moved.unshift(key);
   }
   let gradeKept = unitCount;
-  while (
-    gradeKept > 0 &&
-    total(compact, kept, present, gradeKept) > SHEET_BODY
-  ) {
+  while (gradeKept > 0 && total(compact, present, gradeKept) > SHEET_BODY) {
     gradeKept -= 1;
   }
-  return { itemIndex, compact, kept, moved, gradeKept };
+  return { itemIndex, compact, moved, gradeKept };
 }
 
 /**
@@ -581,8 +548,7 @@ function planExtras(order, plans, noteHeights) {
     (plan) =>
       plan.moved.length > 0 || plan.gradeKept < unitsOf(plan).units.length,
   );
-  const notesLeft = plans.some((plan) => plan.kept < noteHeights.length);
-  if (carried.length === 0 && !notesLeft) return [];
+  if (carried.length === 0 && noteHeights.length === 0) return [];
   /** @type {ExtraPlan[]} */
   const extras = [];
   let used = 0;
@@ -597,7 +563,10 @@ function planExtras(order, plans, noteHeights) {
     };
     extras.push(fresh);
     used =
-      headHeight(order) + PANEL_PADDING + clientHeight(order, carries) + FOOT;
+      headHeight(order, carries) +
+      PANEL_PADDING +
+      clientHeight(order, carries) +
+      FOOT;
     return fresh;
   };
   let sheet = start(carried.length > 0);
@@ -613,11 +582,7 @@ function planExtras(order, plans, noteHeights) {
     return true;
   };
   for (const plan of carried) {
-    const blocks = itemBlocks(
-      order.items[plan.itemIndex],
-      plan.compact,
-      order.orderTotal,
-    );
+    const blocks = itemBlocks(order.items[plan.itemIndex], plan.compact);
     const open = () => {
       /** @type {CarriedSection} */
       const section = {
@@ -648,7 +613,7 @@ function planExtras(order, plans, noteHeights) {
     for (let index = plan.gradeKept; index < units.length; index += 1) {
       const last = index === units.length - 1;
       const cost = (/** @type {boolean} */ first) =>
-        (list ? (first ? LIST_TABLE_TOP : 0) : first ? 4 : 8) +
+        (list ? (first ? LIST_TABLE_TOP : 0) : first ? 0 : 8) +
         units[index].height +
         (list && last ? LIST_TOTAL : 0) +
         (first ? CONTINUATION_TITLE + ROW_GAP : 0);
@@ -662,9 +627,11 @@ function planExtras(order, plans, noteHeights) {
     }
   }
   noteHeights.forEach((height, index) => {
-    const panel = sheet.notes.length === 0 ? PANEL_GAP + PANEL_PADDING + 20 : 0;
-    makeRoom(panel + height + 4, false);
-    if (sheet.notes.length === 0) used += PANEL_GAP + PANEL_PADDING + 20;
+    const header = PANEL_GAP + PANEL_PADDING + SECTION_TITLE;
+    // The panel header is part of what must fit when this sheet has no notes
+    // yet; a sheet opened here starts with no notes and takes it too.
+    makeRoom((sheet.notes.length === 0 ? header : 0) + height + 4, false);
+    if (sheet.notes.length === 0) used += header;
     sheet.notes.push(index);
     used += height + 4;
   });
@@ -681,7 +648,7 @@ export function planFicha(order) {
     (note) => textLines(note, NOTES_WIDTH, 14, { preserve: true }) * LINE,
   );
   const items = order.items.map((item, itemIndex) =>
-    planItem(order, item, itemIndex, noteHeights),
+    planItem(order, item, itemIndex),
   );
   return { items, extras: planExtras(order, items, noteHeights) };
 }

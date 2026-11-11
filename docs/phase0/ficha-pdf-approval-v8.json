@@ -12,16 +12,17 @@
     "FPI-07",
     "FPI-08",
     "FPI-09",
-    "FPI-10"
+    "FPI-10",
+    "FPI-11"
   ],
   "syntheticOnly": true,
   "snapshotVersion": "synthetic-order-v8",
   "templateVersion": "ficha-canonical-v8",
-  "snapshotSha256": "f2fe111a1c6cd2fd75c91ee99461305563c2538936a905614d35008f2d4a5a1f",
-  "renderedHtmlSha256": "4945cb914802fd91f0417cb30d3f5aafa4c3636539ec3760ab296805181492fd",
+  "snapshotSha256": "b8a009343b3ce3926bc2a6ce70f87cbd511416ad0d9274091bc63e59219ed7c3",
+  "renderedHtmlSha256": "1040f5126049d959b52cb94897ace97b7635ee1b2c012218a7eb2806100e167e",
   "artifact": {
     "path": "output/pdf/ficha-canonica-sintetica-v8.pdf",
-    "sha256": "f866c9a3b7935d7dbe9001600150e7e4dbb6df1120f1876606dfa98b14a41610",
+    "sha256": "b55ab552221f0994aeb8b4b83d0319d5def91036047e16facf3770f524d2ff30",
     "pageCount": 5
   },
   "provisionalApproval": {
@@ -30,9 +31,9 @@
     "scope": "development/cloud-dev",
     "reviewedBy": { "role": "PO", "name": null },
     "reviewedAt": null,
-    "snapshotSha256": "f2fe111a1c6cd2fd75c91ee99461305563c2538936a905614d35008f2d4a5a1f",
-    "renderedHtmlSha256": "4945cb914802fd91f0417cb30d3f5aafa4c3636539ec3760ab296805181492fd",
-    "artifactSha256": "f866c9a3b7935d7dbe9001600150e7e4dbb6df1120f1876606dfa98b14a41610",
+    "snapshotSha256": "b8a009343b3ce3926bc2a6ce70f87cbd511416ad0d9274091bc63e59219ed7c3",
+    "renderedHtmlSha256": "1040f5126049d959b52cb94897ace97b7635ee1b2c012218a7eb2806100e167e",
+    "artifactSha256": "b55ab552221f0994aeb8b4b83d0319d5def91036047e16facf3770f524d2ff30",
     "decisionRef": "docs/phase0/FICHA-PDF-REVIEW-V8.md"
   },
   "approval": {

@@ -19,6 +19,7 @@ import {
   TEMPLATE_V8,
   renderOrderFicha,
 } from '../modules/orders/src/print/index.js';
+import { safeArtPreview } from '../modules/orders/src/print/ficha-v8-content.js';
 import { printSnapshot } from '../modules/orders/src/print/print-snapshot.js';
 import {
   fichaV8Approved,
@@ -27,6 +28,8 @@ import {
 import { validateFichaPrintSwitch } from '../scripts/ficha-pdf-review.mjs';
 
 const root = new URL('../', import.meta.url);
+/** @param {{pedido: unknown}} snapshot */
+const pedidoOf = (snapshot) => /** @type {any} */ (snapshot.pedido);
 /** @param {string} path */
 const read = async (path) =>
   JSON.parse(await readFile(new URL(path, root), 'utf8'));
@@ -51,30 +54,109 @@ const visible = (html) =>
 test('FPI-01: each item gets one sheet, with the order data repeated', () => {
   const html = renderOrderFicha(shortOrder(), TEMPLATE_V8);
   const pages = sheets(html);
-  assert.equal(pages.length, 3);
-  for (const [index, page] of pages.entries()) {
+  assert.equal(pages.length, 4, 'three items and the observations sheet');
+  for (const [index, page] of pages.slice(0, 3).entries()) {
     const text = visible(page);
     assert.ok(text.includes(`Item ${index + 1} de 3`));
     assert.ok(text.includes('128-CRM'));
     assert.ok(text.includes('Associação Atlética Exemplo'));
     assert.ok(text.includes('Uniformes temporada 2027'));
     assert.ok(text.includes('20/11/2026'));
-    assert.ok(text.includes('30/10/2026'));
+    assert.ok(!text.includes('30/10/2026'), 'no first contact day');
     assert.ok(text.includes('Controle de produção'));
-    assert.ok(text.includes(`Folha ${index + 1} de 3`));
+    assert.ok(text.includes(`Folha ${index + 1} de 4`));
   }
   assert.doesNotMatch(html, /Lastro do pedido/u);
 });
 
-test('FPI-05/06: the item points use Modelo and the old field is the model detail', () => {
+test('FPI-01: the audience leads the header; the item number is secondary', () => {
+  const html = renderOrderFicha(shortOrder(), TEMPLATE_V8);
+  const [first, second, third] = sheets(html);
+  const head = (/** @type {string} */ page) =>
+    /<header class="head">[\s\S]*?<\/header>/u.exec(page)?.[0] ?? '';
+  assert.match(
+    head(first),
+    /<div class="aud"><strong>Masculino<\/strong><span class="seq">Item 1 de 3<\/span>/u,
+  );
+  assert.match(head(second), /<div class="aud"><strong>Feminino<\/strong>/u);
+  assert.match(head(third), /<div class="aud"><strong>Infantil<\/strong>/u);
+  // The band is the largest type, a solid orange block edge to edge with the
+  // panels and in heavy letters, so it also reads on a laser.
+  assert.match(
+    html,
+    /\.aud \{[^}]*margin-inline: calc\(var\(--inset\) \* -1\)[^}]*background: var\(--brand-primary\)/u,
+  );
+  assert.match(html, /\.aud strong \{ font-size: var\(--text-3xl\)/u);
+  assert.match(html, /--text-3xl: 32px/u);
+  // design.md §5: no upper case, and the audience keeps its own spelling.
+  assert.doesNotMatch(html, /text-transform|letter-spacing/u);
+  // Brand, order and the two dates sit on the same four-column grid.
+  assert.equal((head(first).match(/ s3"/gu) ?? []).length, 4);
+  assert.ok(head(first).indexOf('Masculino') < head(first).indexOf('Item'));
+});
+
+test('FPI-01: both dates sit together in the header; no first contact or FAB', () => {
+  const html = renderOrderFicha(shortOrder(), TEMPLATE_V8);
+  for (const page of sheets(html)) {
+    const header =
+      /<header class="head">[\s\S]*?<\/header>/u.exec(page)?.[0] ?? '';
+    assert.match(visible(header), /Pedido 128-CRM/u);
+    assert.match(
+      visible(header),
+      /Data do pedido 04\/11\/2026 .*Previsão de entrega 20\/11\/2026/u,
+    );
+    const body = visible(page.replace(header, ''));
+    assert.ok(!body.includes('Data do pedido'));
+    assert.ok(!body.includes('Previsão de entrega'));
+  }
+  assert.doesNotMatch(
+    visible(html),
+    /Primeiro contato|FAB|Arte do pedido|O cliente envia a arte/u,
+  );
+  const snapshot = printSnapshot(shortOrder(), TEMPLATE_V8);
+  assert.equal(
+    /** @type {any} */ (snapshot.pedido.lastro).primeiro_contato,
+    undefined,
+  );
+  assert.equal(snapshot.pedido.fab, undefined);
+  assert.equal(/** @type {any} */ (snapshot.pedido).artwork, undefined);
+  assert.ok(
+    /** @type {any} */ (printSnapshot(shortOrder(), TEMPLATE_V6).pedido)
+      .artwork,
+  );
+});
+
+test('FPI-01: every section has a title in one scale, nothing outsizes it', () => {
+  const html = renderOrderFicha(shortOrder(), TEMPLATE_V8);
+  const first = sheets(html)[0];
+  for (const title of [
+    'Dados do pedido',
+    'Dados do item',
+    'Controle de produção',
+  ]) {
+    assert.match(first, new RegExp(`<h2 class="sec">${title}</h2>`, 'u'));
+  }
+  assert.match(html, /\.sec \{ font-size: var\(--text-lg\)/u);
+  assert.match(
+    html,
+    /\.lbl \{[^}]*font-size: var\(--text-xs\)[^}]*color: var\(--color-text-muted\)/u,
+  );
+  assert.match(html, /\.val \{ font-size: var\(--val\)[^}]*font-weight: 600/u);
+  // Body text is 13 or 14px; the section title is 18px.
+  assert.match(html, /--text-lg: 18px/u);
+  assert.match(html, /--text-sm: 14px/u);
+  assert.doesNotMatch(html, /\.qty-line strong/u);
+});
+
+test('FPI-05/06: the item fields use Modelo and the old field is the model detail', () => {
   const order = shortOrder();
   order.ficha.items[0].tipo = 'TIPO_SENTINELA';
   order.ficha.items[0].modelo = 'DETALHE_SENTINELA';
   const text = visible(renderOrderFicha(order, TEMPLATE_V8));
-  assert.match(text, /1 ?Modelo TIPO_SENTINELA/u);
+  assert.match(text, /Modelo TIPO_SENTINELA/u);
   assert.match(text, /Detalhe do modelo DETALHE_SENTINELA/u);
   assert.doesNotMatch(text, /Tipo de roupa/u);
-  assert.match(text, /5 ?Modelo de malha/u);
+  assert.match(text, /Modelo de malha/u);
 });
 
 test('FPI-07: only the seven production fields stay, blank', () => {
@@ -105,16 +187,137 @@ test('FPI-07: only the seven production fields stay, blank', () => {
   );
 });
 
-test('FPI-03: the grade has a blank count row and each point its own check box', () => {
+test('FPI-03: the grade has a blank count row, with no step numbers, boxes or heading row', () => {
   const order = shortOrder();
   order.ficha.items = order.ficha.items.slice(0, 1);
   const html = renderOrderFicha(order, TEMPLATE_V8);
-  assert.equal((html.match(/class="check"/gu) ?? []).length, 7);
+  assert.equal((html.match(/class="check"/gu) ?? []).length, 0);
+  assert.doesNotMatch(html, /Caixa de conferência|grade-head/u);
   assert.match(
     html,
     /<tr class="k"><th scope="row">Conferido<\/th>(<td><\/td>)+/u,
   );
-  assert.ok(html.includes('Escrever a contagem em Conferido'));
+  const text = visible(html);
+  assert.ok(!text.includes('Escrever a contagem em Conferido'));
+  assert.doesNotMatch(
+    text,
+    /\b[1-7] ?(Modelo|Cor|Quantidade|Aplicação|Modelo de malha|Tamanhos|Gola)\b/u,
+  );
+  assert.doesNotMatch(text, /Tamanhos(?!, pedido)/u);
+  // The size table itself stays.
+  for (const label of ['Tamanho', 'Pedido', 'Conferido', 'Total']) {
+    assert.ok(html.includes(`>${label}</th>`), label);
+  }
+});
+
+test('FPI-01: the hierarchy has six levels, each a step from the next', () => {
+  const html = renderOrderFicha(shortOrder(), TEMPLATE_V8);
+  const rule = (/** @type {string} */ selector) => {
+    const at = html.indexOf(`
+${selector} {`);
+    return at < 0 ? '' : html.slice(at, html.indexOf('}', at));
+  };
+  const size = (/** @type {string} */ selector) =>
+    /font-size: var\(--text-(\w+)\)/u.exec(rule(selector))?.[1];
+  assert.equal(size('.aud strong'), '3xl');
+  assert.equal(size('.order strong, .when strong'), '2xl');
+  assert.equal(size('.sec'), 'lg');
+  assert.match(rule('.sec'), /font-weight: 600/u);
+  assert.match(rule('.val'), /font-size: var\(--val\)[^}]*font-weight: 600/u);
+  assert.match(
+    rule('.lbl'),
+    /font-size: var\(--text-xs\)[^}]*font-weight: 500[^}]*color: var\(--color-text-muted\)/u,
+  );
+  assert.match(
+    rule('.foot'),
+    /font-size: var\(--text-xs\)[^}]*font-weight: 400/u,
+  );
+  assert.match(
+    rule('.art-cap'),
+    /font-weight: 400[^}]*color: var\(--color-text-muted\)/u,
+  );
+  const px = (/** @type {string} */ token) =>
+    Number(new RegExp(`--text-${token}: ([0-9]+)px`, 'u').exec(html)?.[1]);
+  // Strictly decreasing sizes from the audience down to the labels.
+  assert.ok(
+    px('3xl') > px('2xl') &&
+      px('2xl') > px('lg') &&
+      px('lg') > px('sm') &&
+      px('sm') > px('xs'),
+  );
+  assert.ok(px('xs') >= 13);
+  // Every length of the sheet is on the 4px scale of design.md §6.
+  for (const [, value] of html.matchAll(/--space-\d+: (\d+)px/gu)) {
+    assert.ok(
+      [4, 8, 12, 16, 20, 24, 32, 40, 48, 64].includes(Number(value)),
+      value,
+    );
+  }
+});
+
+test('FPI-01: a label binds to its value and the sides never move on a compact sheet', () => {
+  const html = renderOrderFicha(sample.order, TEMPLATE_V8);
+  const css = (/** @type {string} */ selector) => {
+    const at = html.indexOf(`\n${selector} {`);
+    return at < 0 ? '' : html.slice(at, html.indexOf('}', at));
+  };
+  const space = (/** @type {string} */ token) =>
+    Number(new RegExp(`--space-${token}: ([0-9]+)px`, 'u').exec(html)?.[1]);
+  // 4px from a label to its value; the next row at least three times that.
+  assert.match(css('.lbl'), /margin-bottom: var\(--space-1\)/u);
+  assert.equal(space('1'), 4);
+  assert.match(css('.sheet'), /--row: var\(--space-5\)/u);
+  assert.match(css('.sheet.compact'), /--row: var\(--space-3\)/u);
+  assert.ok(space('3') >= 3 * space('1') && space('5') >= 5 * space('1'));
+  // Compact shrinks vertical spacing only: the horizontal inset is one value.
+  assert.doesNotMatch(css('.sheet.compact'), /--inset/u);
+  assert.match(css('.panel'), /padding: var\(--pad\) var\(--space-5\)/u);
+  assert.match(css('.sheet'), /--inset: calc\(var\(--space-5\) \+ 1px\)/u);
+});
+
+test('FPI-08: annotations on an item sheet have seven ruled lines, beside half-width art', () => {
+  const html = renderOrderFicha(sample.order, TEMPLATE_V8);
+  for (const page of sheets(html).slice(0, 4)) {
+    assert.equal(
+      (
+        /<div class="ruled seven"[^>]*>([\s\S]*?)<\/div>/u
+          .exec(page)?.[1]
+          .match(/<i><\/i>/gu) ?? []
+      ).length,
+      7,
+    );
+  }
+  assert.match(html, /\.ann \{ grid-column: span 6/u);
+  assert.match(html, /\.art \{ grid-column: span 6/u);
+});
+
+test('FPI-06: every field is a small label over a bold value', () => {
+  const html = renderOrderFicha(shortOrder(), TEMPLATE_V8);
+  for (const label of [
+    'Cliente',
+    'Nome do pedido',
+    'Vendedor',
+    'Entregue em',
+    'Modelo',
+    'Cor',
+    'Aplicação',
+    'Modelo de malha',
+    'Gola',
+    'Viés da gola',
+    'Viés das mangas',
+    'Detalhe do modelo',
+    'Tecido frente',
+    'Tecido costas',
+    'Tecido manga direita',
+    'Tecido manga esquerda',
+  ]) {
+    assert.match(
+      html,
+      new RegExp(`<span class="lbl">${label}</span><div class="val">`, 'u'),
+      label,
+    );
+  }
+  assert.ok(!html.includes('class="val b"'));
 });
 
 test('FPI-03: sixteen short sizes stay in one block, more open another', () => {
@@ -128,47 +331,202 @@ test('FPI-03: sixteen short sizes stay in one block, more open another', () => {
   assert.equal(sheets(two).length >= 1, true);
 });
 
-test('FPI-04: a quantity that differs from the sizes is flagged', () => {
+test('FPI-04: no quantity divergence reaches the paper', () => {
   const html = renderOrderFicha(shortOrder(), TEMPLATE_V8);
-  const [first, second] = sheets(html);
-  assert.ok(visible(first).includes('Informada 42'));
-  assert.ok(
-    visible(first).includes(
-      'Quantidade divergente: informada 42, grade soma 40. Confirmar antes de produzir.',
-    ),
-  );
-  assert.ok(!visible(second).includes('Quantidade divergente'));
+  const [first] = sheets(html);
+  assert.ok(sample.order.ficha.items[0].quantidade_informada !== 40);
+  assert.doesNotMatch(visible(html), /Informada|divergente|Confirmar antes/u);
+  assert.ok(!html.includes('class="alert"') && !html.includes('class="badge"'));
+  // The size table's Total carries the count: no separate quantity line.
+  assert.doesNotMatch(visible(html), /Quantidade|no pedido/u);
+  assert.match(first, /<th scope="col">Total<\/th>[\s\S]*?<td>40<\/td>/u);
 });
 
-test('FPI-02/10: every sheet carries notes and overflow goes to a full, numbered extra sheet', () => {
+test('FPI-02/10: the observations live only on the last sheet, which the item sheets point to', () => {
   const order = structuredClone(sample.order);
   const html = renderOrderFicha(order, TEMPLATE_V8);
   const pages = sheets(html);
   assert.equal(pages.length, 5);
-  for (const page of pages.slice(0, 4)) {
-    const kept = (page.match(/<li value=/gu) ?? []).length;
-    assert.ok(kept > 0, 'each item sheet keeps at least one observation');
-    assert.ok(
-      visible(page).includes(
-        `Continua na folha de observações (folha 5 de 5): mais ${14 - kept} observações`,
-      ),
-    );
+  for (const [index, page] of pages.slice(0, 4).entries()) {
+    assert.equal((page.match(/<li value=/gu) ?? []).length, 0);
+    assert.ok(!visible(page).includes('Continua na folha de observações'));
+    assert.ok(visible(page).includes('Observações do pedido na folha 5'));
+    assert.ok(visible(page).includes(`Folha ${index + 1} de 5`));
+    for (const note of order.ficha.observations) {
+      assert.ok(!visible(page).includes(note), note);
+    }
   }
   const extra = pages[4];
   assert.ok(extra.includes('class="sheet extra'));
-  assert.ok(visible(extra).includes('Observações do pedido'));
+  assert.match(extra, /<h2 class="sec">Observações do pedido<\/h2>/u);
   assert.equal((extra.match(/<li value=/gu) ?? []).length, 14);
   for (const note of order.ficha.observations) {
     assert.ok(visible(extra).includes(note), note);
   }
   assert.ok(visible(extra).includes('informação complementar do atendimento'));
-  assert.ok(visible(extra).includes('Anotações (continuação)'));
+  assert.ok(visible(extra).includes('Anotações (continuação) · Item'));
   assert.ok(visible(pages[0]).includes('Anotações (continua na folha 5 de 5)'));
   assert.ok(visible(extra).includes('Folha 5 de 5'));
 });
 
-test('FPI-02: a short order needs no extra sheet', () => {
+test('FPI-02: without observations there is no observations sheet and no pointer', () => {
+  const order = shortOrder();
+  order.ficha.observations = [];
+  const html = renderOrderFicha(order, TEMPLATE_V8);
+  const pages = sheets(html);
+  assert.equal(pages.length, 3);
+  assert.ok(!html.includes('sheet extra'));
+  assert.doesNotMatch(visible(html), /Observações|Anotações \(continua/u);
+  assert.ok(visible(pages[2]).includes('Folha 3 de 3'));
+});
+
+test('FPI-02: an order with observations has M+1 sheets and a pointer on each item sheet', () => {
   const html = renderOrderFicha(shortOrder(), TEMPLATE_V8);
+  const pages = sheets(html);
+  assert.equal(pages.length, 4);
+  for (const page of pages.slice(0, 3)) {
+    assert.ok(visible(page).includes('Observações do pedido na folha 4'));
+  }
+  assert.ok(pages[3].includes('sheet extra'));
+  assert.ok(visible(pages[3]).includes('Folha 4 de 4'));
+});
+
+test('FPI-11: the art preview renders in a fixed box, or a placeholder says there is none', () => {
+  const html = renderOrderFicha(sample.order, TEMPLATE_V8);
+  const pages = sheets(html);
+  assert.equal(pages.length, 5);
+  for (const index of [0, 3]) {
+    assert.match(
+      pages[index],
+      /<div class="art-box"><img src="data:image\/png;base64,[A-Za-z0-9+/=]+" alt="Prévia da arte anexada ao item \d">/u,
+    );
+    assert.ok(!pages[index].includes('Sem arte anexada'));
+  }
+  for (const index of [1, 2]) {
+    assert.match(
+      pages[index],
+      /<div class="art-box empty"[^>]*><span>Sem arte anexada<\/span>/u,
+    );
+    assert.ok(!pages[index].includes('<img'));
+  }
+  assert.match(html, /\.art-box img \{[^}]*object-fit: contain/u);
+  assert.match(html, /\.art-box \{[^}]*flex: 1 1 0[^}]*min-height: 96px/u);
+  assert.match(html, /\.ann \{ grid-column: span 6/u);
+  assert.match(html, /\.art \{ grid-column: span 6/u);
+  assert.doesNotMatch(html, /\sstyle=|<script/iu);
+});
+
+test('FPI-11: the estampa is helper text under the art box and is omitted when empty', () => {
+  const html = renderOrderFicha(sample.order, TEMPLATE_V8);
+  const [first] = sheets(html);
+  assert.match(
+    first,
+    /<p class="art-cap">Estampa \(referência\): Escudo no peito e número nas costas<\/p>/u,
+  );
+  assert.match(
+    html,
+    /\.art-cap \{[^}]*font-weight: 400[^}]*color: var\(--color-text-muted\)/u,
+  );
+  const item =
+    /<section class="panel item"[\s\S]*?<\/section>/u.exec(first)?.[0] ?? '';
+  assert.ok(!item.includes('Estampa'));
+  const order = shortOrder();
+  order.ficha.items[0].estampa = '';
+  const bare = sheets(renderOrderFicha(order, TEMPLATE_V8))[0];
+  assert.ok(!visible(bare).includes('Estampa'));
+  assert.ok(!bare.includes('art-cap'));
+});
+
+test('FPI-11: the order-level preview is the fallback, and only inline raster images pass', () => {
+  const png = sample.order.ficha.items[0].artPreview;
+  assert.ok(safeArtPreview(png));
+  for (const bad of [
+    'https://exemplo.test/arte.png',
+    'http://exemplo.test/arte.png',
+    '//exemplo.test/arte.png',
+    '/api/arte.png',
+    'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=',
+    'data:image/svg+xml,<svg/>',
+    'data:text/html;base64,PGgxPng8L2gxPg==',
+    'data:image/png;base64,AAAA" onerror="x',
+    'data:image/png,AAAA',
+    'javascript:alert(1)',
+    'blob:https://exemplo.test/1',
+    '',
+    null,
+    42,
+  ]) {
+    assert.equal(safeArtPreview(bad), '', String(bad));
+  }
+  const prefix = 'data:image/png;base64,';
+  const atLimit = prefix + 'A'.repeat(1_000_000 - prefix.length);
+  assert.equal(atLimit.length, 1_000_000);
+  assert.equal(safeArtPreview(atLimit), atLimit);
+  assert.equal(safeArtPreview(`${atLimit}A`), '', '1,000,001 characters');
+  const oversized = shortOrder();
+  for (const item of oversized.ficha.items) item.artPreview = `${atLimit}A`;
+  oversized.artPreview = `${atLimit}A`;
+  const big = renderOrderFicha(oversized, TEMPLATE_V8);
+  assert.ok(!big.includes('<img'));
+  assert.equal((big.match(/Sem arte anexada/gu) ?? []).length, 6);
+  for (const type of ['png', 'jpeg', 'webp']) {
+    assert.ok(safeArtPreview(`data:image/${type};base64,AAAA`), type);
+  }
+  const order = shortOrder();
+  for (const item of order.ficha.items) delete item.artPreview;
+  order.artPreview = png;
+  for (const page of sheets(renderOrderFicha(order, TEMPLATE_V8)).slice(0, 3)) {
+    assert.ok(page.includes('<img src="data:image/png'));
+  }
+  // An item preview wins over the order one.
+  const other = sample.order.ficha.items[3].artPreview;
+  order.ficha.items[1].artPreview = other;
+  const mixed = sheets(renderOrderFicha(order, TEMPLATE_V8));
+  assert.ok(mixed[1].includes(other) && !mixed[1].includes(png));
+  // Remote or SVG sources never reach the document; the placeholder prints.
+  for (const bad of [
+    'https://exemplo.test/arte.png',
+    'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=',
+  ]) {
+    const hostile = shortOrder();
+    for (const item of hostile.ficha.items) item.artPreview = bad;
+    hostile.artPreview = bad;
+    const html = renderOrderFicha(hostile, TEMPLATE_V8);
+    assert.ok(!html.includes('<img') && !html.includes('exemplo.test'));
+    assert.equal((html.match(/class="art-box empty"/gu) ?? []).length, 3);
+    const snapshot = printSnapshot(hostile, TEMPLATE_V8);
+    assert.equal(snapshot.pedido.artPreview, '');
+    assert.ok(
+      pedidoOf(snapshot).itens.every(
+        (/** @type {any} */ item) => item.artPreview === '',
+      ),
+    );
+  }
+  // A valid item preview survives the snapshot; a missing one stays empty.
+  const snapshot = printSnapshot(sample.order, TEMPLATE_V8);
+  assert.equal(pedidoOf(snapshot).itens[0].artPreview, png);
+  assert.equal(pedidoOf(snapshot).itens[1].artPreview, '');
+  // The renderer validates on its own, whoever builds the snapshot.
+  const direct = renderFichaHtmlV8({
+    ...snapshot,
+    pedido: {
+      ...snapshot.pedido,
+      itens: [
+        {
+          ...pedidoOf(snapshot).itens[0],
+          artPreview: 'https://exemplo.test/x.png',
+        },
+      ],
+      artPreview: png,
+    },
+  });
+  assert.ok(direct.includes(png) && !direct.includes('exemplo.test'));
+});
+
+test('FPI-02: a short order without observations needs no extra sheet', () => {
+  const order = shortOrder();
+  order.ficha.observations = [];
+  const html = renderOrderFicha(order, TEMPLATE_V8);
   assert.ok(!html.includes('sheet extra'));
   assert.ok(!html.includes('Continua na folha de observações'));
 });
@@ -231,7 +589,7 @@ test('FPI-10: an item too long for its sheet continues with a printed notice', (
   assert.ok(
     pages.slice(1).some((page) => page.includes('Item 1 · continuação')),
   );
-  assert.equal((html.match(/class="check"/gu) ?? []).length, 7);
+  assert.equal((html.match(/class="check"/gu) ?? []).length, 0);
 });
 
 test('FPI-09: money, billing and payment day stay off the paper', () => {
@@ -287,7 +645,7 @@ test('FPI-09: free text is escaped and unknown service data is dropped', () => {
   const html = renderOrderFicha(order, TEMPLATE_V8);
   assert.doesNotMatch(
     html,
-    /<script>|<img|<b>x|SECRET|PERFIL_PRIVADO|DESCONHECIDO|\[object Object\]/u,
+    /<script>|<img src=x|<b>x|SECRET|PERFIL_PRIVADO|DESCONHECIDO|\[object Object\]/u,
   );
   assert.ok(html.includes('&lt;script&gt;'));
   assert.ok(html.includes('&lt;img'));
@@ -297,7 +655,7 @@ test('FPI-09: free text is escaped and unknown service data is dropped', () => {
 test('FPI-08: the footer prints the version and the time only when given', () => {
   const order = shortOrder();
   const plain = renderOrderFicha(order, TEMPLATE_V8);
-  assert.ok(visible(plain).includes('Folha 1 de 3 · versão 9'));
+  assert.ok(visible(plain).includes('Folha 1 de 4 · versão 9'));
   assert.ok(!plain.includes('impresso em'));
   assert.equal(plain, renderOrderFicha(order, TEMPLATE_V8));
   const stamped = renderOrderFicha(order, TEMPLATE_V8, {
@@ -330,9 +688,7 @@ test('FPI-10: text estimates wrap, keep explicit breaks and break long tokens', 
     nome: 'N',
     vendedor: 'V',
     data: '—',
-    primeiro: '—',
     entregue: '—',
-    fab: '01',
     notes: [],
     items: [],
   });
@@ -486,5 +842,5 @@ test('FPI-06: not-applicable values print readable, also in combinations', () =>
   assert.ok(text.includes('NÃO APLICÁVEL / AZUL'));
   assert.ok(text.includes('NÃO APLICÁVEL / DRY'));
   assert.doesNotMatch(text, /NAO APLICAVEL/u);
-  assert.match(text, /7 ?Gola VIES_NA_GOLA/u);
+  assert.match(text, /Gola VIES_NA_GOLA/u);
 });

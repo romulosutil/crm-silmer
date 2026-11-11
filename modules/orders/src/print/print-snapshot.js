@@ -1,6 +1,6 @@
 import { blankProduction } from './ficha-canonical-v2.js';
 import { PRODUCTION_FIELDS_V8 } from './ficha-canonical-v8.js';
-import { factoryContent } from './ficha-v8-content.js';
+import { factoryContent, safeArtPreview } from './ficha-v8-content.js';
 
 export const TEMPLATE_V2 = 'ficha-canonical-v2';
 export const TEMPLATE_V3 = 'ficha-canonical-v3';
@@ -73,7 +73,9 @@ function printedTrail(order) {
  * decides how to print them.
  *
  * v8 (ADR 078) prints the allowlisted factory instructions, omits the payment
- * day and carries only the seven production fields left on the sheet.
+ * day, the first contact and the FAB code, and carries only the seven
+ * production fields left on the sheet. The optional art preview (FPI-11) of
+ * the order and of each item passes through only as an inline raster image.
  *
  * @param {any} order
  * @param {string} [templateVersion]
@@ -112,18 +114,14 @@ export function printSnapshot(order, templateVersion = TEMPLATE_V2) {
     const trail = printedTrail(order);
     pedido.lastro =
       templateVersion === TEMPLATE_V8
-        ? {
-            primeiro_contato: trail.primeiro_contato,
-            entrega_realizada: trail.entrega_realizada,
-          }
+        ? { entrega_realizada: trail.entrega_realizada }
         : trail;
   }
   if (
     templateVersion === TEMPLATE_V4 ||
     templateVersion === TEMPLATE_V5 ||
     templateVersion === TEMPLATE_V6 ||
-    templateVersion === TEMPLATE_V7 ||
-    templateVersion === TEMPLATE_V8
+    templateVersion === TEMPLATE_V7
   ) {
     pedido.artwork = order.ficha.artwork ?? {
       feito_pelo_cliente: false,
@@ -132,6 +130,14 @@ export function printSnapshot(order, templateVersion = TEMPLATE_V2) {
     };
   }
   if (templateVersion === TEMPLATE_V8) {
+    delete pedido.fab;
+    pedido.itens = (Array.isArray(items) ? items : []).map(
+      (/** @type {any} */ item) => ({
+        ...item,
+        artPreview: safeArtPreview(item?.artPreview),
+      }),
+    );
+    pedido.artPreview = safeArtPreview(order.artPreview);
     pedido.versao = order.version;
     const blank = /** @type {Record<string, string>} */ (blankProduction());
     return {

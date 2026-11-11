@@ -25,6 +25,7 @@ export const REQUIREMENTS_V8 = Object.freeze([
   'FPI-08',
   'FPI-09',
   'FPI-10',
+  'FPI-11',
 ]);
 const PROVISIONAL_STATUSES = Object.freeze(['pending-po-review', 'approved']);
 export const CRITERIA_V8 = Object.freeze([
@@ -86,7 +87,6 @@ export function validateFichaSnapshotV8(sample) {
     'v8 sample needs one item per audience',
   );
   let total = 0;
-  let differs = false;
   for (const [index, item] of items.entries()) {
     for (const field of ['tipo', 'cor', 'estampa', 'tipo_servico', 'gola']) {
       invariant(nonEmpty(item[field]), `v8 item ${index + 1} needs ${field}`);
@@ -101,14 +101,20 @@ export function validateFichaSnapshotV8(sample) {
       0,
     );
     total += sum;
-    if (item.quantidade_informada !== null && item.quantidade_informada !== sum)
-      differs = true;
   }
-  invariant(differs, 'v8 sample must print a quantity that differs from sizes');
   invariant(total === order.totalPieces, 'v8 sample total must match grades');
   invariant(
     items.some((/** @type {any} */ item) => item.grade.length >= 16),
     'v8 sample needs an item with sixteen sizes',
+  );
+  invariant(
+    items.filter((/** @type {any} */ item) => item.artPreview).length === 2 &&
+      items.every(
+        (/** @type {any} */ item) =>
+          !item.artPreview ||
+          /^data:image\/(png|jpeg|webp);base64,/u.test(item.artPreview),
+      ),
+    'v8 sample needs two items with an art preview and two without',
   );
   invariant(
     items.some((/** @type {any} */ item) => nonEmpty(item.modelo)),
@@ -122,7 +128,9 @@ export function validateFichaSnapshotV8(sample) {
   );
   invariant(
     !/R\$|pre[cç]o|subtotal|valor|payment|pagamento_/iu.test(
-      JSON.stringify(order.ficha),
+      JSON.stringify(order.ficha, (key, field) =>
+        key === 'artPreview' ? undefined : field,
+      ),
     ),
     'v8 sample must not carry money',
   );
@@ -179,7 +187,7 @@ export function validateFichaApprovalGateV8({
       gate.adr === '078' &&
       gate.syntheticOnly === true &&
       JSON.stringify(gate.requirements) === JSON.stringify(REQUIREMENTS_V8),
-    'v8 gate must trace FPI-T01, ADR 078 and FPI-01..10',
+    'v8 gate must trace FPI-T01, ADR 078 and FPI-01..11',
   );
   invariant(
     gate.snapshotVersion === 'synthetic-order-v8' &&

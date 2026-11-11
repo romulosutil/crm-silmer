@@ -31,6 +31,8 @@ import MessageTranscript from '../components/inbox/MessageTranscript.vue';
 import { useConversationTitleFocus } from '../components/inbox/useConversationTitleFocus.js';
 import { useInboxOutcome } from '../components/inbox/useInboxOutcome.js';
 import { useInboxReminder } from '../components/inbox/useInboxReminder.js';
+import { groupStarts } from '../components/inbox/message-groups.js';
+import { unreadNoticeText } from '../lib/inbox-unread.js';
 import { commandKey, request } from '../lib/api-client.js';
 import {
   preferredSellerFirstName,
@@ -115,6 +117,19 @@ const sessionUser = inject(
   computed(() => ({})),
 );
 const notify = inject('notify', () => {});
+/**
+ * INBOX-RD-02: the "Mensagem nova" marks live in the shell (App.vue), per
+ * browser. Without it (another host, a test) the marks simply never show.
+ *
+ * @type {{
+ *   count: import('vue').ComputedRef<number>,
+ *   isUnread: (conversationId: string) => boolean,
+ *   observe: (conversations: any[], options?: {openId?: string|null}) => string[],
+ *   markRead: (conversation: any) => void,
+ *   announceArrival?: (arrived: string[]) => void,
+ * } | null}
+ */
+const inboxUnread = inject('inboxUnread', null);
 
 const heading = ref(null);
 const searchInput = ref(null);
@@ -221,6 +236,8 @@ let keepOpenId = '';
 let lastCommandRefused = false;
 /** P1-D: the API answered a tab without the turn contract (older server). */
 const listUnsupported = ref(false);
+/** The list summary is a live region only for reads the person asked for. */
+const summaryAnnounces = ref(true);
 const loading = ref(true);
 const detailLoading = ref(false);
 const busy = ref(false);
@@ -922,9 +939,120 @@ function cardBadges(conversation) {
       (user) => user.id === conversation.assignedUser?.id,
     )?.name,
     reminderLabel,
+    isUnread: inboxUnread
+      ? (/** @type {string} */ id) => inboxUnread.isUnread(id)
+      : undefined,
   });
   const { shown, hidden } = splitBadges(all);
   return { visible: shown, hidden };
+}
+
+/**
+ * INBOX-RD-02: the conversation on screen, which a new message never marks.
+ * Two panes show the selected one; a phone shows only the one opened by its
+ * address, even while the list keeps a selection behind it.
+ */
+const readingId = computed(() =>
+  isPhone.value ? props.conversationId : activeId.value,
+);
+/** Marked cards whose position left the list's scrolled area. */
+const unreadOutOfView = ref(false);
+/** "Ver mensagens novas" waits for the Responder list before it focuses. */
+let unreadFocusPending = false;
+/**
+ * The notice above the list, only while a mark is out of sight: another tab
+ * or a consultation (the shell counts Responder there), a search that hides a
+ * marked card, or a marked card scrolled away. Not a live region: the arrival
+ * is announced once, by the shell's status region.
+ */
+const unreadNotice = computed(() => {
+  const count = inboxUnread?.count.value ?? 0;
+  if (!count) return '';
+  const elsewhere = !showBuckets.value || bucket.value !== 'respond';
+  if (elsewhere) return unreadNoticeText(count);
+  const shown = new Set(filtered.value.map((item) => item.id));
+  const hiddenBySearch = conversations.value.some(
+    (item) => inboxUnread?.isUnread(item.id) && !shown.has(item.id),
+  );
+  return hiddenBySearch || unreadOutOfView.value ? unreadNoticeText(count) : '';
+});
+
+/** Whether a marked card sits outside the list's visible area. */
+function measureUnreadView() {
+  const list = conversationList.value;
+  if (!(list instanceof HTMLElement) || !inboxUnread) {
+    unreadOutOfView.value = false;
+    return;
+  }
+  const frame = list.getBoundingClientRect();
+  unreadOutOfView.value = Array.from(
+    list.querySelectorAll('.conversation-row[data-unread="true"]'),
+  ).some((row) => {
+    const box = row.getBoundingClientRect();
+    return box.bottom <= frame.top || box.top >= frame.bottom;
+  });
+}
+
+/**
+ * The list just read from the server: what arrived since the last read gets
+ * its mark (never the conversation being read), announced once by the shell.
+ *
+ * @param {any[]} items
+ */
+function observeUnread(items) {
+  if (!inboxUnread) return;
+  const arrived = inboxUnread.observe(items, {
+    openId: readingId.value || null,
+  });
+  inboxUnread.announceArrival?.(arrived);
+}
+
+/**
+ * A conversation the person opened (its address, from a card or a link) is
+ * read: its mark goes, and its latest customer message is the one this
+ * browser knows. The first card a wide screen selects by itself keeps its
+ * mark until it is opened, so "Ver mensagens novas" still finds it.
+ *
+ * @param {{conversation?: Record<string, any>, messages?: any[]}} data
+ */
+function markReadingRead(data) {
+  const conversation = data?.conversation;
+  if (!inboxUnread || !conversation?.id) return;
+  if (conversation.id !== props.conversationId) return;
+  const messages = Array.isArray(data.messages) ? data.messages : [];
+  const last = messages.at(-1) ?? conversation.lastMessage ?? null;
+  inboxUnread.markRead({
+    id: conversation.id,
+    lastMessage: last ? { id: last.id, direction: last.direction } : null,
+  });
+}
+
+/**
+ * "Ver mensagens novas": Responder, without the search, from the top, with
+ * the focus on the first marked card. A consultation goes back to the tabs.
+ */
+async function showUnread() {
+  query.value = '';
+  const switching = !showBuckets.value || bucket.value !== 'respond';
+  if (switching) {
+    unreadFocusPending = true;
+    if (!showBuckets.value) consult.value = 'open';
+    bucket.value = 'respond';
+    return;
+  }
+  await focusFirstUnread();
+}
+
+async function focusFirstUnread() {
+  unreadFocusPending = false;
+  await nextTick();
+  const list = conversationList.value;
+  if (list instanceof HTMLElement) list.scrollTop = 0;
+  const row = /** @type {HTMLElement|null} */ (
+    list?.querySelector('.conversation-row[data-unread="true"]') ?? null
+  );
+  (row ?? listSummary.value)?.focus({ preventScroll: true });
+  measureUnreadView();
 }
 
 /** Phones show one pane at a time: the list or the open conversation. */
@@ -1295,6 +1423,64 @@ function messageInitials(message) {
     .toLocaleUpperCase('pt-BR');
 }
 
+/**
+ * INBOX-RD-03: the messages that open a group show the avatar and the name
+ * (see message-groups.js for when a group breaks).
+ */
+const messageGroupStarts = computed(() =>
+  groupStarts(detail.value?.messages ?? []),
+);
+
+/**
+ * What a screen reader hears before each message, grouped or not: author
+ * (with the role where the name does not say it) and time.
+ *
+ * @param {Record<string, any>} message
+ */
+function messageSpoken(message) {
+  const role = messageRoleLabel(message);
+  const author = messageAuthorLabel(message);
+  return `${role ? `${author}, ${role}` : author}, ${messageWhen(message.occurredAt)}:`;
+}
+
+/** @param {Record<string, any>} message */
+function messageHasText(message) {
+  return (
+    !message.media &&
+    !['audio', 'image', 'video'].includes(message.type) &&
+    Boolean(messageCaption(message))
+  );
+}
+
+/**
+ * INBOX-RD-08 (design.md §8 Tabs): the Atendimento panel's two sections.
+ * Arrows, Home and End move between them; only the selected one is a stop.
+ */
+const CONTEXT_TABS = Object.freeze([
+  Object.freeze({ value: 'orders', label: 'Pedidos e assuntos' }),
+  Object.freeze({ value: 'summary', label: 'Resumo' }),
+]);
+/** @type {import('vue').Ref<HTMLButtonElement[]>} */
+const contextTabButtons = ref([]);
+
+/** @param {KeyboardEvent} event @param {number} index */
+async function contextTabKeydown(event, index) {
+  const last = CONTEXT_TABS.length - 1;
+  /** @type {Record<string, number>} */
+  const moves = {
+    ArrowLeft: index === 0 ? last : index - 1,
+    ArrowRight: index === last ? 0 : index + 1,
+    Home: 0,
+    End: last,
+  };
+  const target = moves[event.key];
+  if (target === undefined) return;
+  event.preventDefault();
+  contextTab.value = CONTEXT_TABS[target].value;
+  await nextTick();
+  contextTabButtons.value[target]?.focus();
+}
+
 /** Hide transport labels while retaining genuine captions on media. @param {Record<string, any>} message */
 function messageCaption(message) {
   const caption = String(message.preview ?? '');
@@ -1406,6 +1592,11 @@ async function loadInbox(silent = false) {
   listController?.abort();
   const controller = new AbortController();
   listController = controller;
+  // INBOX-RD-02: a silent read (live event, timer, after a command) changes
+  // the summary without announcing it; an arrival is announced once, by the
+  // shell, and a command by its own status. A read the person asked for
+  // (a tab, a filter) still reads its total.
+  summaryAnnounces.value = !silent;
   if (!silent) loading.value = true;
   // RFC 052 P2: the totals and the list are read in parallel; a slow or failed
   // list no longer leaves the tabs without their numbers.
@@ -1427,6 +1618,7 @@ async function loadInbox(silent = false) {
       return;
     }
     listUnsupported.value = false;
+    observeUnread(response.data.items);
     conversations.value = response.data.items;
     totalCount.value = response.data.totalCount;
     nextCursor.value = response.data.nextCursor ?? '';
@@ -1444,6 +1636,7 @@ async function loadInbox(silent = false) {
   } finally {
     if (controller === listController) {
       loading.value = false;
+      if (unreadFocusPending) void focusFirstUnread();
       if (restoreAppendFocus && document.activeElement === document.body) {
         await nextTick();
         listSummary.value?.focus({ preventScroll: true });
@@ -1513,6 +1706,7 @@ async function loadMoreConversations(event) {
       known.add(item.id);
       return true;
     });
+    observeUnread(additions);
     const restoreFocus = document.activeElement === trigger;
     const scrollTop = conversationList.value?.scrollTop ?? 0;
     conversations.value = [...conversations.value, ...additions];
@@ -1686,6 +1880,7 @@ async function selectConversation(id, silent = false) {
     );
     if (controller !== detailController || activeId.value !== id) return;
     detail.value = response.data;
+    markReadingRead(response.data);
     void loadSubjects(id);
   } catch (cause) {
     if (
@@ -2440,6 +2635,12 @@ watch(
   () => void anchorThread(),
   { flush: 'post' },
 );
+// INBOX-RD-02: the notice follows what the list draws and where it scrolled.
+watch(
+  () => [rowCards.value, inboxUnread?.count.value, workspaceView.value],
+  () => measureUnreadView(),
+  { flush: 'post' },
+);
 watch(liveEvent, (event) => {
   if (!event) return;
   // PLI-08: an order changed elsewhere; Detalhes › Pedido reads it again.
@@ -2492,6 +2693,7 @@ onMounted(() => {
     PERIODIC_REFRESH_MS,
   );
   globalThis.document.addEventListener('visibilitychange', visibilityChanged);
+  globalThis.addEventListener('resize', measureUnreadView, { passive: true });
   heading.value?.focus();
   void refreshInbox();
   void loadAssignableUsers();
@@ -2520,6 +2722,7 @@ onBeforeUnmount(() => {
     'visibilitychange',
     visibilityChanged,
   );
+  globalThis.removeEventListener('resize', measureUnreadView);
 });
 </script>
 
@@ -2754,6 +2957,7 @@ onBeforeUnmount(() => {
           ref="listSummary"
           class="inbox-list-summary"
           role="status"
+          :aria-live="summaryAnnounces ? undefined : 'off'"
           tabindex="-1"
         >
           {{
@@ -2767,11 +2971,23 @@ onBeforeUnmount(() => {
             · {{ activeBucket.order }}</span
           >
         </p>
+        <!-- INBOX-RD-02: marks out of sight. Not a live region: the shell
+             announces each arrival once. -->
+        <div
+          v-if="unreadNotice"
+          class="inbox-notice inbox-live-notice inbox-unread-notice"
+        >
+          <p>{{ unreadNotice }}</p>
+          <button type="button" class="quiet" @click="showUnread">
+            Ver mensagens novas
+          </button>
+        </div>
         <ul
           ref="conversationList"
           class="inbox-list"
           aria-label="Conversas"
           :aria-busy="loading || loadingMore"
+          @scroll.passive="measureUnreadView"
         >
           <li
             v-for="{ conversation, time, badges } in rowCards"
@@ -2887,7 +3103,11 @@ onBeforeUnmount(() => {
                         ? 'success'
                         : 'warning'
                     "
-                    >{{ orderStatusLabel(headerOrder.status) }}</span
+                    ><AppIcon
+                      :name="
+                        headerOrder.status === 'confirmado' ? 'check' : 'alert'
+                      "
+                    />{{ orderStatusLabel(headerOrder.status) }}</span
                   >
                 </RouterLink>
               </div>
@@ -3116,203 +3336,220 @@ onBeforeUnmount(() => {
               tabindex="-1"
               :data-from="messageFrom(message)"
               :data-side="message.direction === 'outbound' ? 'out' : 'in'"
+              :data-group-start="
+                messageGroupStarts.has(message.id) ? 'true' : undefined
+              "
             >
-              <div class="msg-head">
-                <span class="msg-sender">
-                  <span class="message-avatar" aria-hidden="true">{{
-                    messageInitials(message)
-                  }}</span>
-                  <strong class="msg-author">{{
-                    messageAuthorLabel(message)
-                  }}</strong>
-                  <span v-if="messageRoleLabel(message)" class="msg-role">{{
-                    messageRoleLabel(message)
-                  }}</span>
-                </span>
+              <!-- INBOX-RD-03: the author once per group; each message still
+                   says who and when to a screen reader. -->
+              <div
+                v-if="messageGroupStarts.has(message.id)"
+                class="msg-head"
+                aria-hidden="true"
+              >
+                <span class="message-avatar">{{
+                  messageInitials(message)
+                }}</span>
+                <strong class="msg-author">{{
+                  messageAuthorLabel(message)
+                }}</strong>
+                <span v-if="messageRoleLabel(message)" class="msg-role">{{
+                  messageRoleLabel(message)
+                }}</span>
+              </div>
+              <div class="msg-bubble">
+                <span class="sr-only">{{ messageSpoken(message) }} </span>
+                <p v-if="messageHasText(message)" class="msg-text">
+                  {{ messageCaption(message) }}
+                </p>
                 <time
+                  v-if="messageHasText(message)"
                   class="msg-time"
+                  aria-hidden="true"
                   :datetime="message.occurredAt"
                   :title="dateTimeBR(message.occurredAt)"
                   >{{ messageWhen(message.occurredAt) }}</time
                 >
-              </div>
-              <p
-                v-if="
-                  !message.media &&
-                  !['audio', 'image', 'video'].includes(message.type) &&
-                  messageCaption(message)
-                "
-              >
-                {{ messageCaption(message) }}
-              </p>
-              <div
-                v-if="canQuoteShipping && message.direction === 'inbound'"
-                class="inline-actions"
-              >
-                <button
-                  v-for="postalCode in messagePostalCodes(message.preview)"
-                  :key="postalCode"
-                  type="button"
-                  @click="shippingQuote?.open($event.currentTarget, postalCode)"
+                <div
+                  v-if="canQuoteShipping && message.direction === 'inbound'"
+                  class="inline-actions"
                 >
-                  Cotar para CEP {{ postalCode }}
-                </button>
-              </div>
-              <MediaMessage
-                v-if="
-                  message.media ||
-                  (message.direction === 'inbound' && message.type === 'image')
-                "
-                :media="
-                  message.media ?? {
-                    mediaId: message.id,
-                    kind: 'image',
-                    state: 'missing',
-                    contentUrl: null,
-                  }
-                "
-                :orders="
-                  message.direction === 'inbound' ? imageAttachmentOrders : []
-                "
-              />
-              <p
-                v-if="
-                  (message.media ||
-                    ['audio', 'image', 'video'].includes(message.type)) &&
-                  messageCaption(message)
-                "
-                class="message-media-caption"
-              >
-                {{ messageCaption(message) }}
-              </p>
-              <small v-if="message.deliveryMode === 'dev'"
-                >DEV: envio simulado</small
-              >
-              <MessageDeliveryNotice
-                :message="message"
-                :checking="Boolean(deliveryCheckingId)"
-                :check-failed="deliveryCheckFailedId === message.id"
-                @check="checkMessageDelivery(message.id)"
-              />
-              <!-- CP-16/UXA-01: no control on every message. The question
+                  <button
+                    v-for="postalCode in messagePostalCodes(message.preview)"
+                    :key="postalCode"
+                    type="button"
+                    @click="
+                      shippingQuote?.open($event.currentTarget, postalCode)
+                    "
+                  >
+                    Cotar para CEP {{ postalCode }}
+                  </button>
+                </div>
+                <MediaMessage
+                  v-if="
+                    message.media ||
+                    (message.direction === 'inbound' &&
+                      message.type === 'image')
+                  "
+                  :media="
+                    message.media ?? {
+                      mediaId: message.id,
+                      kind: 'image',
+                      state: 'missing',
+                      contentUrl: null,
+                    }
+                  "
+                  :orders="
+                    message.direction === 'inbound' ? imageAttachmentOrders : []
+                  "
+                />
+                <p
+                  v-if="
+                    (message.media ||
+                      ['audio', 'image', 'video'].includes(message.type)) &&
+                    messageCaption(message)
+                  "
+                  class="message-media-caption"
+                >
+                  {{ messageCaption(message) }}
+                </p>
+                <time
+                  v-if="!messageHasText(message)"
+                  class="msg-time"
+                  aria-hidden="true"
+                  :datetime="message.occurredAt"
+                  :title="dateTimeBR(message.occurredAt)"
+                  >{{ messageWhen(message.occurredAt) }}</time
+                >
+                <small v-if="message.deliveryMode === 'dev'"
+                  >DEV: envio simulado</small
+                >
+                <MessageDeliveryNotice
+                  :message="message"
+                  :checking="Boolean(deliveryCheckingId)"
+                  :check-failed="deliveryCheckFailedId === message.id"
+                  @check="checkMessageDelivery(message.id)"
+                />
+                <!-- CP-16/UXA-01: no control on every message. The question
                    sits only on the message the agent stopped on, for whoever
                    has the conversation; the others read why it waits. -->
-              <fieldset
-                v-if="showsSubjectQuestion(message)"
-                :id="`subject-question-${message.id}`"
-                class="subject-question"
-              >
-                <legend>A qual pedido esta mensagem se refere?</legend>
-                <div class="subject-question-options">
-                  <button
-                    v-for="subject in subjectState.subjects"
-                    :key="subject.id"
-                    type="button"
-                    :aria-disabled="subjectBusy ? 'true' : undefined"
-                    @click="answerMessageSubject(message.id, [subject.id])"
-                  >
-                    {{ subjectLabel(subject) }}
-                  </button>
-                  <button
-                    v-if="subjectState.subjects.length > 1"
-                    type="button"
-                    :aria-expanded="Boolean(subjectManyOpen[message.id])"
-                    :aria-controls="`subject-many-${message.id}`"
-                    @click="toggleSubjectMany(message.id)"
-                  >
-                    Mais de um
-                  </button>
-                  <button
-                    type="button"
-                    :aria-disabled="subjectBusy ? 'true' : undefined"
-                    @click="answerMessageSubject(message.id, 'separate')"
-                  >
-                    Separar como novo assunto
-                  </button>
-                  <button
-                    type="button"
-                    :aria-disabled="subjectBusy ? 'true' : undefined"
-                    @click="answerMessageSubject(message.id, [])"
-                  >
-                    Nenhum pedido
-                  </button>
-                  <button
-                    v-if="subjectCorrecting[message.id]"
-                    type="button"
-                    class="quiet"
-                    @click="cancelSubjectCorrection(message.id)"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-                <div
-                  v-if="subjectManyOpen[message.id]"
-                  :id="`subject-many-${message.id}`"
-                  class="subject-question-many"
+                <fieldset
+                  v-if="showsSubjectQuestion(message)"
+                  :id="`subject-question-${message.id}`"
+                  class="subject-question"
                 >
-                  <label
-                    v-for="subject in subjectState.subjects"
-                    :key="subject.id"
+                  <legend>A qual pedido esta mensagem se refere?</legend>
+                  <div class="subject-question-options">
+                    <button
+                      v-for="subject in subjectState.subjects"
+                      :key="subject.id"
+                      type="button"
+                      :aria-disabled="subjectBusy ? 'true' : undefined"
+                      @click="answerMessageSubject(message.id, [subject.id])"
+                    >
+                      {{ subjectLabel(subject) }}
+                    </button>
+                    <button
+                      v-if="subjectState.subjects.length > 1"
+                      type="button"
+                      :aria-expanded="Boolean(subjectManyOpen[message.id])"
+                      :aria-controls="`subject-many-${message.id}`"
+                      @click="toggleSubjectMany(message.id)"
+                    >
+                      Mais de um
+                    </button>
+                    <button
+                      type="button"
+                      :aria-disabled="subjectBusy ? 'true' : undefined"
+                      @click="answerMessageSubject(message.id, 'separate')"
+                    >
+                      Separar como novo assunto
+                    </button>
+                    <button
+                      type="button"
+                      :aria-disabled="subjectBusy ? 'true' : undefined"
+                      @click="answerMessageSubject(message.id, [])"
+                    >
+                      Nenhum pedido
+                    </button>
+                    <button
+                      v-if="subjectCorrecting[message.id]"
+                      type="button"
+                      class="quiet"
+                      @click="cancelSubjectCorrection(message.id)"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                  <div
+                    v-if="subjectManyOpen[message.id]"
+                    :id="`subject-many-${message.id}`"
+                    class="subject-question-many"
                   >
-                    <input
-                      v-model="messageSubjectDrafts[message.id]"
-                      type="checkbox"
-                      :value="subject.id"
-                    />
-                    {{ subjectLabel(subject) }}
-                  </label>
-                  <button
-                    type="button"
-                    :aria-disabled="subjectBusy ? 'true' : undefined"
-                    @click="answerMessageSubject(message.id, 'marked')"
+                    <label
+                      v-for="subject in subjectState.subjects"
+                      :key="subject.id"
+                    >
+                      <input
+                        v-model="messageSubjectDrafts[message.id]"
+                        type="checkbox"
+                        :value="subject.id"
+                      />
+                      {{ subjectLabel(subject) }}
+                    </label>
+                    <button
+                      type="button"
+                      :aria-disabled="subjectBusy ? 'true' : undefined"
+                      @click="answerMessageSubject(message.id, 'marked')"
+                    >
+                      Ligar aos marcados
+                    </button>
+                  </div>
+                  <p
+                    v-if="subjectAnswerErrors[message.id]"
+                    class="subject-question-error"
+                    role="alert"
                   >
-                    Ligar aos marcados
-                  </button>
-                </div>
+                    {{ subjectAnswerErrors[message.id] }}
+                  </p>
+                </fieldset>
                 <p
-                  v-if="subjectAnswerErrors[message.id]"
-                  class="subject-question-error"
-                  role="alert"
+                  v-else-if="subjectReviewIds.has(message.id) && !isTerminal"
+                  class="subject-question-hint"
                 >
-                  {{ subjectAnswerErrors[message.id] }}
+                  O agente não soube a qual pedido esta mensagem se refere.
+                  {{
+                    needsTakeover
+                      ? 'Assuma o atendimento para indicar.'
+                      : 'Aguardando o vendedor indicar o pedido.'
+                  }}
                 </p>
-              </fieldset>
-              <p
-                v-else-if="subjectReviewIds.has(message.id) && !isTerminal"
-                class="subject-question-hint"
-              >
-                O agente não soube a qual pedido esta mensagem se refere.
-                {{
-                  needsTakeover
-                    ? 'Assuma o atendimento para indicar.'
-                    : 'Aguardando o vendedor indicar o pedido.'
-                }}
-              </p>
-              <p v-if="messageSubjectChip(message)" class="subject-chip">
-                <span :id="`subject-chip-${message.id}`">{{
-                  messageSubjectChip(message)
-                }}</span>
-                <button
-                  v-if="canAnswerSubjects && !subjectCorrecting[message.id]"
-                  :id="`subject-correct-${message.id}`"
-                  type="button"
-                  class="link-button"
-                  :aria-describedby="`subject-chip-${message.id}`"
-                  @click="correctMessageSubject(message.id)"
+                <p v-if="messageSubjectChip(message)" class="subject-chip">
+                  <span :id="`subject-chip-${message.id}`">{{
+                    messageSubjectChip(message)
+                  }}</span>
+                  <button
+                    v-if="canAnswerSubjects && !subjectCorrecting[message.id]"
+                    :id="`subject-correct-${message.id}`"
+                    type="button"
+                    class="link-button"
+                    :aria-describedby="`subject-chip-${message.id}`"
+                    @click="correctMessageSubject(message.id)"
+                  >
+                    Corrigir
+                  </button>
+                </p>
+                <!-- UXA-05: the answer is confirmed where it was given. -->
+                <p
+                  v-if="subjectAnswers[message.id]"
+                  :id="`subject-answer-${message.id}`"
+                  class="subject-answer"
+                  role="status"
+                  tabindex="-1"
                 >
-                  Corrigir
-                </button>
-              </p>
-              <!-- UXA-05: the answer is confirmed where it was given. -->
-              <p
-                v-if="subjectAnswers[message.id]"
-                :id="`subject-answer-${message.id}`"
-                class="subject-answer"
-                role="status"
-                tabindex="-1"
-              >
-                {{ subjectAnswers[message.id] }}
-              </p>
+                  {{ subjectAnswers[message.id] }}
+                </p>
+              </div>
             </li>
             <li v-if="!detail.messages.length" class="empty-list">
               Sem mensagens persistidas.
@@ -3497,26 +3734,35 @@ onBeforeUnmount(() => {
 
         <div
           class="context-tabs"
-          role="group"
+          role="tablist"
           aria-label="Seções do atendimento"
         >
           <button
+            v-for="(tab, index) in CONTEXT_TABS"
+            :id="`context-tab-${tab.value}`"
+            :key="tab.value"
+            :ref="(element) => (contextTabButtons[index] = element)"
             type="button"
-            :aria-pressed="contextTab === 'orders'"
-            @click="contextTab = 'orders'"
+            role="tab"
+            :aria-controls="`context-panel-${tab.value}`"
+            :aria-selected="contextTab === tab.value ? 'true' : 'false'"
+            :tabindex="contextTab === tab.value ? 0 : -1"
+            @click="contextTab = tab.value"
+            @keydown="contextTabKeydown($event, index)"
           >
-            Pedidos e assuntos
-          </button>
-          <button
-            type="button"
-            :aria-pressed="contextTab === 'summary'"
-            @click="contextTab = 'summary'"
-          >
-            Resumo
+            {{ tab.label }}
           </button>
         </div>
-        <div v-show="contextTab === 'orders'">
-          <div ref="assistanceDetailsTarget" class="context-assistance" />
+        <!-- INBOX-RD-08: the order first, then the suggestions, then the
+             subjects; the same content as before, in panels. -->
+        <div
+          v-show="contextTab === 'orders'"
+          id="context-panel-orders"
+          class="context-panel"
+          role="tabpanel"
+          aria-labelledby="context-tab-orders"
+          tabindex="0"
+        >
           <ConversationOrderSummary
             :conversation-id="active.id"
             :order="headerOrder"
@@ -3526,6 +3772,7 @@ onBeforeUnmount(() => {
             :open="contextOpen"
             :revision="orderRevision"
           />
+          <div ref="assistanceDetailsTarget" class="context-assistance" />
 
           <section class="subject-panel" aria-labelledby="subject-panel-title">
             <!-- UXA-04: the seller's words, and what each action changes. -->
@@ -3542,7 +3789,7 @@ onBeforeUnmount(() => {
               <li v-for="subject in subjectState.subjects" :key="subject.id">
                 <span>{{ subjectLabel(subject) }}</span>
                 <strong v-if="subject.isCurrent" class="badge" data-tone="info"
-                  >Em foco</strong
+                  ><AppIcon name="info" />Em foco</strong
                 >
                 <button
                   v-else-if="canClose"
@@ -3624,8 +3871,11 @@ onBeforeUnmount(() => {
         </div>
         <section
           v-show="contextTab === 'summary'"
-          class="context-section"
-          aria-label="Resumo do atendimento"
+          id="context-panel-summary"
+          class="context-section context-panel"
+          role="tabpanel"
+          aria-labelledby="context-tab-summary"
+          tabindex="0"
         >
           <dl class="context-facts">
             <div>

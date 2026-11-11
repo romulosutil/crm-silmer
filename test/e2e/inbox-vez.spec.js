@@ -529,7 +529,7 @@ for (const size of [
           return r && { top: r.top, height: r.height, left: r.left };
         };
         const tabs = [
-          ...globalThis.document.querySelectorAll('[role="tab"]'),
+          ...globalThis.document.querySelectorAll('.inbox-tabs [role="tab"]'),
         ].map(box);
         return {
           filters: box(
@@ -1398,10 +1398,12 @@ test('8b: o tablist responde ao teclado, com tabindex itinerante e foco na lista
   await expect(tabs).toHaveCount(4);
   const state = () =>
     page.evaluate(() =>
-      [...globalThis.document.querySelectorAll('[role="tab"]')].map((tab) => [
-        tab.getAttribute('aria-selected'),
-        tab.getAttribute('tabindex'),
-      ]),
+      [...globalThis.document.querySelectorAll('.inbox-tabs [role="tab"]')].map(
+        (tab) => [
+          tab.getAttribute('aria-selected'),
+          tab.getAttribute('tabindex'),
+        ],
+      ),
     );
   expect(await state()).toEqual([
     ['true', '0'],

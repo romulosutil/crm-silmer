@@ -3,6 +3,7 @@ import test from 'node:test';
 import { brand } from '../apps/edge-web/src/brand/index.js';
 import {
   BADGE_RULES,
+  badgeIcon,
   conversationBadges,
   inboxBucketsUrl,
   inboxListUrl,
@@ -425,6 +426,7 @@ const context = (bucket) => ({
 test('the registry declares each seal once, with unique keys and priorities', () => {
   const keys = BADGE_RULES.map((rule) => rule.key);
   assert.deepEqual(keys, [
+    'unread',
     'delivery',
     'claim',
     'urgent',
@@ -542,4 +544,56 @@ test('labels and tones are exactly the ones the card has always shown', () => {
     ).map((badge) => badge.label),
     ['Com Ana'],
   );
+});
+
+// --- INBOX-RD-02 / RD-03: "Mensagem nova" and the seal icons ----------------
+
+/** @param {string} [bucket] */
+const withUnread = (bucket) => ({
+  ...context(bucket),
+  isUnread: (/** @type {string} */ id) => id === 'conv-synthetic-1',
+});
+
+test('"Mensagem nova" is the first seal in every tab and counts in the two', () => {
+  const marked = { ...full, id: 'conv-synthetic-1' };
+  for (const bucket of ['respond', 'awaiting', 'silent', 'lost', undefined]) {
+    const all = conversationBadges(marked, withUnread(bucket));
+    assert.equal(all[0].key, 'unread');
+    assert.equal(all[0].label, 'Mensagem nova');
+    assert.equal(all[0].tone, 'info');
+    const leader =
+      bucket === 'lost'
+        ? 'lost'
+        : bucket === 'silent'
+          ? 'reminder'
+          : 'delivery';
+    const { shown, hidden } = splitBadges(all);
+    assert.deepEqual(
+      shown.map((badge) => badge.key),
+      ['unread', leader],
+    );
+    assert.equal(hidden.length, 6);
+  }
+});
+
+test('no mark without the unread check, or for another conversation', () => {
+  const marked = { ...full, id: 'conv-synthetic-2' };
+  const has = (/** @type {any} */ ctx) =>
+    conversationBadges(marked, ctx).some((badge) => badge.key === 'unread');
+  assert.equal(has(context('respond')), false);
+  assert.equal(has(withUnread('respond')), false);
+});
+
+test('a seal with a tone shows its icon; a neutral seal shows none', () => {
+  /** @type {Array<[any, string]>} */
+  const cases = [
+    [{ key: 'unread', label: 'Mensagem nova', tone: 'info' }, 'message'],
+    [{ key: 'delivery', label: 'Falha de envio', tone: 'error' }, 'alert'],
+    [{ key: 'claim', label: 'Assumir', tone: 'warning' }, 'alert'],
+    [{ key: 'ready', label: 'Pedido pronto', tone: 'success' }, 'check'],
+    [{ key: 'reminder', label: 'Lembrete', tone: 'info' }, 'info'],
+    [{ key: 'owner', label: 'Sem dono' }, ''],
+    [{ key: 'lost', label: 'Perdido · Prazo' }, ''],
+  ];
+  for (const [badge, icon] of cases) assert.equal(badgeIcon(badge), icon);
 });

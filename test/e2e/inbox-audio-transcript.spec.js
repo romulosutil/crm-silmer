@@ -130,7 +130,7 @@ test('keeps automatic transcripts selectable in the attendance summary without c
   await details.focus();
   await page.keyboard.press('Enter');
   const drawer = page.getByRole('dialog', { name: 'Atendimento', exact: true });
-  await drawer.getByRole('button', { name: 'Resumo', exact: true }).click();
+  await drawer.getByRole('tab', { name: 'Resumo', exact: true }).click();
   const disclosure = drawer
     .locator('summary')
     .filter({ hasText: 'Transcrições automáticas' });

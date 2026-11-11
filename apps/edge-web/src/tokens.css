@@ -101,7 +101,12 @@
     --topbar-block-size: 56px;
     --inbox-topbar-block-size: 3rem;
     --inbox-rail-inline-size: 3.5rem;
-    --inbox-list-inline-size: 14rem;
+    /* INBOX-RD-01: 224 px at 933 px of viewport, 300 px from 1250 px up. */
+    --inbox-list-inline-size: clamp(14rem, 24vw, 18.75rem);
+    /* INBOX-RD-03: the history is a centered reading column; a bubble stays
+       near 70 characters. */
+    --inbox-thread-max-inline-size: 48rem;
+    --inbox-message-max-inline-size: 34rem;
     /* Bottom tab bar on phones; screens reserve it above their own footer. */
     --mobile-nav-block-size: 4rem;
     --shell-gap: 0.5rem;

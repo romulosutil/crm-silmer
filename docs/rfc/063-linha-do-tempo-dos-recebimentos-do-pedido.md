@@ -37,8 +37,12 @@ nenhum ADR aprovado é alterado por este planejamento. Issue/PR: ainda não cria
 ## Experiência proposta
 
 Manter o título **Datas do pedido**, o acordeão e o design existente.
-Conservar os três marcos resumidos no topo; **Pago em** recebe apoio
-“Quitação integral”. Abaixo, uma lista vertical, do mais antigo ao mais recente:
+Conforme revisão do proprietário em 11/11/2026 (DTL-P04), remover os três
+marcos horizontais para evitar repetição. Exibir uma lista vertical, do mais
+antigo ao mais recente, com **Confirmar entrega** junto ao título enquanto
+não houver entrega registrada. A data canônica de quitação permanece no
+modelo financeiro; a seção usa os recebimentos e o saldo sem repetir o bloco
+de datas:
 
 1. Primeiro contato e confirmação atual do pedido, quando conhecidos.
 2. Cada recebimento confirmado, inclusive parcial, com valor, método e origem.
@@ -53,7 +57,7 @@ sem prometer uma história completa de todas as confirmações.
 
 Exemplo: R$ 300 confirmados via InfinitePay em 06/11 e R$ 700 recebidos
 manualmente em 09/11 para um pedido de R$ 1.000. A linha do tempo mostra ambos;
-Pago em mostra 09/11 somente se essa for a data canônica retornada pela API.
+O modelo financeiro mantém 09/11 como quitação somente se essa for a data canônica retornada pela API.
 O frontend nunca recalcula nem sobrescreve a data de quitação.
 
 Detalhes nativos expansíveis mostram responsável e instante do registro
@@ -127,6 +131,16 @@ tratamento de legado, antes de mudar o significado desta data.
 
 ## Validação deste planejamento
 
+DTL-P04 (11/11/2026): remover o resumo horizontal do protótipo e mover
+**Confirmar entrega** para o cabeçalho da linha do tempo. Confirmar adiciona
+o evento com dia/autor/horário, oculta o botão e move o foco para o título
+**Pedido entregue**. Cancelar/Escape preservam o estado e devolvem foco ao
+botão. Critérios: ausência do bloco horizontal, fluxo anterior preservado,
+evento único e data correta, teclado e layout mobile. O teste existente do
+harness passou após atualizar as expectativas para a nova composição.
+Esta revisão substitui a disposição visual inicial de DTL-P02/P03; os
+contratos de quitação e o estado financeiro permanecem iguais.
+
 DTL-P03 (11/11/2026): acrescentar ao protótipo local o fluxo **Confirmar
 entrega** solicitado pelo proprietário. Critérios desta entrega visual:
 
@@ -135,7 +149,7 @@ entrega** solicitado pelo proprietário. Critérios desta entrega visual:
 - Confirmar: registrar somente na memória do protótipo o dia atual de São
   Paulo e o instante, mostrar data, um único evento e autor de demonstração.
 - Pagamento/saldo preservados, inclusive quando entregue sem quitação integral.
-- Confirmação concluída move foco para a data; detalhes são operáveis por
+- Confirmação concluída move foco para o evento de entrega (revisão DTL-P04); detalhes são operáveis por
   teclado. Diálogo cabe no celular e o estado por cenário reinicia no reload.
 
 Arquivos DTL-P03: `OrderDatesPreview.vue`, teste existente do harness e esta

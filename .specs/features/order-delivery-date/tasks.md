@@ -22,6 +22,7 @@
 flowchart LR
   T1 --> T2
   T2 --> T3
+  T3 --> T4
 ```
 
 ## Task Breakdown
@@ -70,9 +71,29 @@ flowchart LR
 
 **Gate**: validate_state.py e diff check, commit/push/PR.
 
+### T4: Atualizar regressões de revisão financeira para o fluxo aprovado (DDE-T04)
+
+- [x] Concluída: o CI 43120232727 aprovou 989 E2E e recusou dois testes
+  que ainda procuravam o editor removido. Os dois cenários foram adaptados:
+  entrega/confirmação e correção preservam data de pagamento e revisão pendente;
+  quitação explícita usa Revisar quitação no Dashboard, com o dia original e
+  checkbox obrigatório. Corpos exatos e ausência de campos cruzados são verificados.
+  Não houve alteração no produto ou remoção/skip de cenários.
+
+**Where**: test/e2e/finance-payment-review.spec.js.
+
+**Depends on**: T3
+
+**Tests**: DDE-02/03 e compatibilidade de revisão financeira; 2 E2E aprovados
+  localmente, lint/tipos aprovados e revisão independente das invariantes.
+
+**Gate**: CI completo da revisão integrada antes de merge; autorização explícita
+  do proprietário para atualizar master, acompanhar CI e integrar o PR 348.
+
 ## Cross-check
 
 | Dependency | Diagram | Definition |
 | ---------- | ------- | ---------- |
 | T1 → T2    | yes     | yes        |
 | T2 → T3    | yes     | yes        |
+| T3 → T4    | yes     | yes        |

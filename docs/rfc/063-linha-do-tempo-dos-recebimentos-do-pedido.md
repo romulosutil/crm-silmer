@@ -127,6 +127,23 @@ tratamento de legado, antes de mudar o significado desta data.
 
 ## Validação deste planejamento
 
+DTL-P03 (11/11/2026): acrescentar ao protótipo local o fluxo **Confirmar
+entrega** solicitado pelo proprietário. Critérios desta entrega visual:
+
+- Sem entrega: exibir botão junto a Entregue em, inclusive no exemplo quitado.
+- Cancelar/Escape: não alterar data/eventos e devolver foco ao botão.
+- Confirmar: registrar somente na memória do protótipo o dia atual de São
+  Paulo e o instante, mostrar data, um único evento e autor de demonstração.
+- Pagamento/saldo preservados, inclusive quando entregue sem quitação integral.
+- Confirmação concluída move foco para a data; detalhes são operáveis por
+  teclado. Diálogo cabe no celular e o estado por cenário reinicia no reload.
+
+Arquivos DTL-P03: `OrderDatesPreview.vue`, teste existente do harness e esta
+documentação/README de protótipos. Gate: teste Chromium com confirmação,
+cancelamento, Escape, foco, saldo, ausência de duplicata e fixture financeira
+inalterada; diálogo desktop/mobile inspecionado. Não implementa a mudança no
+produto nem altera o contrato do comando de entrega real.
+
 DTL-P02 (11/11/2026): protótipo inserido no site local pelo harness existente
 `docs/prototypes/billing-chat-preview.mjs`, com `datesPreview=true`.
 `OrderDatesPreview.vue` substitui apenas a seção de datas em memória. O

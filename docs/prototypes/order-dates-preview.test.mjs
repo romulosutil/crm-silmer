@@ -34,11 +34,84 @@ test('DTL-P02: timeline is usable inside the current order screen without changi
         .getByRole('heading', { name: 'Linha do tempo' })
         .isVisible(),
     );
-    assert.equal(await section.locator('ol li').count(), 5);
+    assert.equal(await section.locator('ol li').count(), 4);
     assert.ok((await section.innerText()).includes('R$ 840,00'));
     await example.selectOption('partial');
     assert.equal(await section.locator('ol li').count(), 3);
     assert.ok((await section.innerText()).includes('Ainda não quitado'));
+    // DTL-P03: cancellation/Escape preserve the date; confirmation is independent of payment.
+    const deliveryButton = section.getByRole('button', {
+      name: 'Confirmar entrega',
+      exact: true,
+    });
+    const dialog = page.getByRole('dialog', {
+      name: 'Confirmar entrega',
+      exact: true,
+    });
+    await deliveryButton.click();
+    await dialog.waitFor();
+    assert.equal(
+      await dialog
+        .getByRole('button', { name: 'Cancelar' })
+        .evaluate((el) => el === document.activeElement),
+      true,
+    );
+    await dialog.getByRole('button', { name: 'Cancelar' }).click();
+    assert.equal(
+      await deliveryButton.evaluate((el) => el === document.activeElement),
+      true,
+    );
+    assert.ok((await section.innerText()).includes('Ainda não entregue'));
+    assert.equal(await section.locator('ol li').count(), 3);
+    await deliveryButton.click();
+    await page.keyboard.press('Escape');
+    assert.equal(await dialog.isVisible(), false);
+    assert.equal(
+      await deliveryButton.evaluate((el) => el === document.activeElement),
+      true,
+    );
+    await deliveryButton.click();
+    await dialog.screenshot({ path: 'tmp/order-dates-delivery-dialog.png' });
+    await dialog
+      .getByRole('button', { name: 'Sim, confirmar entrega' })
+      .click();
+    const today = await page.evaluate(() =>
+      new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+      }).format(new Date()),
+    );
+    assert.ok((await section.locator('dl').innerText()).includes(today));
+    assert.equal(
+      await section
+        .getByRole('button', { name: 'Confirmar entrega', exact: true })
+        .count(),
+      0,
+    );
+    assert.equal(
+      await section.getByText('Pedido entregue', { exact: true }).count(),
+      1,
+    );
+    assert.ok((await section.innerText()).includes('Ainda não quitado'));
+    assert.ok(
+      (await section.locator('.preview-totals').innerText()).includes(
+        'R$ 840,00',
+      ),
+    );
+    assert.equal(
+      await section
+        .locator('dd')
+        .last()
+        .evaluate((el) => el === document.activeElement),
+      true,
+    );
+    await section.getByText('Ver detalhes da entrega', { exact: true }).click();
+    assert.ok((await section.innerText()).includes('Confirmada por Marina'));
+    await example.selectOption('full');
+    await example.selectOption('partial');
+    assert.equal(
+      await section.getByText('Pedido entregue', { exact: true }).count(),
+      1,
+    );
     await section.locator('summary').first().focus();
     await page.keyboard.press('Enter');
     assert.equal(
@@ -70,6 +143,20 @@ test('DTL-P02: timeline is usable inside the current order screen without changi
     if (!(await example.isVisible()))
       await section.getByRole('button', { name: /Datas do pedido/ }).click();
     assert.ok(await example.isVisible());
+    await section
+      .getByRole('button', { name: 'Confirmar entrega', exact: true })
+      .click();
+    await dialog.waitFor();
+    assert.ok(
+      await dialog.evaluate(
+        (el) => el.getBoundingClientRect().width <= innerWidth,
+      ),
+    );
+    await dialog.screenshot({ path: 'tmp/order-dates-delivery-mobile.png' });
+    await dialog.getByRole('button', { name: 'Cancelar' }).click();
+    assert.ok(
+      (await section.locator('dl').innerText()).includes('Ainda não entregue'),
+    );
     assert.ok(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

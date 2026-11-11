@@ -17,7 +17,10 @@ const orderPreviewComponent = resolve(
   repository,
   'docs/prototypes/BillingOrderPreview.vue',
 ).replaceAll('\\', '/');
-export async function createBillingChatPreview({ port = 4189 } = {}) {
+export async function createBillingChatPreview({
+  port = 4189,
+  simplifiedBilling = false,
+} = {}) {
   const fixtures = createBillingPreviewFixtures();
   const server = await createServer({
     configFile: false,
@@ -33,10 +36,16 @@ export async function createBillingChatPreview({ port = 4189 } = {}) {
               throw new Error(
                 'The current Order billing section changed; review preview insertion.',
               );
+            const component = simplifiedBilling
+              ? resolve(
+                  repository,
+                  'docs/prototypes/BillingSimplifiedPreview.vue',
+                ).replaceAll('\\', '/')
+              : orderPreviewComponent;
             return code
               .replace(
                 '<script setup>',
-                `<script setup>\nimport BillingOrderPreview from '${orderPreviewComponent}';`,
+                `<script setup>\nimport BillingOrderPreview from '${component}';`,
               )
               .replace('<OrderBillingSection', '<BillingOrderPreview');
           }
@@ -159,6 +168,7 @@ if (
 ) {
   const preview = await createBillingChatPreview({
     port: Number(process.env.BILLING_PREVIEW_PORT ?? 4189),
+    simplifiedBilling: process.env.BILLING_SIMPLIFIED_PREVIEW === 'true',
   });
   process.stdout.write(
     `Protótipo local, somente dados fictícios: ${preview.url}\n`,

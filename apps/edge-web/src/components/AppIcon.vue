@@ -133,6 +133,13 @@ const ICONS = Object.freeze({
     'M5.5 17a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5',
     'M18.5 17a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5',
   ],
+  // INBOX-RD-07: Olist, no desenho "package" do Lucide.
+  package: [
+    'M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z',
+    'M12 22V12',
+    'm3.3 7 8.7 5 8.7-5',
+    'm7.5 4.27 9 5.15',
+  ],
   // RFC 052: the conversation's channel on the Inbox card.
   message: ['M7.9 20A9 9 0 1 0 4 16.1L2 22Z'],
   globe: [

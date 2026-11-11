@@ -1052,13 +1052,13 @@ test.describe('INBOX-RD-05: compositor', () => {
           const composer = /** @type {Element} */ (
             globalThis.document.querySelector('.inbox-composer')
           ).getBoundingClientRect();
+          const distance =
+            thread.scrollHeight - thread.clientHeight - thread.scrollTop;
           return {
             last: last.bottom,
             composer: composer.top,
-            pinned:
-              Math.abs(
-                thread.scrollHeight - thread.clientHeight - thread.scrollTop,
-              ) <= 1,
+            distance,
+            pinned: Math.abs(distance) <= 1,
           };
         });
       await field.focus();
@@ -1073,12 +1073,83 @@ test.describe('INBOX-RD-05: compositor', () => {
       await expect(
         page.getByRole('button', { name: 'Parar gravação', exact: true }),
       ).toBeVisible();
-      await expect.poll(async () => (await tail()).pinned).toBe(true);
+      await expect
+        .poll(async () => JSON.stringify(await tail()), {
+          message: 'distance to the end after the recording line appears',
+        })
+        .toContain('"pinned":true');
       state = await tail();
       expect(state.last).toBeLessThanOrEqual(state.composer);
       await context.close();
     });
   }
+
+  test('a history scrolled up to read is left alone when the composer grows', async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      viewport: { width: 1366, height: 768 },
+      locale: 'pt-BR',
+    });
+    const page = await context.newPage();
+    await fakeRecorder(page);
+    await page.addInitScript(() => {
+      const original = globalThis.fetch.bind(globalThis);
+      globalThis.fetch = async (...args) => {
+        const response = await original(...args);
+        const input = /** @type {any} */ (args[0]);
+        const url = String(input?.url ?? input);
+        if (!url.endsWith('/inbox/conversations/shipping-conversation-1'))
+          return response;
+        const json = await response.clone().json();
+        const base = json.messages[0];
+        json.messages = Array.from({ length: 30 }, (_, index) => ({
+          ...base,
+          id: `history-${index}`,
+          preview: `Mensagem sintética ${index}`,
+          text: `Mensagem sintética ${index}`,
+          occurredAt: `2026-11-02T14:${String(index).padStart(2, '0')}:00.000Z`,
+        }));
+        return new globalThis.Response(JSON.stringify(json), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      };
+    });
+    await mockConversationShipping(page);
+    await page.goto('/inbox/shipping-conversation-1');
+    await expect(page.getByText('Mensagem sintética 29')).toBeVisible();
+    const thread = page.locator('.thread');
+    const distance = () =>
+      thread.evaluate((element) =>
+        Math.round(
+          element.scrollHeight - element.clientHeight - element.scrollTop,
+        ),
+      );
+    await thread.evaluate((element) => {
+      element.scrollTop = 0;
+    });
+    await expect.poll(distance).toBeGreaterThan(200);
+    const before = await distance();
+    await page
+      .getByRole('button', { name: 'Gravar áudio', exact: true })
+      .click();
+    await expect(
+      page.getByRole('button', { name: 'Parar gravação', exact: true }),
+    ).toBeVisible();
+    // Give a late observer callback the chance to (wrongly) scroll.
+    await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          globalThis.requestAnimationFrame(() =>
+            globalThis.requestAnimationFrame(resolve),
+          );
+        }),
+    );
+    expect(await thread.evaluate((element) => element.scrollTop)).toBe(0);
+    expect(await distance()).toBeGreaterThanOrEqual(before);
+    await context.close();
+  });
 });
 
 // INBOX-RD-04: the phone header in three rows, and the first tap on the

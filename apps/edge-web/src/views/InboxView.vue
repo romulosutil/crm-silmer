@@ -1185,6 +1185,36 @@ function threadScrolled() {
 }
 
 /**
+ * The visible height of the history changes whenever the composer grows (a
+ * recording status line, an attachment under review, the unavailable-reason
+ * notice, a virtual keyboard). No scroll event fires for that, so the reader
+ * who was at the end would be left with the last message behind the composer.
+ * One observer per history element re-pins it, and only while the reader was
+ * following the latest message.
+ *
+ * @type {ResizeObserver | undefined}
+ */
+let threadResizeObserver;
+watch(
+  thread,
+  (element) => {
+    threadResizeObserver?.disconnect();
+    threadResizeObserver = undefined;
+    if (
+      !(element instanceof HTMLElement) ||
+      typeof globalThis.ResizeObserver !== 'function'
+    ) {
+      return;
+    }
+    threadResizeObserver = new globalThis.ResizeObserver(() => {
+      if (threadFollowsLatest) element.scrollTop = element.scrollHeight;
+    });
+    threadResizeObserver.observe(element);
+  },
+  { flush: 'post' },
+);
+
+/**
  * The history opens on the latest message and follows new ones, unless the
  * reader scrolled up to read something older.
  */
@@ -2712,6 +2742,8 @@ onMounted(() => {
   }, 30_000);
 });
 onBeforeUnmount(() => {
+  threadResizeObserver?.disconnect();
+  threadResizeObserver = undefined;
   /** @type {any} */ (filterSheet.value)?.close();
   contextDialog.value?.close();
   contactDialog.value?.close();

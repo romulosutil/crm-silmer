@@ -1,5 +1,16 @@
 # CRM Silmer MVP — Requisitos Rastreáveis
 
+## Recuperação de leads sem retorno (11/11/2026)
+
+[REC-01–12](../lead-recovery/spec.md),
+[ADR 085](../../../docs/adr/085-recuperacao-de-leads-por-modo-de-atendimento.md)
+e [RFC 063](../../../docs/rfc/063-recuperacao-de-leads-sem-retorno-no-n8n.md):
+workflow n8n dedicado após a elegibilidade PCX-19, com sugestão interna para
+atendimento humano e envio automático só com o agente. Preserva AGT-01/06,
+ORC-03/05/07, posse e handoff definitivo; não altera a observação da ficha.
+Contrato de implementação e gates em [REC-T00–T04](../lead-recovery/tasks.md).
+Entrega atual documental, sem ativação ou endpoint novo.
+
 ## Caixa por vez de responder — PCX-19 (08/11/2026)
 
 [ADR 065](../../../docs/adr/065-caixa-de-entrada-por-vez-de-responder.md) e

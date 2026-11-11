@@ -1,5 +1,12 @@
 # Request for Comments
 
+## Decisão de 11/11/2026
+
+- [063 — Recuperação de leads sem retorno no n8n](063-recuperacao-de-leads-sem-retorno-no-n8n.md),
+  decidida na [ADR 085](../adr/085-recuperacao-de-leads-por-modo-de-atendimento.md)
+  quanto à orquestração e aos modos: sugestão para atendimento humano e envio
+  automático apenas com o agente. REC-T00 documental; implementação pendente.
+
 ## Decisão de 10/11/2026
 
 - [062 — Valor final com frete](062-valor-final-com-frete.md), decidida na

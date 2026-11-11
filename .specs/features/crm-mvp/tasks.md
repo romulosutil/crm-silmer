@@ -1,5 +1,20 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## REC-T00 — recuperação de leads sem retorno (11/11/2026)
+
+[REC-01–12](../lead-recovery/spec.md),
+[RFC 063](../../../docs/rfc/063-recuperacao-de-leads-sem-retorno-no-n8n.md) /
+[ADR 085](../../../docs/adr/085-recuperacao-de-leads-por-modo-de-atendimento.md).
+
+- [x] Registrar a escolha do PO: n8n dedicado, sugestão para vendedor humano
+  e envio automático apenas nas conversas com o agente.
+- [x] Mapear aba derivada, limite de silêncio, lembrete e reserva inbound no
+  código atual; preparar RFC, ADR, requisitos e plano de tarefas.
+- [x] Concluir verificação documental, commit, push e PR (handoff da REC-T00).
+- [ ] Implementação e ativação em [REC-T01–T04](../lead-recovery/tasks.md).
+
+Esta fatia é documental; não publica workflow nem envia mensagens.
+
 ## INBOX-PDF-01 — corrigir PDF recebido na Inbox (11/11/2026)
 
 INB-01, MSG-01–03 e PRV-03; correção do fluxo existente, sem nova arquitetura.

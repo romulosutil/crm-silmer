@@ -732,9 +732,13 @@ function normalizeMessageContent(message, type) {
     ),
     caption: typeof message?.text === 'string' ? message.text : null,
     // Metadata can announce missing bytes, never authorize a content read.
-    ...(['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(
-      documentMime,
-    )
+    ...([
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+      'application/pdf',
+    ].includes(documentMime)
       ? { mimeType: documentMime }
       : {}),
   };

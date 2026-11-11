@@ -6,6 +6,7 @@ const MIME_TYPES = /** @type {Record<string, string[]>} */ ({
   image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
   audio: ['audio/mpeg', 'audio/ogg'],
   video: ['video/mp4'],
+  document: ['application/pdf'],
 });
 
 /**
@@ -38,7 +39,7 @@ export function createInboundMediaRuntime({
              AND message.direction='inbound' AND media.media_type=message.message_type
              AND (message.message_type IN ('image','audio','video')
                OR (message.message_type='document' AND media.detected_mime_type
-                 IN ('image/jpeg','image/png','image/webp','image/gif')))`,
+                 IN ('image/jpeg','image/png','image/webp','image/gif','application/pdf')))`,
           [input.mediaId, input.conversationId],
         )
       ).rows[0];
@@ -108,6 +109,11 @@ export function createInboundMediaRuntime({
             'Accept-Ranges': 'bytes',
             'Content-Type': row.detected_mime_type,
             'Content-Length': String(end - start + 1),
+            ...(kind === 'document'
+              ? {
+                  'Content-Disposition': 'attachment; filename="documento.pdf"',
+                }
+              : {}),
             ...(partial
               ? { 'Content-Range': `bytes ${start}-${end}/${size}` }
               : {}),

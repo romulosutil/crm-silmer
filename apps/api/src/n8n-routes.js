@@ -328,7 +328,11 @@ function sanitizeFilename(value) {
 /** @param {string} mimeType */
 function attachmentLimitFor(mimeType) {
   if (mimeType.startsWith('image/')) return 5 * 1024 * 1024;
-  if (mimeType.startsWith('audio/') || mimeType.startsWith('video/')) {
+  if (
+    mimeType === 'application/pdf' ||
+    mimeType.startsWith('audio/') ||
+    mimeType.startsWith('video/')
+  ) {
     return 16 * 1024 * 1024;
   }
   return MAX_ATTACHMENT_BYTES;

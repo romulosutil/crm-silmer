@@ -48,7 +48,7 @@ const MEDIA_JOIN = `LEFT JOIN crm.chat_media media
       AND transient.media_type=message.message_type
       AND (message.message_type IN ('image','audio','video')
         OR (message.message_type='document' AND transient.detected_mime_type
-          IN ('image/jpeg','image/png','image/webp','image/gif')))
+          IN ('image/jpeg','image/png','image/webp','image/gif','application/pdf')))
     ORDER BY attachment.created_at DESC, transient.id DESC LIMIT 1
   ) inbound_media ON media.id IS NULL
   LEFT JOIN LATERAL (
@@ -1600,13 +1600,14 @@ function mapMessage(row, repository) {
     row.id,
     repository.messageEnvelopeKey,
   );
-  const missingDocumentImage =
+  const missingDocumentMedia =
     row.direction === 'inbound' &&
     row.message_type === 'document' &&
-    DOCUMENT_IMAGE_MIME_TYPES.has(content.mimeType)
+    (DOCUMENT_IMAGE_MIME_TYPES.has(content.mimeType) ||
+      content.mimeType === 'application/pdf')
       ? Object.freeze({
           mediaId: null,
-          kind: 'image',
+          kind: content.mimeType === 'application/pdf' ? 'document' : 'image',
           state: 'unavailable',
           mimeType: content.mimeType,
           sizeBytes: null,
@@ -1645,7 +1646,7 @@ function mapMessage(row, repository) {
               ? `/api/v1/conversations/${encodeURIComponent(row.conversation_id)}/media/${encodeURIComponent(row.media_id)}/content`
               : null,
         })
-      : missingDocumentImage,
+      : missingDocumentMedia,
     deliveryMode: row.reserved_workflow_version
       ? /^dev-mvp-simple-\d+$/u.test(row.reserved_workflow_version)
         ? 'dev'

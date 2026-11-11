@@ -10,6 +10,10 @@ let origin = '';
 const reads = [];
 /** @type {Record<string, {bytes: Buffer, mime: string}>} */
 const assets = {
+  document: {
+    bytes: Buffer.from('%PDF-1.7\nsynthetic\n%%EOF'),
+    mime: 'application/pdf',
+  },
   gif: {
     bytes: Buffer.from(
       'R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
@@ -120,6 +124,75 @@ test.beforeEach(async ({ context }) => {
   await context.addCookies([
     { name: 'crm_session', value: 'synthetic-media-reader', url: origin },
   ]);
+});
+
+for (const width of [390, 1366]) {
+  test(`INBOX-PDF-01 PDF downloads by keyboard at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto(`${origin}/__media-message?kind=document`);
+    await expect(
+      page.getByText('Documento PDF', { exact: true }),
+    ).toBeVisible();
+    const button = page.getByRole('button', {
+      name: 'Baixar PDF',
+      exact: true,
+    });
+    await button.focus();
+    const pending = page.waitForEvent('download');
+    await page.keyboard.press('Enter');
+    const download = await pending;
+    expect(download.suggestedFilename()).toBe('documento-media-1.pdf');
+    expect(
+      await readFile(/** @type {string} */ (await download.path())),
+    ).toEqual(assets.document.bytes);
+    expect(reads[0].cookie).toContain('crm_session=synthetic-media-reader');
+    await expect(button).toBeEnabled();
+    await expect(button).toBeFocused();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await page.screenshot({ path: `test-results/inbox-pdf-${width}.png` });
+  });
+}
+
+for (const status of [403, 410, 503]) {
+  test(`INBOX-PDF-01 PDF download ${status} announces failure and retries`, async ({
+    page,
+  }) => {
+    await page.goto(`${origin}/__media-message?kind=document`);
+    await page.route('**/media/media-1/content', (route) =>
+      route.fulfill({ status }),
+    );
+    const button = page.getByRole('button', {
+      name: 'Baixar PDF',
+      exact: true,
+    });
+    await button.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('alert')).toContainText(
+      status === 403
+        ? 'Sem permissão'
+        : status === 410
+          ? 'não está mais disponível'
+          : 'Tente novamente',
+    );
+    await expect(button).toBeEnabled();
+    await expect(button).toBeFocused();
+    await page.unroute('**/media/media-1/content');
+    const pending = page.waitForEvent('download');
+    await button.click();
+    await pending;
+    await expect(page.getByRole('alert')).toHaveCount(0);
+  });
+}
+
+test('INBOX-PDF-01 PDF with missing bytes announces unavailable without download', async ({
+  page,
+}) => {
+  await page.goto(`${origin}/__media-message?kind=document&state=unavailable`);
+  await expect(page.getByRole('status')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Baixar PDF' })).toHaveCount(0);
+  expect(reads).toHaveLength(0);
 });
 
 test('MED-17/25 image decodes real private bytes with session', async ({

@@ -14,6 +14,11 @@ A seção compartilha o snapshot do endpoint de cobrança existente, sem
 adicionar consulta ao ciclo de resumo/workspace já usado por Cobranças.
 Abrir o histórico não gera link, mensagem ou recebimento.
 
+Os detalhes de cada evento abrem pelo chevron discreto, com nome acessível
+contextual, teclado e alvo de 44px. O texto Registro revertido não se repete
+abaixo do recebimento: o estado permanece nos detalhes e a reversão continua
+como evento próprio na sequência.
+
 - Manual: **Recebido em** é o dia efetivo informado; registro/autoria ficam
   nos detalhes, sem atribuir horário fictício ao dia efetivo.
 - InfinitePay: **Confirmado no CRM** é a data verificada em São Paulo, sem

@@ -103,6 +103,7 @@ const openSection = ref('');
 let sectionChosen = false;
 let revealOnLoad = false;
 let controller;
+let forcedLoadInFlight = false;
 let refreshTimer = 0;
 let readyPdf = null;
 let readyPdfVersion = null;
@@ -718,9 +719,18 @@ provide('orderEditing', {
  * @returns {Promise<boolean>} whether the order on the page was replaced
  */
 async function load(silent = false, force = false) {
+  // A background refresh never cancels an explicit reload in flight: the
+  // reload will replace the order anyway, and cancelling it would leave the
+  // "Recarregar pedido" error on screen with nothing reloaded.
+  if (silent && !force && forcedLoadInFlight) return false;
+  if (force && refreshTimer) {
+    globalThis.clearTimeout(refreshTimer);
+    refreshTimer = 0;
+  }
   controller?.abort();
   const currentController = new AbortController();
   controller = currentController;
+  if (force) forcedLoadInFlight = true;
   if (!silent) {
     loading.value = true;
     error.value = '';
@@ -767,6 +777,7 @@ async function load(silent = false, force = false) {
       : 'Não foi possível carregar o pedido.';
   } finally {
     if (controller === currentController) {
+      forcedLoadInFlight = false;
       loading.value = false;
       // The heading exists once the order or an error is known.
       if (!headingAnnounced) {

@@ -2658,6 +2658,141 @@ button.op-generate {
   font-weight: 500;
 }
 
+/* PED-RD-06 (ADR 080): Peças + Frete = Total; only the freight is typed. */
+.op-value {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.op-value > p {
+  margin-block: 0;
+}
+
+.op-deal--breakdown {
+  gap: var(--space-1);
+}
+
+.op-value-title {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.op-deal--breakdown > div {
+  align-items: center;
+}
+
+.op-deal--breakdown dt label {
+  color: inherit;
+}
+
+.op-deal--breakdown dd {
+  font-variant-numeric: tabular-nums;
+}
+
+.op-deal--breakdown .op-deal-total {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-emphasis-surface);
+  border-radius: var(--radius-md);
+}
+
+.op-deal--breakdown .op-deal-total dt {
+  color: var(--color-emphasis-muted);
+  font-weight: var(--weight-medium);
+}
+
+.op-deal--breakdown .op-deal-total dd {
+  color: var(--color-emphasis-text);
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+
+.op-deal--breakdown > .op-freight-row {
+  flex-wrap: nowrap;
+}
+
+.op-freight-row dt {
+  min-inline-size: 0;
+}
+
+.op-freight-control {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.op-freight-prefix {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+input.op-freight-input {
+  inline-size: 7rem;
+  min-block-size: var(--target-min);
+  text-align: end;
+}
+
+.op-deal--breakdown dt {
+  display: grid;
+  gap: 0;
+}
+
+.op-freight-origin {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: 400;
+}
+
+.op-freight-status {
+  margin: 0;
+  text-align: end;
+}
+
+.op-freight-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+}
+
+.op-freight-status[data-save-status='saved'] {
+  color: var(--status-success-text);
+}
+
+.op-value > .op-field-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  text-align: end;
+}
+
+.op-freight-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--status-warning-text);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  background: var(--status-warning-surface);
+  border-radius: var(--radius-md);
+}
+
+.op-freight-notice .op-icon {
+  flex: none;
+  margin-block-start: 0.125rem;
+}
+
+button.op-freight-quote {
+  justify-self: end;
+  text-align: end;
+}
+
 .op-confirmed {
   display: flex;
   align-items: center;

@@ -18,6 +18,7 @@ import {
   paymentConditionLabel,
   storeConfirmationLabel,
 } from '../../lib/order-format.js';
+import OrderFreightField from './OrderFreightField.vue';
 import OrderIcon from './OrderIcon.vue';
 import AppHint from '../AppHint.vue';
 
@@ -121,6 +122,20 @@ const currentValue = computed(() => {
   return props.order.finalAmountCents
     ? amountLabel(props.order.finalAmountCents)
     : '';
+});
+// PED-RD-06 items 6-9 (OLC-T01): Peças + Frete = Total, from the payload's
+// money summary. Pending orders priced by size always show it; a confirmed
+// order shows it once a freight took part in its total. Store and older
+// orders keep the single amount.
+const showBreakdown = computed(() => {
+  const { amounts, freight } = props.order;
+  if (!amounts || isStore.value) return false;
+  if (isPending.value) return props.order.ficha?.sizePricing != null;
+  return (
+    freight?.pricingRule === 'pieces-freight-v1' ||
+    amounts.freightCents > 0 ||
+    Boolean(freight?.source)
+  );
 });
 const items = computed(() => props.order.ficha?.items ?? []);
 const itemsHeadline = computed(() => {
@@ -490,7 +505,8 @@ async function reopen() {
            typed only in the dialog; the rail keeps what is missing and the
            action that opens it. -->
       <div v-if="isPending && canCommand" class="op-closing-action">
-        <dl class="op-deal op-deal--value">
+        <OrderFreightField v-if="showBreakdown" :order="order" />
+        <dl v-else class="op-deal op-deal--value">
           <div>
             <dt>Valor do pedido</dt>
             <dd class="op-num" :data-empty="currentValue === '' || undefined">
@@ -551,8 +567,9 @@ async function reopen() {
           }}</span>
         </p>
 
+        <OrderFreightField v-if="showBreakdown" :order="order" />
         <dl class="op-deal">
-          <div class="op-deal-value">
+          <div v-if="!showBreakdown" class="op-deal-value">
             <dt>Valor do pedido</dt>
             <dd class="op-num">{{ amountLabel(order.finalAmountCents) }}</dd>
           </div>

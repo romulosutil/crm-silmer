@@ -151,10 +151,15 @@ quebrado.
       manteve essa regra em 12/11/2026 (sem `soft`).
 - [x] Manter "Revisar pendências" e o total 4; manter o cadastro incompleto
       fora do progresso.
-- [ ] **Slot do frete (gated por OLC-T01):** Peças + Frete = Total, campo
+- [x] **Slot do frete (gated por OLC-T01):** Peças + Frete = Total, campo
       "Frete" em edição no lugar, "Usar cotação" e aviso de cotação vencida.
-      Sem OLC-T01, o slot não é renderizado e o rail mostra só o total
-      atual. Pendente (OLC-T01): não renderizado.
+      Entregue depois do contrato do frete do OLC-T01 (760f7924) em
+      `OrderFreightField.vue`: só o vendedor responsável edita, em pedido
+      pendente precificado por tamanho; confirmado mostra o frete em
+      leitura com a origem; loja e pedido legado mantêm o valor único. O
+      payload não traz `canEditFreight` nem o nome do serviço da cotação
+      gravada ("Da cotação" sem nome quando a cotação foi trocada). Cumpre a
+      parte da página do pedido do 2º item da OLC-T04.
 - Entregue em a9d37d24.
 - Depends on: T01; o slot do frete depende de OLC-T01 (ADR 080). Pode entrar
   o resto e deixar o slot para um PR seguinte, sem marcar esta tarefa como

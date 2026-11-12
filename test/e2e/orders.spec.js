@@ -6036,3 +6036,301 @@ test('PED-RD-07: sem resumo no pedido pendente nem com a cobrança desligada', a
   ).toBeVisible();
   await expect(page.locator('.op-billing-summary')).toHaveCount(0);
 });
+
+// PED-RD-06 items 6-9 / PED-RD-T07 (ADR 080, OLC-05): "Valor do pedido" as
+// Peças + Frete = Total; the responsible seller edits the freight in place.
+const FREIGHT_QUOTE = {
+  id: 'quote-1',
+  orderId: 'order-pendente',
+  selectedServiceId: 2,
+  services: [
+    {
+      company: 'Correios',
+      deliveryDays: 5,
+      id: 2,
+      name: 'PAC',
+      priceCents: 8750,
+    },
+  ],
+  stale: false,
+};
+
+/** @param {any} order @param {Record<string, unknown>} [freight] */
+function withFreight(order, freight = {}) {
+  const freightCents = Number(freight.cents ?? 0);
+  const piecesCents = order.pricing?.totalCents ?? order.finalAmountCents;
+  return {
+    ...order,
+    amounts: {
+      freightCents,
+      piecesCents,
+      totalCents: piecesCents === null ? null : piecesCents + freightCents,
+    },
+    freight: {
+      cents: freightCents,
+      pricingRule: freightCents > 0 ? 'pieces-freight-v1' : 'pieces-v1',
+      quoteId: null,
+      quoteNotice: null,
+      quotedCents: null,
+      serviceId: null,
+      setAt: null,
+      setBy: null,
+      source: null,
+      ...freight,
+    },
+  };
+}
+
+/**
+ * The freight route of the mock: records what the page sent and answers with
+ * the order as the server would derive it.
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {{order: any, quote?: any, writes: {body: any, key?: string}[], failure?: {status: number, code: string}}} context
+ */
+async function mockFreight(page, context) {
+  await page.route('**/api/v1/orders/*/shipping-quote', (route) =>
+    route.fulfill({ json: { quote: context.quote ?? null } }),
+  );
+  await page.route('**/api/v1/orders/*/freight', async (route) => {
+    const request = route.request();
+    const body = request.postDataJSON();
+    context.writes.push({
+      body,
+      key: request.headers()['idempotency-key'],
+    });
+    if (context.failure)
+      return route.fulfill({
+        json: { error: { code: context.failure.code } },
+        status: context.failure.status,
+      });
+    const quoted = body.quote
+      ? context.quote.services.find(
+          (/** @type {any} */ service) => service.id === body.quote.serviceId,
+        )
+      : null;
+    const cents = quoted ? quoted.priceCents : body.freightCents;
+    const next = withFreight(
+      { ...context.order, version: context.order.version + 1 },
+      {
+        cents,
+        quoteId: quoted ? context.quote.id : null,
+        quotedCents: quoted ? quoted.priceCents : null,
+        serviceId: quoted ? quoted.id : null,
+        source: quoted ? 'quote' : 'seller',
+      },
+    );
+    context.order = next;
+    return route.fulfill({ json: { order: next } });
+  });
+}
+
+/** @param {import('@playwright/test').Page} page */
+function closingRail(page) {
+  return page.getByRole('region', { name: 'Fechamento e pagamento' });
+}
+
+test('PED-RD-06: o responsável informa o frete no lugar e o total acompanha', async ({
+  page,
+}) => {
+  const order = withFreight(pricedPendingOrder);
+  const context = { order, writes: /** @type {any[]} */ ([]) };
+  await mockOrders(page, { orders: [order] });
+  await mockFreight(page, context);
+  await page.goto('/pedidos/order-pendente');
+
+  const rail = closingRail(page);
+  const value = rail.getByRole('group', { name: 'Valor do pedido' });
+  await expect(value.getByText('Peças', { exact: true })).toBeVisible();
+  await expect(value.getByText('R$ 4.800,00').first()).toBeVisible();
+  const field = value.getByRole('textbox', { name: 'Frete' });
+  await expect(field).toBeVisible();
+  // The total is calculated: never an input.
+  await expect(value.getByRole('textbox')).toHaveCount(1);
+
+  await field.focus();
+  await page.keyboard.type('120,50');
+  await page.keyboard.press('Enter');
+
+  await expect(value.getByText('R$ 4.920,50')).toBeVisible();
+  expect(context.writes).toHaveLength(1);
+  expect(context.writes[0].body).toEqual({
+    expectedVersion: order.version,
+    freightCents: 12050,
+  });
+  expect(context.writes[0].key).toBeTruthy();
+  await expect(field).toBeFocused();
+  await expect(field).toHaveValue('120,50');
+  await expect(
+    rail.getByRole('status').filter({ hasText: 'Frete salvo' }),
+  ).toBeVisible();
+  await expect(value.getByText('Informado pelo vendedor')).toBeVisible();
+
+  // Same value again sends nothing.
+  await page.keyboard.press('Tab');
+  expect(context.writes).toHaveLength(1);
+
+  expect(
+    (await new AxeBuilder({ page }).include('.op-closing').analyze())
+      .violations,
+  ).toEqual([]);
+});
+
+test('PED-RD-06: frete inválido e recusa do servidor ficam associados ao campo', async ({
+  page,
+}) => {
+  const order = withFreight(pricedPendingOrder);
+  const context = {
+    failure: { code: 'FREIGHT_OVERFLOW', status: 422 },
+    order,
+    writes: /** @type {any[]} */ ([]),
+  };
+  await mockOrders(page, { orders: [order] });
+  await mockFreight(page, context);
+  await page.goto('/pedidos/order-pendente');
+
+  const field = closingRail(page).getByRole('textbox', { name: 'Frete' });
+  await field.fill('abc');
+  await field.press('Enter');
+  const alert = closingRail(page).getByRole('alert');
+  await expect(alert).toHaveText('Use o formato 120,00.');
+  await expect(field).toHaveAttribute('aria-invalid', 'true');
+  const describedBy = (await field.getAttribute('aria-describedby')) ?? '';
+  expect(describedBy.split(' ')).toContain(
+    (await alert.getAttribute('id')) ?? 'missing',
+  );
+  await expect(field).toBeFocused();
+  expect(context.writes).toHaveLength(0);
+
+  await field.fill('100');
+  await field.press('Enter');
+  await expect(alert).toHaveText('O valor passa do limite aceito.');
+  await expect(field).toBeFocused();
+  expect(context.writes).toHaveLength(1);
+});
+
+test('PED-RD-06: Usar cotação envia só a identidade da cotação e do serviço', async ({
+  page,
+}) => {
+  const order = withFreight(pricedPendingOrder);
+  const context = {
+    order,
+    quote: FREIGHT_QUOTE,
+    writes: /** @type {any[]} */ ([]),
+  };
+  await mockOrders(page, { orders: [order] });
+  await mockFreight(page, context);
+  await page.goto('/pedidos/order-pendente');
+
+  const rail = closingRail(page);
+  const button = rail.getByRole('button', {
+    name: 'Usar cotação: R$ 87,50 · Correios PAC',
+  });
+  await expect(button).toBeVisible();
+  await button.focus();
+  await page.keyboard.press('Enter');
+
+  await expect(rail.getByText('R$ 4.887,50')).toBeVisible();
+  expect(context.writes[0].body).toEqual({
+    expectedVersion: order.version,
+    quote: { quoteId: 'quote-1', serviceId: 2 },
+  });
+  expect(JSON.stringify(context.writes[0].body)).not.toContain('Cents');
+  await expect(rail.getByText('Da cotação Correios · PAC')).toBeVisible();
+  // Applied: no button, and the focus lands on the field, not on the page.
+  await expect(button).toHaveCount(0);
+  await expect(rail.getByRole('textbox', { name: 'Frete' })).toBeFocused();
+});
+
+test('PED-RD-06: cotação desatualizada avisa com ícone, sem botão e sem bloquear', async ({
+  page,
+}) => {
+  const order = withFreight(pricedPendingOrder);
+  const context = {
+    order,
+    quote: { ...FREIGHT_QUOTE, stale: true },
+    writes: /** @type {any[]} */ ([]),
+  };
+  await mockOrders(page, { orders: [order] });
+  await mockFreight(page, context);
+  await page.goto('/pedidos/order-pendente');
+
+  const rail = closingRail(page);
+  await expect(
+    rail.getByText(/cotação do frete está desatualizada/u),
+  ).toBeVisible();
+  await expect(rail.getByRole('button', { name: /Usar cotação/u })).toHaveCount(
+    0,
+  );
+  await expect(rail.locator('.op-freight-notice svg')).toHaveCount(1);
+  // Not a block: the seller still types the freight.
+  const field = rail.getByRole('textbox', { name: 'Frete' });
+  await field.fill('10');
+  await field.press('Enter');
+  await expect(rail.getByText('R$ 4.810,00')).toBeVisible();
+  expect(context.writes[0].body.freightCents).toBe(1000);
+});
+
+test('PED-RD-07: pedido confirmado mostra o frete só como texto, com a origem', async ({
+  page,
+}) => {
+  const order = withFreight(
+    { ...ownConfirmedOrder, finalAmountCents: 480000 },
+    { cents: 8750, quoteId: 'quote-1', serviceId: 2, source: 'quote' },
+  );
+  await mockOrders(page, { orders: [order] });
+  await page.route('**/api/v1/orders/*/shipping-quote', (route) =>
+    route.fulfill({ json: { quote: FREIGHT_QUOTE } }),
+  );
+  await page.goto(`/pedidos/${order.id}`);
+
+  const rail = closingRail(page);
+  await expect(rail.getByText('Frete', { exact: true })).toBeVisible();
+  await expect(rail.getByText('R$ 87,50')).toBeVisible();
+  await expect(rail.getByText('Da cotação Correios · PAC')).toBeVisible();
+  await expect(rail.getByRole('textbox')).toHaveCount(0);
+});
+
+test('PED-RD-06: quem não é o vendedor responsável vê o frete sem campo', async ({
+  page,
+}) => {
+  const order = withFreight({
+    ...pricedPendingOrder,
+    seller: { id: 'seller-ricardo', name: 'Ricardo Lima' },
+  });
+  await mockOrders(page, { orders: [order] });
+  await page.goto('/pedidos/order-pendente');
+
+  const rail = closingRail(page);
+  await expect(rail.getByText('Frete', { exact: true })).toBeVisible();
+  await expect(rail.getByRole('textbox')).toHaveCount(0);
+  await expect(rail.getByRole('button', { name: /Usar cotação/u })).toHaveCount(
+    0,
+  );
+});
+
+test('PED-RD-06: com subtotais incompletos o total é um traço, nunca digitado', async ({
+  page,
+}) => {
+  const order = withFreight({
+    ...pricedPendingOrder,
+    finalAmountCents: null,
+    pricing: {
+      ...pricedPendingOrder.pricing,
+      complete: false,
+      totalCents: null,
+    },
+  });
+  order.amounts = { freightCents: 0, piecesCents: null, totalCents: null };
+  await mockOrders(page, { orders: [order] });
+  await page.goto('/pedidos/order-pendente');
+
+  const value = closingRail(page).getByRole('group', {
+    name: 'Valor do pedido',
+  });
+  await expect(value.getByText('—')).toHaveCount(2);
+  await expect(
+    value.getByText(/todos os subtotais estiverem preenchidos/u),
+  ).toBeVisible();
+  await expect(value.getByRole('textbox')).toHaveCount(1);
+});

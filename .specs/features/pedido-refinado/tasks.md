@@ -227,12 +227,12 @@ quebrado.
   - **API real, verificada.** O único erro no console é o 503 esperado da
     cotação de frete (Melhor Envio não configurado localmente).
   - **Achados.**
-    - "Cancelar pedido" ficava colado na borda da folha: PR 361.
+    - "Cancelar pedido" ficava colado na borda da folha. O PO decidiu levá-lo
+      para o menu "Mais ações do pedido" (PED-RD-02 item 3, que não existia):
+      PR 366, que substitui a PR 361. "Reabrir pedido" continua no rail.
     - "Frete estimado" tinha um h3 que caía sob Observações: PR 362.
-    - "Ver cadastro" de um contato fundido abre o cadastro antigo, quase
-      vazio: proposta pendente, abaixo em Pendências.
-    - O menu "Mais ações do pedido" de PED-RD-02 item 3 não existe:
-      "Cancelar pedido" continua no fim da página.
+    - "Ver cadastro" de um contato fundido abria o cadastro antigo, quase
+      vazio. O PO decidiu resolver na leitura: PR 367.
 - Entregue em 6a1384a7 e nos commits de correção de medição: medição em 390,
   1024, 1366 e 1440 px. Na página inteira a 1366 px, pendente tem 19 ações
   e confirmado 8. A meta da §16 conta a primeira tela: 3 ações a 390×844 e 3
@@ -267,17 +267,15 @@ quebrado.
 - Botões de remover tamanho contra a meta da §16 (decisão do PO).
 - Situação das dependências em 12/11/2026, conferida em `origin/master`:
   - Frete no rail: o contrato do frete do OLC-T01 está no master
-    (760f7924), então a tarefa foi iniciada na PR 364 (rascunho). Somada à PR
-    361, a altura do pedido no celular vai a 1831 px, contra a meta de
-    1800 px da §16 (decisão do PO).
+    (760f7924), então a tarefa foi iniciada na PR 364. Ela entra depois da
+    PR 366: sem o bloco de cancelar no fim da página, o pedido pendente com
+    o frete cabe nos 1800 px da §16 no celular.
   - Resumo de Cobranças no rail: a PR 348 está mesclada, então a tarefa foi
     iniciada na PR 363. O interior da cobrança segue com BCS, e o protótipo
     BCP-P01 está na PR 350.
   - "Gerar no Olist": bloqueado. OLC-T03 e OLC-T04 estão abertas, e o
     OLC-T02 está na PR 346, ainda não mesclada.
-- "Ver cadastro" com contato fundido: o pedido guarda o `contact_id`
-  original e a fusão (`identity_links`) não o atualiza. Por isso
-  `/clientes/:id` abre o contato antigo (200, sem identidades nem conversas)
-  e não cai em "não encontrado". A correção proposta aguarda o PO.
+- "Reabrir pedido" no menu "Mais ações do pedido" (resto do PED-RD-02 item
+  3).
 - Não verificado: leitor de tela (NVDA ausente), aparelho real e o foco de
   checkbox e radio.

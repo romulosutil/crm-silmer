@@ -27,7 +27,6 @@
   white-space: nowrap;
 }
 
-.op-label,
 .op-field > label:first-child,
 .op-points dt,
 .op-service dt,
@@ -59,14 +58,14 @@
 }
 
 .op-alert {
-  padding: 0.7rem 0.9rem;
-  margin-block-end: 1rem;
+  padding: var(--space-3) var(--space-4);
+  margin-block-end: var(--space-4);
   background: var(--status-error-surface);
   border-radius: var(--radius-md);
 }
 
 .op-sheet .op-alert {
-  margin: 1rem 1.25rem 0;
+  margin: var(--space-4) var(--space-5) 0;
 }
 
 /* Head */
@@ -75,15 +74,15 @@
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 1rem 1.5rem;
-  margin-block-end: 1rem;
+  gap: var(--space-4) var(--space-6);
+  margin-block-end: var(--space-4);
 }
 
 .op-head-title {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 0.9rem;
+  gap: var(--space-2) var(--space-4);
 }
 
 .op-head h1 {
@@ -94,8 +93,14 @@
   line-height: 1.15;
 }
 
+@media (width < 40rem) {
+  .op-head h1 {
+    font-size: var(--text-xl);
+  }
+}
+
 .op-head-text > p {
-  margin: 0.35rem 0 0;
+  margin: var(--space-1) 0 0;
   color: var(--color-text-muted);
 }
 
@@ -103,14 +108,14 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .op-head-actions button,
 .op-head-actions .button-link {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   border-radius: var(--radius-md);
 }
 
@@ -122,16 +127,16 @@
 .order-badges {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-inline-start: 0.5rem;
+  gap: var(--space-1);
+  margin-inline-start: var(--space-2);
   vertical-align: middle;
 }
 
 .op-status {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.2rem 0.75rem;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
   font-size: var(--text-sm);
   font-weight: 600;
   border-radius: var(--radius-pill);
@@ -153,7 +158,7 @@
 }
 
 .op-print-reason {
-  margin: -0.5rem 0 1rem;
+  margin: calc(var(--space-2) * -1) 0 var(--space-4);
   color: var(--color-text-muted);
   font-size: var(--text-xs);
   text-align: end;
@@ -162,9 +167,9 @@
 .op-readonly {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.7rem 0.9rem;
-  margin: 0 0 1rem;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  margin: 0 0 var(--space-4);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   background: var(--color-surface-raised);
@@ -182,7 +187,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 1.25rem;
+  gap: var(--space-8);
   inline-size: 100%;
   min-inline-size: 0;
 }
@@ -190,7 +195,7 @@
 .op-main,
 .op-rail {
   display: grid;
-  gap: 1.25rem;
+  gap: var(--space-8);
   inline-size: 100%;
   min-inline-size: 0;
 }
@@ -199,7 +204,7 @@
   .op-layout {
     grid-template-columns: minmax(0, 1fr) minmax(20rem, 24rem);
     grid-template-areas: 'main rail';
-    gap: 1.75rem;
+    gap: var(--space-8);
   }
 
   .op-main {
@@ -217,13 +222,13 @@
 .op-facts {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem 1.75rem;
-  margin: 0.75rem 0 0;
+  gap: var(--space-1) var(--space-8);
+  margin: var(--space-3) 0 0;
 }
 
 .op-facts > div {
   display: grid;
-  gap: 0.1rem;
+  gap: 0;
   min-inline-size: 0;
 }
 
@@ -267,12 +272,12 @@
   flex: 1 1 auto;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   min-block-size: var(--target-min);
 }
 
 .op-page[data-mobile-action] {
-  padding-block-end: calc(var(--target-min) + 3rem);
+  padding-block-end: calc(var(--target-min) + var(--space-12));
 }
 
 /* PFI-16: the step's caption sits beside its button, so the footer keeps
@@ -297,8 +302,8 @@
  */
 .op-progress {
   display: grid;
-  gap: 0.75rem;
-  padding: 1rem 1.25rem;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -309,7 +314,7 @@
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.25rem 1rem;
+  gap: var(--space-1) var(--space-4);
 }
 
 .op-progress-head h2 {
@@ -331,13 +336,13 @@
 /* RFC 024: with the three steps done the progress is one line, so the
    pending order fits the phone's 1.800 px. */
 .op-progress[data-ready] {
-  padding-block: 0.75rem;
+  padding-block: var(--space-3);
 }
 
 .op-progress-count[data-ready] {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .op-progress-count[data-ready] .op-progress-mark {
@@ -348,7 +353,7 @@
 
 .op-progress-steps {
   display: grid;
-  gap: 0.5rem;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -358,7 +363,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 0.75rem;
+  gap: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
 }
 
@@ -419,19 +424,11 @@
   display: none;
 }
 
-.op-progress-note {
-  margin: 0;
-  padding-block-start: 0.75rem;
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-  border-block-start: 1px solid var(--color-border-subtle);
-}
-
 @media (width >= 48rem) {
   .op-progress-action {
     display: grid;
     flex: 0 0 auto;
-    gap: 0.25rem;
+    gap: var(--space-1);
     justify-items: end;
   }
 
@@ -473,7 +470,7 @@
 .op-store-correction > summary {
   display: list-item;
   cursor: pointer;
-  min-block-size: 44px;
+  min-block-size: var(--target-min);
 }
 
 .op-store-correction > summary:focus-visible {
@@ -501,15 +498,16 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 0.75rem;
+  gap: var(--space-2) var(--space-3);
   min-block-size: 3.5rem;
-  padding: 0.5rem 1rem 0.5rem 1.25rem;
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-5);
   border-block-end: 1px solid var(--color-border-subtle);
 }
 
 .op-sheet-head h2 {
   margin: 0;
   font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
 }
 
 .op-sheet-head > p {
@@ -527,7 +525,7 @@
 .op-sheet-head > p.op-sheet-state {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--space-1);
   min-inline-size: 0;
   overflow-wrap: anywhere;
 }
@@ -560,7 +558,7 @@
 
 .op-editing-tag,
 .op-quiet-tag {
-  padding: 0.15rem 0.65rem;
+  padding: var(--space-1) var(--space-3);
   font-size: var(--text-xs);
   font-weight: 600;
   border-radius: var(--radius-pill);
@@ -579,9 +577,9 @@
 button.op-edit {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: var(--space-2);
   min-block-size: var(--target-min);
-  padding: 0.4rem 0.8rem;
+  padding: var(--space-2) var(--space-3);
   color: var(--color-link);
   background: transparent;
   border-color: transparent;
@@ -616,7 +614,7 @@ button.op-edit:is(:disabled, [aria-disabled='true']) {
  * beside it, outside the button, while the section is open.
  */
 .op-sheet-head[data-accordion] {
-  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
 }
 
 .op-sheet-head[data-collapsed] {
@@ -633,13 +631,13 @@ button.op-sheet-toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: var(--space-3);
   inline-size: 100%;
   min-block-size: var(--target-min);
-  padding: 0.375rem 0.5rem 0.375rem 1rem;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
   color: var(--color-text);
   font-size: var(--text-lg);
-  font-weight: inherit;
+  font-weight: var(--weight-semibold);
   line-height: 1.25;
   text-align: start;
   background: transparent;
@@ -653,14 +651,14 @@ button.op-sheet-toggle:hover:not([aria-disabled='true']) {
 
 .op-sheet-toggle-text {
   display: grid;
-  gap: 0.15rem;
+  gap: var(--space-1);
   min-inline-size: 0;
 }
 
 .op-sheet-toggle .op-sheet-state {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--space-1);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   font-weight: 500;
@@ -706,7 +704,7 @@ button.op-sheet-toggle:hover:not([aria-disabled='true']) {
   .op-layout,
   .op-main,
   .op-rail {
-    gap: 0.75rem;
+    gap: var(--space-4);
   }
 
   /* A fold brought into view stops below the sticky top bar. */
@@ -717,12 +715,8 @@ button.op-sheet-toggle:hover:not([aria-disabled='true']) {
 
 .op-sheet-body {
   display: grid;
-  gap: 0.75rem;
-  padding: 1.25rem;
-}
-
-.op-sheet-body--tight {
-  padding-block: 0 1.25rem;
+  gap: var(--space-4);
+  padding: var(--space-5);
 }
 
 /*
@@ -738,7 +732,7 @@ button.op-sheet-toggle:hover:not([aria-disabled='true']) {
 .op-summary-fields {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1rem 1.25rem;
+  gap: var(--space-4) var(--space-5);
 }
 
 .op-summary-client,
@@ -746,7 +740,7 @@ button.op-sheet-toggle:hover:not([aria-disabled='true']) {
   display: grid;
   align-content: start;
   justify-items: start;
-  gap: 0.35rem;
+  gap: var(--space-1);
   min-inline-size: 0;
 }
 
@@ -797,7 +791,7 @@ button.op-sheet-toggle:hover:not([aria-disabled='true']) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.15rem 0.5rem;
+  gap: var(--space-1) var(--space-2);
 }
 
 .op-summary-field button.link-button {
@@ -828,110 +822,15 @@ button.op-sheet-toggle:hover:not([aria-disabled='true']) {
   font-weight: 500;
 }
 
-/* Trail (ADR 008): first contact to delivery, in the order they happen */
-.op-milestones {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  grid-template-rows: repeat(4, auto);
-  row-gap: 0.2rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Dot, label, day and note line up across the five steps. */
-.op-milestone {
-  position: relative;
-  display: grid;
-  grid-row: span 4;
-  grid-template-rows: subgrid;
-  min-inline-size: 0;
-  padding-inline-end: 0.75rem;
-}
-
-.op-milestone-dot {
-  position: relative;
-  z-index: 1;
-  inline-size: 0.75rem;
-  block-size: 0.75rem;
-  margin-block-end: 0.45rem;
-  background: var(--color-surface);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-pill);
-}
-
-.op-milestone:not(:last-child)::after {
-  position: absolute;
-  inset-block-start: calc(0.375rem - 1px);
-  inset-inline: 0.75rem 0;
-  block-size: 2px;
-  background: var(--color-border-subtle);
-  content: '';
-}
-
-.op-milestone[data-recorded] .op-milestone-dot {
-  background: var(--color-link);
-  border-color: var(--color-link);
-}
-
-.op-milestone strong {
-  font-size: var(--text-base);
-  font-weight: 600;
-}
-
-.op-milestone:not([data-recorded]) strong {
-  color: var(--color-text-muted);
-  font-weight: 500;
-}
-
-@media (width < 48rem) {
-  .op-milestones {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: none;
-    gap: 0.9rem;
-  }
-
-  .op-milestone {
-    grid-row: auto;
-    grid-template-columns: 0.75rem minmax(0, 1fr);
-    grid-template-rows: none;
-    gap: 0.2rem 0.75rem;
-    padding-inline-end: 0;
-  }
-
-  .op-milestone > :not(.op-milestone-dot) {
-    grid-column: 2;
-  }
-
-  .op-milestone-dot {
-    grid-row: 1 / span 3;
-    margin-block: 0.25rem 0;
-  }
-
-  .op-milestone:not(:last-child)::after {
-    inset-block: 1rem -0.65rem;
-    inset-inline: calc(0.375rem - 1px) auto;
-    inline-size: 2px;
-    block-size: auto;
-  }
-}
-
 /* Forms inside a sheet */
 .op-form {
   display: grid;
 }
 
-.op-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.1rem 1.25rem;
-  padding: 1.25rem;
-}
-
 .op-field {
   display: grid;
   align-content: start;
-  gap: 0.35rem;
+  gap: var(--space-1);
   min-inline-size: 0;
 }
 
@@ -940,8 +839,8 @@ button.op-sheet-toggle:hover:not([aria-disabled='true']) {
 .op-form input[type='number'],
 .op-form select,
 .op-closing-form input[type='text'] {
-  min-block-size: 42px;
-  padding: 0.5rem 0.75rem;
+  min-block-size: var(--control-height);
+  padding: var(--space-2) var(--space-3);
   font-size: var(--text-base);
   font-weight: 500;
   border-radius: var(--radius-md);
@@ -986,22 +885,6 @@ button.op-sheet-toggle:hover:not([aria-disabled='true']) {
   border-color: var(--status-error-text);
 }
 
-.op-input-lock {
-  position: relative;
-}
-
-.op-input-lock input {
-  padding-inline-end: 2.4rem;
-}
-
-.op-input-lock .op-icon {
-  position: absolute;
-  inset-block-start: 50%;
-  inset-inline-end: 0.8rem;
-  color: var(--color-text-muted);
-  transform: translateY(-50%);
-}
-
 .op-swatch {
   display: inline-block;
   inline-size: 0.95rem;
@@ -1011,22 +894,13 @@ button.op-sheet-toggle:hover:not([aria-disabled='true']) {
   box-shadow: inset 0 0 0 1px var(--color-border);
 }
 
-.op-locked-note {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0 1.25rem 1.25rem;
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-}
-
 .op-form-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.6rem;
-  padding: 0.75rem 1rem;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
   background: var(--color-canvas);
   border-block-start: 1px solid var(--color-border-subtle);
   border-end-start-radius: var(--radius-lg);
@@ -1069,9 +943,9 @@ button.op-save:hover:not(:disabled) {
   display: inline-flex;
   justify-self: start;
   min-block-size: 32px;
-  padding-inline-end: 0.35rem;
+  padding-inline-end: var(--space-1);
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--space-2);
   color: var(--color-text-muted);
   font-size: var(--text-xs);
   font-weight: 500;
@@ -1094,14 +968,14 @@ button.op-save:hover:not(:disabled) {
 .op-artwork {
   inline-size: 100%;
   min-inline-size: 0;
-  gap: 1.5rem;
+  gap: var(--space-6);
   container: op-artwork / inline-size;
 }
 
 .op-artwork-source {
   display: grid;
   justify-items: start;
-  gap: 0.5rem;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   min-inline-size: 0;
@@ -1110,7 +984,7 @@ button.op-save:hover:not(:disabled) {
 
 .op-artwork-source legend {
   padding: 0;
-  margin-block-end: 0.25rem;
+  margin-block-end: var(--space-1);
   color: var(--color-text);
   font-weight: 600;
 }
@@ -1118,19 +992,19 @@ button.op-save:hover:not(:disabled) {
 .op-artwork-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 1.25rem;
+  gap: var(--space-1) var(--space-5);
 }
 
 .op-artwork-source .op-field-error {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.15rem 0.5rem;
+  gap: var(--space-1) var(--space-2);
 }
 
 .op-artwork-marked {
   display: grid;
-  gap: 0.25rem;
+  gap: var(--space-1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1139,7 +1013,7 @@ button.op-save:hover:not(:disabled) {
 .op-artwork-marked li {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--space-2);
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
 }
@@ -1153,7 +1027,7 @@ button.op-save:hover:not(:disabled) {
 .op-files {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1.5rem;
+  gap: var(--space-6);
   inline-size: 100%;
   min-inline-size: 0;
 }
@@ -1184,8 +1058,8 @@ button.op-save:hover:not(:disabled) {
 /* Art files (ADR 023): the final art, then up to five references. */
 .op-files-block {
   display: grid;
-  gap: 0.75rem;
-  padding: 1rem 1.25rem 1.25rem;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-5);
   border-block-start: 1px solid var(--color-border-subtle);
 }
 
@@ -1193,21 +1067,21 @@ button.op-save:hover:not(:disabled) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem 0.65rem;
+  gap: var(--space-2) var(--space-3);
 }
 
 .op-files-head h3 {
   margin: 0;
-  font-size: var(--text-sm);
-  font-weight: 600;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
 }
 
 .op-files-count,
 .op-files-tag {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.1rem 0.6rem;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
   font-size: var(--text-xs);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -1241,9 +1115,9 @@ button.op-files-quiet {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
+  gap: var(--space-2);
   min-block-size: 40px;
-  padding: 0.45rem 0.85rem;
+  padding: var(--space-2) var(--space-3);
   color: var(--color-text);
   font-size: var(--text-sm);
   font-weight: 500;
@@ -1273,9 +1147,9 @@ button.op-files-button:disabled {
 .op-files-alert {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: var(--space-2);
   margin: 0;
-  padding: 0.6rem 0.85rem;
+  padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
   font-weight: 500;
   border-radius: var(--radius-md);
@@ -1293,14 +1167,14 @@ button.op-files-button:disabled {
 
 .op-files-alert .op-icon {
   flex: none;
-  margin-block-start: 0.15rem;
+  margin-block-start: var(--space-1);
 }
 
 .op-files-drop {
   display: grid;
   justify-items: center;
-  gap: 0.5rem;
-  padding: 1.4rem 1rem;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-4);
   text-align: center;
   background: var(--color-canvas);
   border: 1.5px dashed var(--color-border);
@@ -1332,14 +1206,14 @@ button.op-files-button:disabled {
 .op-files-drop button {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: var(--space-2);
   border-radius: var(--radius-md);
 }
 
 .op-files-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
-  gap: 0.75rem;
+  gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1403,9 +1277,9 @@ button.op-files-button:disabled {
 
 .op-file-ext span {
   position: absolute;
-  inset-inline-start: 0.2rem;
-  inset-block-end: 0.55rem;
-  padding: 0.05rem 0.35rem;
+  inset-inline-start: var(--space-1);
+  inset-block-end: var(--space-2);
+  padding: 0 var(--space-1);
   font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -1436,8 +1310,8 @@ button.op-files-button:disabled {
 
 .op-file-progress {
   position: absolute;
-  inset-inline: 0.6rem;
-  inset-block-end: 0.6rem;
+  inset-inline: var(--space-2);
+  inset-block-end: var(--space-2);
   inline-size: calc(100% - 1.2rem);
   block-size: 0.4rem;
   accent-color: var(--color-link);
@@ -1451,7 +1325,7 @@ button.op-files-button:disabled {
 .op-file-body {
   display: grid;
   min-inline-size: 0;
-  padding: 0.5rem 0.25rem 0.55rem 0.65rem;
+  padding: var(--space-2) var(--space-1) var(--space-2) var(--space-3);
 }
 
 .op-file-name {
@@ -1478,7 +1352,7 @@ button.op-files-button:disabled {
 .op-file-actions {
   display: flex;
   align-items: center;
-  padding-inline-end: 0.25rem;
+  padding-inline-end: var(--space-1);
 }
 
 a.op-file-icon,
@@ -1512,8 +1386,8 @@ button.op-file-icon[data-danger]:hover:not(:disabled) {
   inset: 0;
   display: grid;
   align-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
+  gap: var(--space-2);
+  padding: var(--space-3);
   text-align: center;
   background: var(--color-surface);
 }
@@ -1529,12 +1403,12 @@ button.op-file-icon[data-danger]:hover:not(:disabled) {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.4rem;
+  gap: var(--space-2);
 }
 
 .op-file-confirm button {
   min-block-size: 36px;
-  padding: 0.3rem 0.7rem;
+  padding: var(--space-1) var(--space-3);
   font-size: var(--text-sm);
   border-radius: var(--radius-md);
 }
@@ -1545,7 +1419,7 @@ button.op-file-icon[data-danger]:hover:not(:disabled) {
   display: grid;
   place-items: center;
   align-content: center;
-  gap: 0.3rem;
+  gap: var(--space-1);
   inline-size: 100%;
   block-size: 100%;
   min-block-size: 8rem;
@@ -1572,8 +1446,8 @@ button.op-file-icon[data-danger]:hover:not(:disabled) {
   display: grid;
   grid-template-columns: 8.25rem minmax(0, 1fr);
   align-items: center;
-  gap: 1rem;
-  padding: 0.75rem;
+  gap: var(--space-4);
+  padding: var(--space-3);
   background: var(--color-accent-subtle);
   border: 1px solid var(--color-border);
   border-inline-start: 4px solid var(--color-accent);
@@ -1589,7 +1463,7 @@ button.op-file-icon[data-danger]:hover:not(:disabled) {
 .op-final-info {
   position: relative;
   display: grid;
-  gap: 0.25rem;
+  gap: var(--space-1);
   min-inline-size: 0;
 }
 
@@ -1603,7 +1477,7 @@ button.op-file-icon[data-danger]:hover:not(:disabled) {
 .op-final-info .op-file-confirm {
   position: static;
   justify-items: start;
-  padding: 0.5rem 0 0;
+  padding: var(--space-2) 0 0;
   text-align: start;
   background: transparent;
 }
@@ -1612,16 +1486,16 @@ button.op-file-icon[data-danger]:hover:not(:disabled) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  margin-block-start: 0.35rem;
+  gap: var(--space-2);
+  margin-block-start: var(--space-1);
 }
 
 .op-final-empty {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem 1rem;
-  padding: 0.85rem 1rem;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-4);
   border: 1.5px dashed var(--color-border);
   border-radius: var(--radius-md);
 }
@@ -1641,7 +1515,7 @@ button.op-file-icon[data-danger]:hover:not(:disabled) {
 
 @media (width < 40rem) {
   .op-files-block {
-    padding-inline: 0.9rem;
+    padding-inline: var(--space-4);
   }
 
   .op-files-grid {
@@ -1659,7 +1533,7 @@ button.op-file-icon[data-danger]:hover:not(:disabled) {
 
   .op-final {
     grid-template-columns: 5.5rem minmax(0, 1fr);
-    gap: 0.75rem;
+    gap: var(--space-3);
   }
 }
 
@@ -1687,9 +1561,9 @@ button.op-add-inline {
   display: inline-flex;
   align-items: center;
   justify-self: start;
-  gap: 0.4rem;
+  gap: var(--space-2);
   min-block-size: 36px;
-  padding: 0.3rem 0.5rem;
+  padding: var(--space-1) var(--space-2);
   color: var(--color-link);
   font-size: var(--text-sm);
   background: transparent;
@@ -1714,7 +1588,7 @@ button.op-add-inline:disabled {
  * sidebar and the rail leave the card narrow on a mid-sized screen.
  */
 .op-item-list {
-  gap: 0.75rem;
+  gap: var(--space-3);
   container: op-items / inline-size;
 }
 
@@ -1735,8 +1609,8 @@ button.op-add-inline:disabled {
     'title menu'
     'meta menu';
   align-items: center;
-  column-gap: 0.6rem;
-  padding: 0.5rem 0.9rem;
+  column-gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
   background: var(--color-canvas);
   border-block-end: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md) var(--radius-md) 0 0;
@@ -1746,10 +1620,10 @@ button.op-add-inline:disabled {
   display: flex;
   grid-area: title;
   align-items: flex-start;
-  gap: 0.6rem;
+  gap: var(--space-2);
   min-inline-size: 0;
   margin: 0;
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
   font-weight: var(--weight-semibold);
   line-height: 1.5rem;
 }
@@ -1760,7 +1634,7 @@ button.op-add-inline:disabled {
   place-items: center;
   min-inline-size: 1.5rem;
   block-size: 1.5rem;
-  padding-inline: 0.35rem;
+  padding-inline: var(--space-1);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   line-height: 1;
@@ -1782,7 +1656,7 @@ button.op-add-inline:disabled {
 .op-item-meta {
   grid-area: meta;
   margin: 0;
-  padding-inline-start: 2.1rem;
+  padding-inline-start: var(--space-8);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   line-height: 1.4;
@@ -1791,7 +1665,7 @@ button.op-add-inline:disabled {
 .op-item-menu {
   position: relative;
   grid-area: menu;
-  margin-inline-end: -0.65rem;
+  margin-inline-end: calc(var(--space-3) * -1);
 }
 
 button.op-item-menu-button,
@@ -1804,12 +1678,12 @@ button.op-size-remove {
 
 .op-item-menu-list {
   position: absolute;
-  inset-block-start: calc(100% + 0.25rem);
-  inset-inline-end: 0.25rem;
+  inset-block-start: calc(100% + var(--space-1));
+  inset-inline-end: var(--space-1);
   z-index: 5;
   display: grid;
   min-inline-size: 15rem;
-  padding: 0.3rem;
+  padding: var(--space-1);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -1818,9 +1692,9 @@ button.op-size-remove {
 
 .op-item-menu-list button {
   justify-content: flex-start;
-  gap: 0.6rem;
+  gap: var(--space-2);
   min-block-size: var(--target-min);
-  padding: 0.4rem 0.6rem;
+  padding: var(--space-2) var(--space-2);
   text-align: start;
   background: transparent;
   border: 0;
@@ -1841,8 +1715,8 @@ button.op-size-remove {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 0.9rem;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
   color: var(--status-error-text);
   font-size: var(--text-sm);
   background: var(--status-error-surface);
@@ -1856,14 +1730,14 @@ button.op-size-remove {
 }
 
 .op-item > .op-field-error {
-  padding: 0.6rem 0.9rem 0;
+  padding: var(--space-2) var(--space-4) 0;
 }
 
 .op-item-list .op-field-error {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.15rem 0.5rem;
+  gap: var(--space-1) var(--space-2);
 }
 
 .op-item-list button.link-button {
@@ -1888,15 +1762,15 @@ button.op-size-remove {
 .op-specs {
   display: grid;
   align-content: start;
-  gap: 0.5rem;
-  padding: 0.75rem 0.9rem;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
 }
 
 .op-inline-field {
   display: grid;
   grid-template-columns: 6.5rem minmax(0, 1fr);
   align-items: start;
-  gap: 0.2rem 0.5rem;
+  gap: var(--space-1) var(--space-2);
 }
 
 .op-inline-field > label,
@@ -1913,7 +1787,7 @@ button.op-size-remove {
 .op-inline-control {
   display: grid;
   justify-items: start;
-  gap: 0.3rem;
+  gap: var(--space-1);
   min-inline-size: 0;
 }
 
@@ -1921,7 +1795,7 @@ button.op-size-remove {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   inline-size: 100%;
   min-inline-size: 0;
 }
@@ -1958,7 +1832,7 @@ button.op-size-remove {
 /* FieldGap: what generating the order still asks of this field. */
 .op-field-gap {
   justify-self: start;
-  gap: 0.25rem;
+  gap: var(--space-1);
 }
 
 .op-field-gap .op-icon,
@@ -1971,14 +1845,14 @@ button.op-size-remove {
 .op-chip-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 /* A chip that toggles: selection colours, never the brand's (design.md §17). */
 button.op-toggle-chip {
   flex: none;
   min-block-size: var(--control-height);
-  padding: 0.2rem 0.75rem;
+  padding: var(--space-1) var(--space-3);
   color: var(--color-text-muted);
   font-size: var(--text-xs);
   white-space: nowrap;
@@ -1998,8 +1872,8 @@ button.op-toggle-chip[aria-pressed='true']:hover:not(:disabled) {
 .op-optional-adds {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-inline-start: -0.5rem;
+  gap: var(--space-2);
+  margin-inline-start: calc(var(--space-2) * -1);
 }
 
 /*
@@ -2010,8 +1884,8 @@ button.op-toggle-chip[aria-pressed='true']:hover:not(:disabled) {
 .op-sizes {
   display: grid;
   align-content: start;
-  gap: 0.5rem;
-  padding: 0.75rem 0.9rem 0.9rem;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-4);
   background: var(--color-surface);
   border-block-start: 1px solid var(--color-border-subtle);
   border-radius: 0 0 var(--radius-md) var(--radius-md);
@@ -2021,7 +1895,7 @@ button.op-toggle-chip[aria-pressed='true']:hover:not(:disabled) {
 .op-size-row {
   display: grid;
   grid-template-columns: minmax(0, 5rem) minmax(0, 6rem) var(--target-min);
-  gap: 0.5rem;
+  gap: var(--space-2);
   align-items: start;
 }
 
@@ -2058,7 +1932,7 @@ button.op-toggle-chip[aria-pressed='true']:hover:not(:disabled) {
 
 .op-sizes-rows {
   display: grid;
-  gap: 0.5rem;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2066,7 +1940,7 @@ button.op-toggle-chip[aria-pressed='true']:hover:not(:disabled) {
 
 .op-size-row input {
   min-inline-size: 0;
-  padding-inline: 0.4rem;
+  padding-inline: var(--space-2);
 }
 
 .op-size-input {
@@ -2114,7 +1988,7 @@ button.op-size-remove {
   align-items: center;
   align-self: center;
   justify-content: flex-end;
-  gap: 0.15rem 0.5rem;
+  gap: var(--space-1) var(--space-2);
   min-inline-size: 0;
   color: var(--color-text-muted);
   font-size: var(--text-xs);
@@ -2144,14 +2018,14 @@ button.op-size-remove {
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.25rem 1rem;
+  gap: var(--space-1) var(--space-4);
   margin: 0;
   color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
 
 .op-item-total {
-  padding-block-start: 0.6rem;
+  padding-block-start: var(--space-2);
   border-block-start: 1px solid var(--color-border);
 }
 
@@ -2166,7 +2040,7 @@ button.op-size-remove {
 .op-item > .op-item-total,
 .op-item > .op-quantity-warning,
 .op-item > .op-size-prices {
-  margin: 0 1.1rem 0.9rem;
+  margin: 0 var(--space-4) var(--space-4);
 }
 
 .op-size-prices {
@@ -2176,7 +2050,7 @@ button.op-size-remove {
 }
 
 .op-size-prices :is(th, td) {
-  padding: 0.35rem 0.25rem;
+  padding: var(--space-1) var(--space-1);
   text-align: start;
   overflow-wrap: anywhere;
   border-block-end: 1px solid var(--color-border-subtle);
@@ -2195,15 +2069,15 @@ button.op-size-remove {
 .op-size-prices-gap {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--space-1);
   color: var(--status-warning-text);
 }
 
 .op-items-empty {
   display: grid;
-  gap: 0.2rem;
+  gap: var(--space-1);
   margin: 0;
-  padding: 1.25rem 1rem;
+  padding: var(--space-5) var(--space-4);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   text-align: center;
@@ -2238,7 +2112,7 @@ button.op-add-item:hover:not(:disabled) {
 .op-sheet-head > p.op-save-status {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: var(--space-1);
   margin-inline-start: auto;
   font-size: var(--text-xs);
 }
@@ -2289,9 +2163,9 @@ button.op-add-item:hover:not(:disabled) {
 .op-quantity-warning {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: var(--space-2);
   margin: 0;
-  padding: 0.6rem 0.8rem;
+  padding: var(--space-2) var(--space-3);
   color: var(--status-warning-text);
   font-size: var(--text-sm);
   background: var(--status-warning-surface);
@@ -2300,16 +2174,16 @@ button.op-add-item:hover:not(:disabled) {
 
 .op-quantity-warning .op-icon {
   flex: none;
-  margin-block-start: 0.1rem;
+  margin-block-start: 0;
 }
 
 /* PIT-01: the points in the order of the bot, three to a row. */
 .op-points {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.25rem 1rem;
+  gap: var(--space-1) var(--space-4);
   margin: 0;
-  padding: 0.75rem 1.1rem 1rem;
+  padding: var(--space-3) var(--space-4) var(--space-4);
 }
 
 .op-points > div {
@@ -2317,9 +2191,9 @@ button.op-add-item:hover:not(:disabled) {
   /* A long grade wraps inside the point instead of widening it. */
   grid-template-columns: minmax(0, 1fr);
   align-content: start;
-  gap: 0.2rem;
+  gap: var(--space-1);
   min-inline-size: 0;
-  padding-block: 0.4rem;
+  padding-block: var(--space-2);
 }
 
 .op-points > .op-point--wide {
@@ -2329,7 +2203,7 @@ button.op-add-item:hover:not(:disabled) {
 .op-points dd {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: var(--space-2);
   margin: 0;
   overflow-wrap: anywhere;
   font-size: var(--text-sm);
@@ -2340,7 +2214,7 @@ button.op-add-item:hover:not(:disabled) {
   display: grid;
   flex: 1 1 auto;
   grid-template-columns: repeat(auto-fill, minmax(3.75rem, 1fr));
-  gap: 0.4rem;
+  gap: var(--space-2);
   min-inline-size: 0;
   max-inline-size: 28rem;
   margin: 0;
@@ -2355,7 +2229,7 @@ button.op-add-item:hover:not(:disabled) {
 .op-grade-tiles li {
   display: grid;
   justify-items: center;
-  padding: 0.3rem 0.25rem;
+  padding: var(--space-1) var(--space-1);
   background: var(--color-surface-active);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
@@ -2370,7 +2244,7 @@ button.op-add-item:hover:not(:disabled) {
 }
 
 .op-grade-tile-size {
-  padding-block-end: 0.15rem;
+  padding-block-end: var(--space-1);
   overflow-wrap: anywhere;
   text-align: center;
   border-block-end: 1px solid var(--color-border-strong);
@@ -2388,7 +2262,7 @@ button.op-add-item:hover:not(:disabled) {
 
 .op-quantity {
   display: block;
-  padding-block: 0.55rem;
+  padding-block: var(--space-2);
   color: var(--color-brand-ink);
   font-size: var(--text-lg);
   font-weight: 700;
@@ -2399,22 +2273,18 @@ button.op-add-item:hover:not(:disabled) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .op-form-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   /* The card keeps the width of a phone for its fields. */
   .op-sheet-body.op-item-list {
-    padding: 0.75rem;
+    padding: var(--space-3);
   }
 }
 
 /* Observations */
 .op-observations {
   display: grid;
-  gap: 0.4rem;
+  gap: var(--space-2);
   margin: 0;
-  padding-inline-start: 1.4rem;
+  padding-inline-start: var(--space-6);
   font-size: var(--text-sm);
   line-height: 1.55;
 }
@@ -2431,14 +2301,14 @@ button.op-add-item:hover:not(:disabled) {
  */
 .op-obs-edit {
   display: grid;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .op-obs-head,
 .op-obs-row {
   display: grid;
   grid-template-columns: 2rem minmax(0, 1fr) var(--target-min);
-  column-gap: 0.5rem;
+  column-gap: var(--space-2);
   align-items: start;
 }
 
@@ -2454,7 +2324,7 @@ button.op-add-item:hover:not(:disabled) {
 
 .op-obs-list {
   display: grid;
-  gap: 0.5rem;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2470,7 +2340,7 @@ button.op-add-item:hover:not(:disabled) {
 
 .op-obs-field {
   display: grid;
-  gap: 0.35rem;
+  gap: var(--space-1);
   min-inline-size: 0;
 }
 
@@ -2509,27 +2379,27 @@ button.op-obs-remove {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.15rem 0.5rem;
+  gap: var(--space-1) var(--space-2);
 }
 
 .op-obs-edit > .op-field-error {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.15rem 0.5rem;
+  gap: var(--space-1) var(--space-2);
 }
 
 /* Production and service data */
 .op-service {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
-  gap: 1rem 1.25rem;
-  margin: 0.25rem 0 0;
+  gap: var(--space-4) var(--space-5);
+  margin: var(--space-1) 0 0;
 }
 
 .op-service > div {
   display: grid;
-  gap: 0.15rem;
+  gap: var(--space-1);
 }
 
 .op-service dd {
@@ -2566,15 +2436,15 @@ button.op-obs-remove {
 
 /* Rail: closing, readiness and the primary action */
 .op-closing-body {
-  gap: 1.1rem;
+  gap: var(--space-4);
 }
 
 .op-success {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   margin: 0;
-  padding: 0.7rem 0.9rem;
+  padding: var(--space-3) var(--space-4);
   color: var(--status-success-text);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -2586,8 +2456,8 @@ button.op-obs-remove {
    "Gerar pedido"; the amount and the payment method live in the dialog. */
 .op-closing-action {
   display: grid;
-  gap: 1.1rem;
-  padding-block-start: 1rem;
+  gap: var(--space-4);
+  padding-block-start: var(--space-4);
   border-block-start: 1px solid var(--color-border-subtle);
 }
 
@@ -2602,7 +2472,7 @@ button.op-obs-remove {
 
 .op-closing-form {
   display: grid;
-  gap: 1.1rem;
+  gap: var(--space-4);
 }
 
 .op-amount {
@@ -2612,7 +2482,7 @@ button.op-obs-remove {
 .op-amount > span {
   position: absolute;
   inset-block-start: 50%;
-  inset-inline-start: 0.8rem;
+  inset-inline-start: var(--space-3);
   color: var(--color-text-muted);
   font-weight: 600;
   transform: translateY(-50%);
@@ -2621,21 +2491,21 @@ button.op-obs-remove {
 .op-closing-form .op-amount input {
   inline-size: 100%;
   min-block-size: var(--target-min);
-  padding-inline-start: 2.6rem;
+  padding-inline-start: var(--space-10);
   font-size: var(--text-lg);
   font-weight: 600;
 }
 
 .op-conditions {
   display: grid;
-  gap: 0.5rem;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   border: 0;
 }
 
 .op-conditions legend {
-  margin-block-end: 0.5rem;
+  margin-block-end: var(--space-2);
   padding: 0;
 }
 
@@ -2665,7 +2535,7 @@ button.op-obs-remove {
   display: inline-flex;
   align-items: center;
   min-block-size: var(--target-min);
-  padding: 0 0.9rem;
+  padding: 0 var(--space-4);
   font-size: var(--text-sm);
   font-weight: 600;
   background: var(--color-surface);
@@ -2695,7 +2565,7 @@ button.op-generate {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
+  gap: var(--space-2);
   border-radius: var(--radius-md);
 }
 
@@ -2716,7 +2586,7 @@ button.op-generate {
 }
 
 .op-readiness {
-  margin: -0.4rem 0 0;
+  margin: calc(var(--space-2) * -1) 0 0;
   color: var(--status-warning-text);
   font-size: var(--text-sm);
   line-height: 1.45;
@@ -2730,7 +2600,7 @@ button.op-generate {
 
 .op-deal {
   display: grid;
-  gap: 0.6rem;
+  gap: var(--space-2);
   margin: 0;
 }
 
@@ -2738,7 +2608,7 @@ button.op-generate {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--space-4);
   font-size: var(--text-sm);
 }
 
@@ -2786,8 +2656,8 @@ button.op-generate {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
+  gap: var(--space-3);
+  padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
@@ -2836,15 +2706,15 @@ button.op-generate {
 
 .op-reopen {
   display: grid;
-  gap: 0.4rem;
-  padding-block-start: 1rem;
+  gap: var(--space-2);
+  padding-block-start: var(--space-4);
   border-block-start: 1px solid var(--color-border-subtle);
 }
 
 /* "Gerar pedido" confirmation */
 .op-dialog {
   inline-size: min(34rem, calc(100vw - 2rem));
-  padding: 1.5rem;
+  padding: var(--space-6);
   color: var(--color-text);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -2857,7 +2727,7 @@ button.op-generate {
 }
 
 .op-dialog h2 {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--space-2);
   color: var(--color-brand-ink);
   font-size: var(--text-xl);
 }
@@ -2870,8 +2740,8 @@ button.op-generate {
 }
 
 .op-dialog dl {
-  margin: 1.1rem 0;
-  padding: 0.25rem 1rem;
+  margin: var(--space-4) 0;
+  padding: var(--space-1) var(--space-4);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
 }
@@ -2879,8 +2749,8 @@ button.op-generate {
 .op-dialog dl > div {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
-  padding-block: 0.6rem;
+  gap: var(--space-4);
+  padding-block: var(--space-2);
   font-size: var(--text-sm);
   border-block-end: 1px solid var(--color-border-subtle);
 }
@@ -2903,7 +2773,7 @@ button.op-generate {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 0.6rem;
+  gap: var(--space-2);
 }
 
 /*
@@ -2916,12 +2786,12 @@ button.op-generate {
 }
 
 .op-generate-dialog dl {
-  margin-block: 0.9rem 1.1rem;
+  margin-block: var(--space-4) var(--space-4);
 }
 
 .op-generate-dialog .op-dialog-actions {
   gap: var(--space-2);
-  padding-block-start: 0.25rem;
+  padding-block-start: var(--space-1);
 }
 
 .op-generate-dialog .op-dialog-actions button {

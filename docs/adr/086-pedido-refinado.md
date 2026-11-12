@@ -67,7 +67,8 @@ ficar lado a lado e que faltava responsividade aos componentes.
    item têm borda dentro da folha.
 3. **Rail = "Fechamento e pagamento".** Pendente: progresso honesto "Para gerar
    o pedido: N de 3", "Valor do pedido" (Peças + Frete = Total) e a única
-   primária da página. Confirmado: fechamento em leitura, resumo de Cobranças
+   primária da página: o próximo passo enquanto há pendência e "Gerar pedido"
+   com tudo pronto (PFI-16; o PO manteve a regra em 12/11/2026). Confirmado: fechamento em leitura, resumo de Cobranças
    e bloco Olist, cada um com a sua primária.
 4. **Rail antes da ficha abaixo de 75rem.** Ele é o primeiro filho do layout
    no DOM; as áreas de grade (`grid-template-areas`) o põem à direita a partir

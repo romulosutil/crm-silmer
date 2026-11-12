@@ -140,10 +140,12 @@ teclado abre e fecha com Enter e Espaço.
 
 1. O rail SHALL ter o título "Fechamento e pagamento" e, nesta ordem: "Para
    gerar o pedido: N de 3" (passos Previsão de entrega, Itens e Arte, só do
-   `missingFields`; só o próximo passo tem botão, `soft` no notebook), "Valor
-   do pedido" e "Gerar pedido".
-2. "Gerar pedido" SHALL ser a única primária da página; com pendência SHALL
-   usar `aria-disabled="true"`, continuar focável e mostrar o motivo ao lado
+   `missingFields`; só o próximo passo tem botão), "Valor do pedido" e "Gerar
+   pedido".
+2. A página SHALL ter uma só primária (PFI-13, PFI-16): o botão do próximo
+   passo enquanto há pendência e "Gerar pedido" com tudo pronto. Com
+   pendência, "Gerar pedido" SHALL ficar fora do estilo primário, usar
+   `aria-disabled="true"`, continuar focável e mostrar o motivo ao lado
    ("Falta: aplicação do item 2 e mais 1 ponto") como descrição acessível.
 3. Uma pendência que a tela não conhece SHALL virar o passo "Revisar
    pendências" e o total SHALL passar a 4, nunca um falso "3 de 3" (PFI-15).

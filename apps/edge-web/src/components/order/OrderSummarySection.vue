@@ -1,37 +1,52 @@
 <script setup>
-import { computed, inject, nextTick, ref, watch } from 'vue';
+import { computed, h, inject, nextTick, reactive, ref, watch } from 'vue';
 import {
   fabLabel,
   orderSteps,
   quantityWarning,
 } from '../../lib/order-format.js';
+import { createSaveQueue } from '../../lib/order-items-inline.js';
 import OrderIcon from './OrderIcon.vue';
 import OrderSheetHead from './OrderSheetHead.vue';
 
+/*
+ * PED-RD-T03 (PED-RD-09, PED-RD-12; ADR 083, design.md §20): the summary is
+ * edited in place. "Nome do pedido" and "Previsão de entrega" are open fields
+ * that save by themselves (blur or Enter, the date on change), one field per
+ * command, through the same section write the form used (PFI-06). There is no
+ * "Editar resumo", no Salvar and no Cancelar.
+ */
 const SECTION = 'summary';
+const NAME = 'nome';
+const DELIVERY = 'data_entrega_confirmada';
 
 const props = defineProps({
   order: { type: Object, required: true },
 });
 
 const editing = inject('orderEditing');
-const firstField = ref(null);
-const draft = ref({ data_entrega_confirmada: '', nome: '' });
-const saving = ref(false);
-const errorMessage = ref('');
+const sheet = ref(null);
+const saveState = ref('');
+/** What was typed and not yet saved, by field; it survives an error. */
+const drafts = reactive(/** @type {Record<string, string>} */ ({}));
+const errors = reactive(
+  /** @type {Record<string, {message: string, conflict: boolean}>} */ ({}),
+);
 
-const isEditing = computed(() => editing.editingSection.value === SECTION);
 // PFI-10: a confirmed order is read-only; to change it the seller reopens it.
-const canEdit = computed(
+const permitted = computed(
   () => editing.canEdit.value && props.order.status === 'pendente',
 );
+// design.md §20: a section not yet migrated in "Editar" leaves this one in
+// reading, with the reason, until that one is saved or cancelled.
+const blocked = computed(
+  () => permitted.value && editing.editingSection.value !== '',
+);
+const editable = computed(() => permitted.value && !blocked.value);
 const summary = computed(() => props.order.ficha.summary);
 // PIT-09: a warning only when the sizes add up to something other than what
 // the customer said (ADR 020: the figure itself is not repeated beside it).
 const warning = computed(() => quantityWarning(props.order));
-const otherSectionOpen = computed(
-  () => editing.editingSection.value !== '' && !isEditing.value,
-);
 // PFI-18: on a phone the body is shown only while the accordion opens it.
 const open = computed(() => editing.isSectionOpen?.(SECTION) ?? true);
 
@@ -43,74 +58,152 @@ function dateBR(value) {
 }
 
 // PFI-17: the promised delivery is what this section owes to "Gerar"; the
-// server's missingFields says whether it is still missing (PFI-15).
-const headState = computed(() => {
+// server's missingFields says whether it is still missing (PFI-15). The head,
+// the FieldGap and the footer read that one source.
+const deliveryMissing = computed(() => {
   const step = orderSteps(props.order).find((one) => one.key === 'delivery');
-  if (step && !step.done) {
+  return Boolean(step && !step.done);
+});
+const headState = computed(() => {
+  if (deliveryMissing.value) {
     return { text: 'Falta previsão de entrega', tone: 'missing' };
   }
-  const day = dateBR(summary.value.data_entrega_confirmada);
+  const day = dateBR(summary.value[DELIVERY]);
   if (day) return { text: `Entrega ${day}`, tone: 'ok' };
   return { text: 'Sem previsão de entrega', tone: 'neutral' };
 });
 
-async function startEditing() {
-  draft.value = {
-    data_entrega_confirmada: summary.value.data_entrega_confirmada ?? '',
-    nome: summary.value.nome ?? '',
-  };
-  errorMessage.value = '';
-  editing.start(SECTION);
-  await nextTick();
-  firstField.value?.focus();
+/** @param {string} key */
+function stored(key) {
+  return String(summary.value[key] ?? '');
+}
+/** @param {string} key */
+function shown(key) {
+  return key in drafts ? drafts[key] : stored(key);
 }
 
-function cancel() {
-  errorMessage.value = '';
-  editing.stop();
-}
-
-// ADR 016: "Informar no Resumo" from "Gerar pedido" opens this editor on
-// Previsão de entrega; with another section open, it only brings the summary
-// into view.
-const sheet = ref(null);
-watch(
-  () => editing.editRequest?.value,
-  (request) => {
-    if (request?.section !== SECTION || isEditing.value) return;
-    if (canEdit.value && !otherSectionOpen.value) {
-      void startEditing();
-      return;
-    }
-    sheet.value?.scrollIntoView?.({ block: 'start' });
-  },
-);
+/* ------------------------------- queue ------------------------------- */
 
 /**
- * PFI-06: the whole section travels in one write. ADR 020: the technique
- * lives on each item, so the summary no longer sends one.
+ * The saves run one after the other, each built from the order the last
+ * answer brought: PFI-06 writes the whole section over one version, with only
+ * the field of the job changed.
  */
-async function save() {
-  saving.value = true;
-  errorMessage.value = '';
-  const result = await editing.save(SECTION, {
-    data_entrega_confirmada: draft.value.data_entrega_confirmada.trim() || null,
-    nome: draft.value.nome.trim() || null,
-  });
-  saving.value = false;
-  if (result.ok) {
-    editing.stop();
+const saveQueue = createSaveQueue({
+  async execute(job, sending) {
+    const next = String(job.mark ?? '');
+    if (next === stored(job.key)) return { noop: true, ok: true };
+    sending();
+    return editing.save(SECTION, {
+      [DELIVERY]: (job.key === DELIVERY ? next : stored(DELIVERY)) || null,
+      [NAME]: (job.key === NAME ? next : stored(NAME)) || null,
+    });
+  },
+  onFailure(job, failure) {
+    errors[job.key] = failure;
+  },
+  onState(state) {
+    saveState.value = state;
+  },
+});
+
+/**
+ * Blur, Enter or (for the date) change: trimmed and otherwise as typed, only
+ * when it differs from what the order holds. A late answer never moves the
+ * focus: nothing here does.
+ *
+ * @param {string} key @param {string} raw
+ */
+function commit(key, raw) {
+  const value = raw.trim();
+  // A refused version is not sent again until "Recarregar pedido".
+  if (errors[key]?.conflict) return;
+  if (value === stored(key) && !saveQueue.isPending(key)) {
+    // No draft or error is left over what the order already holds.
+    delete drafts[key];
+    delete errors[key];
     return;
   }
-  errorMessage.value = result.message;
+  delete errors[key];
+  saveQueue.enqueue({
+    after: () => {
+      if (key in drafts && drafts[key].trim() === value) delete drafts[key];
+    },
+    key,
+    mark: value,
+  });
 }
+
+/** @param {string} key @param {string} text */
+function setDraft(key, text) {
+  drafts[key] = text;
+}
+
+/** VERSION_CONFLICT: the way out is the order as the server has it. */
+async function reloadOrder(event) {
+  const origin = event?.currentTarget;
+  const replaced = await editing.reload?.();
+  if (replaced !== true) return;
+  for (const key of Object.keys(drafts)) delete drafts[key];
+  for (const key of Object.keys(errors)) delete errors[key];
+  saveState.value = '';
+  // The button is gone with the error: the focus goes back to its field.
+  const field = origin?.closest?.('.op-summary-field');
+  await nextTick();
+  field?.querySelector?.('input')?.focus();
+}
+
+/** The error under a field, with its way out (design.md §20, SaveStatus). */
+const FieldError = (context) =>
+  context.error
+    ? h('p', { class: 'op-field-error', id: context.id, role: 'alert' }, [
+        h('span', context.error.message),
+        context.error.conflict
+          ? h(
+              'button',
+              { class: 'link-button', onClick: reloadOrder, type: 'button' },
+              'Recarregar pedido',
+            )
+          : null,
+      ])
+    : null;
+FieldError.props = ['error', 'id'];
+
+/** @param {string} key @param {string} gapId @param {string} errorId */
+function describedBy(key, gapId, errorId) {
+  return (
+    [
+      key === DELIVERY && deliveryMissing.value ? gapId : '',
+      errors[key] ? errorId : '',
+    ]
+      .filter(Boolean)
+      .join(' ') || undefined
+  );
+}
+
+// ADR 016: "Informar a previsão de entrega" (the progress, the footer or
+// "Gerar pedido") brings the summary into view and puts the focus on the
+// delivery date; with the fields closed it only brings the summary into view.
+watch(
+  () => editing.editRequest?.value,
+  async (request) => {
+    if (request?.section !== SECTION) return;
+    await nextTick();
+    sheet.value?.scrollIntoView?.({ block: 'start' });
+    if (!editable.value) return;
+    await nextTick();
+    const field = globalThis.document?.getElementById('summary-entrega');
+    field?.focus({ preventScroll: true });
+    field?.scrollIntoView?.({ block: 'center' });
+  },
+);
 </script>
 
 <template>
   <section
     ref="sheet"
     class="op-sheet"
-    :data-editing="isEditing || undefined"
+    :data-summary-mode="editable ? 'edit' : 'read'"
     aria-labelledby="order-summary-title"
   >
     <OrderSheetHead
@@ -118,124 +211,138 @@ async function save() {
       title="Resumo do pedido"
       :state="headState.text"
       :tone="headState.tone"
-      edit-label="Editar resumo"
-      :can-edit="canEdit"
-      :blocked="otherSectionOpen"
-      :editing="isEditing"
+      :can-edit="false"
       section="summary"
       body-id="order-summary-body"
-      @edit="startEditing"
-    />
-
-    <p v-if="errorMessage" role="alert" class="op-alert" :hidden="!open">
-      {{ errorMessage }}
-    </p>
-
-    <form
-      v-if="isEditing"
-      id="order-summary-body"
-      class="op-form"
-      :hidden="!open"
-      @submit.prevent="save"
     >
-      <div class="op-form-grid">
-        <div class="op-field">
-          <label for="summary-cliente">Cliente</label>
-          <div class="op-input-lock">
-            <input
-              id="summary-cliente"
-              :value="summary.cliente"
-              type="text"
-              disabled
-              aria-describedby="summary-cliente-hint"
-            />
-            <OrderIcon name="lock" />
-          </div>
-          <p id="summary-cliente-hint" class="op-hint">
-            {{
-              order.status === 'pendente'
-                ? 'Acompanha o cadastro do cliente até gerar o pedido.'
-                : 'Nome registrado quando o pedido foi gerado.'
-            }}
-          </p>
-        </div>
+      <template #status>
+        <!-- design.md §20 (SaveStatus): the one status region of the section. -->
+        <p
+          class="op-save-status"
+          :class="{ 'op-visually-hidden': saveState === '' }"
+          role="status"
+          :data-save-status="saveState || 'idle'"
+        >
+          <template v-if="saveState === 'saving'">Salvando…</template>
+          <template v-else-if="saveState === 'saved'">
+            <OrderIcon name="check" />Salvo
+          </template>
+        </p>
+      </template>
+    </OrderSheetHead>
 
-        <div class="op-field">
-          <label for="summary-entrega">Previsão de entrega</label>
-          <input
-            id="summary-entrega"
-            ref="firstField"
-            v-model="draft.data_entrega_confirmada"
-            type="date"
-            aria-describedby="summary-entrega-hint"
-          />
-          <p id="summary-entrega-hint" class="op-hint">
-            A data combinada com o cliente.
-          </p>
-        </div>
-
-        <div class="op-field">
-          <label for="summary-nome">Nome do pedido</label>
-          <input
-            id="summary-nome"
-            v-model="draft.nome"
-            type="text"
-            autocomplete="off"
-            aria-describedby="summary-nome-hint"
-          />
-          <p id="summary-nome-hint" class="op-hint">
-            Evento, empresa, time ou turma.
-          </p>
-        </div>
-      </div>
-
-      <p class="op-locked-note">
-        <OrderIcon name="lock" />
-        Calculados pelo sistema: total de peças ({{ order.totalPieces }}),
-        vendedor, data do pedido e FAB.
+    <div
+      id="order-summary-body"
+      class="op-sheet-body op-summary"
+      :class="{ 'op-summary-edit': editable }"
+      :hidden="!open"
+    >
+      <p v-if="blocked" class="op-hint op-items-blocked">
+        Salve ou cancele a edição aberta para alterar o resumo.
       </p>
 
-      <div class="op-form-actions">
-        <button type="button" :disabled="saving" @click="cancel">
-          Cancelar
-        </button>
-        <!-- PFI-13: "Gerar pedido" is the only primary button here. -->
-        <button type="submit" class="op-save" :disabled="saving">
-          {{ saving ? 'Salvando…' : 'Salvar resumo' }}
-        </button>
-      </div>
-    </form>
-
-    <div v-else id="order-summary-body" class="op-sheet-body" :hidden="!open">
-      <dl class="op-summary-main">
-        <div>
-          <dt>Cliente</dt>
-          <dd>
+      <div class="op-summary-fields">
+        <div class="op-summary-client">
+          <span id="summary-cliente-label" class="op-summary-label"
+            >Cliente</span
+          >
+          <p class="op-summary-text" aria-labelledby="summary-cliente-label">
             {{ summary.cliente || '—' }}
             <span v-if="order.conversationId" class="op-origin-note">
               vem da conversa
             </span>
-          </dd>
+          </p>
         </div>
-        <div>
-          <dt>Previsão de entrega</dt>
-          <dd class="op-num">
-            {{ dateBR(summary.data_entrega_confirmada) || '—' }}
-          </dd>
+
+        <div class="op-summary-field" data-field="nome">
+          <template v-if="editable">
+            <label for="summary-nome">Nome do pedido</label>
+            <input
+              id="summary-nome"
+              type="text"
+              maxlength="200"
+              autocomplete="off"
+              :value="shown(NAME)"
+              :aria-invalid="errors[NAME] ? 'true' : undefined"
+              :aria-describedby="
+                describedBy(NAME, 'summary-nome-gap', 'summary-nome-error')
+              "
+              @input="setDraft(NAME, $event.target.value)"
+              @change="commit(NAME, $event.target.value)"
+              @keydown.enter.prevent="commit(NAME, $event.target.value)"
+            />
+            <FieldError id="summary-nome-error" :error="errors[NAME]" />
+          </template>
+          <template v-else>
+            <span id="summary-nome-label" class="op-summary-label"
+              >Nome do pedido</span
+            >
+            <p class="op-summary-text" aria-labelledby="summary-nome-label">
+              {{ summary.nome || '—' }}
+            </p>
+          </template>
         </div>
-        <div>
-          <dt>Total de peças</dt>
-          <dd class="op-num op-pieces">{{ order.totalPieces }}</dd>
+
+        <div class="op-summary-field" data-field="entrega">
+          <template v-if="editable">
+            <label for="summary-entrega">Previsão de entrega</label>
+            <input
+              id="summary-entrega"
+              type="date"
+              :value="shown(DELIVERY)"
+              :aria-required="deliveryMissing ? 'true' : undefined"
+              :aria-invalid="errors[DELIVERY] ? 'true' : undefined"
+              :aria-describedby="
+                describedBy(
+                  DELIVERY,
+                  'summary-entrega-gap',
+                  'summary-entrega-error',
+                )
+              "
+              @input="setDraft(DELIVERY, $event.target.value)"
+              @change="commit(DELIVERY, $event.target.value)"
+              @keydown.enter.prevent="commit(DELIVERY, $event.target.value)"
+            />
+            <span
+              v-if="deliveryMissing"
+              id="summary-entrega-gap"
+              class="badge op-field-gap"
+              data-tone="warning"
+              ><OrderIcon name="alert" />Falta<span class="op-visually-hidden">
+                para gerar o pedido</span
+              ></span
+            >
+            <FieldError id="summary-entrega-error" :error="errors[DELIVERY]" />
+          </template>
+          <template v-else>
+            <span id="summary-entrega-label" class="op-summary-label"
+              >Previsão de entrega</span
+            >
+            <p
+              class="op-summary-text op-num"
+              aria-labelledby="summary-entrega-label"
+            >
+              {{ dateBR(summary[DELIVERY]) || '—' }}
+            </p>
+            <span
+              v-if="deliveryMissing && permitted"
+              class="badge op-field-gap"
+              data-tone="warning"
+              ><OrderIcon name="alert" />Falta<span class="op-visually-hidden">
+                para gerar o pedido</span
+              ></span
+            >
+          </template>
         </div>
-      </dl>
+      </div>
+
       <p v-if="warning" class="op-quantity-warning">
         <OrderIcon name="alert" />{{ warning }}
       </p>
+
+      <!-- Moves to Dados do atendimento with PED-RD-T06; until that chapter
+           shows them, the summary keeps them (PED-RD-09 negative). -->
       <dl class="op-summary-meta">
-        <div>
-          <dt>Nome do pedido</dt>
-          <dd>{{ summary.nome || '—' }}</dd>
-        </div>
         <div>
           <dt>Vendedor</dt>
           <dd>{{ order.seller?.name || 'sem vendedor' }}</dd>
@@ -251,10 +358,6 @@ async function save() {
           <dd>{{ fabLabel(order.fabCode) }}</dd>
         </div>
       </dl>
-      <p class="op-hint">
-        Total de peças é somado a partir dos tamanhos dos itens. O número do
-        pedido já existe desde a criação; a data do pedido é definida ao gerar.
-      </p>
     </div>
   </section>
 </template>

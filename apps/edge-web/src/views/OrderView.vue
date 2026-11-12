@@ -259,7 +259,23 @@ function describeWriteError(cause) {
  *
  * @param {string} section @param {unknown} value
  */
-async function saveSection(section, value) {
+function saveSection(section, value) {
+  // PED-RD-12: sections edited in place save on blur, so two of them may be
+  // typed over the same order; each write reads its version only once the
+  // one before it has answered.
+  const turn = sectionWrites.then(() => writeSection(section, value));
+  sectionWrites = turn.then(
+    () => undefined,
+    () => undefined,
+  );
+  return turn;
+}
+
+/** @type {Promise<void>} */
+let sectionWrites = Promise.resolve();
+
+/** @param {string} section @param {unknown} value */
+async function writeSection(section, value) {
   const sentVersion = editingVersion.value ?? order.value.version;
   try {
     const response = await request(

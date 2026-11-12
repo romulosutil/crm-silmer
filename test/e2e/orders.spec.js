@@ -5879,3 +5879,95 @@ test('PED-RD-09: sem cliente vinculado, o Resumo não mostra Ver cadastro', asyn
     summary.getByRole('link', { name: /Ver cadastro/u }),
   ).toHaveCount(0);
 });
+
+/** @param {import('@playwright/test').Page} page @param {any} [billing] */
+async function mockBilling(page, billing = {}) {
+  await page.route('**/api/v1/orders/*/billing**', (route) =>
+    route.fulfill({
+      json: {
+        billing: {
+          balanceAmountCents: 150000,
+          blockedReason: null,
+          canManage: true,
+          charges: [],
+          enabled: true,
+          managed: false,
+          orderVersion: ownConfirmedOrder.version,
+          percent: null,
+          receivedAmountCents: 75000,
+          totalAmountCents: 225000,
+          version: 0,
+          ...billing,
+        },
+      },
+    }),
+  );
+}
+
+test('PED-RD-07: o rail do pedido confirmado resume as cobranças com Meter', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 768, width: 1366 });
+  await mockOrders(page, { orders: [ownConfirmedOrder] });
+  await mockBilling(page);
+  await page.goto('/pedidos/order-confirmado');
+
+  const summary = page.locator('.op-rail .op-billing-summary');
+  await expect(summary).toBeVisible();
+  await expect(
+    summary.getByRole('heading', { name: 'Cobranças' }),
+  ).toBeVisible();
+  await expect(summary).toContainText('Recebido R$ 750,00 de R$ 2.250,00');
+  await expect(summary).toContainText('Pago parcialmente');
+  const meter = summary.getByRole('meter', { name: 'Recebido do pedido' });
+  await expect(meter).toHaveAttribute('aria-valuenow', '75000');
+  await expect(meter).toHaveAttribute('aria-valuemax', '225000');
+  await expect(meter).toHaveAttribute(
+    'aria-valuetext',
+    /^Recebido R\$\s750,00 de R\$\s2\.250,00, 33%$/u,
+  );
+  // One primary per region: the link is quiet.
+  await expect(summary.getByRole('button')).toHaveText(['Ver cobranças']);
+
+  await summary.getByRole('button', { name: 'Ver cobranças' }).click();
+  await expect(page.locator('#order-billing-title')).toBeFocused();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('PED-RD-07: Ver cobranças abre o capítulo recolhido e foca o título no celular', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 844, width: 390 });
+  await mockOrders(page, { orders: [ownConfirmedOrder] });
+  await mockBilling(page);
+  await page.goto('/pedidos/order-confirmado');
+
+  const toggle = page
+    .locator('section.billing-section')
+    .getByRole('button', { name: /Cobranças/u });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  const go = page.getByRole('button', { name: 'Ver cobranças' });
+  await go.focus();
+  await page.keyboard.press('Enter');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(toggle).toBeFocused();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('PED-RD-07: sem resumo no pedido pendente nem com a cobrança desligada', async ({
+  page,
+}) => {
+  await mockOrders(page, { orders: [ownConfirmedOrder, pendingOrder] });
+  await mockBilling(page, { enabled: false });
+  await page.goto('/pedidos/order-confirmado');
+  await expect(
+    page.getByRole('region', { name: 'Fechamento e pagamento' }),
+  ).toBeVisible();
+  await expect(page.locator('.op-billing-summary')).toHaveCount(0);
+
+  await page.goto('/pedidos/order-pendente');
+  await expect(
+    page.getByRole('region', { name: 'Para gerar o pedido' }),
+  ).toBeVisible();
+  await expect(page.locator('.op-billing-summary')).toHaveCount(0);
+});

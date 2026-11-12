@@ -7,15 +7,15 @@ Rastreabilidade: [ADR 087](../adr/087-ficha-por-item-controle-no-verso.md),
 
 ## Estado
 
-**Aguardando aprovação do PO.** A v9 (`ficha-canonical-v9`) ainda não tem
-aprovação provisória: o registro
+**Aprovada pelo PO em 12/11/2026 para desenvolvimento e cloud-dev; assinatura
+física de Rose e Operação pendente.** O registro
 [`ficha-pdf-approval-v9.json`](ficha-pdf-approval-v9.json) trava os hashes da
-amostra, do HTML e do PDF com `provisionalApproval.status` pendente e a
-assinatura física pendente (`FPI-T03`). `PRINT_TEMPLATE` continua em
-`ficha-canonical-v8`, aprovada em 12/11/2026; o validador só aceita a v9
-selecionada depois da aprovação registrada (`FPI-13`). As versões v2 a v8, seus
-PDFs, amostras, aprovações e hashes não foram alterados. A produção continua
-condicionada à assinatura física de Rose e Operação.
+amostra, do HTML e do PDF com `provisionalApproval.status` `approved` e a
+assinatura física pendente (`FPI-T03`). A aprovação libera a troca de
+`PRINT_TEMPLATE` (`FPI-T06`), feita em commit à parte: o validador aceita a v9
+selecionada só com essa aprovação registrada (`FPI-13`). As versões v2 a v8,
+seus PDFs, amostras, aprovações e hashes não foram alterados. A produção
+continua condicionada à assinatura física de Rose e Operação.
 
 ## Pedido que originou a v9
 
@@ -93,10 +93,10 @@ pedido sem observações (nenhuma folha extra, nenhum aviso); observação longa
 
 ## Como a aprovação será registrada
 
-O PO (Rômulo Sutil Corrêa) revisa a amostra e registra, em
+O PO (Rômulo Sutil Corrêa) revisou a amostra e registrou em 2026-11-12, em
 `ficha-pdf-approval-v9.json`, `status` `approved`, `approved: true`, o nome e a
 data em `provisionalApproval`, ligados aos hashes da amostra, do HTML e do PDF.
-Um commit à parte troca `PRINT_TEMPLATE` para `ficha-canonical-v9`
+Um commit à parte trocou `PRINT_TEMPLATE` para `ficha-canonical-v9`
 (`FPI-T06`). Rose e Operação assinam a amostra impressa antes da produção
 (`FPI-T03`). Qualquer correção do layout depois da aprovação exige uma nova
 versão do template.

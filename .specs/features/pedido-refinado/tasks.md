@@ -146,8 +146,8 @@ quebrado.
       primária "Gerar pedido" com `aria-disabled` e motivo.
 - [x] Só o próximo passo com botão. Ele continua `primary`, como em PFI-13 e
       PFI-16: enquanto há pendência, "Gerar pedido" fica `aria-disabled` e
-      fora do estilo primário, então a região tem uma só primária. O `soft`
-      fica para decisão do PO, porque contraria o E2E de PFI-16.
+      fora do estilo primário, então a região tem uma só primária. O PO
+      manteve essa regra em 12/11/2026 (sem `soft`).
 - [x] Manter "Revisar pendências" e o total 4; manter o cadastro incompleto
       fora do progresso.
 - [ ] **Slot do frete (gated por OLC-T01):** Peças + Frete = Total, campo
@@ -215,6 +215,11 @@ quebrado.
   `npx playwright test test/e2e/orders.spec.js` verdes.
 
 ## Decisões do PO
+
+- **12/11/2026 — Primária do pendente:** continua a PFI-16. O próximo passo é
+  a primária enquanto há pendência e "Gerar pedido" fica neutro com
+  `aria-disabled`; "Gerar pedido" vira primária com tudo pronto. O `soft` do
+  protótipo não entra.
 
 - **12/11/2026 — v1 sobre v2:** ficha com rail de fechamento; a v2 sem rail
   (blocos de largura total por momento) foi testada e rejeitada. Refinar a

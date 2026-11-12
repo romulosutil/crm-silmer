@@ -1493,7 +1493,7 @@ lugar da §20. Até cada tarefa ser entregue, a §9 descreve o que o código faz
 
 | Estado     | Blocos, em ordem                                                                                                                                                     | Primária                                                                                 |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Pendente   | Para gerar o pedido: N de 3 (Previsão de entrega, Itens, Arte); Valor do pedido (Peças + Frete = Total); Gerar pedido com o motivo ao lado                           | "Gerar pedido", única da página; `aria-disabled` com pendência; o próximo passo é `soft` |
+| Pendente   | Para gerar o pedido: N de 3 (Previsão de entrega, Itens, Arte); Valor do pedido (Peças + Frete = Total); Gerar pedido com o motivo ao lado                           | Uma só (PFI-16): o próximo passo enquanto há pendência, com "Gerar pedido" neutro e `aria-disabled`; "Gerar pedido" com tudo pronto. Decisão do PO em 12/11/2026 |
 | Confirmado | Fechamento em leitura (selo "Confirmado por … · data, hora", Valor do pedido, Forma de pagamento, "Ficha v{N}" com "Baixar ficha em PDF"); Cobranças (resumo); Olist | "Gerar no Olist" no seu bloco, só para quem é "Habilitado Olist"                         |
 
 - **Progresso:** só do `missingFields` (§9, PFI-15). Pendência desconhecida

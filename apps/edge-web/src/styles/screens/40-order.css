@@ -2836,3 +2836,38 @@ button.op-generate {
     inline-size: 100%;
   }
 }
+
+/* PED-RD-07: the rail's Cobranças summary (own card, no primary). The Meter
+   is one colour and decorative to the eye; the figures beside it are text. */
+.op-billing-summary-body {
+  gap: var(--space-3);
+}
+
+.op-billing-summary-line {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.op-billing-summary-line strong {
+  font-weight: var(--weight-semibold);
+}
+
+.op-meter {
+  display: block;
+  inline-size: 100%;
+  block-size: 0.5rem;
+  overflow: hidden;
+  background: var(--color-surface-active);
+  border-radius: var(--radius-pill);
+}
+
+.op-meter > span {
+  display: block;
+  block-size: 100%;
+  background: var(--color-link);
+  border-radius: inherit;
+}
+
+.op-billing-summary-go {
+  justify-self: start;
+}

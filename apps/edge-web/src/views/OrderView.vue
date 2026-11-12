@@ -13,6 +13,7 @@ import { useRoute, useRouter } from 'vue-router';
 import OrderCancelAction from '../components/order/OrderCancelAction.vue';
 import OrderOlistPanel from '../components/order/OrderOlistPanel.vue';
 import OrderPriceBreakdown from '../components/order/OrderPriceBreakdown.vue';
+import OrderBillingSummary from '../components/order/OrderBillingSummary.vue';
 import OrderClosingSection from '../components/order/OrderClosingSection.vue';
 import OrderBillingSection from '../components/order/OrderBillingSection.vue';
 import OrderArtworkSection from '../components/order/OrderArtworkSection.vue';
@@ -556,6 +557,25 @@ function goToSection(section) {
   }
 }
 
+/**
+ * PED-RD-07: "Ver cobranças" in the rail opens the Cobranças chapter when
+ * the phone accordion has it closed, brings it into view and puts the focus
+ * on its heading: the accordion's toggle on a phone, the title on a wide page.
+ */
+async function showBilling() {
+  await revealSection('billing');
+  await nextTick();
+  const doc = globalThis.document;
+  const chapter = doc?.querySelector('section.billing-section');
+  const target = isPhone.value
+    ? chapter?.querySelector('.op-sheet-toggle')
+    : chapter?.querySelector('#order-billing-title');
+  if (!target) return;
+  if (!isPhone.value) target.setAttribute('tabindex', '-1');
+  target.scrollIntoView?.({ block: 'start' });
+  target.focus({ preventScroll: true });
+}
+
 /** @param {string} section */
 function isAccordionSection(section) {
   return Object.hasOwn(SECTION_HASHES, section);
@@ -1015,6 +1035,7 @@ onBeforeUnmount(() => {
         <aside class="op-rail" aria-label="Gerar pedido">
           <OrderProgress v-if="showProgress" :order="order" />
           <OrderClosingSection ref="closingSection" :order="order" />
+          <OrderBillingSummary @show="showBilling" />
         </aside>
         <!-- PFI-01: the order of the printed ficha, top to bottom.
              PED-RD-01: the chapters are one surface (op-ficha), told apart

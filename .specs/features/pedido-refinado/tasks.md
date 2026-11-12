@@ -168,8 +168,10 @@ quebrado.
 
 - [x] Fechamento em leitura: selo de confirmação, Valor do pedido, Forma de
       pagamento, "Ficha v{N}" e "Baixar ficha em PDF".
-- [ ] Resumo de Cobranças com `Meter` e "Ver cobranças"; sem tocar o interior
-      da cobrança. Pendente: PR 348.
+- [x] Resumo de Cobranças com `Meter` e "Ver cobranças"; sem tocar o interior
+      da cobrança. Entregue depois da PR 348 em `OrderBillingSummary.vue`:
+      lê o `orderBillingState` que o capítulo já emite (sem requisição
+      própria) e "Ver cobranças" abre o capítulo e põe o foco no título.
 - [x] Linha com cadeado no topo da ficha; campos em leitura.
 - [ ] **Bloco Olist (gated por OLC-T03 e OLC-T04):** estados da PED-RD-07
       item 4. Sem eles, o bloco não é renderizado. Pendente: OLC-T03 e

@@ -82,33 +82,33 @@ O produto é whitelabel e a Silmer é o piloto. `tokens.css` tem três camadas:
 
 1. **Marca** — as únicas entradas por empresa:
 
-| Entrada | Silmer | Papel |
-|---|---|---|
-| `--brand-primary` | `#ff5b01` | assinatura: logotipo, faixas, ícone ativo |
-| `--brand-primary-strong` | `#c94300` | preenchimento de ação; branco sobre ele passa 4.78:1 |
-| `--brand-ink` | `#0c042d` | texto, neutros, superfícies escuras e tema escuro |
-| `--brand-secondary` / `-light` | `#6544ee` / `#b2a1f7` | link, foco e seleção (claro / escuro) |
-| `--brand-font` | Poppins | família única |
-| `--brand-radius` | `0.5rem` | raio base; `sm`, `lg` e `xl` derivam dele |
+| Entrada                        | Silmer                | Papel                                                |
+| ------------------------------ | --------------------- | ---------------------------------------------------- |
+| `--brand-primary`              | `#ff5b01`             | assinatura: logotipo, faixas, ícone ativo            |
+| `--brand-primary-strong`       | `#c94300`             | preenchimento de ação; branco sobre ele passa 4.78:1 |
+| `--brand-ink`                  | `#0c042d`             | texto, neutros, superfícies escuras e tema escuro    |
+| `--brand-secondary` / `-light` | `#6544ee` / `#b2a1f7` | link, foco e seleção (claro / escuro)                |
+| `--brand-font`                 | Poppins               | família única                                        |
+| `--brand-radius`               | `0.5rem`              | raio base; `sm`, `lg` e `xl` derivam dele            |
 
 2. **Semânticos** — derivados da marca com `color-mix()`; componentes só usam
    estes. Os neutros são a tinta misturada ao branco em poucas porcentagens, por
    isso trocar `--brand-ink` re-tinge canvas, bordas, texto e sombras.
 
-| Papel | Light | Dark | Uso |
-|---|---|---|---|
-| `--color-canvas` | tinta 5% | tinta + preto | fundo do shell e da navegação |
-| `--color-page` | tinta 1.5% | tinta | painel de trabalho (inset) |
-| `--color-surface` | branco | branco 5% | cards, campos, botões secundários |
-| `--color-surface-raised` | tinta 4% | branco 9% | hover e segundo nível |
-| `--color-surface-active` | tinta 8% | branco 14% | pressionado |
-| `--color-text` | tinta | branco 94% | texto principal (≥ 16:1) |
-| `--color-text-muted` | tinta 64% | branco 68% | texto secundário (≥ 5.5:1) |
+| Papel                                    | Light                | Dark                   | Uso                               |
+| ---------------------------------------- | -------------------- | ---------------------- | --------------------------------- |
+| `--color-canvas`                         | tinta 5%             | tinta + preto          | fundo do shell e da navegação     |
+| `--color-page`                           | tinta 1.5%           | tinta                  | painel de trabalho (inset)        |
+| `--color-surface`                        | branco               | branco 5%              | cards, campos, botões secundários |
+| `--color-surface-raised`                 | tinta 4%             | branco 9%              | hover e segundo nível             |
+| `--color-surface-active`                 | tinta 8%             | branco 14%             | pressionado                       |
+| `--color-text`                           | tinta                | branco 94%             | texto principal (≥ 16:1)          |
+| `--color-text-muted`                     | tinta 64%            | branco 68%             | texto secundário (≥ 5.5:1)        |
 | `--color-border` / `-strong` / `-subtle` | tinta 14% / 45% / 8% | branco 16% / 45% / 10% | limites; `strong` em campos (3:1) |
-| `--color-accent` | primária | primária | faixa, ícone ativo, assinatura |
-| `--color-accent-solid` | primária forte | primária forte | botão primário (texto branco) |
-| `--color-link` / `--color-focus` | secundária | secundária clara | links, anel e halo de foco |
-| `--color-selected` | secundária 9% | secundária 22% | chip ou linha selecionada |
+| `--color-accent`                         | primária             | primária               | faixa, ícone ativo, assinatura    |
+| `--color-accent-solid`                   | primária forte       | primária forte         | botão primário (texto branco)     |
+| `--color-link` / `--color-focus`         | secundária           | secundária clara       | links, anel e halo de foco        |
+| `--color-selected`                       | secundária 9%        | secundária 22%         | chip ou linha selecionada         |
 
 3. **Componentes** — `--control-height` (40 px; 44 px em `pointer: coarse`),
    `--target-min`, `--sidebar-inline-size`, `--sidebar-rail-size`,
@@ -122,11 +122,11 @@ empresa.
 
 ### Cores semânticas
 
-| Estado | Light: fundo / texto | Dark: fundo / texto |
-|---|---|---|
-| sucesso | `#e7f6ed` / `#146c43` | `#123a2a` / `#8fe3b3` |
-| atenção | `#fff4d6` / `#7a4a00` | `#4a2e00` / `#ffd17a` |
-| erro | `#fdecec` / `#a12a2a` | `#491a22` / `#ffb4c0` |
+| Estado     | Light: fundo / texto  | Dark: fundo / texto   |
+| ---------- | --------------------- | --------------------- |
+| sucesso    | `#e7f6ed` / `#146c43` | `#123a2a` / `#8fe3b3` |
+| atenção    | `#fff4d6` / `#7a4a00` | `#4a2e00` / `#ffd17a` |
+| erro       | `#fdecec` / `#a12a2a` | `#491a22` / `#ffb4c0` |
 | informação | `#eaf2ff` / `#205aa7` | `#152f56` / `#a8caff` |
 
 Cada estado combina cor, ícone e rótulo. Os nomes dos tokens devem expressar função, nunca a cor: `--status-error-text`, não `--red-700` dentro de componentes.
@@ -150,15 +150,15 @@ marca seleção (chip, segmentado, aba): seleção é neutra ou usa
 
 Uma única família reduz ruído e custo de carregamento. Pesos permitidos: `400`, `500`, `600` e `700`; `800` fica reservado à autenticação ou comunicação institucional.
 
-| Token | Tamanho / linha | Peso | Uso |
-|---|---:|---:|---|
-| `--text-xs` | `0.8125rem / 1.5` | 500 | metadados, legendas e rótulos (piso do produto) |
-| `--text-sm` | `0.875rem / 1.5` | 400–600 | controles compactos e tabelas |
-| `--text-base` | `1rem / 1.5` | 400 | texto e campos |
-| `--text-lg` | `1.125rem / 1.4` | 600 | título de painel |
-| `--text-xl` | `1.25rem / 1.35` | 600 | seção |
-| `--text-2xl` | `1.5rem / 1.25` | 600 | título de página (h1) |
-| `--text-3xl` | `2rem / 1.2` | 700 | estados especiais e autenticação |
+| Token         |   Tamanho / linha |    Peso | Uso                                             |
+| ------------- | ----------------: | ------: | ----------------------------------------------- |
+| `--text-xs`   | `0.8125rem / 1.5` |     500 | metadados, legendas e rótulos (piso do produto) |
+| `--text-sm`   |  `0.875rem / 1.5` | 400–600 | controles compactos e tabelas                   |
+| `--text-base` |      `1rem / 1.5` |     400 | texto e campos                                  |
+| `--text-lg`   |  `1.125rem / 1.4` |     600 | título de painel                                |
+| `--text-xl`   |  `1.25rem / 1.35` |     600 | seção                                           |
+| `--text-2xl`  |   `1.5rem / 1.25` |     600 | título de página (h1)                           |
+| `--text-3xl`  |      `2rem / 1.2` |     700 | estados especiais e autenticação                |
 
 - Texto corrido não ultrapassa aproximadamente 75 caracteres por linha.
 - Não usar caixa alta nem eyebrow acima de títulos; rótulos ficam em caixa normal, peso 500 e cor secundária.
@@ -179,13 +179,13 @@ Base de `4px`: `4`, `8`, `12`, `16`, `20`, `24`, `32`, `40`, `48`, `64`.
 
 ### Raios
 
-| Token | Valor | Uso |
-|---|---:|---|
-| `--radius-sm` | `6px` | badge, item compacto, segmento |
-| `--radius-md` | `8px` | inputs, botões e menus |
-| `--radius-lg` | `12px` | cards, painéis e dialogs |
-| `--radius-xl` | `16px` | painel de trabalho e tela de acesso |
-| `--radius-pill` | `999px` | chips, contadores e avatar |
+| Token           |   Valor | Uso                                 |
+| --------------- | ------: | ----------------------------------- |
+| `--radius-sm`   |   `6px` | badge, item compacto, segmento      |
+| `--radius-md`   |   `8px` | inputs, botões e menus              |
+| `--radius-lg`   |  `12px` | cards, painéis e dialogs            |
+| `--radius-xl`   |  `16px` | painel de trabalho e tela de acesso |
+| `--radius-pill` | `999px` | chips, contadores e avatar          |
 
 ### Elevação
 
@@ -256,28 +256,28 @@ desenhada primeiro para 390×844.
 
 ### Primitivos obrigatórios
 
-| Componente | Variantes ou responsabilidades |
-|---|---|
-| `Button` | secundário por padrão; `.primary` (uma por região), `.quiet`, `.danger`, `.link-button`; `.button-link` para links com cara de botão; loading e disabled |
-| `IconButton` | alvo mínimo de `44×44px`, tooltip e nome acessível |
-| `Field` | label visível, descrição, input/select/textarea, erro e estado obrigatório; variante **em linha** (rótulo à esquerda, campo à direita) para edição no lugar; uma só anatomia de campo em todo o produto (§20) |
-| `FieldGap` | `Badge` de atenção "Falta" sob o campo exigido para concluir a tarefa; ligado ao campo por `aria-describedby`, com `aria-required`; nunca `aria-invalid` (§20) |
-| `SaveStatus` | "Salvando…" → "Salvo" no cabeçalho da seção, `role="status"`, texto + ícone; falha vira erro no campo (§20) |
-| `BlankRow` | última linha de uma lista editável, sempre vazia e tracejada; preencher cria a linha; substitui "Adicionar linha" (§20) |
-| `InlineConfirm` | confirmação de ação destrutiva no próprio item: pergunta, `Manter` e `Remover`; foco em `Manter`, Esc cancela (§20) |
-| `Checkbox` / `Radio` / `Switch` | label clicável, foco visível e estado indeterminado quando necessário |
-| `SearchField` | limpeza, atalho opcional e anúncio de resultados |
-| `Badge` / `Status` | texto + ícone; nunca somente cor |
-| `Panel` / `Card` | estrutura visual; não deve embutir regra de domínio |
-| `Tabs` | setas entre abas, `Home/End` e associação `tab`/`tabpanel` |
-| `Menu` / `Popover` | foco gerenciado, Escape e retorno de foco |
-| `Dialog` / `Drawer` | título, descrição, foco contido, Escape e ação explícita |
-| `Toast` | feedback breve; erros persistentes também aparecem junto ao contexto |
-| `EmptyState` | motivo, ação recuperável e sem ilustração excessiva |
-| `Skeleton` | mesma geometria do conteúdo; respeita reduced motion |
-| `DataTable` / `DataList` | cabeçalhos reais, seleção, ordenação e alternativa responsiva |
-| `Tooltip` | apoio curto; nunca guarda informação necessária para concluir tarefa |
-| `ThemeSwitcher` | `Claro`, `Escuro`, com rótulo acessível |
+| Componente                      | Variantes ou responsabilidades                                                                                                                                                                                |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Button`                        | secundário por padrão; `.primary` (uma por região), `.quiet`, `.danger`, `.link-button`; `.button-link` para links com cara de botão; loading e disabled                                                      |
+| `IconButton`                    | alvo mínimo de `44×44px`, tooltip e nome acessível                                                                                                                                                            |
+| `Field`                         | label visível, descrição, input/select/textarea, erro e estado obrigatório; variante **em linha** (rótulo à esquerda, campo à direita) para edição no lugar; uma só anatomia de campo em todo o produto (§20) |
+| `FieldGap`                      | `Badge` de atenção "Falta" sob o campo exigido para concluir a tarefa; ligado ao campo por `aria-describedby`, com `aria-required`; nunca `aria-invalid` (§20)                                                |
+| `SaveStatus`                    | "Salvando…" → "Salvo" no cabeçalho da seção, `role="status"`, texto + ícone; falha vira erro no campo (§20)                                                                                                   |
+| `BlankRow`                      | última linha de uma lista editável, sempre vazia e tracejada; preencher cria a linha; substitui "Adicionar linha" (§20)                                                                                       |
+| `InlineConfirm`                 | confirmação de ação destrutiva no próprio item: pergunta, `Manter` e `Remover`; foco em `Manter`, Esc cancela (§20)                                                                                           |
+| `Checkbox` / `Radio` / `Switch` | label clicável, foco visível e estado indeterminado quando necessário                                                                                                                                         |
+| `SearchField`                   | limpeza, atalho opcional e anúncio de resultados                                                                                                                                                              |
+| `Badge` / `Status`              | texto + ícone; nunca somente cor                                                                                                                                                                              |
+| `Panel` / `Card`                | estrutura visual; não deve embutir regra de domínio                                                                                                                                                           |
+| `Tabs`                          | setas entre abas, `Home/End` e associação `tab`/`tabpanel`                                                                                                                                                    |
+| `Menu` / `Popover`              | foco gerenciado, Escape e retorno de foco                                                                                                                                                                     |
+| `Dialog` / `Drawer`             | título, descrição, foco contido, Escape e ação explícita                                                                                                                                                      |
+| `Toast`                         | feedback breve; erros persistentes também aparecem junto ao contexto                                                                                                                                          |
+| `EmptyState`                    | motivo, ação recuperável e sem ilustração excessiva                                                                                                                                                           |
+| `Skeleton`                      | mesma geometria do conteúdo; respeita reduced motion                                                                                                                                                          |
+| `DataTable` / `DataList`        | cabeçalhos reais, seleção, ordenação e alternativa responsiva                                                                                                                                                 |
+| `Tooltip`                       | apoio curto; nunca guarda informação necessária para concluir tarefa                                                                                                                                          |
+| `ThemeSwitcher`                 | `Claro`, `Escuro`, com rótulo acessível                                                                                                                                                                       |
 
 ### Composição de domínio
 
@@ -478,7 +478,6 @@ persistente. Resumo inicia compacto, preservando aviso comercial, vendedor
 solicitado e acesso ao texto completo. Estes pontos prevalecem sobre a
 apresentação anterior abaixo; contratos comerciais permanecem iguais.
 
-
 Workspace de altura fixa para a atendente (pesquisa UX de 15/10/2026, achado 1):
 a página ocupa exatamente a altura abaixo da barra superior e nunca rola; cada
 coluna rola por dentro.
@@ -629,7 +628,7 @@ tem esse título e imprime os dados em cada folha, sem Pago em.
   ("Entrega 20/11/2026", "Falta: cor do item 1", "1 item · 150 peças", "1 de
   3 datas") e o `SaveStatus`. Decisão do PO em 10/11/2026 (§20): os botões
   `Editar resumo`, `Editar datas`, `Editar itens`, `Editar arte` e `Editar
-  observações` saem; quem pode editar encontra os campos abertos. Enquanto
+observações` saem; quem pode editar encontra os campos abertos. Enquanto
   uma seção não for migrada, ela mantém o botão e o bloqueio "Salve ou
   cancele a edição aberta."; nenhuma seção nova nasce com eles.
 - **Itens e especificações (§20, protótipo
@@ -873,12 +872,12 @@ Contagem fora da navegação do app, com dados sintéticos, em 390×844 e
 fatias estão no "Resultado" do
 [RFC 024](docs/rfc/024-jornadas-com-menos-botoes.md).
 
-| Tela             | Celular                                                      | Notebook            |
-| ---------------- | ------------------------------------------------------------ | ------------------- |
+| Tela             | Celular                                                       | Notebook            |
+| ---------------- | ------------------------------------------------------------- | ------------------- |
 | Pedido aberto    | ≤ 12 ações; documento ≤ 1.800 px; nenhum "Editar"; 1 primária | ≤ 16 ações          |
-| Conversa         | ≤ 9 antes de assumir; ≤ 12 depois; cabeçalho ≤ 4             | ≤ 24; cabeçalho ≤ 4 |
-| Caixa de Entrada | ≤ 15; barra de ferramentas de 7 para 5                       | ≤ 24                |
-| Pedidos          | ≤ 12, com o 1º cartão inteiro acima da barra inferior        | ≤ 19                |
+| Conversa         | ≤ 9 antes de assumir; ≤ 12 depois; cabeçalho ≤ 4              | ≤ 24; cabeçalho ≤ 4 |
+| Caixa de Entrada | ≤ 15; barra de ferramentas de 7 para 5                        | ≤ 24                |
+| Pedidos          | ≤ 12, com o 1º cartão inteiro acima da barra inferior         | ≤ 19                |
 
 Decisão do PO em 10/11/2026 (§20): na tela com edição no lugar a meta conta
 **ações** (botões, links e itens de menu visíveis); campos de dados não
@@ -1491,10 +1490,10 @@ lugar da §20. Até cada tarefa ser entregue, a §9 descreve o que o código faz
 
 ### Fechamento e pagamento (o rail)
 
-| Estado     | Blocos, em ordem                                                                                                                                                     | Primária                                                                                 |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Estado     | Blocos, em ordem                                                                                                                                                     | Primária                                                                                                                                                         |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Pendente   | Para gerar o pedido: N de 3 (Previsão de entrega, Itens, Arte); Valor do pedido (Peças + Frete = Total); Gerar pedido com o motivo ao lado                           | Uma só (PFI-16): o próximo passo enquanto há pendência, com "Gerar pedido" neutro e `aria-disabled`; "Gerar pedido" com tudo pronto. Decisão do PO em 12/11/2026 |
-| Confirmado | Fechamento em leitura (selo "Confirmado por … · data, hora", Valor do pedido, Forma de pagamento, "Ficha v{N}" com "Baixar ficha em PDF"); Cobranças (resumo); Olist | "Gerar no Olist" no seu bloco, só para quem é "Habilitado Olist"                         |
+| Confirmado | Fechamento em leitura (selo "Confirmado por … · data, hora", Valor do pedido, Forma de pagamento, "Ficha v{N}" com "Baixar ficha em PDF"); Cobranças (resumo); Olist | "Gerar no Olist" no seu bloco, só para quem é "Habilitado Olist"                                                                                                 |
 
 - **Progresso:** só do `missingFields` (§9, PFI-15). Pendência desconhecida
   vira "Revisar pendências" e o total passa a 4. O cadastro incompleto do
@@ -1562,14 +1561,22 @@ por espaço, não por caixa. Valores só da escala de 4 px.
   (`pedidoPrimeiraTela`) trava o limite. As 19 ações a 1366 px são a página
   inteira, 10 delas em "Itens e especificações" (EDIT-01), e não entram
   nessa meta.
-- **Frete no total:** depende de OLC-T01 (ADR 080).
+- **Frete no total:** o contrato do OLC-T01 (ADR 080) está no master, e o
+  campo no rail está na PR 364 (rascunho). Com ele, a altura do pedido no
+  celular fica no limite de 1800 px da meta da §16 e passa dele somada a
+  outra linha (decisão do PO).
 - **Gerar no Olist:** depende de OLC-T03 e OLC-T04 (ADR 079); o texto final dos
   estados fica para o PO.
-- **Interior de Cobranças:** depende do PR 348 (BCS-01–09).
+- **Cobranças:** o resumo no rail (medidor e "Ver cobranças") está na PR 363,
+  depois da PR 348. O interior segue com BCS.
 - **Acordeão do celular (PFI-18):** o protótipo o mantém, na ordem nova; fica
   assim até o PO decidir o contrário.
-- **Não verificado:** render no app real, leitor de tela e aparelho real; o
-  protótipo é um canvas estático.
+- **Verificação de 12/11/2026 (PED-RD-T10):** app real com API e Postgres
+  locais. Teclado a 1366 e a 390 px, toque emulado a 390 px, tema escuro (sem
+  texto abaixo de 4,5:1) e árvore de acessibilidade conferidos. **Não
+  verificado:** leitor de tela (NVDA ausente na máquina), aparelho real e o
+  foco de checkbox e radio. O tema escuro vem do botão "Escuro"
+  (`data-theme`); `prefers-color-scheme` sozinho não troca a tela.
 
 ### Não usar
 

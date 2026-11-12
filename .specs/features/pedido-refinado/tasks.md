@@ -215,7 +215,35 @@ quebrado.
       sem rolagem horizontal a 320 px, nenhum "Editar <seção>" nos capítulos
       migrados.
 - [ ] Teste manual com leitor de tela e em aparelho real, registrado como
-      feito ou como pendente. Pendente: não verificado.
+      feito ou como pendente. Verificação de 12/11/2026 no app real, com a API
+      e o Postgres 17 locais (dados sintéticos), num pedido pendente e num
+      confirmado. O resultado de cada item vem abaixo.
+  - **Teclado, verificado.** De 1 a 60 Tabs a 1366 e a 390 px. Toda parada
+    fica visível e nenhuma cai em `body` dentro da página. Botões e links têm
+    contorno de 2 px; os campos, anel de 3 px e borda. Pendente: o indicador
+    de foco de checkbox e radio ("Quem faz a arte", entrada da cobrança) não
+    foi conferido. A 1366 px a 2ª parada é "Gerar pedido", no rail, antes da
+    ficha: é a ordem do DOM decidida em PED-RD-08.
+  - **Leitor de tela, pendente.** O NVDA não está instalado nesta máquina.
+    Só a árvore de acessibilidade foi conferida (`ariaSnapshot`): h1, um h2
+    por capítulo e h3 em item e arte; regiões nomeadas; nenhum botão ou link
+    sem nome; "Gerar pedido" com `aria-disabled` no pendente.
+  - **Toque, verificado por emulação.** A 390×844 (`isMobile`, `hasTouch`,
+    DSF 3): sem rolagem horizontal, e o acordeão abre e fecha por toque
+    (`aria-expanded` alterna). Aparelho real: pendente.
+  - **Modo escuro, verificado.** O app troca de tema pelo botão "Escuro"
+    (`data-theme`); `prefers-color-scheme` sozinho não muda a tela. Dos 167
+    textos de `.op-layout`, nenhum fica abaixo de 4,5:1 (o menor é 4,90); no
+    claro também nenhum.
+  - **API real, verificada.** O único erro no console é o 503 esperado da
+    cotação de frete (Melhor Envio não configurado localmente).
+  - **Achados.**
+    - "Cancelar pedido" ficava colado na borda da folha: PR 361.
+    - "Frete estimado" tinha um h3 que caía sob Observações: PR 362.
+    - "Ver cadastro" de um contato fundido abre o cadastro antigo, quase
+      vazio: proposta pendente, abaixo em Pendências.
+    - O menu "Mais ações do pedido" de PED-RD-02 item 3 não existe:
+      "Cancelar pedido" continua no fim da página.
 - Entregue em 6a1384a7 e nos commits de correção de medição: medição em 390,
   1024, 1366 e 1440 px. Na página inteira a 1366 px, pendente tem 19 ações
   e confirmado 8. A meta da §16 conta a primeira tela: 3 ações a 390×844 e 3
@@ -248,6 +276,19 @@ quebrado.
 ## Pendências
 
 - Botões de remover tamanho contra a meta da §16 (decisão do PO).
-- Frete no rail: OLC-T01. Gerar no Olist: OLC-T03 e OLC-T04. Interior de
-  Cobranças: PR 348.
-- Não verificado: render no app real, leitor de tela e aparelho real.
+- Situação das dependências em 12/11/2026, conferida em `origin/master`:
+  - Frete no rail: o contrato do frete do OLC-T01 está no master
+    (760f7924), então a tarefa foi iniciada na PR 364 (rascunho). Somada à PR
+    361, a altura do pedido no celular vai a 1831 px, contra a meta de
+    1800 px da §16 (decisão do PO).
+  - Resumo de Cobranças no rail: a PR 348 está mesclada, então a tarefa foi
+    iniciada na PR 363. O interior da cobrança segue com BCS, e o protótipo
+    BCP-P01 está na PR 350.
+  - "Gerar no Olist": bloqueado. OLC-T03 e OLC-T04 estão abertas, e o
+    OLC-T02 está na PR 346, ainda não mesclada.
+- "Ver cadastro" com contato fundido: o pedido guarda o `contact_id`
+  original e a fusão (`identity_links`) não o atualiza. Por isso
+  `/clientes/:id` abre o contato antigo (200, sem identidades nem conversas)
+  e não cai em "não encontrado". A correção proposta aguarda o PO.
+- Não verificado: leitor de tela (NVDA ausente), aparelho real e o foco de
+  checkbox e radio.

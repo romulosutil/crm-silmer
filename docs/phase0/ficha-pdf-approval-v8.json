@@ -26,11 +26,11 @@
     "pageCount": 5
   },
   "provisionalApproval": {
-    "status": "pending-po-review",
-    "approved": false,
+    "status": "approved",
+    "approved": true,
     "scope": "development/cloud-dev",
-    "reviewedBy": { "role": "PO", "name": null },
-    "reviewedAt": null,
+    "reviewedBy": { "role": "PO", "name": "Rômulo Sutil Corrêa" },
+    "reviewedAt": "2026-11-12",
     "snapshotSha256": "b8a009343b3ce3926bc2a6ce70f87cbd511416ad0d9274091bc63e59219ed7c3",
     "renderedHtmlSha256": "5bb2d44defec6b0bf38a64c0e625ed08135f0f54489ae1ae9d9d0472b1dd8ff7",
     "artifactSha256": "398776769160bdb203d070f2206990acbe169506c27adb835a588ed12c15b6f2",

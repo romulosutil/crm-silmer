@@ -812,12 +812,12 @@ function shortItems(order) {
   }));
 }
 
-test('FPI-13: the v9 is addressable, the switch still names v8 and refuses v9 without the PO approval', async () => {
-  assert.equal(PRINT_TEMPLATE, TEMPLATE_V8);
+test('FPI-13: the switch names v9 with the PO approval of its sample recorded; v8 stays addressable', async () => {
+  assert.equal(PRINT_TEMPLATE, TEMPLATE_V9);
   assert.equal(
     renderOrderFicha(sample.order),
-    renderOrderFicha(sample.order, TEMPLATE_V8),
-    'the default is still v8',
+    renderOrderFicha(sample.order, TEMPLATE_V9),
+    'the default is v9',
   );
   assert.notEqual(
     renderOrderFicha(sample.order, TEMPLATE_V9),
@@ -828,16 +828,29 @@ test('FPI-13: the v9 is addressable, the switch still names v8 and refuses v9 wi
   assert.equal(gate.task, 'FPI-T05');
   assert.equal(gate.versioning.supersedesTemplateVersion, TEMPLATE_V8);
   assert.equal(gate.versioning.overwriteApprovedVersion, false);
+  // The physical signature by Rose and Operação stays pending (FPI-T03).
   assert.equal(gate.approval.status, 'pending-human-approval');
   assert.equal(gate.approval.approved, false);
-  // While the PO has not reviewed the sample, the switch refuses v9.
-  assert.equal(gate.provisionalApproval.approved, false);
-  assert.equal(fichaV9Approved(gate), false);
+  // The PO approved the sample on 2026-11-12, tied to its hashes.
+  assert.equal(gate.provisionalApproval.status, 'approved');
+  assert.equal(gate.provisionalApproval.reviewedAt, '2026-11-12');
+  assert.equal(fichaV9Approved(gate), true);
+  assert.doesNotThrow(() =>
+    validateFichaPrintSwitch({
+      gate: {},
+      gateV9: gate,
+      printTemplate: TEMPLATE_V9,
+    }),
+  );
+  const pending = structuredClone(gate);
+  pending.provisionalApproval.status = 'pending-po-review';
+  pending.provisionalApproval.approved = false;
+  assert.equal(fichaV9Approved(pending), false);
   assert.throws(
     () =>
       validateFichaPrintSwitch({
         gate: {},
-        gateV9: gate,
+        gateV9: pending,
         printTemplate: TEMPLATE_V9,
       }),
     /before its approval is recorded/u,
@@ -846,7 +859,7 @@ test('FPI-13: the v9 is addressable, the switch still names v8 and refuses v9 wi
     () => validateFichaPrintSwitch({ gate: {}, printTemplate: TEMPLATE_V9 }),
     /before its approval is recorded/u,
   );
-  // v8 stays valid for the switch regardless of the v9 record.
+  // v8 stays valid for the switch (rollback), whatever the v9 record says.
   assert.doesNotThrow(() =>
     validateFichaPrintSwitch({
       gate: {},

@@ -53,9 +53,9 @@ cresçam na página 2.
    4 px e de 12 colunas, piso de 13 px, FPI-03 a FPI-10 e as regras de
    `artPreview` (FPI-11), exceto a divisão da área em metades.
 6. **Imutabilidade e ativação.** A v9 é um arquivo novo. As fichas v2 a v8 e
-   seus hashes não mudam. `PRINT_TEMPLATE` continua em v8 até a aprovação
-   provisória do PO ligada ao hash das amostras v9 (mesmo gate de FPI-09); a
-   troca acontece em commit próprio. A assinatura física de Rose e Operação
+   seus hashes não mudam. `PRINT_TEMPLATE` passou à v9 depois da aprovação
+   provisória do PO (12/11/2026) ligada ao hash das amostras v9 (mesmo gate de
+   FPI-09); a troca aconteceu em commit próprio (FPI-T06). A assinatura física de Rose e Operação
    continua sendo gate de produção.
 
 ## O que muda na ADR 078
@@ -67,9 +67,9 @@ cresçam na página 2.
 | FPI-11, só a divisão do Controle em duas metades (Anotações e arte)      | Na v9, a arte ocupa a largura inteira da página 2; o contrato de `artPreview` não muda.                                                           |
 | 3 a 7, 9 e 10                                                            | Continuam valendo: conferência à mão, rótulos, campos de produção, conteúdo de fábrica e o gate de ativação, agora também para a v9.              |
 
-A ADR 078 e a RFC 061 continuam valendo para a v8, que segue selecionada até a
-aprovação da v9; seus corpos não são editados. Se a v9 for liberada, a v8 passa
-a ser o template anterior, como v2 a v7.
+A ADR 078 e a RFC 061 continuam valendo para a v8; seus corpos não são editados. Com a v9
+selecionada, a v8 passa a ser o template anterior, como v2 a v7, e segue
+endereçável para rollback.
 
 ## Alternativas descartadas
 
@@ -93,7 +93,6 @@ a ser o template anterior, como v2 a v7.
   impressa à parte.
 - Não há migração, mudança de API, de snapshot nem do bot.
 - A folha de estilos da v9 exige o hash admitido na CSP da rota de impressão.
-- Até a aprovação do PO, a v8 continua sendo a ficha impressa; tela e papel não
-  divergem em vocabulário, que é o mesmo nas duas.
+- Tela e papel não divergem em vocabulário, que é o mesmo na v8 e na v9.
 - Reverter a troca é reverter só o commit que muda `PRINT_TEMPLATE`, sem
   migração; o registro de aprovação e as amostras da v9 permanecem.

@@ -20,7 +20,7 @@ Decisão: [ADR 087](../../../docs/adr/087-ficha-por-item-controle-no-verso.md).
 FPI-01 a FPI-11 descrevem a v8 e seguem valendo para ela; FPI-12 e FPI-13
 descrevem a v9, que mantém FPI-03 a FPI-08, FPI-10 e FPI-11, salvo onde FPI-12
 diz o contrário (ordem dos blocos de FPI-01, observações de FPI-02, pauta de
-FPI-08 e "Anotações" e divisão em metades de FPI-11). A v8 continua selecionada até a aprovação da v9.
+FPI-08 e "Anotações" e divisão em metades de FPI-11). A v9 está selecionada em `PRINT_TEMPLATE` desde a aprovação provisória do PO de 12/11/2026 (FPI-T06); a v8 segue endereçável para rollback.
 
 ## Fora de escopo
 

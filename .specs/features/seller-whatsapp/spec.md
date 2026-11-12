@@ -21,6 +21,17 @@ Status: em revisão, não implementado. [RFC 067](../../../docs/rfc/067-whatsapp
 | WAP-11 | Pessoa consulta estado e reconecta a própria linha sem suporte. Desconexão/revogação mantém carteira e história, bloqueia despachos não iniciados e informa falta de sincronização. Fechar modal para consultas; não desfaz conexão já concluída. Efeito iniciado pode concluir.                                             |
 | WAP-12 | Reutilizar monólito/worker/PostgreSQL/Evolution privados e n8n; credenciais no servidor, sem painel Evolution ao vendedor, novo serviço por linha ou workflow manual copiado. Falha fica visível. Ativação depende de gates com duas linhas, capacidade, privacidade, recovery e flags inicialmente desligadas.              |
 
+### Complemento da etapa 1 — operação comercial completa
+
+Esclarecimento do proprietário em 12/11/2026: cadastro, pedidos e cobranças
+integram Meus clientes desde a etapa 1, com os contratos comerciais existentes.
+
+| ID     | Critério proposto                                                                                                                                                                                                                                                                                                                                                          |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| WAP-17 | Meus clientes reutiliza a operação CRM completa: salvar/editar contato, criar/editar/confirmar pedido, ficha/PDF/arquivos e fazer/acompanhar cobranças conforme ACL e elegibilidade atuais. A linha define carteira/remetente e não retira ações nem concede permissões comerciais adicionais. Preservar Contato/Conversa/Assunto/Pedido ao navegar e executar.            |
+| WAP-18 | Cadastro humano pode anteceder conversa e fica vinculado à própria carteira com proveniência explícita. Salvar contato não fabrica identidade confirmada, inbound, pedido ou envio. Criar pedido continua ação humana pelos fluxos vigentes, inclusive sem sugestão da IA. Duplicata/correlação exige o procedimento autorizado existente.                                 |
+| WAP-19 | Cobrança usa os serviços e guardas COB/BAPI existentes; emissão, envio de link e confirmação de pagamento são efeitos distintos e idempotentes. O envio revalida cliente/Pedido/destino/linha. Desconectar WhatsApp bloqueia o canal, preservando ações locais autorizadas, cobranças existentes, callbacks e conciliação financeira; reconectar não emite outra cobrança. |
+
 ## Etapa 2 — carteira anterior e continuidade
 
 | ID     | Critério proposto                                                                                                                                                                                                                                                              |
@@ -32,18 +43,22 @@ Status: em revisão, não implementado. [RFC 067](../../../docs/rfc/067-whatsapp
 
 ## Matriz mínima de verificação
 
-| Cenário                                                               | Resultado esperado                                                                                        |
-| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| A pareia; B força ID/QR/rota, busca geral, contagem ou cursor de A    | Sem QR, clientes exclusivos, mensagens, mídia ou metadados da linha A; Financeiro/inativo também negados. |
-| A e B tentam o mesmo número; duas abas de A iniciam conexão           | Um vínculo/tentativa efetivo; conflito seguro e reconciliação, sem roubo ou duplicação.                   |
-| QR expira, navegador fecha ou callback antigo chega após revogação    | Renovação explícita/releitura autorizada; acesso perdido não se restaura.                                 |
-| Número conectado difere do informado, ou é a linha geral já existente | Ativação bloqueada antes de expor/importar canal; linha existente preservada.                             |
-| Mesmo cliente fala com linhas A e B                                   | Cada vendedor vê seu relacionamento; enviar pelo CRM usa a conta de origem.                               |
-| Mensagem enviada pelo aplicativo; eco do CRM antes/depois de HTTP     | Uma mensagem por efeito real, autoria/origem corretas; sem novo envio ou bot.                             |
-| Mensagem fora de ordem ou lacuna após reconexão                       | Estados monotônicos, sem duplicata; lacuna não é declarada preenchida sem prova.                          |
-| Troca de dono, desativação ou disconnect durante reserva/despacho     | Sem novo efeito após fence; efeito iniciado permanece auditado; leitura/SSE revogados.                    |
-| n8n/Evolution falha ou criação termina sem resposta                   | Pendência visível, consulta/reconciliação; sem fallback para outra linha ou retry criador.                |
-| Importação parcial repetida e sucessão com sessão antiga aberta       | Retomada sem duplicação/disparo retroativo; antigo titular perde acesso sem alterar vendas passadas.      |
+| Cenário                                                                               | Resultado esperado                                                                                                             |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| A pareia; B força ID/QR/rota, busca geral, contagem ou cursor de A                    | Sem QR, clientes exclusivos, mensagens, mídia ou metadados da linha A; Financeiro/inativo também negados.                      |
+| A e B tentam o mesmo número; duas abas de A iniciam conexão                           | Um vínculo/tentativa efetivo; conflito seguro e reconciliação, sem roubo ou duplicação.                                        |
+| QR expira, navegador fecha ou callback antigo chega após revogação                    | Renovação explícita/releitura autorizada; acesso perdido não se restaura.                                                      |
+| Número conectado difere do informado, ou é a linha geral já existente                 | Ativação bloqueada antes de expor/importar canal; linha existente preservada.                                                  |
+| Mesmo cliente fala com linhas A e B                                                   | Cada vendedor vê seu relacionamento; enviar pelo CRM usa a conta de origem.                                                    |
+| Mensagem enviada pelo aplicativo; eco do CRM antes/depois de HTTP                     | Uma mensagem por efeito real, autoria/origem corretas; sem novo envio ou bot.                                                  |
+| Mensagem fora de ordem ou lacuna após reconexão                                       | Estados monotônicos, sem duplicata; lacuna não é declarada preenchida sem prova.                                               |
+| Troca de dono, desativação ou disconnect durante reserva/despacho                     | Sem novo efeito após fence; efeito iniciado permanece auditado; leitura/SSE revogados.                                         |
+| n8n/Evolution falha ou criação termina sem resposta                                   | Pendência visível, consulta/reconciliação; sem fallback para outra linha ou retry criador.                                     |
+| A salva contato sem conversa e cria pedido humano pela carteira                       | Cadastro vinculado à carteira e pedido nos módulos oficiais, sem exigir IA, importar histórico ou fabricar inbound.            |
+| A confirma pedido, emite/envia cobrança e recebe callback duplicado                   | Mesmo contexto comercial, link enviado pela linha correta e um recebimento; aplicar gates de confirmação/saldo/ACL existentes. |
+| Mesmo cliente nas linhas A/B; B tenta emitir/enviar cobrança de Pedido não autorizado | Não trocar contexto nem conceder gestão pela coincidência do telefone; negar operação alheia conforme ACL comercial.           |
+| WhatsApp desconecta antes do envio do link; pagamento chega depois                    | Preservar cobrança e registrar pagamento; envio fica bloqueado e reconecta sem nova emissão ou troca de linha.                 |
+| Importação parcial repetida e sucessão com sessão antiga aberta                       | Retomada sem duplicação/disparo retroativo; antigo titular perde acesso sem alterar vendas passadas.                           |
 
 Executar negativos também por API, comandos repetidos e sessões abertas. UAT
 com duas linhas e cliente sintético valida cada caminho antes de declarar

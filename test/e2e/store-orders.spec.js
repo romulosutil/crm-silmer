@@ -529,9 +529,8 @@ test('the store order page reads like a confirmed order, is locked and downloads
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
   await expect(closing).toContainText('pedido confirmado');
   for (const [label, value] of [
-    ['Valor final', 'R$ 180,00'],
+    ['Valor do pedido', 'R$ 180,00'],
     ['Forma de pagamento', 'Pix'],
-    ['Confirmação', 'Confirmado pela loja do site · 07/10/2026, 23:15'],
   ]) {
     await expect(
       closing
@@ -539,6 +538,10 @@ test('the store order page reads like a confirmed order, is locked and downloads
         .filter({ has: page.getByText(label, { exact: true }) }),
     ).toContainText(value);
   }
+  // PED-RD-07: the confirmation is a badge, said once.
+  await expect(closing.locator('.op-confirmed')).toHaveText(
+    'Confirmado pela loja do site · 07/10/2026, 23:15',
+  );
   await expect(closing).toContainText('Ficha 12-CRM');
   await expect(closing).toContainText('1 página · pedido da loja');
   await expect(closing.locator('.op-ficha-status')).toHaveText(

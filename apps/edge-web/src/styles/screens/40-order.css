@@ -2752,6 +2752,36 @@ button.op-generate {
   text-align: end;
 }
 
+.op-deal--value dt {
+  font-weight: var(--weight-medium);
+}
+
+.op-deal--value dd,
+.op-deal-value dd {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.op-deal--value dd[data-empty] {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.op-confirmed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--status-success-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  background: var(--status-success-surface);
+  border-radius: var(--radius-md);
+}
+
 .op-ficha-card {
   display: flex;
   flex-wrap: wrap;

@@ -979,6 +979,10 @@ onBeforeUnmount(() => {
         Somente {{ order.seller?.name || 'o dono da conversa' }} ou um
         administrador edita este pedido.
       </p>
+      <p v-else-if="!isPending" class="op-readonly">
+        <OrderIcon name="lock" />
+        Pedido confirmado. Para alterar, reabra o pedido.
+      </p>
 
       <!-- LOJ-34: the same two columns as any confirmed order. -->
       <div v-if="isStore" class="op-layout">

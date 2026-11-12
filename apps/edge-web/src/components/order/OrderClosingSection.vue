@@ -108,6 +108,20 @@ const amountValid = computed(() =>
       props.order.pricing.totalCents > 0
     : parseBrl(amountText.value) !== null,
 );
+// PED-RD-06: "Valor do pedido" shows only what the order has today (the
+// calculated total or the amount already recorded), read-only; the typing
+// stays in the dialog. Frete is gated by OLC-T01 and not drawn here.
+const currentValue = computed(() => {
+  if (calculatedPricing.value) {
+    const { complete, totalCents } = props.order.pricing;
+    return complete === true && Number.isSafeInteger(totalCents)
+      ? amountLabel(totalCents)
+      : '';
+  }
+  return props.order.finalAmountCents
+    ? amountLabel(props.order.finalAmountCents)
+    : '';
+});
 const items = computed(() => props.order.ficha?.items ?? []);
 const itemsHeadline = computed(() => {
   const count = items.value.length;
@@ -476,6 +490,15 @@ async function reopen() {
            typed only in the dialog; the rail keeps what is missing and the
            action that opens it. -->
       <div v-if="isPending && canCommand" class="op-closing-action">
+        <dl class="op-deal op-deal--value">
+          <div>
+            <dt>Valor do pedido</dt>
+            <dd class="op-num" :data-empty="currentValue === '' || undefined">
+              {{ currentValue || 'Você informa ao gerar' }}
+            </dd>
+          </div>
+        </dl>
+
         <p
           v-for="note in blockerNotes"
           :key="note.field"
@@ -515,20 +538,29 @@ async function reopen() {
       </div>
 
       <template v-else>
+        <!-- PED-RD-07: the confirmation as a badge (icon + words), once. -->
+        <p
+          v-if="!isPending && (isStore || order.confirmedAt)"
+          class="op-confirmed"
+        >
+          <OrderIcon name="check" />
+          <span>{{
+            isStore
+              ? storeConfirmationLabel(order)
+              : `Confirmado por ${order.confirmedBy?.name || 'vendedor'} · ${dateTimeBR(order.confirmedAt)}`
+          }}</span>
+        </p>
+
         <dl class="op-deal">
-          <div>
-            <dt>Valor final</dt>
+          <div class="op-deal-value">
+            <dt>Valor do pedido</dt>
             <dd class="op-num">{{ amountLabel(order.finalAmountCents) }}</dd>
           </div>
           <div>
             <dt>Forma de pagamento</dt>
             <dd>{{ paymentConditionLabel(order.paymentCondition) }}</dd>
           </div>
-          <div v-if="isStore">
-            <dt>Confirmação</dt>
-            <dd>{{ storeConfirmationLabel(order) }}</dd>
-          </div>
-          <div v-else-if="order.confirmedAt">
+          <div v-if="isPending && order.confirmedAt">
             <dt>Confirmação</dt>
             <dd>
               Confirmado por {{ order.confirmedBy?.name || 'vendedor' }} ·
@@ -552,6 +584,9 @@ async function reopen() {
             <strong>Ficha {{ order.number }}</strong>
             <span v-if="isStore">1 página · pedido da loja</span>
             <span v-else>2 páginas · pedido e controle de produção</span>
+            <span v-if="!isStore && order.confirmedAt"
+              >gerada {{ dateTimeBR(order.confirmedAt) }}</span
+            >
           </span>
           <!-- LOJ-34: whether the site order already left the notice. -->
           <p

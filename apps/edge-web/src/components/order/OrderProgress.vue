@@ -97,9 +97,5 @@ function goToNext() {
         </div>
       </li>
     </ol>
-
-    <p v-if="!ready" class="op-progress-note">
-      Valor e forma de pagamento: você informa ao gerar o pedido.
-    </p>
   </section>
 </template>

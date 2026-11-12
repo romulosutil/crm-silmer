@@ -603,6 +603,11 @@ coluna rola por dentro.
 
 ### Ficha de Pedido
 
+A refinação aprovada em 12/11/2026 (cabeçalho com fatos-chave, ficha em uma
+folha, rail de Fechamento antes da ficha abaixo de 75rem, Datas e Arte
+refinadas) está na [§22](#22-pedido-refinado--ped-rd-12112026). Até cada
+tarefa ser entregue, a §9 descreve o que o código faz.
+
 A página do pedido (`/pedidos/:id`) segue a ordem da ficha impressa, com as
 palavras da tela (PFI-01, PFI-20): Resumo do pedido, Datas do pedido, Itens e
 especificações, Arte do pedido, Observações do pedido, Dados do atendimento
@@ -1439,3 +1444,137 @@ Da seção "Decisões pendentes" do protótipo, sem decisão nesta data:
 - Uma segunda primária no compositor ou na casca de jornada.
 - Diálogo sobre diálogo ou caixa com borda dentro da casca.
 - O mesmo ícone para dois destinos da navegação.
+
+## 22. Pedido refinado — PED-RD (12/11/2026)
+
+Decisão do PO em 12/11/2026, a partir do protótipo "Pedido refinado" (canvas
+Design privado; cópia local em `output/prototipos/pedido-refinado/`, não
+versionada). Registro: [ADR 086](docs/adr/086-pedido-refinado.md), sem RFC,
+como nas ADR 083 e 084. Requisitos e cenários em
+[Pedido refinado](.specs/features/pedido-refinado/spec.md); tarefas
+PED-RD-T00 a T10 em [tasks.md](.specs/features/pedido-refinado/tasks.md).
+Completa as §9, §16, §19 e §20; mantém a anatomia do `Field` e a edição no
+lugar da §20. Até cada tarefa ser entregue, a §9 descreve o que o código faz.
+
+### Regras
+
+- **Três camadas (PED-RD-01):** cabeçalho, ficha e rail. A ficha é uma folha
+  só, com os capítulos separados por divisor e respiro; só os cartões de item
+  têm borda dentro dela.
+- **Cabeçalho (PED-RD-02):** trilha "← Pedidos", h1 "Pedido {número}", selo de
+  status com ícone, contexto ("{cliente} — {nome} · com {vendedor}") e a linha
+  de fatos-chave (entrega, peças, valor), que é a fonte única desses dados.
+  Sem primária no cabeçalho; "Abrir conversa", "Gerar PDF" e "Mais ações do
+  pedido".
+- **Ordem da ficha (PED-RD-03):** Resumo do pedido, Datas do pedido, Itens e
+  especificações, Arte do pedido, Observações do pedido e Dados do
+  atendimento.
+- **Resumo (PED-RD-09):** Cliente (texto, "Ver cadastro"), Nome do pedido e
+  Previsão de entrega, os dois campos lado a lado em container de 40rem ou
+  mais. Não repete peças, valor, vendedor, data do pedido nem FAB.
+- **Arte (PED-RD-10):** "Quem faz a arte" no topo; "Arte final" e "Arquivos da
+  arte" lado a lado em container de 36rem ou mais, empilhados no estreito.
+- **Observações (PED-RD-11):** lista numerada com cabeçalho visível das
+  colunas, `BlankRow` no fim, dica de uma linha, até 5 linhas de 200
+  caracteres.
+- **Dados do atendimento (PED-RD-05):** último capítulo, recolhido, com o
+  aviso "Não vai para a ficha impressa.".
+- **Edição no lugar (PED-RD-12):** a §20 se estende a Resumo, Arte e
+  Observações: sem "Editar <seção>", sem Salvar/Cancelar de seção, `SaveStatus`
+  no cabeçalho do capítulo. Pedido confirmado e quem não edita veem o mesmo
+  layout em leitura, com a linha "Pedido confirmado. Para alterar, reabra o
+  pedido em Mais ações.".
+- **Rail antes da ficha abaixo de 75rem (PED-RD-08):** o rail é o primeiro
+  filho do layout no DOM e vem logo depois do cabeçalho; a partir de 75rem a
+  grade (`grid-template-areas`) o põe à direita, sticky, com
+  `minmax(20rem, 24rem)`. A ordem visual é a do DOM e a do foco.
+
+### Fechamento e pagamento (o rail)
+
+| Estado     | Blocos, em ordem                                                                                                                                                     | Primária                                                                                 |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Pendente   | Para gerar o pedido: N de 3 (Previsão de entrega, Itens, Arte); Valor do pedido (Peças + Frete = Total); Gerar pedido com o motivo ao lado                           | "Gerar pedido", única da página; `aria-disabled` com pendência; o próximo passo é `soft` |
+| Confirmado | Fechamento em leitura (selo "Confirmado por … · data, hora", Valor do pedido, Forma de pagamento, "Ficha v{N}" com "Baixar ficha em PDF"); Cobranças (resumo); Olist | "Gerar no Olist" no seu bloco, só para quem é "Habilitado Olist"                         |
+
+- **Progresso:** só do `missingFields` (§9, PFI-15). Pendência desconhecida
+  vira "Revisar pendências" e o total passa a 4. O cadastro incompleto do
+  cliente nunca aparece aqui (ADR 082).
+- **Valor do pedido:** Peças (soma dos itens, calculada), Frete e Total
+  (calculado, nunca digitado, `tabular-nums`, destaque `--color-emphasis-*`).
+  O frete é do responsável, em edição no lugar, com "Usar cotação: R$ … ·
+  {serviço}" como botão quieto e a origem em texto; cotação vencida mostra
+  aviso de atenção com ícone, sem bloquear. **Pendente de OLC-T01
+  (ADR 080):** até lá o rail não tem campo de frete.
+- **Cobranças:** só o resumo ("Recebido R$ … de R$ …", `Meter`, "Ver
+  cobranças"); o interior espera o PR 348.
+- **Olist (pendente de OLC-T03 e OLC-T04):** bloco próprio, com a sua
+  primária e estados Pronto, Cadastro incompleto (`aria-disabled` com o que
+  falta e "Completar cadastro"), Aguardando processamento, Processando com
+  etapa, Gerado (venda nº e "Abrir venda no Olist"), Conferência necessária
+  (sem botão de repetir) e Falha de consulta ("Atualizar situação", leitura).
+  Sem diálogo de prévia (ADR 079).
+
+### Datas do pedido, o container de produção refinado
+
+- É o container de `OrderMilestonesSection.vue`, sem trocar de contrato, como
+  2º capítulo da ficha.
+- Cabeçalho do capítulo: contador neutro ("1 de 3 datas") e, só no
+  confirmado, a ação padrão "Confirmar entrega" à direita.
+- Linha do tempo horizontal: data acima, ponto na trilha (concluído
+  preenchido em sucesso, próximo vazado), título sublinhado em pontilhado
+  como botão que abre o detalhe, subtítulo abaixo.
+- Rodapé com divisor: "Recebido: …" à esquerda e "Falta receber: …" à
+  direita, só no confirmado.
+- Em container de 44rem ou menos a mesma linha do tempo vira vertical, sem
+  rolagem lateral. O estado do ponto também está no nome acessível.
+
+### Hierarquia
+
+| Nível | Papel                             | Elemento e tipografia                                       | Espaço                                    |
+| ----- | --------------------------------- | ----------------------------------------------------------- | ----------------------------------------- |
+| 1     | Página                            | `h1` 24 px (20 px no celular), selo, contexto, fatos-chave  | 24 px abaixo do cabeçalho                 |
+| 2     | Capítulo da ficha e bloco do rail | `h2` `--text-lg` 600, estado (ícone + texto) e `SaveStatus` | 32 px entre capítulos                     |
+| 3     | Subseção dentro do capítulo       | `h3` `--text-base` 600 (Arte final, Arquivos da arte, item) | 24 px entre subseções; 8 a 12 px no grupo |
+| 4     | Rótulo de campo e metadado        | `--text-sm` 500 atenuado; metadado `--text-xs`              | 16 px entre campos                        |
+
+Uma superfície por nível: a folha da ficha e os cartões do rail são o nível
+de superfície; dentro deles, só o cartão de item tem borda. Subseções agrupam
+por espaço, não por caixa. Valores só da escala de 4 px.
+
+### Responsividade
+
+- Todo container de layout (ficha, capítulo, bloco do rail, lista de itens,
+  linha do tempo) declara `container-type: inline-size`, `inline-size: 100%`
+  e `min-inline-size: 0`.
+- As grades internas usam `@container`: Resumo a 40rem, Arte a 36rem, Datas a
+  44rem. A única consulta de viewport do layout é a de 75rem do rail.
+- Nunca centralizar um container com `margin-inline: auto` dentro de grade ou
+  flex sem largura explícita: sem largura intrínseca ele encolhe a zero (foi o
+  defeito que colapsou a v2 do protótipo numa coluna de poucos pixels).
+- Sem rolagem horizontal a 320 px nem a 200% de zoom.
+
+### Pendências (dependem do PO)
+
+- **Orçamento de ações (§16):** os botões de remover tamanho, um por linha,
+  mantêm a primeira tela do pedido acima da meta. A contagem a 390×844 e
+  1366×768 é medida na tarefa PED-RD-T10; até lá, a meta é meta, não medição
+  (§19).
+- **Frete no total:** depende de OLC-T01 (ADR 080).
+- **Gerar no Olist:** depende de OLC-T03 e OLC-T04 (ADR 079); o texto final dos
+  estados fica para o PO.
+- **Interior de Cobranças:** depende do PR 348 (BCS-01–09).
+- **Acordeão do celular (PFI-18):** o protótipo o mantém, na ordem nova; fica
+  assim até o PO decidir o contrário.
+- **Não verificado:** render no app real, leitor de tela e aparelho real; o
+  protótipo é um canvas estático.
+
+### Não usar
+
+- O rail como linha do tempo empilhada (as datas são um capítulo da ficha).
+- Blocos de largura total sem rail, como na v2 rejeitada em 12/11/2026.
+- Repetir entrega, peças e valor no Resumo, nas Datas ou no rail.
+- Container de layout sem largura explícita, ou centralizado com
+  `margin-inline: auto` dentro de grade ou flex.
+- Ordem visual diferente da ordem do DOM (`order`, `*-reverse`).
+- Cadastro incompleto do cliente dentro de "Para gerar o pedido".
+- Segundo modelo de edição no mesmo capítulo migrado, ou "Editar <seção>".

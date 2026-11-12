@@ -66,6 +66,23 @@ const categoricalPolicies = new Map([
     {
       allowed: new Set([
         'API_START_FAILED',
+        // OPS-ERR-06: retain known database categories, never arbitrary codes,
+        // SQL, constraint names, error messages or PostgreSQL row details.
+        '08006',
+        '22P02',
+        '23502',
+        '23503',
+        '23505',
+        '23514',
+        '40001',
+        '40P01',
+        '42703',
+        '42P01',
+        '53300',
+        '55P03',
+        '57014',
+        '57P01',
+        'DATABASE_CONNECTION_TIMEOUT',
         'JOB_FAILED',
         'WORKER_HEALTH_PUBLISH_FAILED',
         'OPERATIONAL_SAMPLING_FAILED',

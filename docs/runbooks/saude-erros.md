@@ -257,6 +257,21 @@ sucesso, JSON 503 degradado, amostra vencida/futura e Date ausente/inválido,
 além de ACL, abort, teclado e acessibilidade existentes. Rollback restaura
 somente o código anterior do edge-web; sem migração ou alteração de dados.
 
+### Códigos PostgreSQL nos logs — OPS-ERR-DIAG-01
+
+O hook HTTP já entregava `error.code` ao logger, mas a allowlist descartava os
+SQLSTATE como `UNCLASSIFIED_ERROR`. O caso 23514 foi reproduzido pelo teste
+HTTP da criação no pedido 100. A correção aceita somente categorias conhecidas:
+08006, 22P02, 23502, 23503, 23505, 23514, 40001, 40P01, 42703, 42P01, 53300,
+55P03, 57014, 57P01 e DATABASE_CONNECTION_TIMEOUT. Não aceita um padrão livre
+de cinco caracteres. O request/correlation já existente permite seguir a causa.
+
+Mensagem, SQL, detalhe da linha, tabela e nome de constraint permanecem fora
+dos logs seguros. O teste HTTP cobre a lista técnica, correlação e tentativas
+de inserir telefone ou texto misturado no código. A classificação não altera
+resposta HTTP, agrupamento API_5XX, métricas, ACL ou estado de mensagem.
+Não preenche retroativamente causas dos eventos antigos já redigidos.
+
 ### Contrato do endpoint e amostragem
 
 GET /api/health/operations é público, sem dados pessoais e sem I/O por request.

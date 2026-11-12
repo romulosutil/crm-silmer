@@ -716,6 +716,55 @@ test('reads the order summary with the customer as text and no repeated key fact
   await expect(summary.getByRole('button')).toHaveCount(0);
 });
 
+// PED-RD-01: the ficha is one surface; only the rail and the item cards
+// keep their own card.
+test('PED-RD-01: a ficha é uma folha só', async ({ page }) => {
+  await page.setViewportSize({ height: 768, width: 1366 });
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const folha = page.locator('.op-ficha');
+  await expect(folha).toBeVisible();
+  const border = (/** @type {import('@playwright/test').Locator} */ loc) =>
+    loc.evaluate((el) => {
+      const s = globalThis.getComputedStyle(el);
+      return {
+        bg: s.backgroundColor,
+        bottom: s.borderBottomWidth,
+        left: s.borderLeftWidth,
+        right: s.borderRightWidth,
+        top: s.borderTopWidth,
+      };
+    });
+  expect(await border(folha)).toMatchObject({
+    bottom: '1px',
+    left: '1px',
+    right: '1px',
+    top: '1px',
+  });
+  const names = [
+    'Resumo do pedido',
+    'Datas do pedido',
+    'Itens e especificações',
+    'Arte do pedido',
+    'Observações do pedido',
+  ];
+  for (const name of names) {
+    const chapter = folha.getByRole('region', { name, exact: true });
+    await expect(chapter).toHaveCount(1);
+    const style = await border(chapter);
+    expect(style.left, name).toBe('0px');
+    expect(style.right, name).toBe('0px');
+    expect(style.bottom, name).toBe('0px');
+    expect(style.bg, name).toBe('rgba(0, 0, 0, 0)');
+  }
+  const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
+  await expect(
+    folha.getByRole('region', { name: 'Fechamento e pagamento' }),
+  ).toHaveCount(0);
+  expect((await border(closing)).left).toBe('1px');
+});
+
 test('does not attribute a manual order customer to a conversation', async ({
   page,
 }) => {

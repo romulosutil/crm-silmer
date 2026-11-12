@@ -58,11 +58,13 @@ quebrado.
       `inline-size: 100%` e `min-inline-size: 0`.
 - [x] Cabeçalho com a linha de fatos-chave como fonte única (PED-RD-02) e sem
       repetição nos blocos.
-- [ ] Ficha como uma folha com capítulos separados por divisor, sem cartão por
+- [x] Ficha como uma folha com capítulos separados por divisor, sem cartão por
       seção (PED-RD-01).
 - [ ] Rodapé fixo do celular acompanhando o rail antes da ficha (PED-RD-08).
-- Entregue em 70bb636d. Pendentes: ficha em folha única (as seções ainda são
-  cartões `.op-sheet`); rodapé mantido, sem mudança.
+- Entregue em 70bb636d; a folha única veio depois, em `.op-main.op-ficha`
+  (uma superfície; capítulos com divisor `--color-border-subtle`; rail,
+  cartões de item e pedido da loja mantêm o cartão), com o E2E "PED-RD-01: a
+  ficha é uma folha só". Rodapé mantido, sem mudança.
 - Depends on: T00.
 - Arquivos: `OrderView.vue`, `OrderSheetHead.vue`, `OrderInfoStrips.vue`,
   `40-order.css`.

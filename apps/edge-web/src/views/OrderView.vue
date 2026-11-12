@@ -1016,8 +1016,10 @@ onBeforeUnmount(() => {
           <OrderProgress v-if="showProgress" :order="order" />
           <OrderClosingSection ref="closingSection" :order="order" />
         </aside>
-        <!-- PFI-01: the order of the printed ficha, top to bottom. -->
-        <div class="op-main">
+        <!-- PFI-01: the order of the printed ficha, top to bottom.
+             PED-RD-01: the chapters are one surface (op-ficha), told apart
+             by dividers; only the item cards and the rail keep their own. -->
+        <div class="op-main op-ficha">
           <OrderSummarySection :order="order" />
           <OrderMilestonesSection :order="order" />
           <OrderBillingSection

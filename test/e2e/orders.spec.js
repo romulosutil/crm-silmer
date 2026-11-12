@@ -1814,9 +1814,12 @@ test('opens every point of a pending item as a field, in the order of the ficha,
     await expect(items.getByRole('button', { name })).toHaveCount(0);
   }
   await expect(items.locator('.op-editing-tag')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveText([
-    'Editar observações',
-  ]);
+  // PED-RD-T05: the observations are edited in place too, so no section of
+  // the ficha has an "Editar" button.
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Editar observações' }),
+  ).toHaveCount(0);
   // PED-RD-T04: the art is edited in place too.
   await expect(page.getByRole('button', { name: 'Editar arte' })).toHaveCount(
     0,
@@ -2884,56 +2887,6 @@ test('keeps what is being typed, and the focus, when the order is refreshed from
   );
 });
 
-test('reads the items, with the reason, while a section still in the Editar model is open (PFI-06, EDIT-08)', async ({
-  page,
-}) => {
-  /** @type {any[]} */
-  const writes = [];
-  await mockOrders(page, {
-    onWrite: (call) => writes.push(call),
-    orders: [pricedPendingOrder],
-  });
-  await page.goto('/pedidos/order-pendente');
-
-  const observations = page.getByRole('region', {
-    name: 'Observações do pedido',
-  });
-  const items = page.getByRole('region', { name: ITEMS });
-  await expect(items).toHaveAttribute('data-items-state', 'edit');
-  await observations
-    .getByRole('button', { name: 'Editar observações' })
-    .click();
-
-  // A save here would make "Salvar observações" lose to a conflict of versions.
-  await expect(items).toHaveAttribute('data-items-state', 'blocked');
-  await expect(
-    items.getByText('Salve ou cancele a edição aberta para alterar os itens.'),
-  ).toBeVisible();
-  await expect(items.getByRole('textbox')).toHaveCount(0);
-  await expect(items.getByRole('button')).toHaveCount(0);
-  await expect(items.locator('dl.op-points')).toBeVisible();
-  await expect(
-    items
-      .getByRole('list', { name: 'Tamanhos do item 1' })
-      .getByRole('listitem'),
-  ).toHaveText([/^M\s*100\s*peças$/u, /^G\s*50\s*peças$/u]);
-  // OLIST-43: read, an order priced by size shows what each size was sold for.
-  await expect(
-    items
-      .getByRole('table', { name: 'Tamanhos e subtotais do item 1' })
-      .locator('tbody tr'),
-  ).toHaveText([/^M\s*100\s*R\$ 3\.200,00$/u, /^G\s*50\s*R\$ 1\.600,00$/u]);
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-
-  await observations.getByRole('button', { name: 'Cancelar' }).click();
-  await expect(items).toHaveAttribute('data-items-state', 'edit');
-  await expect(
-    page.getByText('Salve ou cancele a edição aberta para alterar os itens.'),
-  ).toHaveCount(0);
-  await expect(items.getByLabel('Modelo', { exact: true })).toBeEditable();
-  expect(writes).toHaveLength(0);
-});
-
 test('saves a summary field typed right after a change to an item, over the version that change left (PFI-06, EDIT-02, PED-RD-12)', async ({
   page,
 }) => {
@@ -3032,10 +2985,8 @@ test('heads each section with its state in words, "Editar" naming the section an
   );
 
   // Verb and object on every button; none says only "Editar". EDIT-01: the
-  // section edited in place has none.
-  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveText([
-    'Editar observações',
-  ]);
+  // sections edited in place have none, and PED-RD-T05 moved the last one.
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(0);
   await expect(
     page.getByRole('button', { exact: true, name: 'Editar' }),
   ).toHaveCount(0);
@@ -3091,7 +3042,7 @@ test('heads each section with its state in words, "Editar" naming the section an
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('reads the sections edited in place, with the reason, while the one still in "Editar" is open (PFI-17, PFI-06, EDIT-08, PED-RD-12)', async ({
+test('shows no "Editar" on any section of the ficha and no reason to wait (PFI-17, EDIT-08, PED-RD-11, PED-RD-12)', async ({
   page,
 }) => {
   /** @type {any[]} */
@@ -3105,37 +3056,20 @@ test('reads the sections edited in place, with the reason, while the one still i
   const observations = page.getByRole('region', {
     name: 'Observações do pedido',
   });
-  // The observations are the last section still in the Editar/Salvar model.
-  const editObservations = observations.getByRole('button', {
-    name: 'Editar observações',
-  });
-  await editObservations.focus();
-  await page.keyboard.press('Enter');
 
-  // No other "Editar" is left to wait: the sections edited in place read,
-  // with the reason, and never mix the two models.
+  // PED-RD-T05: every ficha section is edited in place, so nothing is left
+  // to wait for and nothing is read with a reason.
   await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(0);
-  await expect(items).toHaveAttribute('data-items-state', 'blocked');
-  await expect(items.getByRole('textbox')).toHaveCount(0);
-  await expect(summary.getByRole('textbox')).toHaveCount(0);
-  await expect(summary).toContainText(
-    'Salve ou cancele a edição aberta para alterar o resumo.',
-  );
-  await expect(artwork).toContainText(
-    'Salve ou cancele a edição aberta para alterar a arte.',
-  );
-  await expect(artwork.getByRole('checkbox')).toHaveCount(0);
-  expect(writes).toHaveLength(0);
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-
-  // Cancelling frees the fields again, without the reason.
-  await observations.getByRole('button', { name: 'Cancelar' }).click();
-  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(1);
+  await expect(items).toHaveAttribute('data-items-state', 'edit');
+  await expect(items.getByLabel('Modelo', { exact: true })).toBeEditable();
+  await expect(summary.getByRole('textbox')).toHaveCount(2);
+  await expect(artwork.getByRole('checkbox')).toHaveCount(3);
+  await expect(observations.getByRole('textbox')).not.toHaveCount(0);
   await expect(page.getByText('Salve ou cancele a edição aberta')).toHaveCount(
     0,
   );
-  await expect(items).toHaveAttribute('data-items-state', 'edit');
-  await expect(artwork.getByRole('checkbox')).toHaveCount(3);
+  expect(writes).toHaveLength(0);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
 test('takes the next step to the first pending field of the items, by keyboard, wide and on a phone (PFI-15, PFI-16, PFI-17, EDIT-04)', async ({
@@ -3504,27 +3438,23 @@ test('keeps the section heads readable and their buttons thumb sized, light and 
       ).toBe('16px');
     }
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-    // Something open, so the waiting heads are checked too.
+    // The observations open on their fields, 44 px tall; no section waits.
     const observations = page.getByRole('region', {
       name: 'Observações do pedido',
     });
     await observations
       .getByRole('button', { name: /^Observações do pedido/u })
       .click();
-    const editObservations = observations.getByRole('button', {
-      name: 'Editar observações',
-    });
-    expect(
-      (await editObservations.boundingBox())?.height ?? 0,
-    ).toBeGreaterThanOrEqual(44);
-    await editObservations.click();
+    for (const field of await observations.getByRole('textbox').all()) {
+      expect((await field.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(
+        44,
+      );
+    }
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
     await page.setViewportSize({ height: 800, width: 1280 });
-    // On a wide screen no "Editar" is left but the one in edit (the items,
-    // the summary and the art have none, EDIT-01), and the edit is still open.
+    // On a wide screen no section has an "Editar" (EDIT-01, PED-RD-T05).
     await expect(edits).toHaveCount(0);
-    await expect(observations.getByText('Editando')).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   }
 });
@@ -3668,9 +3598,9 @@ test('opens the section of the hash and of the next step, and never folds a sect
   await expect(observationsHead).toHaveAttribute('aria-expanded', 'true');
   await expect(summaryHead).toHaveAttribute('aria-expanded', 'false');
   await expect(observationsHead).toBeInViewport();
-  await expect(observations.getByRole('listitem')).toHaveText([
+  await expect(observations.getByLabel('Observação 1')).toHaveValue(
     'Separar os itens por tamanho.',
-  ]);
+  );
 
   // The next step in the footer opens its section on the field it asks for.
   const footer = page.locator('.op-mobile-action');
@@ -3695,60 +3625,31 @@ test('opens the section of the hash and of the next step, and never folds a sect
     await expect(head).not.toHaveAttribute('aria-disabled', /./u);
   }
 
-  // A section still in its Editar model does: every head waits, its own
-  // included, so no other fold opens and the edit never folds.
+  // The observations are edited in place too (PED-RD-T05): opening their
+  // fold keeps every head free, and the edit never folds anything.
   await observationsHead.click();
-  await observations
-    .getByRole('button', { name: 'Editar observações' })
-    .click();
+  await expect(observationsHead).toHaveAttribute('aria-expanded', 'true');
+  await expect(observations.getByLabel('Observação 1')).toBeEditable();
   for (const head of await page
     .locator('main h2 button[aria-expanded]')
     .all()) {
-    await expect(head).toHaveAttribute('aria-disabled', 'true');
-    await expect(head).toHaveAccessibleDescription(
-      'Salve ou cancele a edição aberta.',
-    );
+    await expect(head).not.toHaveAttribute('aria-disabled', /./u);
   }
   await itemsHead.focus();
   await page.keyboard.press('Enter');
-  await page.keyboard.press('Space');
-  await itemsHead.dispatchEvent('click');
-  await expect(itemsHead).toBeFocused();
-  await expect(itemsHead).toHaveAttribute('aria-expanded', 'false');
-  await expect(
-    items.getByText('Salve ou cancele a edição aberta.', { exact: true }),
-  ).toBeVisible();
-  await observationsHead.focus();
-  await page.keyboard.press('Enter');
-  await expect(observationsHead).toHaveAttribute('aria-expanded', 'true');
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-
-  // The draft survives the window going wide and back.
-  await page.setViewportSize({ height: 800, width: 1280 });
-  await expect(page.locator('main h2 button')).toHaveCount(0);
-  // EDIT-08: the items and the summary wait in reading, with the reason, and
-  // no button.
-  await expect(items).toHaveAttribute('data-items-state', 'blocked');
-  await expect(
-    items.getByText('Salve ou cancele a edição aberta para alterar os itens.'),
-  ).toBeVisible();
-  await expect(summary.getByRole('textbox')).toHaveCount(0);
-  await expect(
-    summary.getByText(
-      'Salve ou cancele a edição aberta para alterar o resumo.',
-    ),
-  ).toBeVisible();
-  await expect(summary).toContainText('20/11/2026');
-  await page.setViewportSize({ height: 844, width: 390 });
-  await expect(observationsHead).toHaveAttribute('aria-expanded', 'true');
-  expect(writes).toHaveLength(1);
-
-  // Cancelling frees the heads again.
-  await observations.getByRole('button', { name: 'Cancelar' }).click();
-  await expect(itemsHead).not.toHaveAttribute('aria-disabled', /./u);
-  await expect(page.getByText('Salve ou cancele a edição aberta.')).toHaveCount(
+  await expect(itemsHead).toHaveAttribute('aria-expanded', 'true');
+  await expect(observationsHead).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByText('Salve ou cancele a edição aberta')).toHaveCount(
     0,
   );
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(0);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // Going wide keeps every section open.
+  await page.setViewportSize({ height: 800, width: 1280 });
+  await expect(page.locator('main h2 button')).toHaveCount(0);
+  await expect(summary).toContainText('20/11/2026');
+  expect(writes).toHaveLength(1);
 });
 
 test('folds the items like any other section: nothing typed holds them open (PFI-18, EDIT-01)', async ({
@@ -3846,8 +3747,7 @@ test('keeps every section open and the heads plain on a wide screen (PFI-18)', a
   await page.goto('/pedidos/order-pendente#itens');
 
   // No accordion: no head button, no aria-expanded on a heading, every
-  // body on screen and every "Editar" in place (EDIT-01: only the
-  // observations keep one).
+  // body on screen and no "Editar" left (EDIT-01, PED-RD-T05).
   await expect(page.locator('main h2 button')).toHaveCount(0);
   await expect(page.locator('main h2 [aria-expanded]')).toHaveCount(0);
   for (const body of [
@@ -3859,7 +3759,7 @@ test('keeps every section open and the heads plain on a wide screen (PFI-18)', a
   ]) {
     await expect(page.locator(body)).toBeVisible();
   }
-  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(0);
   await expect(page.getByRole('region', { name: ITEMS })).toHaveAttribute(
     'data-items-state',
     'edit',
@@ -3874,7 +3774,7 @@ test('keeps every section open and the heads plain on a wide screen (PFI-18)', a
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('edits the observations and stops at five lines (PFI-05)', async ({
+test('edits the observations in place and stops at five lines (PFI-05, PED-RD-11, PED-RD-12)', async ({
   page,
 }) => {
   /** @type {any[]} */
@@ -3886,27 +3786,58 @@ test('edits the observations and stops at five lines (PFI-05)', async ({
     name: 'Observações do pedido',
   });
   await expect(observations).toContainText('1 de 5 linhas');
-  await expect(observations.getByRole('listitem')).toHaveText([
+  // The columns have a visible header; the line is an open field.
+  await expect(observations.locator('.op-obs-head')).toHaveText('NºObservação');
+  await expect(observations.getByLabel('Observação 1')).toHaveValue(
     'Separar os itens por tamanho.',
+  );
+  // No edit mode, no Salvar, no Cancelar and no "add" button (PED-RD-11).
+  for (const name of [/^Editar/u, /^Salvar/u, 'Cancelar', /^Adicionar/u]) {
+    await expect(observations.getByRole('button', { name })).toHaveCount(0);
+  }
+  await expect(
+    observations.getByRole('button', { name: 'Remover observação 1' }),
+  ).toBeVisible();
+
+  // The BlankRow creates the next line on Enter and keeps the focus there.
+  const blank = observations.getByLabel('Nova observação, linha 2');
+  await expect(blank).toHaveAttribute('placeholder', 'Adicionar observação');
+  await blank.fill('Linha 2');
+  await blank.press('Enter');
+  await expect(observations.getByRole('status')).toHaveText('Salvo');
+  await expect(observations).toContainText('2 de 5 linhas');
+  await expect(observations.getByLabel('Observação 2')).toHaveValue('Linha 2');
+  await expect(
+    observations.getByLabel('Nova observação, linha 3'),
+  ).toBeFocused();
+  expect(writes.at(-1).section).toBe('observations');
+  expect(writes.at(-1).body.value).toEqual([
+    'Separar os itens por tamanho.',
+    'Linha 2',
   ]);
 
-  await observations.getByRole('button', { name: 'Editar' }).click();
-  const addLine = observations.getByRole('button', {
-    name: 'Adicionar observação',
-  });
-  for (let line = 2; line <= 5; line += 1) {
-    await addLine.click();
-    await observations.getByLabel(`Observação ${line}`).fill(`Linha ${line}`);
-  }
-  await expect(addLine).toBeDisabled();
+  // Leaving the BlankRow creates the line too, without moving the focus.
+  await observations.getByLabel('Nova observação, linha 3').fill('Linha 3');
+  await observations.getByLabel('Observação 1').focus();
+  await expect(observations.getByLabel('Observação 3')).toHaveValue('Linha 3');
+  await expect(observations.getByLabel('Observação 1')).toBeFocused();
 
-  await observations.getByRole('button', { name: 'Salvar' }).click();
+  // The fifth line takes the BlankRow away and the hint says the limit.
+  await observations.getByLabel(/^Nova observação/u).fill('Linha 4');
+  await observations.getByLabel(/^Nova observação/u).press('Enter');
+  await observations.getByLabel(/^Nova observação/u).fill('Linha 5');
+  await observations.getByLabel(/^Nova observação/u).press('Enter');
   await expect(observations).toContainText('5 de 5 linhas');
-  expect(writes[0].section).toBe('observations');
-  expect(writes[0].body.value).toHaveLength(5);
+  await expect(observations.getByLabel(/^Nova observação/u)).toHaveCount(0);
+  await expect(observations.locator('.op-hint')).toContainText(
+    'Limite de 5 linhas atingido',
+  );
+  await expect(observations.getByLabel('Observação 5')).toBeFocused();
+  expect(writes.at(-1).body.value).toHaveLength(5);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('drops a blank observation instead of storing an empty line', async ({
+test('edits, clears and removes observation lines by keyboard, never storing an empty line (PED-RD-11)', async ({
   page,
 }) => {
   /** @type {any[]} */
@@ -3917,13 +3848,82 @@ test('drops a blank observation instead of storing an empty line', async ({
   const observations = page.getByRole('region', {
     name: 'Observações do pedido',
   });
-  await observations.getByRole('button', { name: 'Editar' }).click();
-  await observations
-    .getByRole('button', { name: 'Adicionar observação' })
-    .click();
-  await observations.getByRole('button', { name: 'Salvar' }).click();
+  const first = observations.getByLabel('Observação 1');
+  // An empty BlankRow and an untouched line write nothing.
+  const blank = observations.getByLabel('Nova observação, linha 2');
+  await blank.focus();
+  await first.focus();
+  await first.press('Tab');
+  expect(writes).toHaveLength(0);
 
-  expect(writes[0].body.value).toEqual(['Separar os itens por tamanho.']);
+  // Editing a line saves on Enter, trimmed.
+  await first.fill('  Escudo no peito.  ');
+  await first.press('Enter');
+  await expect(observations.getByRole('status')).toHaveText('Salvo');
+  expect(writes.at(-1).body.value).toEqual(['Escudo no peito.']);
+  await expect(first).toHaveValue('Escudo no peito.');
+
+  // Add a second line, then clear the first and leave it: it is removed and
+  // the focus goes to the line that took its place.
+  await blank.fill('Entregar separado.');
+  await blank.press('Enter');
+  await expect(observations).toContainText('2 de 5 linhas');
+  await first.fill('');
+  await first.press('Enter');
+  await expect(observations).toContainText('1 de 5 linhas');
+  expect(writes.at(-1).body.value).toEqual(['Entregar separado.']);
+  await expect(observations.getByLabel('Observação 1')).toHaveValue(
+    'Entregar separado.',
+  );
+  await expect(observations.getByLabel('Observação 1')).toBeFocused();
+
+  // The remove button has a name and 44 px, and the focus goes to the BlankRow.
+  const remove = observations.getByRole('button', {
+    name: 'Remover observação 1',
+  });
+  const box = await remove.boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+  expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+  await remove.focus();
+  await page.keyboard.press('Enter');
+  await expect(observations).toContainText('0 de 5 linhas');
+  expect(writes.at(-1).body.value).toEqual([]);
+  await expect(
+    observations.getByLabel('Nova observação, linha 1'),
+  ).toBeFocused();
+  expect(writes.every((call) => call.body.value.every(Boolean))).toBe(true);
+});
+
+test('keeps the typed observation at its field and offers "Recarregar pedido" on a conflict (PED-RD-11, PED-RD-12)', async ({
+  page,
+}) => {
+  let detailCalls = 0;
+  await mockOrders(page, {
+    onDetail: () => {
+      detailCalls += 1;
+    },
+    writeFailure: { body: { code: 'VERSION_CONFLICT' }, status: 409 },
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const observations = page.getByRole('region', {
+    name: 'Observações do pedido',
+  });
+  const first = observations.getByLabel('Observação 1');
+  await first.fill('Texto que não pôde ser salvo.');
+  await first.press('Enter');
+  const alert = observations.getByRole('alert');
+  await expect(alert).toContainText('Este pedido mudou em outro lugar.');
+  await expect(first).toHaveValue('Texto que não pôde ser salvo.');
+  await expect(first).toHaveAttribute('aria-invalid', 'true');
+
+  const before = detailCalls;
+  await alert.getByRole('button', { name: 'Recarregar pedido' }).click();
+  await expect.poll(() => detailCalls).toBeGreaterThan(before);
+  await expect(alert).toHaveCount(0);
+  await expect(observations.getByLabel('Observação 1')).toHaveValue(
+    'Separar os itens por tamanho.',
+  );
 });
 
 test('leaves production to the printed ficha and shows service data as not printed (PFI-08, PFI-20)', async ({
@@ -4558,12 +4558,13 @@ test('keeps "Gerar pedido" as the only primary button of the page (PFI-13)', asy
   await dialog.getByRole('button', { name: 'Voltar' }).click();
   await expect(dialog).toHaveCount(0);
 
+  // PED-RD-T05: opening the observations (edited in place) adds no button.
   const observations = page.getByRole('region', {
     name: 'Observações do pedido',
   });
-  await observations
-    .getByRole('button', { name: 'Editar observações' })
-    .click();
+  await expect(observations.getByRole('button')).toHaveText([
+    'Remover observação 1',
+  ]);
   await expect(primary).toHaveText(['Gerar pedido']);
 });
 
@@ -4746,9 +4747,8 @@ test('keeps the main action of the order in a fixed footer on a phone', async ({
   await expect(dialog).toHaveCount(0);
   await expect(generate).toBeFocused();
 
-  // EDIT-01: the items, the summary and the art are edited in place, so their
-  // open fold keeps the footer; it steps aside only for a section still in
-  // the Editar model.
+  // EDIT-01: the items, the summary, the art and the observations are edited
+  // in place, so their open fold keeps the footer.
   const items = page.getByRole('region', { name: ITEMS });
   await items.getByRole('button', { name: /^Itens e especificações/u }).click();
   await expect(items.getByLabel('Modelo', { exact: true })).toBeEditable();
@@ -4763,10 +4763,8 @@ test('keeps the main action of the order in a fixed footer on a phone', async ({
   await observations
     .getByRole('button', { name: /^Observações do pedido/u })
     .click();
-  await observations
-    .getByRole('button', { name: 'Editar observações' })
-    .click();
-  await expect(footer).toHaveCount(0);
+  await expect(observations.getByLabel('Observação 1')).toBeEditable();
+  await expect(generate).toBeVisible();
 });
 
 test('keeps a ready pending order within 1.800 px on a phone (RFC 024)', async ({
@@ -5511,13 +5509,6 @@ test('says "Salvando…" and then "Salvo" in the one status region of the head, 
   ]);
   // The status is the only word about it: no toast.
   await expect(page.locator('.notice-toast')).toHaveCount(0);
-
-  // "Salvo" speaks of the fields and leaves with them.
-  await page
-    .getByRole('region', { name: 'Observações do pedido' })
-    .getByRole('button', { name: 'Editar observações' })
-    .click();
-  await expect(status).toHaveText('');
 });
 
 test('keeps every subtotal that awaits a look with one button, one command per size (EDIT-07)', async ({

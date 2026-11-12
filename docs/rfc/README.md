@@ -1,5 +1,12 @@
 # Request for Comments
 
+## Proposta de 12/11/2026
+
+- [067 — WhatsApp por vendedor e Meus clientes](067-whatsapp-por-vendedor-e-meus-clientes.md),
+  em revisão, WAP-T00: duas etapas exclusivas de WhatsApp, conexão pessoal por
+  QR, carteira isolada e sincronização corrente; depois, importação controlada
+  e sucessão de linha. ADR pendente; sem implementação ou ativação.
+
 ## Decisão de 12/11/2026
 
 - [065 — Ficha por item com o controle de produção no verso](065-ficha-por-item-controle-no-verso.md),

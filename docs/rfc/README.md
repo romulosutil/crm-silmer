@@ -4,8 +4,9 @@
 
 - [067 — WhatsApp por vendedor e Meus clientes](067-whatsapp-por-vendedor-e-meus-clientes.md),
   em revisão, WAP-T00: duas etapas exclusivas de WhatsApp, conexão pessoal por
-  QR, carteira isolada e sincronização corrente; depois, importação controlada
-  e sucessão de linha. ADR pendente; sem implementação ou ativação.
+  QR, carteira isolada e operação CRM completa com contatos, pedidos, cobranças
+  e sincronização corrente; depois, importação controlada e sucessão de linha.
+  Complemento WAP-T00a; ADR pendente, sem implementação ou ativação.
 
 ## Decisão de 12/11/2026
 

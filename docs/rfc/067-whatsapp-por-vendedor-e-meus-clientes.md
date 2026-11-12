@@ -3,7 +3,7 @@
 Data: 12/11/2026. Status: **proposta em revisão**. Responsável: Tech Lead.
 Solicitante e aprovador de produto: proprietário do CRM Silmer. Revisão técnica:
 Backend/Dados, Integrações, Frontend/A11y e QA/Privacidade/Operação conforme a
-fatia. Requisitos propostos [WAP-01–16](../../.specs/features/seller-whatsapp/spec.md);
+fatia. Requisitos propostos [WAP-01–19](../../.specs/features/seller-whatsapp/spec.md);
 entrega documental WAP-T00 e [plano WAP-T01–07](../../.specs/features/seller-whatsapp/tasks.md).
 Sem issue específica; PR desta entrega vinculada no handoff.
 
@@ -20,6 +20,12 @@ Cada vendedor atende sua carteira por um celular de trabalho. O CRM precisa
 reconhecer a linha que recebeu a mensagem, mostrar seus clientes e responder
 pelo mesmo número. A pessoa deve conectar e reconectar seu aparelho no CRM,
 sem receber credencial técnica, acessar Evolution Manager ou chamar suporte.
+
+Esclarecimento do proprietário em 12/11/2026: **Meus clientes é uma entrada
+para a operação comercial completa do CRM**. O vendedor continua salvando
+contatos, criando e acompanhando pedidos, fazendo cobranças e usando as demais
+ações existentes conforme as permissões e regras de cada domínio. Essa
+paridade integra a etapa 1; não fica adiada para importação de histórico.
 
 **Sim, Meus clientes pode abrir a configuração e mostrar o QR code.** O QR é
 gerado pela Evolution e exibido por uma API autenticada do CRM. O navegador
@@ -65,15 +71,51 @@ imagem implantada, a disponibilidade da conta nem importação integral da agend
 
 ## Duas etapas, ambas de telefones
 
-| Etapa                                      | Entrega                                                                                                                                                      | Gate de conclusão                                                                                                                |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| 1 — Conexão pessoal e atendimento corrente | Configuração pessoal, QR/reconexão, vínculo por linha, Meus clientes, novas mensagens de entrada e saída no CRM e no aparelho, isolamento e falhas visíveis. | Duas linhas sintéticas/piloto autorizado, sem acesso cruzado ou resposta pelo número errado; vendedor conecta sem ajuda técnica. |
-| 2 — Carteira anterior e continuidade       | Descoberta/importação controlada de contatos e histórico disponível; troca de número e transferência administrativa da linha/carteira.                       | Prévia, limites reais do provedor, deduplicação, retomada e revogação demonstrados sem disparar atendimento retroativo.          |
+| Etapa                                    | Entrega                                                                                                                                                                       | Gate de conclusão                                                                                                                              |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 — Conexão pessoal e operação comercial | Configuração pessoal, QR/reconexão, carteira por linha e operação CRM completa: contatos, pedidos, cobranças e mensagens pelo CRM/aparelho, com isolamento e falhas visíveis. | Vendedor conecta sem suporte e completa contato → pedido → cobrança nas duas linhas do piloto, sem acesso cruzado ou envio pelo número errado. |
+| 2 — Carteira anterior e continuidade     | Descoberta/importação controlada de contatos e histórico disponível; troca de número e transferência administrativa da linha/carteira.                                        | Prévia, limites reais do provedor, deduplicação, retomada e revogação demonstrados sem disparar atendimento retroativo.                        |
 
 A etapa 1 não promete que todos os clientes antigos apareçam ao escanear o QR.
 Na etapa 2, contato sem conversa pode ser importado como cadastro, nunca como
 mensagem recebida, pedido ou oportunidade presumida. Grupo, status, broadcast,
 newsletter e contatos pessoais sem pertinência comercial ficam excluídos.
+
+## Operação comercial completa desde a etapa 1
+
+Ao abrir um cliente da carteira, reutilizar o atendimento e os módulos atuais,
+com o mesmo contexto de Contato, Conversa, Assunto e Pedido e as respectivas
+capacidades. A linha pessoal define a origem e o remetente; não substitui as
+autorizações de cadastro, edição comercial, confirmação ou cobrança.
+
+| Ação                      | Comportamento esperado em Meus clientes                                                                                                                                                                                                             |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Salvar e editar contato   | Usar o cadastro oficial do CRM, incluindo dados comerciais e vínculo com a própria carteira. Permitir cadastro humano antes de existir conversa; não fabricar identidade de canal, mensagem recebida ou pareamento pelo ato de salvar.              |
+| Criar e acompanhar pedido | Criar por ação humana, inclusive sem sugestão da IA, usando os fluxos vigentes de pedido associado ao atendimento ou pedido manual. Preservar edição, confirmação, ficha/PDF, arquivos e demais ações comerciais elegíveis com suas guardas atuais. |
+| Fazer cobrança            | Reutilizar configuração, emissão e acompanhamento de cobranças, recebimentos e saldo já existentes. Criação da cobrança, envio do link e confirmação de pagamento continuam efeitos separados, autorizados e idempotentes.                          |
+| Enviar ao cliente         | Mensagens, arquivos, ficha e link de cobrança usam a conversa/destino escolhido e sua linha de origem. Não trocar cliente, Pedido ou número ao navegar pela carteira; não enviar automaticamente ao criar cadastro, pedido ou cobrança.             |
+
+A exigência de emissão em Pedido confirmado, os limites de saldo/acordo e os
+demais gates de cobrança continuam no [contrato COB/BAPI](../../.specs/features/order-billing/spec.md).
+A abertura humana mantém [OA-01–08](../../.specs/features/order-assistance/spec.md);
+o modo humano proposto para a linha pessoal não remove essas ações. Reutilizar
+as APIs e componentes existentes, sem cadastro, pedido ou cobrança paralelos
+por instância Evolution. Parear o celular não concede capacidade comercial
+extra nem habilita integrações ainda não liberadas no ambiente.
+
+Contato salvo manualmente fica vinculado à carteira do vendedor/linha com
+proveniência humana, inclusive antes da primeira inbound; o telefone informado
+não é prova de identidade do canal. Identidades posteriores seguem correlação
+verificável e escolha de duplicata já existentes. Um cadastro global anterior
+não é copiado nem fundido silenciosamente para contornar autorização.
+
+WhatsApp desconectado bloqueia o envio pelo canal. Consulta e mutações locais
+autorizadas, como salvar contato ou criar/editar pedido, continuam disponíveis;
+emissão e confirmação de cobrança dependem da integração de pagamento própria,
+sem exigir pareamento WhatsApp. Não suspender callbacks financeiros, conciliação
+ou registro de recebimento por desconexão/rollback da linha. Uma cobrança já
+criada é preservada; o envio posterior exige nova validação do mesmo link,
+cliente, Pedido, destino e linha, sem emitir cobrança duplicada para reconectar.
 
 ## Jornada pessoal proposta
 
@@ -131,7 +173,8 @@ não decorre do pareamento. Esse modo humano inicial e a atribuição por linha
 são propostas de exceção restrita às regras atuais de jornada/handoff.
 
 Meus clientes lista Contatos com vínculo comercial à própria linha, não apenas
-conversas atualmente abertas. Encerrar atendimento ou desconectar não apaga
+conversas atualmente abertas; inclui os contatos salvos manualmente nessa
+carteira. Encerrar atendimento ou desconectar não apaga
 carteira. Leituras de conversas continuam exigindo posse atual (ADR 088), com
 proteção adicional da linha pessoal. Outro vendedor não ganha acesso pela
 condição sem responsável, pelo filtro Todas, pela busca geral de clientes ou
@@ -266,6 +309,11 @@ estão na spec e os gates locais/remotos no plano. A etapa 1 exige evidência de
 duas linhas, reconexão autônoma, mesmo cliente em ambas, concorrência de número,
 QR expirado, aparelho incorreto, saída nativa, eco duplicado, revogação durante
 envio, isolamento de Contatos/SSE/mídia e indisponibilidade do n8n/Evolution.
+WAP-17–19 exigem ainda cadastro manual sem conversa, criação/edição/confirmação
+humana de Pedido e cobrança com contexto correto, envio do link pela linha de
+origem e pagamento conciliado uma vez. Repetir com duas linhas e mesmo cliente,
+tentativas alheias e WhatsApp desconectado; pagamento usa ambiente sintético
+ou sandbox autorizado, sem presumir liberação de cobrança financeira real.
 
 Flags propostas desligadas por padrão, habilitação/piloto privados, sem mudar
 a linha geral. Antes de cada piloto: capacidade do gateway e banco, retenção
@@ -274,6 +322,8 @@ verificados no alvo. Baileys continua ponte com os limites da ADR 050; múltipla
 linhas não significam estabilidade ou imunidade a bloqueio do WhatsApp.
 
 Rollback desliga novas conexões/importações e despachos das linhas pessoais,
-preservando histórico, ledger, ACL e resultados incertos. Não publica outra
+preservando cadastro, pedidos, cobranças, recebimentos, histórico, ledger, ACL
+e resultados incertos. Confirmação e conciliação financeira seguem operantes
+sob seus contratos próprios. Não publica outra
 linha como remetente, não reabre acesso compartilhado e não apaga sessões ou
 operações para permitir retry. Reativação exige reconciliar o que ficou incerto.

@@ -1,8 +1,8 @@
 # WhatsApp por vendedor — plano em duas etapas
 
 [RFC 067](../../../docs/rfc/067-whatsapp-por-vendedor-e-meus-clientes.md),
-[WAP-01–16 propostos](spec.md). Uma tarefa, entrega atômica, commit e push.
-Somente WAP-T00 é documental e autorizada nesta solicitação. As tarefas
+[WAP-01–19 propostos](spec.md). Uma tarefa, entrega atômica, commit e push.
+WAP-T00 e seu complemento WAP-T00a são documentais e autorizados. As tarefas
 seguintes são planejamento; implementação/ativação dependem da decisão da RFC.
 
 ## WAP-T00 — RFC, requisitos e plano
@@ -17,6 +17,15 @@ seguintes são planejamento; implementação/ativação dependem da decisão da 
 Validação proporcional: Prettier nos documentos alterados, referências locais,
 rastreabilidade e `git diff --check`. Sem suítes de runtime para esta proposta
 documental; não há novo endpoint, migração, workflow ou pareamento nesta entrega.
+
+## WAP-T00a — explicitar a operação comercial completa
+
+- [x] Registrar o esclarecimento do proprietário: Meus clientes inclui cadastro
+      de contatos, pedidos, cobranças e demais ações CRM elegíveis na etapa 1.
+- [x] Acrescentar WAP-17–19 e cenários de contexto comercial, cadastro sem
+      conversa, envio de cobrança pela linha correta e pagamento após disconnect.
+- [x] Alinhar tarefas e referências; verificar documentação e publicar o
+      complemento em commit/push na PR 372 da RFC, sem alterar runtime.
 
 ## Antes da implementação — decisão de produto
 
@@ -41,7 +50,7 @@ WAP-02–05, 10–12. Backend/Dados, Integrações e QA/Privacidade.
 
 ### WAP-T02 — roteamento, carteira e autorização
 
-WAP-04–08, 10–12. Backend/Dados, Integrações e QA.
+WAP-04–08, 10–12, 17–19. Backend/Dados, Integrações e QA.
 
 - [ ] Vincular conta de canal à linha/geração no CRM; atribuição/modo humano
       atômicos conforme ADR aprovado, sem alterar a linha compartilhada.
@@ -49,6 +58,12 @@ WAP-04–08, 10–12. Backend/Dados, Integrações e QA.
       impedir transferência genérica de linha pessoal a outro vendedor.
 - [ ] Proteger carteira e clientes gerais, busca/contagens, links, histórico,
       mídia, contexto, assuntos, replay e SSE; preservar ACL comercial do Pedido.
+- [ ] Vincular cadastro manual à carteira sem exigir inbound ou inventar
+      identidade; compor serviços comerciais existentes e preservar contexto
+      Contato/Conversa/Assunto/Pedido e ACL de pedido/cobrança.
+- [ ] Garantir envio de cobrança/ficha pelo número correto, sem vincular
+      emissão ou callback financeiro à disponibilidade do WhatsApp; testar
+      concorrência, duas linhas com o mesmo cliente e pagamento após disconnect.
 - [ ] Testar dois vendedores, mesmo cliente em duas linhas, unassigned indevido,
       Admin/Financeiro, inativação e revogação concorrente; gates, commit/push.
 
@@ -65,12 +80,15 @@ WAP-06, 09–12. Integrações, Backend/Dados e QA.
 
 ### WAP-T04 — Meus clientes e Meu WhatsApp
 
-WAP-01–04, 06–08, 11–12. Frontend/A11y, Backend/Dados e QA.
+WAP-01–04, 06–08, 11–12, 17–19. Frontend/A11y, Backend/Dados e QA.
 
 - [ ] Compor a aba/configuração nos tokens e componentes Vue existentes; sem
       nova identidade visual, estado global ou domínio em window.
 - [ ] Abrir onboarding sem linha; pedir número/ação de conectar e mostrar QR;
       conectado abre carteira; desconectado mantém histórico e reconexão.
+- [ ] Reutilizar o atendimento comercial atual: salvar/editar contato, criar e
+      acompanhar pedido, ficha/arquivos e cobrança com as mesmas guardas, sem
+      adiar essas ações para a etapa 2. Falha do canal não remove ações locais.
 - [ ] Reutilizar configuração em Conta, alternativa mobile homologada, estados,
       cancelamento de leituras e expiração; respostas tardias não reabrem QR
       após fechar ou perder sessão. Nenhum segredo em storage/telemetria.
@@ -79,7 +97,7 @@ WAP-01–04, 06–08, 11–12. Frontend/A11y, Backend/Dados e QA.
 
 ### WAP-T05 — piloto e operação da etapa 1
 
-WAP-01–12, 16. Tech Lead, DevOps, Integrações e QA/Privacidade.
+WAP-01–12, 16–19. Tech Lead, DevOps, Integrações e QA/Privacidade.
 
 - [ ] Provisionamento por configuração com flags desligadas, allowlist privada,
       limites por usuário/serviço e política de retenção aplicada no gateway/n8n.
@@ -88,6 +106,10 @@ WAP-01–12, 16. Tech Lead, DevOps, Integrações e QA/Privacidade.
 - [ ] Piloto explicitamente autorizado com duas linhas: conectar sem suporte,
       número errado/duplicado, mesma pessoa em ambas, mensagens reais nos dois
       sentidos pelo CRM/aparelho, mídia/recibos, expiração, reconnect e outage.
+- [ ] Demonstrar contato manual → pedido humano → confirmação → cobrança →
+      envio pela linha de origem → recebimento único, nas duas carteiras;
+      repetir sem canal disponível e com acesso alheio. Pagamentos sintéticos/
+      sandbox autorizado, sem ativação financeira real implícita.
 - [ ] Confirmar limites do canal, ACL negativa, fences e rollback sem perda de
       ledger/ACL. Registrar aceite e evidências sem PII; commit/push do runbook.
 

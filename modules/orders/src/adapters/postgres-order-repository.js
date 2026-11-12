@@ -477,7 +477,8 @@ export class PostgresOrderRepository {
               created_at, updated_at, contact_id, manual_owner_id,
               manual_create_key)
            SELECT $1, reserved.sequence,
-                  lpad(reserved.sequence::text, 2, '0') || '-CRM',
+                  lpad(reserved.sequence::text,
+                       greatest(2, length(reserved.sequence::text)), '0') || '-CRM',
                   $2, 'pendente', $3, 1, $4::jsonb, $5, $6::text[], $7, $8,
                   $10, 1, $9, $9, $11, $12, $13
            FROM reserved
@@ -609,7 +610,8 @@ export class PostgresOrderRepository {
               payment_transaction_nsu, payment_invoice_slug, version,
               created_at, updated_at)
            SELECT $1, reserved.sequence,
-                  lpad(reserved.sequence::text, 2, '0') || '-CRM',
+                  lpad(reserved.sequence::text,
+                       greatest(2, length(reserved.sequence::text)), '0') || '-CRM',
                   NULL, 'confirmado', $2, 1, $3::jsonb, $4, '{}'::text[],
                   $5, $6, $7::date, $8, $9, $10, $11, $12, $13::date, 'loja',
                   $14, $15, $16, $17, $18, $19, $20, $21, 1, $8, $8

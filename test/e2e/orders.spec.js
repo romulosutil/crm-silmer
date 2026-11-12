@@ -387,8 +387,8 @@ test('lists exactly what is missing to generate, point by point, and fills the i
     .click();
   const artwork = page.getByRole('region', { name: 'Arte do pedido' });
   await expect(artwork.getByLabel('O cliente envia a arte')).toBeFocused();
+  // PED-RD-T04: the toggle saves by itself; there is no Salvar.
   await artwork.getByLabel('Sem estampa').check();
-  await artwork.getByRole('button', { name: 'Salvar arte' }).click();
   // RFC 024: with nothing missing the progress folds into one line, under
   // the same heading and the same status, without the list of steps.
   await expect(count).toHaveText('Tudo pronto para gerar · 3 de 3');
@@ -898,12 +898,12 @@ test('records who makes the art next to an empty file area (TEC-03, ARQ-01)', as
   // PFI-20: one control adds files; with none yet, the drop area's button.
   await expect(addFileControls(artwork)).toHaveCount(1);
 
-  await artwork.getByRole('button', { name: 'Editar' }).click();
+  // PED-RD-T04: the controls are open; each toggle saves by itself.
+  await expect(artwork.getByRole('button', { name: 'Editar' })).toHaveCount(0);
   const client = artwork.getByLabel('O cliente envia a arte');
   // PFI-20 (ADR 035): the company's name comes from the brand.
   const silmer = artwork.getByLabel(`A ${brand.companyName} cria a arte`);
   const plain = artwork.getByLabel('Sem estampa');
-  await expect(client).toBeFocused();
   await expect(client).toBeChecked();
   // "Sem estampa" stands alone; an origin clears it again.
   await plain.check();
@@ -911,24 +911,130 @@ test('records who makes the art next to an empty file area (TEC-03, ARQ-01)', as
   await client.check();
   await expect(plain).not.toBeChecked();
   await silmer.check();
-  await artwork.getByRole('button', { name: 'Salvar arte' }).click();
 
-  await expect(artwork).toContainText(
+  await expect(artwork.locator('.op-save-status')).toHaveText('Salvo');
+  await expect(artwork.locator('.op-sheet-state')).toHaveText(
     `O cliente envia a arte · A ${brand.companyName} cria a arte`,
   );
-  expect(writes).toHaveLength(1);
-  expect(writes[0]).toEqual({
-    section: 'artwork',
-    body: {
-      expectedVersion: 2,
-      value: {
-        feito_pela_silmer: true,
-        feito_pelo_cliente: true,
-        sem_estampa: false,
+  // One command per toggle, each over the version the last one left.
+  expect(writes).toEqual(
+    [
+      { silmer: false, client: false, plain: true },
+      { silmer: false, client: true, plain: false },
+      { silmer: true, client: true, plain: false },
+    ].map((marks, index) => ({
+      section: 'artwork',
+      body: {
+        expectedVersion: 2 + index,
+        value: {
+          feito_pela_silmer: marks.silmer,
+          feito_pelo_cliente: marks.client,
+          sem_estampa: marks.plain,
+        },
       },
-    },
-  });
+    })),
+  );
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test('keeps the toggled origin at the group and offers "Recarregar pedido" on a conflict (PED-RD-10, PED-RD-12)', async ({
+  page,
+}) => {
+  let detailCalls = 0;
+  await mockOrders(page, {
+    onDetail: () => {
+      detailCalls += 1;
+    },
+    writeFailure: { body: { code: 'VERSION_CONFLICT' }, status: 409 },
+  });
+  await page.goto('/pedidos/order-pendente');
+
+  const artwork = page.getByRole('region', { name: 'Arte do pedido' });
+  const plain = artwork.getByLabel('Sem estampa');
+  await plain.check();
+
+  const alert = artwork.getByRole('alert');
+  await expect(alert).toContainText('Este pedido mudou em outro lugar.');
+  await expect(plain).toBeChecked();
+  await expect(artwork.getByRole('group')).toHaveAccessibleDescription(
+    /Este pedido mudou/u,
+  );
+  await expect(artwork.getByRole('group')).not.toHaveAttribute(
+    'aria-invalid',
+    /./u,
+  );
+  await expect(artwork.locator('.op-save-status')).toHaveText('');
+
+  const before = detailCalls;
+  await alert.getByRole('button', { name: 'Recarregar pedido' }).click();
+  await expect.poll(() => detailCalls).toBeGreaterThan(before);
+  await expect(alert).toHaveCount(0);
+  await expect(plain).not.toBeChecked();
+  await expect(artwork.getByLabel('O cliente envia a arte')).toBeFocused();
+});
+
+test('lays "Arte final" and "Arquivos da arte" side by side from 32rem of chapter, stacked below, and reads without controls once confirmed (PED-RD-10, PED-RD-12)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const artwork = page.getByRole('region', { name: 'Arte do pedido' });
+  const final = artwork.getByRole('region', { name: 'Arte final' });
+  const files = artwork.getByRole('region', { name: 'Arquivos da arte' });
+  await expect(final).toBeVisible();
+  await expect(files).toBeVisible();
+  await expect(artwork.getByRole('button', { name: /^Editar/u })).toHaveCount(
+    0,
+  );
+  await expect(
+    artwork.getByRole('button', { name: 'Salvar arte' }),
+  ).toHaveCount(0);
+
+  /** @type {[number, boolean][]} */
+  const layouts = [
+    [1600, true],
+    [390, false],
+    [320, false],
+  ];
+  for (const [width, sideBySide] of layouts) {
+    await page.setViewportSize({ height: 900, width });
+    // PFI-18: on a phone the chapter is a fold; open it.
+    const fold = artwork.getByRole('button', { name: /^Arte do pedido/u });
+    if ((await fold.count()) > 0 && !(await final.isVisible())) {
+      await fold.click();
+    }
+    const one = await final.boundingBox();
+    const two = await files.boundingBox();
+    expect(one && two).toBeTruthy();
+    if (sideBySide) {
+      expect(Math.abs((one?.y ?? 0) - (two?.y ?? 0))).toBeLessThan(2);
+      expect(two?.x ?? 0).toBeGreaterThan(
+        (one?.x ?? 0) + (one?.width ?? 0) - 1,
+      );
+    } else {
+      expect(two?.y ?? 0).toBeGreaterThan(
+        (one?.y ?? 0) + (one?.height ?? 0) - 1,
+      );
+    }
+    expect(
+      await page.evaluate(
+        () =>
+          globalThis.document.documentElement.scrollWidth -
+          globalThis.document.documentElement.clientWidth,
+      ),
+    ).toBeLessThanOrEqual(0);
+  }
+
+  await page.setViewportSize({ height: 900, width: 1280 });
+  await mockOrders(page);
+  await page.goto('/pedidos/order-confirmado');
+  const confirmed = page.getByRole('region', { name: 'Arte do pedido' });
+  await expect(confirmed.getByRole('checkbox')).toHaveCount(0);
+  await expect(
+    confirmed.getByRole('list', { name: 'Quem faz a arte' }),
+  ).toBeVisible();
+  await expect(confirmed.getByText('Salve ou cancele')).toHaveCount(0);
 });
 
 test('a seller sends art files and the final art, then removes one by keyboard (ARQ-02, ARQ-04, ARQ-05)', async ({
@@ -1165,7 +1271,6 @@ for (const width of [390, 1280]) {
       page.getByRole('button', { name: 'Enviar arte final' }),
     ).toHaveCSS('min-block-size', width < 640 ? '44px' : '40px');
 
-    await page.getByRole('button', { name: 'Editar arte' }).click();
     await expect(
       artwork.getByLabel(`A ${brand.companyName} cria a arte`),
     ).toBeVisible();
@@ -1710,9 +1815,12 @@ test('opens every point of a pending item as a field, in the order of the ficha,
   }
   await expect(items.locator('.op-editing-tag')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveText([
-    'Editar arte',
     'Editar observações',
   ]);
+  // PED-RD-T04: the art is edited in place too.
+  await expect(page.getByRole('button', { name: 'Editar arte' })).toHaveCount(
+    0,
+  );
   // PED-RD-T03: the summary is edited in place too.
   await expect(page.getByRole('button', { name: 'Editar resumo' })).toHaveCount(
     0,
@@ -2787,12 +2895,16 @@ test('reads the items, with the reason, while a section still in the Editar mode
   });
   await page.goto('/pedidos/order-pendente');
 
-  const artwork = page.getByRole('region', { name: 'Arte do pedido' });
+  const observations = page.getByRole('region', {
+    name: 'Observações do pedido',
+  });
   const items = page.getByRole('region', { name: ITEMS });
   await expect(items).toHaveAttribute('data-items-state', 'edit');
-  await artwork.getByRole('button', { name: 'Editar arte' }).click();
+  await observations
+    .getByRole('button', { name: 'Editar observações' })
+    .click();
 
-  // A save here would make "Salvar arte" lose to a conflict of versions.
+  // A save here would make "Salvar observações" lose to a conflict of versions.
   await expect(items).toHaveAttribute('data-items-state', 'blocked');
   await expect(
     items.getByText('Salve ou cancele a edição aberta para alterar os itens.'),
@@ -2813,7 +2925,7 @@ test('reads the items, with the reason, while a section still in the Editar mode
   ).toHaveText([/^M\s*100\s*R\$ 3\.200,00$/u, /^G\s*50\s*R\$ 1\.600,00$/u]);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
-  await artwork.getByRole('button', { name: 'Cancelar' }).click();
+  await observations.getByRole('button', { name: 'Cancelar' }).click();
   await expect(items).toHaveAttribute('data-items-state', 'edit');
   await expect(
     page.getByText('Salve ou cancele a edição aberta para alterar os itens.'),
@@ -2922,7 +3034,6 @@ test('heads each section with its state in words, "Editar" naming the section an
   // Verb and object on every button; none says only "Editar". EDIT-01: the
   // section edited in place has none.
   await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveText([
-    'Editar arte',
     'Editar observações',
   ]);
   await expect(
@@ -2969,9 +3080,8 @@ test('heads each section with its state in words, "Editar" naming the section an
   await expect(summary.locator('.op-sheet-state')).toHaveText(
     'Entrega 20/11/2026',
   );
-  await artwork.getByRole('button', { name: 'Editar arte' }).click();
   await artwork.getByLabel('O cliente envia a arte').check();
-  await artwork.getByRole('button', { name: 'Salvar arte' }).click();
+  await expect(artwork.locator('.op-save-status')).toHaveText('Salvo');
   await expect(artwork.locator('.op-sheet-state')).toHaveText(
     'O cliente envia a arte',
   );
@@ -2981,7 +3091,7 @@ test('heads each section with its state in words, "Editar" naming the section an
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('keeps the other "Editar" focusable but unavailable, with the reason, while one section is open (PFI-17, PFI-06, EDIT-08)', async ({
+test('reads the sections edited in place, with the reason, while the one still in "Editar" is open (PFI-17, PFI-06, EDIT-08, PED-RD-12)', async ({
   page,
 }) => {
   /** @type {any[]} */
@@ -2995,61 +3105,37 @@ test('keeps the other "Editar" focusable but unavailable, with the reason, while
   const observations = page.getByRole('region', {
     name: 'Observações do pedido',
   });
-  // The art is still in the Editar/Salvar model.
-  const editArtwork = artwork.getByRole('button', { name: 'Editar arte' });
-  await editArtwork.focus();
+  // The observations are the last section still in the Editar/Salvar model.
+  const editObservations = observations.getByRole('button', {
+    name: 'Editar observações',
+  });
+  await editObservations.focus();
   await page.keyboard.press('Enter');
-  const reference = artwork.getByLabel('O cliente envia a arte');
-  await reference.check();
 
-  const others = page.getByRole('button', { name: /^Editar\b/u });
-  await expect(others).toHaveText(['Editar observações']);
-  for (const other of await others.all()) {
-    await expect(other).toHaveAttribute('aria-disabled', 'true');
-    await expect(other).toHaveAccessibleDescription(
-      'Salve ou cancele a edição aberta.',
-    );
-  }
-  // EDIT-08: the items and the summary have no button to wait; they read,
-  // with the reason.
+  // No other "Editar" is left to wait: the sections edited in place read,
+  // with the reason, and never mix the two models.
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(0);
   await expect(items).toHaveAttribute('data-items-state', 'blocked');
   await expect(items.getByRole('textbox')).toHaveCount(0);
   await expect(summary.getByRole('textbox')).toHaveCount(0);
   await expect(summary).toContainText(
     'Salve ou cancele a edição aberta para alterar o resumo.',
   );
-
-  // Enter and a click on a waiting button open nothing and keep the draft.
-  const editObservations = observations.getByRole('button', {
-    name: 'Editar observações',
-  });
-  await editObservations.focus();
-  await page.keyboard.press('Enter');
-  await page.keyboard.press('Space');
-  await editObservations.dispatchEvent('click');
-  await expect(editObservations).toBeFocused();
-  await expect(observations.getByRole('textbox')).toHaveCount(0);
-  await expect(reference).toBeChecked();
-  // After the attempt the reason shows on screen, next to the button.
-  await expect(
-    observations.getByText('Salve ou cancele a edição aberta.', {
-      exact: true,
-    }),
-  ).toBeVisible();
+  await expect(artwork).toContainText(
+    'Salve ou cancele a edição aberta para alterar a arte.',
+  );
+  await expect(artwork.getByRole('checkbox')).toHaveCount(0);
   expect(writes).toHaveLength(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
-  // Cancelling frees the "Editar" again, without the reason.
-  await artwork.getByRole('button', { name: 'Cancelar' }).click();
-  await expect(others).toHaveCount(2);
-  for (const other of await others.all()) {
-    await expect(other).not.toHaveAttribute('aria-disabled', /./u);
-    await expect(other).not.toHaveAttribute('aria-describedby', /./u);
-  }
-  await expect(page.getByText('Salve ou cancele a edição aberta.')).toHaveCount(
+  // Cancelling frees the fields again, without the reason.
+  await observations.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(1);
+  await expect(page.getByText('Salve ou cancele a edição aberta')).toHaveCount(
     0,
   );
   await expect(items).toHaveAttribute('data-items-state', 'edit');
+  await expect(artwork.getByRole('checkbox')).toHaveCount(3);
 });
 
 test('takes the next step to the first pending field of the items, by keyboard, wide and on a phone (PFI-15, PFI-16, PFI-17, EDIT-04)', async ({
@@ -3435,9 +3521,9 @@ test('keeps the section heads readable and their buttons thumb sized, light and 
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
     await page.setViewportSize({ height: 800, width: 1280 });
-    // On a wide screen every "Editar" is back but the one in edit (the items
-    // and the summary have none, EDIT-01), and the edit is still open.
-    await expect(edits).toHaveCount(1);
+    // On a wide screen no "Editar" is left but the one in edit (the items,
+    // the summary and the art have none, EDIT-01), and the edit is still open.
+    await expect(edits).toHaveCount(0);
     await expect(observations.getByText('Editando')).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   }
@@ -3760,7 +3846,8 @@ test('keeps every section open and the heads plain on a wide screen (PFI-18)', a
   await page.goto('/pedidos/order-pendente#itens');
 
   // No accordion: no head button, no aria-expanded on a heading, every
-  // body on screen and every "Editar" in place (EDIT-01: none on the items).
+  // body on screen and every "Editar" in place (EDIT-01: only the
+  // observations keep one).
   await expect(page.locator('main h2 button')).toHaveCount(0);
   await expect(page.locator('main h2 [aria-expanded]')).toHaveCount(0);
   for (const body of [
@@ -3772,7 +3859,7 @@ test('keeps every section open and the heads plain on a wide screen (PFI-18)', a
   ]) {
     await expect(page.locator(body)).toBeVisible();
   }
-  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(2);
+  await expect(page.getByRole('button', { name: /^Editar\b/u })).toHaveCount(1);
   await expect(page.getByRole('region', { name: ITEMS })).toHaveAttribute(
     'data-items-state',
     'edit',
@@ -4471,8 +4558,12 @@ test('keeps "Gerar pedido" as the only primary button of the page (PFI-13)', asy
   await dialog.getByRole('button', { name: 'Voltar' }).click();
   await expect(dialog).toHaveCount(0);
 
-  const artwork = page.getByRole('region', { name: 'Arte do pedido' });
-  await artwork.getByRole('button', { name: 'Editar arte' }).click();
+  const observations = page.getByRole('region', {
+    name: 'Observações do pedido',
+  });
+  await observations
+    .getByRole('button', { name: 'Editar observações' })
+    .click();
   await expect(primary).toHaveText(['Gerar pedido']);
 });
 
@@ -4655,9 +4746,9 @@ test('keeps the main action of the order in a fixed footer on a phone', async ({
   await expect(dialog).toHaveCount(0);
   await expect(generate).toBeFocused();
 
-  // EDIT-01: the items and the summary are edited in place, so their open
-  // fold keeps the footer; it steps aside only for a section still in the
-  // Editar model.
+  // EDIT-01: the items, the summary and the art are edited in place, so their
+  // open fold keeps the footer; it steps aside only for a section still in
+  // the Editar model.
   const items = page.getByRole('region', { name: ITEMS });
   await items.getByRole('button', { name: /^Itens e especificações/u }).click();
   await expect(items.getByLabel('Modelo', { exact: true })).toBeEditable();
@@ -4666,9 +4757,15 @@ test('keeps the main action of the order in a fixed footer on a phone', async ({
   await summary.getByRole('button', { name: /^Resumo do pedido/u }).click();
   await expect(summary.getByLabel('Nome do pedido')).toBeEditable();
   await expect(generate).toBeVisible();
-  const artwork = page.getByRole('region', { name: 'Arte do pedido' });
-  await artwork.getByRole('button', { name: /^Arte do pedido/u }).click();
-  await artwork.getByRole('button', { name: 'Editar arte' }).click();
+  const observations = page.getByRole('region', {
+    name: 'Observações do pedido',
+  });
+  await observations
+    .getByRole('button', { name: /^Observações do pedido/u })
+    .click();
+  await observations
+    .getByRole('button', { name: 'Editar observações' })
+    .click();
   await expect(footer).toHaveCount(0);
 });
 
@@ -5417,8 +5514,8 @@ test('says "Salvando…" and then "Salvo" in the one status region of the head, 
 
   // "Salvo" speaks of the fields and leaves with them.
   await page
-    .getByRole('region', { name: 'Arte do pedido' })
-    .getByRole('button', { name: 'Editar arte' })
+    .getByRole('region', { name: 'Observações do pedido' })
+    .getByRole('button', { name: 'Editar observações' })
     .click();
   await expect(status).toHaveText('');
 });

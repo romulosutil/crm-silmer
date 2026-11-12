@@ -96,7 +96,7 @@ quebrado.
 ### PED-RD-T04: Arte em edição no lugar, lado a lado
 
 - [ ] "Quem faz a arte" como chips de alternância que salvam ao tocar.
-- [ ] "Arte final" e "Arquivos da arte" em duas colunas a partir de 36rem; um
+- [ ] "Arte final" e "Arquivos da arte" em duas colunas a partir de 32rem; um
       só "Adicionar arquivo" por lista.
 - [ ] Remover "Editar arte"; `SaveStatus` no cabeçalho.
 - [ ] Preservar o fluxo de "Enviar arte final" e a regra de que referências

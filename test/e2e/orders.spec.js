@@ -212,13 +212,13 @@ test('opens the order page inside Pedidos, with the trail and the sections in or
   // of the screen, and no production control (it is only on paper).
   await expect(page.locator('main h2')).toHaveText([
     'Para gerar o pedido',
+    'Fechamento e pagamento',
     'Resumo do pedido',
     'Datas do pedido',
     'Itens e especificações',
     'Arte do pedido',
     'Observações do pedido',
     'Dados do atendimento',
-    'Fechamento e pagamento',
   ]);
 
   const results = await new AxeBuilder({ page }).analyze();
@@ -3761,18 +3761,18 @@ test('keeps the sections in the order of the printed ficha (PFI-01, PLA-01)', as
   await mockOrders(page);
   await page.goto('/pedidos/order-pendente');
 
-  // PFI-15: the progress to generate comes before the sections of the ficha.
+  // PED-RD-08: the rail (progress, then closing) comes before the sections of the ficha.
   // PFI-20: the ficha's order, in the words of the screen; the production
   // control stays on the printed ficha only.
   await expect(page.locator('main h2')).toHaveText([
     'Para gerar o pedido',
+    'Fechamento e pagamento',
     'Resumo do pedido',
     'Datas do pedido',
     'Itens e especificações',
     'Arte do pedido',
     'Observações do pedido',
     'Dados do atendimento',
-    'Fechamento e pagamento',
   ]);
 });
 

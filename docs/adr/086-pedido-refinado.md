@@ -77,7 +77,7 @@ ficar lado a lado e que faltava responsividade aos componentes.
    pedido e Previsão de entrega; os dois campos lado a lado em container de
    40rem ou mais.
 6. **Arte:** "Quem faz a arte" no topo; "Arte final" e "Arquivos da arte" lado
-   a lado em container de 36rem ou mais, empilhados no estreito.
+   a lado em container de 32rem ou mais, empilhados no estreito.
 7. **Datas = container de produção refinado**
    (`OrderMilestonesSection.vue`): contador neutro no cabeçalho, linha do
    tempo horizontal com data acima, ponto na trilha (concluído preenchido,

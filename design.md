@@ -1473,7 +1473,7 @@ lugar da §20. Até cada tarefa ser entregue, a §9 descreve o que o código faz
   Previsão de entrega, os dois campos lado a lado em container de 40rem ou
   mais. Não repete peças, valor, vendedor, data do pedido nem FAB.
 - **Arte (PED-RD-10):** "Quem faz a arte" no topo; "Arte final" e "Arquivos da
-  arte" lado a lado em container de 36rem ou mais, empilhados no estreito.
+  arte" lado a lado em container de 32rem ou mais, empilhados no estreito.
 - **Observações (PED-RD-11):** lista numerada com cabeçalho visível das
   colunas, `BlankRow` no fim, dica de uma linha, até 5 linhas de 200
   caracteres.
@@ -1546,7 +1546,7 @@ por espaço, não por caixa. Valores só da escala de 4 px.
 - Todo container de layout (ficha, capítulo, bloco do rail, lista de itens,
   linha do tempo) declara `container-type: inline-size`, `inline-size: 100%`
   e `min-inline-size: 0`.
-- As grades internas usam `@container`: Resumo a 40rem, Arte a 36rem, Datas a
+- As grades internas usam `@container`: Resumo a 40rem, Arte a 32rem, Datas a
   44rem. A única consulta de viewport do layout é a de 75rem do rail.
 - Nunca centralizar um container com `margin-inline: auto` dentro de grade ou
   flex sem largura explícita: sem largura intrínseca ele encolhe a zero (foi o

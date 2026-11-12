@@ -1116,17 +1116,99 @@ button.op-save:hover:not(:disabled) {
   accent-color: var(--color-brand-ink);
 }
 
+/*
+ * Arte (PED-RD-10, EDIT-01): who makes the art on top, then "Arte final" and
+ * "Arquivos da arte" side by side once the chapter body is 32rem wide (about 1366 px with the rail). The
+ * layout answers the width of the chapter, not of the window.
+ */
+.op-artwork {
+  inline-size: 100%;
+  min-inline-size: 0;
+  gap: 1.5rem;
+  container: op-artwork / inline-size;
+}
+
 .op-artwork-source {
   display: grid;
-  gap: 0.65rem;
+  justify-items: start;
+  gap: 0.5rem;
   margin: 0;
-  padding: 1rem 1.25rem;
+  padding: 0;
+  min-inline-size: 0;
   border: 0;
 }
 
 .op-artwork-source legend {
+  padding: 0;
+  margin-block-end: 0.25rem;
   color: var(--color-text);
   font-weight: 600;
+}
+
+.op-artwork-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+}
+
+.op-artwork-source .op-field-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem 0.5rem;
+}
+
+.op-artwork-marked {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.op-artwork-marked li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+
+.op-artwork-marked .op-icon {
+  inline-size: 1rem;
+  block-size: 1rem;
+  color: var(--status-success-text);
+}
+
+.op-files {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.op-artwork .op-files-block {
+  min-inline-size: 0;
+  padding: 0;
+  border-block-start: 0;
+  align-content: start;
+}
+
+@container op-artwork (width >= 32rem) {
+  .op-files {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  /* Half a chapter is too narrow for the thumb beside the details. */
+  .op-final {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .op-files > .op-files-block:only-of-type {
+    grid-column: 1 / -1;
+  }
 }
 
 /* Art files (ADR 023): the final art, then up to five references. */

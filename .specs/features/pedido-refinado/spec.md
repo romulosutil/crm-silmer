@@ -234,7 +234,7 @@ dos fatos-chave.
    (`aria-pressed`) que salvam ao tocar.
 2. Abaixo, "Arte final" (a versão aprovada que vai para a produção) e
    "Arquivos da arte" (referências e rascunhos; não vão para a produção)
-   SHALL ficar lado a lado em container de 36rem ou mais, empilhados no
+   SHALL ficar lado a lado em container de 32rem ou mais, empilhados no
    estreito, cada um com `h3`.
 3. Cada lista SHALL ter um só controle "Adicionar arquivo" e remover por botão
    de ícone de 44 px com nome ("Remover {arquivo}").
@@ -245,7 +245,7 @@ dos fatos-chave.
    dizer "Falta marcar quem faz a arte" com `FieldGap`, nunca erro.
 
 Verificação: E2E de arte final e arquivos (`Enviar arte final`) com o novo
-arranjo; medida das duas colunas a 36rem.
+arranjo; medida das duas colunas a 32rem.
 
 ### PED-RD-11 — Observações
 
@@ -301,7 +301,7 @@ em `40-order.css`, antes e depois (§19 do `design.md`).
    linha do tempo) SHALL declarar `container-type: inline-size`,
    `inline-size: 100%` e `min-inline-size: 0`.
 2. As grades internas SHALL reagir ao container com `@container`: Resumo a
-   40rem, Arte a 36rem, Datas a 44rem; a única consulta de viewport do layout
+   40rem, Arte a 32rem, Datas a 44rem; a única consulta de viewport do layout
    é a de 75rem do rail.
 3. SHALL NOT haver rolagem horizontal da página a 320 px nem a 200% de zoom.
 4. **Negativo:** nenhum container de layout SHALL ser centralizado com

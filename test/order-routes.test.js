@@ -1557,12 +1557,12 @@ test('GET /orders/:orderId/print renders the confirmed order on the printed temp
     guards.map((guard) => [guard.method, guard.input.action]),
     [['authorizeRead', 'order.print']],
   );
-  assert.match(html, /FICHA DE PEDIDO/u);
-  assert.match(html, /@page \{ size: A4 landscape/u);
+  // FPI-T02: orders print on v8, one A4 portrait sheet per item.
+  assert.match(html, /Ficha de pedido/u);
+  assert.match(html, /@page \{ size: A4 portrait/u);
   assert.match(html, /01-CRM/u);
   assert.match(html, /Cliente Sintetico/u);
   assert.match(html, /Equipe Sintetica/u);
-  assert.match(html, /FAB 01/u);
   assert.match(html, /Vendedora Um/u);
   assert.doesNotMatch(html, /Vendedor Dois/u);
 });
@@ -1629,7 +1629,7 @@ test('PIM-13: PDF download uses the approved ficha and the same print permission
     /pedido-01-CRM\.pdf/u,
   );
   assert.equal(pdf.rawPayload.toString(), '%PDF-1.7\nsynthetic PDF');
-  assert.match(rendered[0], /FICHA DE PEDIDO/u);
+  assert.match(rendered[0], /Ficha de pedido/u);
   assert.deepEqual(
     guards.map(({ input }) => input.action),
     ['order.print'],
@@ -1785,10 +1785,16 @@ test('the printed order hides money, the sample band and empty fields', async (t
   // A blank field prints blank, never "null" or "undefined".
   assert.equal(confirmed.ficha.summary.aplicacao, null);
   assert.doesNotMatch(html, /null|undefined/u);
-  // The 14 production fields reach the shop floor empty.
+  // FPI-T02 (v8): the 7 production fields of each item sheet reach the shop
+  // floor empty.
+  const itemSheets = (
+    html.match(/<article class="sheet(?: compact)?">/gu) ?? []
+  ).length;
+  assert.ok(itemSheets > 0);
   assert.equal(
-    (html.match(/<span class="campo-producao-vazio"><\/span>/gu) ?? []).length,
-    14,
+    (html.match(/campo-producao-vazio[^"]*"><span class="fv"><\/span>/gu) ?? [])
+      .length,
+    7 * itemSheets,
   );
 });
 
@@ -1812,7 +1818,7 @@ test('the printed order dates the document on the day it was confirmed', async (
   // The page stores the promised day as ISO; paper reads it like the sample.
   assert.match(
     response.body,
-    /Entrega prometida<\/span><strong>24\/10\/2026</u,
+    /Previsão de entrega<\/span><strong>24\/10\/2026</u,
   );
 });
 

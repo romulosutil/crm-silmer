@@ -157,8 +157,8 @@ test('v6 package is locked by hash and approved by the PO for development', asyn
   );
 });
 
-test('orders print on v6 only with the PO approval recorded (PIM-10)', () => {
-  assert.equal(PRINT_TEMPLATE, TEMPLATE_V6);
+test('v6 is selectable only with the PO approval recorded; v8 supersedes it as the printed template (PIM-10, FPI-T02)', () => {
+  assert.notEqual(PRINT_TEMPLATE, TEMPLATE_V6);
   assert.equal(fichaV6ApprovalStages(gate).provisional, true);
   const switchTo = (/** @type {any} */ gateV6) =>
     validateFichaPrintSwitch({

@@ -244,10 +244,11 @@ começa desativada. Requisitos e fronteiras em
 tarefa ACT-T01 e gate operacional ACT-T02.
 Receber arquivo não confirma pagamento.
 
-A ficha impressa usa `ficha-canonical-v6` (ADR 025, público por item e Modelo de malha), paginação com cabeçalho e campos
-posteriores de produção vazios. Valor e condição não saem no papel. Aprovação
-provisória do PO permite desenvolvimento; Rose e Operação devem assinar a
-amostra física antes da produção. Templates v2–v5 e hashes permanecem intactos.
+A ficha impressa usa `ficha-canonical-v8` (ADR 078, uma folha A4 retrato por
+item), com cabeçalho em cada folha e campos posteriores de produção vazios.
+Valor e condição não saem no papel. Aprovação provisória do PO permite
+desenvolvimento; Rose e Operação devem assinar a amostra física antes da
+produção. Templates v2–v7 e hashes permanecem intactos.
 
 O inventário da planilha está em `CAMPOS-FICHA-E-JORNADA-P0-1.md`; as
 exigências atuais do runtime são refinadas em

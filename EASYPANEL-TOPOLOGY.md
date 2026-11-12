@@ -807,9 +807,9 @@ Audit trail comercial não depende de logs do EasyPanel.
 - [ ] Persistência de execução/manual do n8n desabilitada ou expurgada em até 30 dias, sem PII.
 - [ ] Ficha confirmada pode ser impressa pelo navegador e a operação registra
       o encaminhamento externo; geração de PDF no worker não é gate do runtime atual.
-- [ ] Ficha impressa v6 com aprovação final: assinatura física de Rose e
+- [ ] Ficha impressa v8 com aprovação final: assinatura física de Rose e
       Operação na amostra impressa registrada em
-      `docs/phase0/ficha-pdf-approval-v6.json` (ADR 025). A aprovação provisória
+      `docs/phase0/ficha-pdf-approval-v8.json` (ADR 078). A aprovação provisória
       do PO vale só para desenvolvimento e cloud-dev.
 - [ ] Monitor externo detecta parada da VPS.
 - [ ] Responsável de Privacidade aprova storage, IA e observabilidade.

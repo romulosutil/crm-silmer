@@ -32,25 +32,20 @@ export {
  * PIM-10 (ADR 017): the single switch point for the printed ficha. Every
  * printed order uses this template; the print route never chooses one.
  *
- * It names `ficha-canonical-v6` (ADR 025) since the PO approved its
- * synthetic sample on 06/10/2026 for development and cloud-dev (T100). The
- * physical signature by Rose and Operação in
- * `docs/phase0/ficha-pdf-approval-v6.json` remains a production go-live
- * gate. The validator refuses an unapproved switch; v2–v5 stay addressable
- * and their approved artifacts remain unchanged.
+ * It names `ficha-canonical-v8` (ADR 078, FPI-T02), one A4 sheet per item,
+ * since the PO approved its synthetic sample on 12/11/2026 for development
+ * and cloud-dev. The physical signature by Rose and Operação in
+ * `docs/phase0/ficha-pdf-approval-v8.json` (FPI-T03) remains a production
+ * go-live gate. The validator refuses an unapproved switch; v2–v7 stay
+ * addressable and their approved artifacts remain unchanged.
  *
  * OLIST-50 (RFC 050): `ficha-canonical-v7` (Aplicação, Previsão de entrega) is
- * addressable and testable but NOT selected. Selecting it needs the PO to
- * approve its synthetic sample and the physical gates; the validator refuses
- * `PRINT_TEMPLATE = v7` until that approval is recorded.
- *
- * ADR 078 (FPI-T02): `ficha-canonical-v8`, one sheet per item, is addressable
- * and testable but NOT selected either: the same approval of its sample comes
- * first, and the physical signature stays a production gate.
+ * addressable and testable but NOT selected: v8 supersedes it, and the
+ * validator refuses `PRINT_TEMPLATE = v7` until its own approval is recorded.
  *
  * @type {string}
  */
-export const PRINT_TEMPLATE = TEMPLATE_V6;
+export const PRINT_TEMPLATE = TEMPLATE_V8;
 
 /**
  * The printed document of an order in the public Order contract. The

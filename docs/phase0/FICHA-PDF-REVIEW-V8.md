@@ -85,6 +85,11 @@ Um commit à parte trocou `PRINT_TEMPLATE` para `ficha-canonical-v8`
 (`FPI-T03`). Qualquer correção do layout depois da aprovação exige uma nova
 versão do template.
 
+Rollback da troca: reverter só o commit que mudou `PRINT_TEMPLATE`. A v6, com a
+aprovação provisória do PO, volta a imprimir; o registro da aprovação da v8 e as
+amostras ficam como estão. Nenhum dado de pedido é alterado, porque a ficha é
+gerada na hora da impressão.
+
 ```bash
 node --test test/ficha-print-v8.test.js
 npm run validate:ficha-pdf-review

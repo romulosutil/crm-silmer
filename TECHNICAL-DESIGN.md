@@ -885,12 +885,12 @@ bot (`audiences`) vira um item por público quando o domínio a lê sem dúvida
 malha". O bot pergunta pelo produto, com kits e pontos passivos (ADR 024).
 
 `GET /api/v1/orders/:orderId/print` exige sessão de leitura autorizada e
-Pedido confirmado. Retorna HTML imprimível da v6 (público de cada item e
-"Modelo de malha"), escolhida em `modules/orders/src/print/index.js` e
-aprovada provisoriamente pelo PO em 06/10/2026. PDF sintético e hashes são
-artefatos de aprovação, sem prova de envio externo. V2 a v5 não são
-sobrescritas. Assinatura física de Rose/Operação na v6 segue obrigatória
-antes da produção.
+Pedido confirmado. Retorna HTML imprimível da v8 (uma folha A4 retrato por
+item, ADR 078), escolhida em `modules/orders/src/print/index.js` e aprovada
+provisoriamente pelo PO em 12/11/2026. PDF sintético e hashes são artefatos
+de aprovação, sem prova de envio externo. V2 a v7 não são sobrescritas.
+Assinatura física de Rose/Operação na v8 segue obrigatória antes da
+produção.
 
 `GET /api/v1/orders/:orderId/pdf` usa a mesma permissão e a mesma ficha,
 renderizada no Chromium headless incluído na imagem do runtime (ADR 037).

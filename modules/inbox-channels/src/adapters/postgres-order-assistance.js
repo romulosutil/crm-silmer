@@ -1,3 +1,5 @@
+import { canReadConversation } from '@crm-silmer/identity-access';
+
 import { createHash, randomUUID } from 'node:crypto';
 import {
   OrderAssistanceError,
@@ -165,6 +167,8 @@ export class PostgresOrderAssistanceRepository {
       throw new OrderAssistanceError(403, 'FORBIDDEN');
     return this.database.transaction(async (/** @type {any} */ tx) => {
       const conversation = await this.conversation(tx, input.conversationId);
+      if (!canReadConversation(input.actor, conversation.assigned_user_id))
+        throw new OrderAssistanceError(403, 'FORBIDDEN');
       const rows = (
         await tx.query(
           `SELECT suggestion.*,decision.reason AS decision_reason,decision.created_at AS decided_at FROM crm.order_assistance_suggestions suggestion LEFT JOIN crm.order_assistance_decisions decision ON decision.suggestion_id=suggestion.id WHERE suggestion.conversation_id=$1 ORDER BY suggestion.created_at DESC,suggestion.id DESC LIMIT 20`,

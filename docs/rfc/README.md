@@ -234,3 +234,5 @@ entre os documentos.
 - [032 — Atendimento comercial concentrado no WhatsApp](032-atendimento-comercial-concentrado-no-whatsapp.md), decidida na ADR 044.
 
 - [046 — Escopo inicial Olist de centavos exatos](046-olist-escopo-inicial-de-centavos-exatos.md), aceita na ADR 062; prova restrita e bloqueio fracionário.
+
+- [066 — Visibilidade de conversas por responsável](066-visibilidade-de-conversas-por-responsavel.md); aceita na ADR 088, CONV-ACL-01/T01.

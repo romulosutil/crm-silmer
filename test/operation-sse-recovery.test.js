@@ -24,6 +24,7 @@ function streamHarness(readLiveEvents) {
     {
       authorizeRead: async () => ({ actor: { id: 'operator-1' } }),
       readLiveEvents,
+      eventForReader: async (/** @type {any} */ event) => event,
     },
     () => ({ correlationId: 'test', requestId: 'test' }),
   );

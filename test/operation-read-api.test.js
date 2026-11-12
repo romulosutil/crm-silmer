@@ -133,7 +133,7 @@ test('INBOX-UX-02: work queues receive only the authenticated actor', async () =
       assert.equal(result.statusCode, 200);
       assert.deepEqual(reads.at(-1), {
         input: { workQueue, limit: 1 },
-        access: { actorId: 'operator-1' },
+        access: { actorId: 'operator-1', capabilities: [] },
       });
     }
     const forged = await api.inject({
@@ -172,7 +172,7 @@ test('INBOX-VEZ-01: the tabs query forwards its filters and always names the ses
         orderReady: true,
         owner: 'mine',
       },
-      access: { actorId: 'operator-1' },
+      access: { actorId: 'operator-1', capabilities: [] },
     });
     const terminal = await api.inject({
       headers,
@@ -190,7 +190,10 @@ test('INBOX-VEZ-01: the tabs query forwards its filters and always names the ses
       method: 'GET',
       url: '/api/v1/inbox/conversations?archived=true',
     });
-    assert.deepEqual(reads.at(-1).access, { actorId: 'operator-1' });
+    assert.deepEqual(reads.at(-1).access, {
+      actorId: 'operator-1',
+      capabilities: [],
+    });
     for (const url of [
       '/api/v1/inbox/conversations?orderReady=sim&bucket=respond',
       '/api/v1/inbox/conversations?terminal=1',
@@ -236,7 +239,7 @@ test('INBOX-VEZ-01: the buckets endpoint needs conversation.read, takes only its
     assert.deepEqual(counted, [
       {
         input: { assignedUserId: 'seller-9', orderReady: true, owner: 'mine' },
-        access: { actorId: 'operator-1' },
+        access: { actorId: 'operator-1', capabilities: [] },
       },
     ]);
     for (const url of [
@@ -272,7 +275,7 @@ test('INBOX-VEZ-01: the detail is read for the session user', async () => {
     assert.deepEqual(seen, [
       {
         input: { conversationId: 'conversation-1' },
-        access: { actorId: 'operator-1' },
+        access: { actorId: 'operator-1', capabilities: [] },
       },
     ]);
   } finally {
@@ -868,7 +871,7 @@ test('PCX-17: urgency sorting uses conversation.read and binds only the authenti
     assert.deepEqual(reads, [
       {
         input: { sort: 'urgency', archived: false, limit: 1 },
-        access: { actorId: 'operator-1' },
+        access: { actorId: 'operator-1', capabilities: [] },
       },
     ]);
     assert.equal(response.headers['cache-control'], 'private, no-cache');
@@ -881,5 +884,44 @@ test('PCX-17: urgency sorting uses conversation.read and binds only the authenti
     assert.equal(reads.length, 1);
   } finally {
     await api.close();
+  }
+});
+
+test('CONV-ACL-01: auxiliary reads receive only the authenticated reader and current capabilities', async () => {
+  for (const capabilities of [[], ['COMMERCIAL_ADMIN']]) {
+    const received =
+      /** @type {Array<{actorId:string,capabilities:string[]}>} */ ([]);
+    const read = async (
+      /** @type {any} */ _input,
+      /** @type {any} */ access,
+    ) => {
+      received.push(access);
+      return {};
+    };
+    const { api, headers } = harness({
+      authorizeRead: async () => ({
+        actor: { id: 'server-reader', functionName: 'Vendedor', capabilities },
+      }),
+      getContact: read,
+      getAssistantContext: read,
+      getConversationHandoff: read,
+      listOpenHandoffs: read,
+    });
+    try {
+      for (const url of [
+        '/api/v1/contacts/contact-1',
+        '/api/v1/inbox/conversations/conversation-1/assistant-context',
+        '/api/v1/inbox/conversations/conversation-1/handoff',
+        '/api/v1/inbox/handoffs',
+      ]) {
+        const response = await api.inject({ headers, method: 'GET', url });
+        assert.equal(response.statusCode, 200, url);
+      }
+      assert.equal(received.length, 4);
+      for (const access of received)
+        assert.deepEqual(access, { actorId: 'server-reader', capabilities });
+    } finally {
+      await api.close();
+    }
   }
 });

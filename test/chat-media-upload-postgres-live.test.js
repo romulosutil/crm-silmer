@@ -89,7 +89,12 @@ if (connectionString) {
   function input(overrides = {}) {
     return {
       id: randomUUID(),
-      actor: { id: 'upload-seller', kind: 'human', capabilities: [] },
+      actor: {
+        id: 'upload-seller',
+        kind: 'human',
+        functionName: 'Vendedor',
+        capabilities: [],
+      },
       conversationId: 'upload-conversation',
       expectedVersion: 1,
       idempotencyKey: randomUUID(),
@@ -387,12 +392,22 @@ if (connectionString) {
     const access = {
       async authorizeRead() {
         return {
-          actor: { id: 'upload-seller', kind: 'human', capabilities: [] },
+          actor: {
+            id: 'upload-seller',
+            kind: 'human',
+            functionName: 'Vendedor',
+            capabilities: [],
+          },
         };
       },
       async authorize() {
         return {
-          actor: { id: 'upload-seller', kind: 'human', capabilities: [] },
+          actor: {
+            id: 'upload-seller',
+            kind: 'human',
+            functionName: 'Vendedor',
+            capabilities: [],
+          },
         };
       },
     };
@@ -479,12 +494,22 @@ if (connectionString) {
       const access = {
         async authorizeRead() {
           return {
-            actor: { id: 'upload-seller', kind: 'human', capabilities: [] },
+            actor: {
+              id: 'upload-seller',
+              kind: 'human',
+              functionName: 'Vendedor',
+              capabilities: [],
+            },
           };
         },
         async authorize() {
           return {
-            actor: { id: 'upload-seller', kind: 'human', capabilities: [] },
+            actor: {
+              id: 'upload-seller',
+              kind: 'human',
+              functionName: 'Vendedor',
+              capabilities: [],
+            },
           };
         },
       };
@@ -584,12 +609,13 @@ if (connectionString) {
       IDENTITY_BOOTSTRAP_TOKEN:
         'synthetic-bootstrap-token-with-at-least-32-characters',
       CONTACT_IDENTITY_ENVELOPE_KEY: key,
+      CONTACT_IDENTITY_LOOKUP_KEY: key,
       INBOX_MESSAGE_ENVELOPE_KEY: key,
       HANDOFF_ENVELOPE_KEY: key,
       OPERATION_CURSOR_HMAC_KEY: key,
     };
     await pool.query(
-      `INSERT INTO crm.user_functions(user_id,function_name) VALUES('upload-seller','Vendedor') ON CONFLICT DO NOTHING`,
+      `INSERT INTO crm.user_functions(user_id,function_name) VALUES('upload-seller','Vendedor'),('upload-other','Vendedor') ON CONFLICT DO NOTHING`,
     );
     const hash = (/** @type {string} */ value) =>
       createHash('sha256').update(value).digest('hex');
@@ -809,6 +835,48 @@ if (connectionString) {
         actor: admission.actor,
       }),
       { statusCode: 404 },
+    );
+  });
+
+  test('CONV-ACL-01 PostgreSQL: retained media follows current ownership even for the original uploader', async () => {
+    const admission = input();
+    await repository.admit(admission);
+    await repository.complete(completed(admission));
+    const messageId = `acl-media-${randomUUID()}`;
+    await pool.query(
+      `INSERT INTO crm.messages(id,conversation_id,provider,provider_account_id,external_message_id,direction,author_kind,author_id,message_type,content_envelope,status,occurred_at,created_at)
+       VALUES($1,$2,'meta','synthetic',$1,'inbound','contact','synthetic','image',$3,'received',now(),now())`,
+      [messageId, admission.conversationId, envelope],
+    );
+    await pool.query(
+      `UPDATE crm.chat_media SET message_id=$2,attached_at=now(),state='unavailable',sanitized_reason='storage_unavailable' WHERE id=$1`,
+      [admission.id, messageId],
+    );
+    const read = (/** @type {any} */ actor) =>
+      repository.readForActor({
+        mediaId: admission.id,
+        conversationId: admission.conversationId,
+        actor,
+      });
+    assert.equal((await read(admission.actor)).id, admission.id);
+    await pool.query(
+      `UPDATE crm.conversations SET assigned_user_id='upload-seller' WHERE id=$1`,
+      [admission.conversationId],
+    );
+    assert.equal((await read(admission.actor)).id, admission.id);
+    await pool.query(
+      `UPDATE crm.conversations SET assigned_user_id='upload-other' WHERE id=$1`,
+      [admission.conversationId],
+    );
+    await assert.rejects(read(admission.actor), { statusCode: 404 });
+    assert.equal(
+      (await read({ ...admission.actor, id: 'upload-other' })).id,
+      admission.id,
+    );
+    assert.equal(
+      (await read({ ...admission.actor, capabilities: ['COMMERCIAL_ADMIN'] }))
+        .id,
+      admission.id,
     );
   });
 }

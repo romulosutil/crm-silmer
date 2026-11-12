@@ -1,5 +1,15 @@
 # Arquitetura — baseline do CRM Silmer
 
+## Leitura de conversas por responsável — 12/11/2026
+
+[ADR 088](docs/adr/088-leitura-de-conversas-por-responsavel.md) / [RFC 066](docs/rfc/066-visibilidade-de-conversas-por-responsavel.md),
+CONV-ACL-01/T01: Admin consulta todas; Vendedor consulta próprias e sem dono,
+incluindo IA. Filtros SQL precedem contagens e paginação, leituras auxiliares
+seguem a conversa, SSE revalida acesso e a interface limpa conteúdo após perda
+de posse. Pedido mantém ACL comercial independente, sem expor conversa oculta.
+Sem migração ou infraestrutura nova; publicação precisa do gate de CI.
+
+
 ## Recuperação após Sem retorno (11/11/2026)
 
 [ADR 085](docs/adr/085-recuperacao-de-leads-por-modo-de-atendimento.md) /

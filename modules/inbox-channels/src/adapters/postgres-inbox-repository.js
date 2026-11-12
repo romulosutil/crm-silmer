@@ -300,6 +300,17 @@ export class PostgresInboxRepository {
             'Idempotency key was reused with another command',
           );
         }
+        // CONV-ACL-01: a receipt never preserves access after a transfer.
+        // Hold ownership until the replayed message/conversation is hydrated.
+        const current = (
+          await transaction.query(
+            'SELECT assigned_user_id FROM crm.conversations WHERE id=$1 FOR SHARE',
+            [input.conversationId],
+          )
+        ).rows[0];
+        if (!current)
+          throw new InboxConflictError('Conversation was not found');
+        assertConversationOwnership(kind, current, input.actor);
         return this.#hydrateCommand(transaction, replay.rows[0].result);
       }
 

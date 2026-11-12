@@ -934,4 +934,6 @@ export {
   OPERATIONAL_ACTIONS,
   authorize,
   createAccessControlService,
+  canReadConversation,
+  conversationReadScope,
 } from './authorization.js';

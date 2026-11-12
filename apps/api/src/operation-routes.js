@@ -136,7 +136,7 @@ export function registerOperationRoutes(api, operations, contextFor) {
             operations,
             'deal.events.read',
           );
-          return current.actor.id === actorId;
+          return current.actor.id === actorId ? current.actor : false;
         } catch {
           return false;
         }
@@ -155,15 +155,19 @@ export function registerOperationRoutes(api, operations, contextFor) {
         writes = writes
           .then(async () => {
             if (closed) return;
-            if (!(await stillAuthorized())) return expire();
+            const currentActor = await stillAuthorized();
+            if (!currentActor) return expire();
             if (
               closed ||
               (event.type !== 'stream.reset' &&
                 Number(event.cursor) <= deliveredCursor)
             )
               return;
+            const visible = operations.eventForReader
+              ? await operations.eventForReader(event, currentActor)
+              : { ...event, type: 'stream.reset', payload: {} };
             reply.raw.write(
-              `id: ${event.cursor}\nevent: ${event.type}\ndata: ${JSON.stringify(event.payload)}\n\n`,
+              `id: ${event.cursor}\nevent: ${visible.type}\ndata: ${JSON.stringify(visible.payload)}\n\n`,
             );
             deliveredCursor = Number(event.cursor);
           })
@@ -238,15 +242,25 @@ export function registerOperationRoutes(api, operations, contextFor) {
       respond(reply, async () => {
         const params = requireObject(request.params);
         rejectUnknownKeys(requireObject(request.query ?? {}), []);
-        await authorizeRead(request, operations, 'conversation.read');
+        const access = await authorizeRead(
+          request,
+          operations,
+          'conversation.read',
+        );
         privateNoStoreHeaders(reply);
         return reply.code(200).send(
-          await operations.getAssistantContext({
-            conversationId: requireIdentifier(
-              params.conversationId,
-              'CONVERSATION_ID',
-            ),
-          }),
+          await operations.getAssistantContext(
+            {
+              conversationId: requireIdentifier(
+                params.conversationId,
+                'CONVERSATION_ID',
+              ),
+            },
+            {
+              actorId: access.actor.id,
+              capabilities: access.actor.capabilities ?? [],
+            },
+          ),
         );
       }),
   );
@@ -278,9 +292,12 @@ export function registerOperationRoutes(api, operations, contextFor) {
       privateReadHeaders(reply);
       // The session, never the query, names the reader: it binds the cursor
       // and decides whose reminder and ownership the turn fields reflect.
-      return reply
-        .code(200)
-        .send(await operations.listInbox(input, { actorId: access.actor.id }));
+      return reply.code(200).send(
+        await operations.listInbox(input, {
+          actorId: access.actor.id,
+          capabilities: access.actor.capabilities ?? [],
+        }),
+      );
     }),
   );
 
@@ -301,6 +318,7 @@ export function registerOperationRoutes(api, operations, contextFor) {
       return reply.code(200).send(
         await operations.countInboxBuckets(input, {
           actorId: access.actor.id,
+          capabilities: access.actor.capabilities ?? [],
         }),
       );
     }),
@@ -325,7 +343,10 @@ export function registerOperationRoutes(api, operations, contextFor) {
                 'CONVERSATION_ID',
               ),
             },
-            { actorId: access.actor.id },
+            {
+              actorId: access.actor.id,
+              capabilities: access.actor.capabilities ?? [],
+            },
           ),
         );
       }),
@@ -338,15 +359,21 @@ export function registerOperationRoutes(api, operations, contextFor) {
       respond(reply, async () => {
         const params = requireObject(request.params);
         rejectUnknownKeys(requireObject(request.query ?? {}), []);
-        await authorizeRead(request, operations, 'handoff.read');
+        const access = await authorizeRead(request, operations, 'handoff.read');
         privateNoStoreHeaders(reply);
         return reply.code(200).send(
-          await operations.getConversationHandoff({
-            conversationId: requireIdentifier(
-              params.conversationId,
-              'CONVERSATION_ID',
-            ),
-          }),
+          await operations.getConversationHandoff(
+            {
+              conversationId: requireIdentifier(
+                params.conversationId,
+                'CONVERSATION_ID',
+              ),
+            },
+            {
+              actorId: access.actor.id,
+              capabilities: access.actor.capabilities ?? [],
+            },
+          ),
         );
       }),
   );
@@ -354,9 +381,14 @@ export function registerOperationRoutes(api, operations, contextFor) {
   api.get('/api/v1/inbox/handoffs', async (request, reply) =>
     respond(reply, async () => {
       const input = parseListQuery(request.query, ['cursor', 'limit']);
-      await authorizeRead(request, operations, 'handoff.read');
+      const access = await authorizeRead(request, operations, 'handoff.read');
       privateReadHeaders(reply);
-      return reply.code(200).send(await operations.listOpenHandoffs(input));
+      return reply.code(200).send(
+        await operations.listOpenHandoffs(input, {
+          actorId: access.actor.id,
+          capabilities: access.actor.capabilities ?? [],
+        }),
+      );
     }),
   );
 
@@ -367,9 +399,14 @@ export function registerOperationRoutes(api, operations, contextFor) {
       if ((input.q?.match(/\d/gu) ?? []).length >= 8) {
         throw new OperationReadRequestError(400, 'INVALID_REQUEST');
       }
-      await authorizeRead(request, operations, 'contact.read');
+      const access = await authorizeRead(request, operations, 'contact.read');
       privateReadHeaders(reply);
-      return reply.code(200).send(await operations.listContacts(input));
+      return reply.code(200).send(
+        await operations.listContacts(input, {
+          actorId: access.actor.id,
+          capabilities: access.actor.capabilities ?? [],
+        }),
+      );
     }),
   );
 
@@ -387,7 +424,7 @@ export function registerOperationRoutes(api, operations, contextFor) {
             : {}),
           ...(body.limit !== undefined ? { limit: body.limit } : {}),
         };
-        await operations.authorizeWrite({
+        const access = await operations.authorizeWrite({
           action: 'contact.read',
           authorization: request.headers.authorization,
           cookie: request.headers.cookie,
@@ -395,7 +432,12 @@ export function registerOperationRoutes(api, operations, contextFor) {
           origin: request.headers.origin,
         });
         privateReadHeaders(reply);
-        return reply.code(200).send(await operations.listContacts(input));
+        return reply.code(200).send(
+          await operations.listContacts(input, {
+            actorId: access.actor.id,
+            capabilities: access.actor.capabilities ?? [],
+          }),
+        );
       }),
   );
 
@@ -540,13 +582,19 @@ export function registerOperationRoutes(api, operations, contextFor) {
   api.get('/api/v1/contacts/:contactId', async (request, reply) =>
     respond(reply, async () => {
       const params = requireObject(request.params);
-      await authorizeRead(request, operations, 'contact.read');
+      const access = await authorizeRead(request, operations, 'contact.read');
       // The detail carries the encrypted-at-rest registration (ADR 047).
       privateNoStoreHeaders(reply);
       return reply.code(200).send(
-        await operations.getContact({
-          contactId: requireIdentifier(params.contactId, 'CONTACT_ID'),
-        }),
+        await operations.getContact(
+          {
+            contactId: requireIdentifier(params.contactId, 'CONTACT_ID'),
+          },
+          {
+            actorId: access.actor.id,
+            capabilities: access.actor.capabilities ?? [],
+          },
+        ),
       );
     }),
   );

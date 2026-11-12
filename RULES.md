@@ -1,5 +1,14 @@
 # Regras do CRM Silmer
 
+## Visibilidade de conversas — decisão de 12/11/2026
+
+[ADR 088](docs/adr/088-leitura-de-conversas-por-responsavel.md), CONV-ACL-01:
+somente administradores ativos leem conversas de outros vendedores. Vendedor
+lê suas próprias conversas e as sem responsável, incluindo as atendidas pela IA.
+Modo IA não libera conversa com outro dono. API, mídia, contexto, histórico,
+contagens e eventos seguem a posse atual; transferência revoga acesso anterior.
+
+
 ## Cadastro do comprador e envio Olist em 10/11/2026
 
 Correção explícita do proprietário na [ADR 082](docs/adr/082-cadastro-obrigatorio-somente-no-envio-olist.md),

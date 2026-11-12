@@ -1,5 +1,11 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## CONV-ACL-T01 — Leitura por responsável (12/11/2026)
+
+[CONV-ACL-01 e tarefas](../conversation-visibility/tasks.md), ADR 088: Admin lê
+todas; vendedor lê próprias e sem dono, com enforcement na API e interface.
+
+
 ## REC-T00 — recuperação de leads sem retorno (11/11/2026)
 
 [REC-01–12](../lead-recovery/spec.md),

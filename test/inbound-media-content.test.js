@@ -40,7 +40,15 @@ async function harness(t, options = {}) {
           throw Object.assign(new Error('private-details'), {
             statusCode: 403,
           });
-        return { actor: { id: 'seller-synthetic' } };
+        return {
+          actor: {
+            id: 'seller-synthetic',
+            kind: 'human',
+            functionName: 'Vendedor',
+            capabilities: [],
+            ...options.actor,
+          },
+        };
       },
     },
     database: {
@@ -48,7 +56,16 @@ async function harness(t, options = {}) {
         assert.match(sql, /message\.conversation_id=\$2/u);
         assert.match(sql, /message\.direction='inbound'/u);
         assert.match(sql, /media\.media_type=message\.message_type/u);
-        return { rows: values[1] === 'conversation-synthetic' ? [row] : [] };
+        assert.match(sql, /conversation\.assigned_user_id IS NULL/u);
+        assert.match(sql, /conversation\.assigned_user_id=\$4/u);
+        const allowed =
+          values[2] === true ||
+          options.owner === null ||
+          options.owner === undefined ||
+          options.owner === values[3];
+        return {
+          rows: values[1] === 'conversation-synthetic' && allowed ? [row] : [],
+        };
       },
     },
     mediaVolume: {
@@ -182,6 +199,27 @@ for (const [
     403,
   ],
   ['actor lacks conversation read', { forbidden: true }, {}, undefined, 403],
+  [
+    'another seller owns the conversation',
+    { owner: 'other-seller' },
+    {},
+    undefined,
+    404,
+  ],
+  [
+    'assistant mode cannot expose another owner',
+    { owner: 'other-seller', row: { automation_state: 'assistant' } },
+    {},
+    undefined,
+    404,
+  ],
+  [
+    'disabled account',
+    { actor: { disabledAt: '2026-11-01T00:00:00Z' } },
+    {},
+    undefined,
+    403,
+  ],
   [
     'attachment belongs to another conversation',
     {},
@@ -379,3 +417,16 @@ test('INBOX-2: retained seller UUIDs keep using their original runtime', async (
   assert.equal(response.body, 'retained-synthetic');
   assert.equal(fixture.reads(), 0);
 });
+
+for (const [owner, actor] of [
+  ['seller-synthetic', {}],
+  [null, {}],
+  ['other-seller', { capabilities: ['COMMERCIAL_ADMIN'] }],
+]) {
+  test(`CONV-ACL-01: inbound bytes remain available for owner ${owner} with expected role`, async (t) => {
+    const fixture = await harness(t, { owner, actor });
+    const response = await fixture.get();
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.rawPayload, bytes);
+  });
+}

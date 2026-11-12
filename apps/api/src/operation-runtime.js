@@ -100,11 +100,15 @@ export function createOperationReadService({
     throw new TypeError('cursorKey must contain at least 32 bytes');
   }
 
-  /** @param {{actorId?: string}} access */
+  /** @param {{actorId?: string, capabilities?: readonly string[]}} access */
   const readerFor = (access) => ({
     actorId: access?.actorId ?? null,
     now: clock(),
     stallMinutes,
+    ...(access?.actorId &&
+    !access.capabilities?.includes(CAPABILITIES.COMMERCIAL_ADMIN)
+      ? { visibilityActorId: access.actorId }
+      : {}),
   });
 
   return Object.freeze({
@@ -126,13 +130,14 @@ export function createOperationReadService({
         actorId: requireId(input?.actorId, 'ACTOR_ID'),
         now,
         stallMinutes,
+        readAll: manager,
         unansweredMinutes: manager ? SELLER_UNANSWERED_MINUTES : null,
       });
       const summary = Object.freeze({
         ...read,
         unanswered: manager ? (read.unanswered ?? null) : null,
       });
-      if (!countStalled) return summary;
+      if (!countStalled || !manager) return summary;
       // The sweep's own rule (revision fence and failed replies).
       return Object.freeze({
         ...summary,
@@ -181,11 +186,12 @@ export function createOperationReadService({
      * AGENTE-OBS-01: the assistant's last turn on one conversation and how
      * much of its message budget it used.
      *
-     * @param {any} input
+     * @param {any} input @param {{actorId?: string, capabilities?: readonly string[]}} [access]
      */
-    async getAssistantContext(input) {
+    async getAssistantContext(input, access = {}) {
       const context = await inboxRepository.assistantContext(
         requireId(input?.conversationId, 'CONVERSATION_ID'),
+        readerFor(access),
       );
       return Object.freeze({
         last_turn: context.lastTurn,
@@ -193,14 +199,17 @@ export function createOperationReadService({
         assistant_message_cap: assistantMessageCap,
       });
     },
-    /** @param {any} input */
-    async getContact(input) {
-      return contactRepository.get(requireId(input?.contactId, 'CONTACT_ID'));
+    /** @param {any} input @param {{actorId?: string, capabilities?: readonly string[]}} [access] */
+    async getContact(input, access = {}) {
+      return contactRepository.get(
+        requireId(input?.contactId, 'CONTACT_ID'),
+        readerFor(access),
+      );
     },
     /**
      * INBOX-VEZ-01: the detail carries the turn fields, worked out for the
      * session's reader on the server clock.
-     * @param {any} input @param {{actorId?: string}} [access]
+     * @param {any} input @param {{actorId?: string, capabilities?: readonly string[]}} [access]
      */
     async getConversation(input, access = {}) {
       return inboxRepository.get(
@@ -211,7 +220,7 @@ export function createOperationReadService({
     /**
      * INBOX-VEZ-01: the four tab counts in one snapshot. Same `owner`,
      * `orderReady` and `assignedUserId` rules as the list.
-     * @param {any} input @param {{actorId?: string}} [access]
+     * @param {any} input @param {{actorId?: string, capabilities?: readonly string[]}} [access]
      */
     async countInboxBuckets(input = {}, access = {}) {
       rejectUnknownKeys(input, ['assignedUserId', 'orderReady', 'owner']);
@@ -239,11 +248,12 @@ export function createOperationReadService({
      * INBOX-HANDOFF-01 / AGT-03: the open handoff's summary, read apart from
      * the conversation so only `handoff.read` decrypts it.
      *
-     * @param {any} input
+     * @param {any} input @param {{actorId?: string, capabilities?: readonly string[]}} [access]
      */
-    async getConversationHandoff(input) {
+    async getConversationHandoff(input, access = {}) {
       const open = await handoffRepository.getOpenForConversation(
         requireId(input?.conversationId, 'CONVERSATION_ID'),
+        readerFor(access),
       );
       if (!open)
         return Object.freeze({ handoff: null, preferred_seller: null });
@@ -260,8 +270,8 @@ export function createOperationReadService({
           : null,
       });
     },
-    /** @param {any} input */
-    async listContacts(input = {}) {
+    /** @param {any} input @param {{actorId?: string, capabilities?: readonly string[]}} [access] */
+    async listContacts(input = {}, access = {}) {
       rejectUnknownKeys(input, ['cursor', 'limit', 'q']);
       const q = input.q === undefined ? '' : String(input.q).trim();
       if (
@@ -277,14 +287,17 @@ export function createOperationReadService({
         fingerprint: filterFingerprint(filters),
         scope: 'contacts',
       });
-      const result = await contactRepository.list({ after, limit, ...filters });
+      const result = await contactRepository.list(
+        { after, limit, ...filters },
+        readerFor(access),
+      );
       return pageResponse(result, {
         cursorKey,
         fingerprint: filterFingerprint(filters),
         scope: 'contacts',
       });
     },
-    /** @param {any} input @param {{actorId?: string}} [access] */
+    /** @param {any} input @param {{actorId?: string, capabilities?: readonly string[]}} [access] */
     async listInbox(input = {}, access = {}) {
       rejectUnknownKeys(input, [
         'assignedUserId',
@@ -433,6 +446,13 @@ export function createOperationReadService({
           filters.owner = owner;
         }
       }
+      // CONV-ACL-01: a cursor cannot cross readers or privilege changes.
+      if (access.actorId) {
+        filters.visibility = {
+          actorId: access.actorId,
+          readAll: !readerFor(access).visibilityActorId,
+        };
+      }
       const ranked = filters.sort === 'urgency' || input.bucket !== undefined;
       // Reject cursors from Responder's former oldest-wait/failure-first order.
       const fingerprint = filterFingerprint(
@@ -464,6 +484,27 @@ export function createOperationReadService({
             ? { position: (/** @type {any} */ item) => item.handoff.createdAt }
             : {}),
       });
+    },
+    /** CONV-ACL-01: never disclose hidden aggregate ids over SSE.
+     * @param {any} event @param {any} actor
+     */
+    async eventForReader(event, actor) {
+      if (actor?.capabilities?.includes(CAPABILITIES.COMMERCIAL_ADMIN))
+        return event;
+      const reset = { cursor: event.cursor, type: 'stream.reset', payload: {} };
+      const conversationId = event.payload?.conversationId;
+      if (!actor?.id || !conversationId) return reset;
+      try {
+        await inboxRepository.assertReadable(
+          conversationId,
+          readerFor({ actorId: actor.id, capabilities: actor.capabilities }),
+        );
+        return event;
+      } catch (error) {
+        if (Number(/** @type {any} */ (error)?.statusCode) === 404)
+          return reset;
+        throw error;
+      }
     },
     /** @param {{after?: unknown}} [input] */
     async readLiveEvents(input = {}) {
@@ -526,19 +567,31 @@ export function createOperationReadService({
         reset: false,
       });
     },
-    /** @param {any} input */
-    async listOpenHandoffs(input = {}) {
+    /** @param {any} input @param {{actorId?: string, capabilities?: readonly string[]}} [access] */
+    async listOpenHandoffs(input = {}, access = {}) {
       rejectUnknownKeys(input, ['cursor', 'limit']);
       const limit = readLimit(input.limit);
+      const scope = {
+        status: 'pending',
+        ...(access.actorId
+          ? {
+              reader: readerFor(access).visibilityActorId ?? 'admin',
+              actorId: access.actorId,
+            }
+          : {}),
+      };
       const after = readCursor(input.cursor, {
         cursorKey,
-        fingerprint: filterFingerprint({ status: 'pending' }),
+        fingerprint: filterFingerprint(scope),
         scope: 'handoffs',
       });
-      const result = await handoffRepository.listOpen({ after, limit });
+      const result = await handoffRepository.listOpen(
+        { after, limit },
+        readerFor(access),
+      );
       return pageResponse(result, {
         cursorKey,
-        fingerprint: filterFingerprint({ status: 'pending' }),
+        fingerprint: filterFingerprint(scope),
         scope: 'handoffs',
       });
     },

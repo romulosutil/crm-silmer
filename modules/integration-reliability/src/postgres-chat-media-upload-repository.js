@@ -1,4 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
+import {
+  canReadConversation,
+  conversationReadScope,
+} from '@crm-silmer/identity-access';
 
 /** @param {number} statusCode */
 function error(statusCode) {
@@ -203,10 +207,16 @@ export class PostgresChatMediaUploadRepository {
   }
   /** @param {any} input */
   async readForActor(input) {
+    if (!canReadConversation(input.actor, null)) throw error(403);
+    const scope = conversationReadScope(input.actor);
     const row = (
       await this.#database.query(
-        'SELECT * FROM crm.chat_media WHERE id=$1 AND conversation_id=$2',
-        [input.mediaId, input.conversationId],
+        `SELECT media.* FROM crm.chat_media media
+         JOIN crm.conversations conversation ON conversation.id=media.conversation_id
+         WHERE media.id=$1 AND media.conversation_id=$2
+           AND ($3::boolean OR conversation.assigned_user_id IS NULL
+             OR conversation.assigned_user_id=$4)`,
+        [input.mediaId, input.conversationId, scope.readAll, scope.actorId],
       )
     ).rows[0];
     if (!row) throw error(404);

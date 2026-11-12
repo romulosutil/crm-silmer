@@ -6,8 +6,8 @@ import { requireMediaSpoolRoot } from '../apps/api/src/server.js';
 import { createIdentityApiRuntime } from '../apps/api/src/identity-runtime.js';
 
 const id = '20000000-0000-4000-8000-000000000001';
-/** @param {Record<string,any>} [overrides] */
-function harness(overrides = {}) {
+/** @param {Record<string,any>} [overrides] @param {string|null} [owner] */
+function harness(overrides = {}, owner = null) {
   const row = {
     id,
     conversation_id: 'conversation',
@@ -29,8 +29,12 @@ function harness(overrides = {}) {
     database: {
       async query(/** @type {string} */ sql, /** @type {any[]} */ values) {
         assert.ok(sql.includes('conversation_id=$2'));
-        assert.deepEqual(values, [id, 'conversation']);
-        return { rows: [row] };
+        assert.deepEqual(values.slice(0, 2), [id, 'conversation']);
+        assert.match(sql, /conversation\.assigned_user_id IS NULL/u);
+        assert.match(sql, /conversation\.assigned_user_id=\$4/u);
+        const allowed =
+          values[2] === true || owner === null || owner === values[3];
+        return { rows: allowed ? [row] : [] };
       },
     },
   });
@@ -42,7 +46,12 @@ function harness(overrides = {}) {
   });
   return (
     actor = { id: 'author', capabilities: /** @type {string[]} */ ([]) },
-  ) => runtime.status({ mediaId: id, conversationId: 'conversation', actor });
+  ) =>
+    runtime.status({
+      mediaId: id,
+      conversationId: 'conversation',
+      actor: { kind: 'human', functionName: 'Vendedor', ...actor },
+    });
 }
 test('MED-08/20: author sees draft DTO with only safe metadata', async () => {
   assert.deepEqual(await harness()(), {
@@ -175,4 +184,21 @@ test('MED-16: opted-in read distinguishes invalid session401, capability403 and 
     }),
     (error) => error === failure,
   );
+});
+
+test('CONV-ACL-01: published retained media follows the current conversation owner', async () => {
+  for (const state of ['attached', 'lost']) {
+    const get = harness({ message_id: 'message', state }, 'current-owner');
+    for (const id of ['author', 'other']) {
+      await assert.rejects(get({ id, capabilities: [] }), { statusCode: 404 });
+    }
+    assert.equal(
+      (await get({ id: 'current-owner', capabilities: [] })).mediaId,
+      id,
+    );
+    assert.equal(
+      (await get({ id: 'admin', capabilities: ['COMMERCIAL_ADMIN'] })).mediaId,
+      id,
+    );
+  }
 });

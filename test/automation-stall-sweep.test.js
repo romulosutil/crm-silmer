@@ -195,7 +195,7 @@ test('AGENTE-FAIL-01: each sweep logs its counts and the codes of the conversati
   assert.doesNotMatch(JSON.stringify(records), /5527999999999|conversa/u);
 });
 
-test('AGENTE-FAIL-01: the Painel counts stalled conversations with the sweep rule and window', async () => {
+test('CONV-ACL-01: only the administrator uses the global sweep count; seller health stays scoped', async () => {
   const seen = /** @type {any[]} */ ([]);
   const service = createOperationReadService({
     clock: () => new Date('2026-10-30T12:00:00.000Z'),
@@ -208,16 +208,40 @@ test('AGENTE-FAIL-01: the Painel counts stalled conversations with the sweep rul
     handoffRepository: {},
     inboxRepository: {
       async summary(/** @type {any} */ input) {
-        seen.push(input.stallMinutes);
+        seen.push({
+          actorId: input.actorId,
+          readAll: input.readAll,
+          stallMinutes: input.stallMinutes,
+        });
         return {
-          assistant: { stallMinutes: input.stallMinutes, stalledCount: 9 },
+          assistant: {
+            stallMinutes: input.stallMinutes,
+            stalledCount: input.readAll ? 9 : 1,
+          },
         };
       },
     },
     stallMinutes: 7,
   });
-  const summary = await service.summarizeInbox({ actorId: 'user-1' });
+  const summary = await service.summarizeInbox({
+    actorId: 'user-1',
+    capabilities: ['COMMERCIAL_ADMIN'],
+  });
   assert.deepEqual(summary.assistant, { stallMinutes: 7, stalledCount: 3 });
-  assert.deepEqual(seen, [7, '2026-10-30T12:00:00.000Z']);
+  assert.deepEqual(seen, [
+    { actorId: 'user-1', readAll: true, stallMinutes: 7 },
+    '2026-10-30T12:00:00.000Z',
+  ]);
+  seen.length = 0;
+  const seller = await service.summarizeInbox({
+    actorId: 'seller-a',
+    capabilities: [],
+  });
+  assert.deepEqual(seller.assistant, { stallMinutes: 7, stalledCount: 1 });
+  assert.deepEqual(
+    seen,
+    [{ actorId: 'seller-a', readAll: false, stallMinutes: 7 }],
+    'a seller must not call the global sweeper or receive its aggregate',
+  );
   assert.equal(ASSISTANT_STALL_MINUTES.default, OPERATION_STALL_MINUTES);
 });

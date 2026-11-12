@@ -169,7 +169,9 @@ segunda função no runtime atual.
 
 ### Vendedor
 
-Vendedor observa conversas, responde, assume atendimento, reivindica handoff,
+Vendedor observa somente conversas próprias e sem responsável (incluindo IA);
+apenas administradores observam conversas de outros vendedores (ADR 088, CONV-ACL-01).
+Dentro desse escopo, responde, assume atendimento, reivindica handoff,
 repassa para outro vendedor e encerra. Handoff automático tem papel-alvo
 Vendedor e nasce sem responsável; somente um claim elegível vence (ADR 009).
 Depois de handoff ou takeover, a conversa segue com pessoa até encerrar e não

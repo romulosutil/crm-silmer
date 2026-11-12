@@ -228,6 +228,7 @@ test('INBOX-VEZ-01: a tab binds its cursor to reader, tab, owner, order-ready an
     bucket: 'respond',
     owner: 'all',
     orderReady: false,
+    visibility: { actorId: 'seller-1', readAll: false },
     limit: 1,
   });
   // The reader and the server instant travel apart from the filters.
@@ -235,6 +236,7 @@ test('INBOX-VEZ-01: a tab binds its cursor to reader, tab, owner, order-ready an
     actorId: 'seller-1',
     now: new Date('2026-11-08T15:00:00.000Z'),
     stallMinutes: 7,
+    visibilityActorId: 'seller-1',
   });
   assert.equal(first.totalCount, 9);
   const payload = payloadOf(first.nextCursor);
@@ -254,6 +256,7 @@ test('INBOX-VEZ-01: a tab binds its cursor to reader, tab, owner, order-ready an
       bucket: 'respond',
       owner: 'all',
       orderReady: false,
+      visibility: { actorId: 'seller-1', readAll: false },
       orderVersion: 'latest-message-v1',
     }),
   );
@@ -375,7 +378,7 @@ test('INBOX-VEZ-01: tab combinations the contract forbids are INVALID_FILTER', a
   assert.equal(calls.at(-1)[1].assignedUserId, 'seller-9');
 });
 
-test('INBOX-VEZ-01: owner and terminal join older filters without moving their fingerprint', async () => {
+test('CONV-ACL-01: owner and terminal preserve filters while cursors bind the visibility scope', async () => {
   const { calls, service } = vezService();
   // owner=all is the default and leaves every older cursor valid.
   const plain = await service.listInbox({ limit: 1 });
@@ -388,7 +391,11 @@ test('INBOX-VEZ-01: owner and terminal join older filters without moving their f
   );
   assert.equal(
     payloadOf(urgency.nextCursor).fingerprint,
-    fingerprintOf({ sort: 'urgency', actorId: 'seller-1' }),
+    fingerprintOf({
+      sort: 'urgency',
+      actorId: 'seller-1',
+      visibility: { actorId: 'seller-1', readAll: false },
+    }),
   );
   const queue = await service.listInbox(
     { workQueue: 'closing', limit: 1 },
@@ -396,7 +403,11 @@ test('INBOX-VEZ-01: owner and terminal join older filters without moving their f
   );
   assert.equal(
     payloadOf(queue.nextCursor).fingerprint,
-    fingerprintOf({ workQueue: 'closing', actorId: 'seller-1' }),
+    fingerprintOf({
+      workQueue: 'closing',
+      actorId: 'seller-1',
+      visibility: { actorId: 'seller-1', readAll: false },
+    }),
   );
   // New narrowings are new scopes.
   const mine = await service.listInbox(
@@ -405,7 +416,11 @@ test('INBOX-VEZ-01: owner and terminal join older filters without moving their f
   );
   assert.equal(
     payloadOf(mine.nextCursor).fingerprint,
-    fingerprintOf({ actorId: 'seller-1', owner: 'mine' }),
+    fingerprintOf({
+      actorId: 'seller-1',
+      owner: 'mine',
+      visibility: { actorId: 'seller-1', readAll: false },
+    }),
   );
   assert.deepEqual(
     { ...calls.at(-1)[1], after: undefined },
@@ -414,6 +429,7 @@ test('INBOX-VEZ-01: owner and terminal join older filters without moving their f
       actorId: 'seller-1',
       limit: 1,
       owner: 'mine',
+      visibility: { actorId: 'seller-1', readAll: false },
     },
   );
   const terminal = await service.listInbox({ terminal: 'true', limit: 1 });
@@ -492,6 +508,7 @@ test('INBOX-VEZ-01: bucket counts and the detail read for the session on the ser
       actorId: 'seller-1',
       now: new Date('2026-11-08T15:00:00.000Z'),
       stallMinutes: 7,
+      visibilityActorId: 'seller-1',
     },
   ]);
 });
@@ -918,12 +935,15 @@ test('Painel: the Inbox summary reads the server clock and maps counts without e
     'seller-1',
     '2026-10-15T15:00:00.000Z',
     '2026-10-15T14:55:00.000Z',
+    false,
   ]);
   assert.match(queue.sql, /handoff\.due_at <= \$2::timestamptz/u);
   assert.match(queue.sql, /conversation\.archived_at IS NULL/u);
   assert.deepEqual(sends.values, [
     '2026-10-14T15:00:00.000Z',
     '2026-10-15T15:00:00.000Z',
+    false,
+    'seller-1',
   ]);
   // Counts only: no message or contact envelope is selected.
   for (const { sql } of queries) assert.doesNotMatch(sql, /envelope/u);

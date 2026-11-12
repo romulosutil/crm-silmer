@@ -72,8 +72,8 @@ const LIVE_REFRESH_DELAY_MS = 250;
 const PERIODIC_REFRESH_MS = 60_000;
 /**
  * RFC 052 (INBOX-VEZ-02): "Responsável" in the Filtros sheet applies to every
- * tab and to their counts. Todos is the default (decision of 22/10/2026:
- * everyone sees everything; whoever answers first becomes the owner).
+ * tab and to their counts. CONV-ACL-01: Todos is intersected with the
+ * session visibility: own and unassigned conversations for a seller.
  */
 const OWNER_SCOPES = Object.freeze([
   Object.freeze({ label: 'Todos', value: 'all' }),
@@ -346,6 +346,7 @@ let periodicTimer;
 let lastPeriodicAt = 0;
 let orderChangedLive = false;
 let threadFollowsLatest = true;
+let pendingAccessId = '';
 
 // RFC 052: each tab's order is computed in SQL before the limit (longest wait
 // in Responder, failures on top); the search only narrows it, in that order.
@@ -391,8 +392,8 @@ const ownedByMe = computed(
   () => !owner.value || owner.value.id === currentUserId.value,
 );
 /**
- * A conversation belongs to whoever took it over. Another seller sees it but
- * cannot act on it; only an administrator overrides that.
+ * CONV-ACL-01: the API limits reading to own or unassigned conversations;
+ * only an administrator may read or act across owners.
  */
 const canAct = computed(
   () => !isTerminal.value && (ownedByMe.value || isAdmin.value),
@@ -1583,8 +1584,14 @@ async function checkMessageDelivery(messageId) {
     ) {
       thread.value?.focus();
     }
-  } catch {
+  } catch (cause) {
     if (controller.signal.aborted || activeId.value !== id) return;
+    if ([403, 404].includes(Number(cause?.status))) {
+      clearPrivateConversation(id, true);
+      error.value = 'Esta conversa não está disponível para seu acesso.';
+      notify(error.value);
+      return;
+    }
     deliveryCheckFailedId.value = messageId;
     deliveryCheckError.value =
       'Não foi possível verificar o envio agora. Tente novamente. O histórico foi preservado.';
@@ -1838,6 +1845,14 @@ function holdsComposer() {
  * @param {boolean} [refreshActive] refetch even when the selection is unchanged
  */
 async function selectVisibleConversation(refreshActive = true) {
+  // CONV-ACL-01: revalidate the suspended selection before a list can replace
+  // it, so a lost owner's hidden draft is removed even without a deep link.
+  const revalidateId = pendingAccessId;
+  pendingAccessId = '';
+  if (revalidateId && !props.conversationId) {
+    await selectConversation(revalidateId, true);
+    if (detail.value) keepOpenId = revalidateId;
+  }
   // A conversation opened by its address stays open whatever the list shows:
   // it may be archived, filtered out or beyond the 100 loaded.
   if (props.conversationId) {
@@ -1867,6 +1882,86 @@ async function selectVisibleConversation(refreshActive = true) {
   // keystroke; only a data refresh or a changed selection needs the request.
   if (stillVisible && !refreshActive && detail.value) return;
   await selectConversation(nextId, stillVisible);
+}
+
+/**
+ * CONV-ACL-01: a reset can mean this seller lost access to the open thread.
+ * Hide its content before revalidation, including dialogs and pending reads.
+ * A hidden draft survives revalidation only while access is still allowed.
+ * @param {string} [id] @param {boolean} [forgetDraft]
+ */
+function clearPrivateConversation(id = activeId.value, forgetDraft = false) {
+  detailController?.abort();
+  detailController = undefined;
+  subjectController?.abort();
+  subjectController = undefined;
+  contactController?.abort();
+  contactController = undefined;
+  deliveryCheckController?.abort();
+  deliveryCheckController = undefined;
+  detailLoading.value = false;
+  if (id && activeId.value === id) {
+    activeId.value = '';
+    if (!forgetDraft) pendingAccessId = id;
+  }
+  if (forgetDraft && pendingAccessId === id) pendingAccessId = '';
+  detail.value = null;
+  contactDetail.value = null;
+  contactLoading.value = false;
+  contactError.value = '';
+  contextOpen.value = false;
+  contextTab.value = 'orders';
+  moreOpen.value = false;
+  renaming.value = false;
+  draftName.value = '';
+  renameBase.value = null;
+  renameConflict.value = false;
+  renameCurrentKnown.value = false;
+  transferring.value = false;
+  transferTarget.value = '';
+  subjectActionsOpen.value = false;
+  subjectState.value = emptySubjects();
+  subjectOrderQuery.value = '';
+  selectedSubjectOrderId.value = '';
+  subjectError.value = '';
+  subjectNotice.value = '';
+  subjectCorrecting.value = {};
+  subjectManyOpen.value = {};
+  messageSubjectDrafts.value = {};
+  subjectAnswers.value = {};
+  subjectAnswerErrors.value = {};
+  subjectCommandKeys.clear();
+  separatedSubjects.clear();
+  deliveryCheckingId.value = '';
+  deliveryCheckNotice.value = '';
+  deliveryCheckError.value = '';
+  deliveryCheckFailedId.value = '';
+  actionMessage.value = '';
+  error.value = '';
+  manualOrderError.value = '';
+  closeError.value = '';
+  snoozeOpen.value = false;
+  reminderAt.value = '';
+  reminderError.value = '';
+  clearLostDialogState();
+  clearReopenDialogState();
+  for (const dialog of [
+    orderConfirmationDialog,
+    contextDialog,
+    contactDialog,
+    archiveConfirmationDialog,
+    closeConfirmationDialog,
+    lostDialog,
+    reopenDialog,
+  ])
+    dialog.value?.close();
+  if (forgetDraft) {
+    replyDrafts.value.delete(id);
+    conversations.value = conversations.value.filter((item) => item.id !== id);
+    keepOpenId = '';
+    if (activeId.value === id) activeId.value = '';
+    void nextTick(() => searchInput.value?.focus({ preventScroll: true }));
+  }
 }
 
 /** @param {string} id @param {boolean} [silent] */
@@ -1928,8 +2023,14 @@ async function selectConversation(id, silent = false) {
       activeId.value === id &&
       /** @type {any} */ (cause)?.name !== 'AbortError'
     ) {
-      error.value = 'Não foi possível carregar a conversa selecionada.';
-      if (!silent || !renaming.value) detail.value = null;
+      if ([403, 404].includes(Number(cause?.status))) {
+        clearPrivateConversation(id, true);
+        error.value = 'Esta conversa não está disponível para seu acesso.';
+        notify(error.value);
+      } else {
+        error.value = 'Não foi possível carregar a conversa selecionada.';
+        if (!silent || !renaming.value) detail.value = null;
+      }
     }
   } finally {
     if (controller === detailController && activeId.value === id)
@@ -2454,6 +2555,7 @@ async function claimHandoff() {
       idempotencyKey: commandKey(),
       method: 'POST',
     });
+    if (active.value?.id !== conversation.id) return;
     actionMessage.value = `Atendimento de ${conversation.contact.label} assumido.`;
     await loadInbox(true);
     await selectConversation(conversation.id);
@@ -2573,6 +2675,7 @@ async function saveName() {
         method: 'POST',
       },
     );
+    if (renameBase.value !== base) return;
     actionMessage.value = 'Nome do contato atualizado.';
     renaming.value = false;
     renameBase.value = null;
@@ -2683,6 +2786,21 @@ watch(
 );
 watch(liveEvent, (event) => {
   if (!event) return;
+  if (event.reset) {
+    // A reset intentionally carries no hidden conversation id. Abort older
+    // pages too, so a delayed response cannot put revoked data back on screen.
+    listController?.abort();
+    listController = undefined;
+    appendController?.abort();
+    appendController = undefined;
+    countController?.abort();
+    countController = undefined;
+    clearPrivateConversation();
+    conversations.value = [];
+    counts.value = {};
+    totalCount.value = 0;
+    nextCursor.value = '';
+  }
   // PLI-08: an order changed elsewhere; Detalhes › Pedido reads it again.
   if (event.reset || event.type === 'inbox.order.changed') {
     orderChangedLive = true;
@@ -2862,8 +2980,15 @@ onBeforeUnmount(() => {
       @clear="clearSheetDraft"
       @close="filtersOpen = false"
     >
-      <fieldset class="filter-sheet-group">
+      <fieldset
+        class="filter-sheet-group"
+        :aria-describedby="!isAdmin ? 'inbox-visibility-hint' : undefined"
+      >
         <legend>Responsável</legend>
+        <p v-if="!isAdmin" id="inbox-visibility-hint" class="filter-sheet-hint">
+          Você vê suas conversas e as sem responsável, incluindo as atendidas
+          pela IA.
+        </p>
         <label
           v-for="scope in OWNER_SCOPES"
           :key="scope.value"

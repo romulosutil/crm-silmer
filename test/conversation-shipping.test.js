@@ -26,6 +26,7 @@ function fixture() {
   /** @type {any} */ const state = {
     role: 'Vendedor',
     disabled: false,
+    capabilities: [],
     owner: 'seller',
     mode: 'human',
     closed: false,
@@ -45,7 +46,12 @@ function fixture() {
             ? []
             : [{ id: 'seller', name: 'Seller', function_name: state.role }],
         };
-      if (sql.includes('SELECT capability')) return { rows: [] };
+      if (sql.includes('SELECT capability'))
+        return {
+          rows: state.capabilities.map((/** @type {string} */ capability) => ({
+            capability,
+          })),
+        };
       if (sql.includes('FROM crm.conversations'))
         return {
           rows: [
@@ -109,6 +115,14 @@ function fixture() {
         });
         return { rows: [] };
       }
+      if (sql.startsWith('SELECT id FROM crm.orders WHERE id=$1'))
+        return { rows: [{ id: 'order' }] };
+      if (
+        sql.startsWith('SELECT id FROM crm.shipping_quotes WHERE order_id=$1')
+      )
+        return {
+          rows: state.quotes.map((/** @type {any} */ row) => ({ id: row.id })),
+        };
       if (sql.startsWith('SELECT quote.*'))
         return {
           rows: state.quotes
@@ -117,6 +131,7 @@ function fixture() {
               ...structuredClone(row),
               creator_name: 'Seller',
               current_order_version: state.orderVersion,
+              conversation_owner_id: state.owner,
             })),
         };
       if (sql.startsWith('INSERT INTO crm.shipping_quote_commands')) {
@@ -306,4 +321,50 @@ test('T139 new destination or order changes invalidate an earlier selection; sta
   );
   state.owner = 'other';
   await assert.rejects(runtime.select(select), { code: 'FORBIDDEN' });
+});
+
+for (const [
+  owner,
+  capabilities,
+  visible,
+] of /** @type {Array<[string|null,string[],boolean]>} */ ([
+  ['seller', [], true],
+  [null, [], true],
+  ['other-seller', [], false],
+  ['other-seller', ['COMMERCIAL_ADMIN'], true],
+])) {
+  test(`CONV-ACL-01 shipping estimate preserves prices and protects conversation references for owner ${owner}`, async () => {
+    const { runtime, state } = fixture();
+    const { quote: initial } = await runtime.quote(INPUT);
+    state.owner = owner;
+    state.capabilities = capabilities;
+    const { quote } = await runtime.read({
+      actor: INPUT.actor,
+      orderId: 'order',
+    });
+    assert.deepEqual(quote.services, initial.services);
+    assert.equal(quote.id, initial.id);
+    assert.equal(quote.conversationId, visible ? 'conversation' : null);
+    assert.equal(quote.subjectId, visible ? 'subject' : null);
+    assert.equal(state.calls, 1);
+  });
+}
+
+test('CONV-ACL-01 shipping estimate rechecks current conversation owner after transfer and denies missing actor', async () => {
+  const { runtime, state } = fixture();
+  await runtime.quote(INPUT);
+  assert.equal(
+    (await runtime.read({ actor: INPUT.actor, orderId: 'order' })).quote
+      .conversationId,
+    'conversation',
+  );
+  state.owner = 'other-seller';
+  const hidden = (await runtime.read({ actor: INPUT.actor, orderId: 'order' }))
+    .quote;
+  assert.equal(hidden.conversationId, null);
+  assert.equal(hidden.subjectId, null);
+  await assert.rejects(runtime.read({ orderId: 'order' }), {
+    statusCode: 403,
+    code: 'FORBIDDEN',
+  });
 });

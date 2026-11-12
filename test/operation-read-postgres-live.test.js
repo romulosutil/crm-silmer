@@ -208,7 +208,7 @@ if (connectionString) {
               reason_code, summary_envelope, due_at, sla_minutes,
               sla_policy_version, created_at, updated_at, target_role)
            VALUES ($1, $2, $3, $4, 1, $5,
-                   '{"algorithm":"AES-256-GCM","version":"1"}'::jsonb,
+                   $7::jsonb,
                    $6::timestamptz + interval '30 minutes', 30, 'v1', $6, $6,
                    'Vendedor')`,
           [
@@ -218,6 +218,13 @@ if (connectionString) {
             status,
             reason,
             createdAt,
+            JSON.stringify(
+              encryptJson(
+                'Resumo sintético de atendimento',
+                `${conversationId}:handoff:summary`,
+                Buffer.alloc(32, 46),
+              ),
+            ),
           ],
         );
       await insertHandoff(
@@ -1098,7 +1105,7 @@ if (connectionString) {
         [archivedFailure, NOW],
       );
       const urgencyInput = { sort: 'urgency', limit: 100 };
-      const access = { actorId: sellerId };
+      const access = { actorId: sellerId, capabilities: ['COMMERCIAL_ADMIN'] };
       const ranked = await reads.listInbox(urgencyInput, access);
       const expectedRanked = [
         delivery,
@@ -1206,6 +1213,231 @@ if (connectionString) {
       assert.ok(
         explicitOwner.items.every(
           (/** @type {any} */ item) => item.assignedUser.id === otherSeller,
+        ),
+      );
+
+      // CONV-ACL-01/T01: all filters and pagination intersect server-owned visibility.
+      const sellerAccess = { actorId: sellerId, capabilities: [] };
+      const foreignAccess = { actorId: otherSeller, capabilities: [] };
+      const allRows = await reads.listInbox({ limit: 100 }, access);
+      const isVisible = (/** @type {any} */ item) =>
+        !item.assignedUser || item.assignedUser.id === sellerId;
+      assert.ok(
+        allRows.items.some(
+          (/** @type {any} */ item) => item.assignedUser?.id === otherSeller,
+        ),
+      );
+      assert.ok(
+        allRows.items.some((/** @type {any} */ item) => !item.assignedUser),
+      );
+      for (const query of [
+        {},
+        { sort: 'urgency' },
+        { archived: true },
+        { terminal: true },
+        { automationState: 'assistant' },
+        { owner: 'mine' },
+        { owner: 'unassigned' },
+        { assignedUserId: otherSeller },
+        { bucket: 'respond' },
+        { bucket: 'awaiting' },
+        { bucket: 'silent' },
+        { bucket: 'lost' },
+      ]) {
+        const administrative = await reads.listInbox(
+          { ...query, limit: 100 },
+          access,
+        );
+        const visible = await reads.listInbox(
+          { ...query, limit: 100 },
+          sellerAccess,
+        );
+        const expected = administrative.items.filter(isVisible);
+        assert.deepEqual(
+          visible.items.map((/** @type {any} */ item) => item.id),
+          expected.map((/** @type {any} */ item) => item.id),
+          JSON.stringify(query),
+        );
+        assert.equal(
+          visible.totalCount,
+          expected.length,
+          JSON.stringify(query),
+        );
+      }
+      const visiblePage = await reads.listInbox({ limit: 1 }, sellerAccess);
+      assert.ok(visiblePage.nextCursor);
+      for (const replayAccess of [foreignAccess, access]) {
+        await assert.rejects(
+          reads.listInbox(
+            { limit: 1, cursor: visiblePage.nextCursor },
+            replayAccess,
+          ),
+          { code: 'INVALID_CURSOR' },
+        );
+      }
+      const pagedIds = [];
+      let next = /** @type {string|null} */ (null);
+      do {
+        const page = await reads.listInbox(
+          { limit: 1, ...(next ? { cursor: next } : {}) },
+          sellerAccess,
+        );
+        pagedIds.push(...page.items.map((/** @type {any} */ item) => item.id));
+        next = page.nextCursor;
+      } while (next);
+      assert.deepEqual(
+        pagedIds,
+        allRows.items
+          .filter(isVisible)
+          .map((/** @type {any} */ item) => item.id),
+      );
+      const counts = await reads.countInboxBuckets({}, sellerAccess);
+      for (const bucket of ['respond', 'awaiting', 'silent', 'lost']) {
+        assert.equal(
+          counts[bucket],
+          (await reads.listInbox({ bucket }, sellerAccess)).totalCount,
+        );
+      }
+      assert.deepEqual(
+        await reads.countInboxBuckets(
+          { assignedUserId: otherSeller },
+          sellerAccess,
+        ),
+        { respond: 0, awaiting: 0, silent: 0, lost: 0 },
+      );
+      for (const hidden of [delivery, closed, archivedFailure]) {
+        await assert.rejects(
+          reads.getConversation({ conversationId: hidden }, sellerAccess),
+          { code: 'CONVERSATION_NOT_FOUND', statusCode: 404 },
+        );
+        await assert.rejects(
+          reads.getAssistantContext({ conversationId: hidden }, sellerAccess),
+          { code: 'CONVERSATION_NOT_FOUND', statusCode: 404 },
+        );
+        assert.equal(
+          (await reads.getConversation({ conversationId: hidden }, access))
+            .conversation.id,
+          hidden,
+        );
+      }
+      const foreignDetail = await reads.getConversation(
+        { conversationId: delivery },
+        access,
+      );
+      const foreignContact = await reads.getContact(
+        { contactId: foreignDetail.conversation.contact.id },
+        sellerAccess,
+      );
+      assert.deepEqual(foreignContact.conversations, []);
+      // Contact reads keep the shared register but must not reveal activity
+      // from an inaccessible conversation. Exercise name/phone and page binds.
+      const contactPage = await reads.listContacts(
+        { limit: 100 },
+        sellerAccess,
+      );
+      const foreignContactRow = contactPage.items.find(
+        (/** @type {any} */ item) =>
+          item.id === foreignDetail.conversation.contact.id,
+      );
+      assert.ok(foreignContactRow);
+      const storedContact = await pool.query(
+        'SELECT updated_at FROM crm.contacts WHERE id=$1',
+        [foreignContactRow.id],
+      );
+      assert.equal(
+        foreignContactRow.latestActivityAt,
+        new Date(storedContact.rows[0].updated_at).toISOString(),
+      );
+      const administrativeContacts = await reads.listContacts(
+        { limit: 100 },
+        access,
+      );
+      assert.notEqual(
+        administrativeContacts.items.find(
+          (/** @type {any} */ item) => item.id === foreignContactRow.id,
+        )?.latestActivityAt,
+        foreignContactRow.latestActivityAt,
+      );
+      for (const q of [undefined, '@', '5511999999999']) {
+        const filter = q === undefined ? {} : { q };
+        const first = await reads.listContacts(
+          { ...filter, limit: 1 },
+          sellerAccess,
+        );
+        if (first.nextCursor) {
+          await reads.listContacts(
+            { ...filter, limit: 1, cursor: first.nextCursor },
+            sellerAccess,
+          );
+        }
+      }
+
+      assert.equal(
+        (
+          await reads.getConversation(
+            { conversationId: delivery },
+            foreignAccess,
+          )
+        ).conversation.id,
+        delivery,
+      );
+      // IA mode does not override another seller's ownership.
+      await pool.query(
+        'UPDATE crm.conversations SET assigned_user_id=$2 WHERE id=$1',
+        [agent, otherSeller],
+      );
+      await assert.rejects(
+        reads.getConversation({ conversationId: agent }, sellerAccess),
+        { code: 'CONVERSATION_NOT_FOUND' },
+      );
+      const aclHandoff = await openConversation(
+        'acl-handoff',
+        '2026-09-08T18:00:00.000Z',
+      );
+      await insertHandoff(
+        'acl-handoff',
+        aclHandoff,
+        'customer_requested_human',
+        '2026-09-08T18:00:00.000Z',
+        'pending',
+      );
+      assert.ok(
+        (
+          await reads.getConversationHandoff(
+            { conversationId: aclHandoff },
+            sellerAccess,
+          )
+        ).handoff,
+      );
+      await pool.query(
+        'UPDATE crm.conversations SET assigned_user_id=$2 WHERE id=$1',
+        [aclHandoff, otherSeller],
+      );
+      assert.deepEqual(
+        await reads.getConversationHandoff(
+          { conversationId: aclHandoff },
+          sellerAccess,
+        ),
+        { handoff: null, preferred_seller: null },
+      );
+      assert.ok(
+        (
+          await reads.getConversationHandoff(
+            { conversationId: aclHandoff },
+            access,
+          )
+        ).handoff,
+      );
+      const handoffs = await reads.listOpenHandoffs({}, sellerAccess);
+      assert.ok(
+        handoffs.items.every(
+          (/** @type {any} */ item) => item.conversationId !== aclHandoff,
+        ),
+      );
+      const adminHandoffs = await reads.listOpenHandoffs({}, access);
+      assert.ok(
+        adminHandoffs.items.some(
+          (/** @type {any} */ item) => item.conversationId === aclHandoff,
         ),
       );
     } finally {

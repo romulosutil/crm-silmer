@@ -1,4 +1,8 @@
 import { createHash } from 'node:crypto';
+import {
+  canReadConversation,
+  conversationReadScope,
+} from '@crm-silmer/identity-access';
 import { open } from 'node:fs/promises';
 import { mediaError } from './chat-media-runtime.js';
 
@@ -28,6 +32,8 @@ export function createInboundMediaRuntime({
         if (retained) return retained.content(input);
         throw mediaError(404);
       }
+      if (!canReadConversation(input.actor, null)) throw mediaError(403);
+      const scope = conversationReadScope(input.actor);
       const row = (
         await database.query(
           `SELECT media.*, conversation.terminal_at
@@ -36,11 +42,13 @@ export function createInboundMediaRuntime({
            JOIN crm.conversations conversation ON conversation.id=message.conversation_id
            JOIN crm.transient_media media ON media.id=attachment.transient_media_id
            WHERE media.id=$1 AND message.conversation_id=$2
+             AND ($3::boolean OR conversation.assigned_user_id IS NULL
+               OR conversation.assigned_user_id=$4)
              AND message.direction='inbound' AND media.media_type=message.message_type
              AND (message.message_type IN ('image','audio','video')
                OR (message.message_type='document' AND media.detected_mime_type
                  IN ('image/jpeg','image/png','image/webp','image/gif','application/pdf')))`,
-          [input.mediaId, input.conversationId],
+          [input.mediaId, input.conversationId, scope.readAll, scope.actorId],
         )
       ).rows[0];
       if (!row) throw mediaError(404);

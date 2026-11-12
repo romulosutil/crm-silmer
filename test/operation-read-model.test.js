@@ -216,6 +216,7 @@ test('PCX-17: urgency cursors bind rank, position, reader and explicit filters w
     sort: 'urgency',
     actorId: 'reader-one',
     archived: false,
+    visibility: { actorId: 'reader-one', readAll: false },
     limit: 3,
   });
   assert.equal('nextPosition' in first, false);

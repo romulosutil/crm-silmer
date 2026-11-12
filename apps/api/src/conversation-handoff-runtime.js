@@ -1,3 +1,4 @@
+import { canReadConversation } from '@crm-silmer/identity-access';
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import { PostgresOperationalUserPort } from '@crm-silmer/identity-access';
 import {
@@ -77,13 +78,16 @@ export function createConversationHandoffRuntime(database, options = {}) {
           );
           return result;
         },
+        async (transaction) => {
+          await lockReadableClaimConversation(transaction, input);
+        },
       );
     },
   });
 }
 
-/** @param {any} transaction @param {any} users @param {any} input */
-async function claimConversationHandoff(transaction, users, input) {
+/** @param {any} transaction @param {any} input */
+async function lockReadableClaimConversation(transaction, input) {
   const locator = (
     await transaction.query(
       'SELECT conversation_id FROM crm.handoffs WHERE id = $1',
@@ -99,6 +103,15 @@ async function claimConversationHandoff(transaction, users, input) {
     )
   ).rows[0];
   if (!conversation) throw conflict('Conversation was not found');
+  // CONV-ACL-01: a stale pending handoff cannot reclaim another seller's chat.
+  if (!canReadConversation(input.actor, conversation.assigned_user_id))
+    throw forbidden();
+  return conversation;
+}
+
+/** @param {any} transaction @param {any} users @param {any} input */
+async function claimConversationHandoff(transaction, users, input) {
+  const conversation = await lockReadableClaimConversation(transaction, input);
   if (
     input.expectedConversationVersion !== undefined &&
     Number(conversation.version) !== input.expectedConversationVersion

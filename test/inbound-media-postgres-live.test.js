@@ -87,7 +87,14 @@ if (connectionString) {
       clock: () => now,
       access: {
         async authorizeRead() {
-          return { actor: { id: 'reader-synthetic' } };
+          return {
+            actor: {
+              id: 'reader-synthetic',
+              kind: 'human',
+              functionName: 'Vendedor',
+              capabilities: [],
+            },
+          };
         },
       },
     });

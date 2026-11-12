@@ -169,8 +169,8 @@ Tarefa INBOX-UX-05, solicitação do proprietário no chat. Emenda a entrada
 padrão de PCX-15a; as filas pessoais e capacidades permanecem existentes.
 
 - **PCX-17a:** sem filtro explícito na URL, a Caixa SHALL abrir em Todas,
-  sem restrição de responsável, agente ou situação. Inclui conversas de
-  outros vendedores e encerradas não arquivadas, respeitando conversation.read.
+  dentro do universo autorizado: Admin vê todas; Vendedor vê próprias e sem
+  responsável, incluindo IA (CONV-ACL-01, ADR 088). Inclui encerradas não arquivadas.
   Arquivadas continuam no filtro próprio; links com fila/situação explícita
   preservam a intenção. Todas/Atender/Fechar pedidos continuam refinamentos.
 - **PCX-17b:** Todas SHALL pedir `sort=urgency` à API, sem ordenar apenas a

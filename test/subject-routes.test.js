@@ -23,8 +23,12 @@ test('subject routes authorize reads and writes and keep explicit order and mess
       calls.push(['write-auth', input]);
       return { actor };
     },
-    async list(/** @type {any} */ id, /** @type {any} */ orderQuery) {
-      calls.push(['list', id, orderQuery]);
+    async list(
+      /** @type {any} */ id,
+      /** @type {any} */ orderQuery,
+      /** @type {any} */ reader,
+    ) {
+      calls.push(['list', id, orderQuery, reader]);
       return {
         currentSubjectId: null,
         subjects: [],
@@ -63,7 +67,7 @@ test('subject routes authorize reads and writes and keep explicit order and mess
   });
   assert.equal(read.statusCode, 200);
   assert.equal(calls[0][1].action, 'conversation.read');
-  assert.deepEqual(calls[1], ['list', 'conversation-1', '12-CRM']);
+  assert.deepEqual(calls[1], ['list', 'conversation-1', '12-CRM', actor]);
   // CP-12/CP-16: the route keeps who assigned each link and the messages
   // the seller still has to classify.
   assert.deepEqual(read.json().links, [

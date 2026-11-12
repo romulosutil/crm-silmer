@@ -1057,6 +1057,21 @@ transporte n8n, confirmação comercial, ACL de escrita ou infraestrutura.
       unsupported no workflow. Operação e rollback no
       [runbook](../../../docs/runbooks/inbox-prioridades.md).
 
+## OPS-ERR-DIAG-01 — códigos de banco nos logs seguros (12/11/2026)
+
+OPS-ERR-04/06, PRV-01 e investigação dos API_5XX históricos.
+
+- [x] Reproduzir perda de SQLSTATE 23514 como UNCLASSIFIED_ERROR no hook HTTP.
+- [x] Preservar somente uma lista fechada de SQLSTATE conhecidos e o timeout
+      de aquisição de conexão; manter query/detail/constraint/table fora do log.
+- [x] Regressão HTTP de constraint, unicidade, referência, deadlock, timeout e
+      correlação; códigos desconhecidos, telefone e texto misturado continuam
+      classificados sem ecoar seus valores.
+- [x] Validate local: 2.717 aprovados, 53 skips existentes; regressão focada
+      de observabilidade/saúde: 17 aprovados; diff check limpo.
+- [ ] PR/CI e conferência do código publicado. Não recupera detalhes
+      descartados nem encerra incidentes históricos sem evidência.
+
 ## OPS-ERR-T01 — Saúde e erros (02/11/2026)
 
 Requisitos OPS-ERR-01–08, PRV-01 e INT-2/3; decisão do proprietário na

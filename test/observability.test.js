@@ -148,6 +148,51 @@ test('readiness injection preserves explicit true, false and failure states', as
   await failing.close();
 });
 
+test('OPS-ERR-06: API database failures keep bounded SQLSTATE and request correlation without query data', async (t) => {
+  const { logger, records } = capture();
+  const api = createApi({}, { logger });
+  t.after(() => api.close());
+  let code = '23514';
+  api.get('/synthetic-database-failure', async () => {
+    throw Object.assign(new Error('Synthetic database failure'), {
+      code,
+      detail: canaries.join(' '),
+      query: canaries.join(' '),
+      constraint: canaries[0],
+      table: canaries[1],
+    });
+  });
+  const requestId = 'abcdef0123456789abcdef0123456789ab';
+  for (code of [
+    '23514',
+    '23505',
+    '23503',
+    '40P01',
+    '57014',
+    'DATABASE_CONNECTION_TIMEOUT',
+  ]) {
+    const response = await api.inject({
+      url: '/synthetic-database-failure',
+      headers: { 'x-request-id': requestId },
+    });
+    assert.equal(response.statusCode, 500);
+    const error = records
+      .filter((r) => r.event === 'api_request_failed')
+      .at(-1);
+    assert.equal(error?.error_code, code);
+    assert.equal(error?.request_id, requestId);
+  }
+  for (code of ['12345', '23514 ' + canaries[0], canaries[1]]) {
+    await api.inject({ url: '/synthetic-database-failure' });
+    assert.equal(
+      records.filter((r) => r.event === 'api_request_failed').at(-1)
+        ?.error_code,
+      'UNCLASSIFIED_ERROR',
+    );
+  }
+  assertNoCanaries(records);
+});
+
 test('emits worker heartbeat and bounded failure metrics without job content', async () => {
   const { logger, records } = capture();
   const metrics = new MetricRegistry({ logger });

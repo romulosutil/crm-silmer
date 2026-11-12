@@ -7,7 +7,7 @@ Pedido do cliente trazido pelo proprietário em 12/11/2026.
 Requisitos [FPI-12 e FPI-13](../../.specs/features/ficha-por-item/spec.md);
 tarefas [FPI-T05 e FPI-T06](../../.specs/features/ficha-por-item/tasks.md).
 Pacote de revisão: [FICHA-PDF-REVIEW-V9](../phase0/FICHA-PDF-REVIEW-V9.md).
-PR: a preencher pelo orquestrador. Sem issue específica.
+PR: [romulosutil/crm-silmer#368](https://github.com/romulosutil/crm-silmer/pull/368). Sem issue específica.
 Antecedentes: [RFC 061](061-ficha-impressa-por-item.md) e
 [ADR 078](../adr/078-ficha-impressa-por-item.md).
 

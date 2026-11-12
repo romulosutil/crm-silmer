@@ -1,5 +1,14 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## WAP-T00 — proposta de WhatsApp por vendedor (12/11/2026)
+
+[RFC 067](../../../docs/rfc/067-whatsapp-por-vendedor-e-meus-clientes.md),
+[requisitos propostos WAP-01–16](../seller-whatsapp/spec.md) e
+[plano em duas etapas](../seller-whatsapp/tasks.md): configuração pessoal por
+QR, Meus clientes e sincronização corrente; depois, carteira anterior e
+sucessão. Escopo exclusivo de WhatsApp. Somente elaboração documental
+autorizada; D1–D4 e ADR ainda pendentes, sem runtime ou pareamento.
+
 ## CONV-ACL-T01 — Leitura por responsável (12/11/2026)
 
 [CONV-ACL-01 e tarefas](../conversation-visibility/tasks.md), ADR 088: Admin lê

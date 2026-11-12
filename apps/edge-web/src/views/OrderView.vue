@@ -37,6 +37,7 @@ import {
   sharePdf,
 } from '../lib/order-pdf.js';
 import {
+  amountLabel,
   fabLabel,
   isStoreOrder,
   nextOrderStep,
@@ -208,17 +209,28 @@ const mobileAction = computed(() => {
   if (!canConfirm.value || isStore.value) return '';
   return nextStep.value ? 'step' : 'generate';
 });
-const itemCount = computed(() => order.value?.ficha?.items?.length ?? 0);
 /** The conversation this order came from, opened directly in the Inbox. */
 const conversationLink = computed(() => {
   const id = order.value?.conversationId || props.fromConversationId;
   return id ? `/inbox/${encodeURIComponent(id)}` : '';
 });
-const deliveryLabel = computed(() => {
-  const match = /^\d{4}-(\d{2})-(\d{2})$/u.exec(
+// PED-RD-02: the header's key facts are the one place that says delivery,
+// pieces and value; an absent value shows "—".
+const deliveryFact = computed(() => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(
     String(order.value?.ficha?.summary?.data_entrega_confirmada ?? ''),
   );
-  return match ? `entrega ${match[2]}/${match[1]}` : 'sem previsão de entrega';
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : '—';
+});
+const valueFact = computed(() => {
+  const pricing = order.value?.pricing;
+  if (
+    pricing?.complete === true &&
+    Number.isSafeInteger(pricing.totalCents) &&
+    pricing.totalCents > 0
+  )
+    return amountLabel(pricing.totalCents);
+  return amountLabel(order.value?.finalAmountCents);
 });
 
 /**
@@ -871,6 +883,20 @@ onBeforeUnmount(() => {
             {{ customerName }} — {{ orderContext }} ·
             {{ fabLabel(order.fabCode) }}
           </p>
+          <dl class="op-facts" aria-label="Fatos do pedido">
+            <div>
+              <dt>Entrega</dt>
+              <dd class="op-num">{{ deliveryFact }}</dd>
+            </div>
+            <div>
+              <dt>Peças</dt>
+              <dd class="op-num">{{ order.totalPieces ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>Valor</dt>
+              <dd class="op-num">{{ valueFact }}</dd>
+            </div>
+          </dl>
         </div>
         <div class="op-head-actions">
           <RouterLink
@@ -929,6 +955,9 @@ onBeforeUnmount(() => {
 
       <!-- LOJ-34: the same two columns as any confirmed order. -->
       <div v-if="isStore" class="op-layout">
+        <aside class="op-rail" aria-label="Fechamento e pagamento">
+          <OrderClosingSection ref="closingSection" :order="order" />
+        </aside>
         <div class="op-main">
           <OrderStoreDetails :order="order" />
           <OrderStoreCorrection
@@ -946,16 +975,18 @@ onBeforeUnmount(() => {
             @saved="order = $event"
           />
         </div>
-        <aside class="op-rail" aria-label="Fechamento e pagamento">
-          <OrderClosingSection ref="closingSection" :order="order" />
-        </aside>
       </div>
 
       <div v-if="!isStore" class="op-layout">
-        <!-- PFI-01: the order of the printed ficha, top to bottom, under the
-             real progress to generate it (PFI-15). -->
-        <div class="op-main">
+        <!-- PED-RD-08: the rail comes first in the DOM, so on a narrow page the
+             progress and the closing precede the ficha and focus follows the
+             visual order; from 75rem grid areas move it to the right. -->
+        <aside class="op-rail" aria-label="Gerar pedido">
           <OrderProgress v-if="showProgress" :order="order" />
+          <OrderClosingSection ref="closingSection" :order="order" />
+        </aside>
+        <!-- PFI-01: the order of the printed ficha, top to bottom. -->
+        <div class="op-main">
           <OrderSummarySection :order="order" />
           <OrderMilestonesSection :order="order" />
           <OrderBillingSection
@@ -972,19 +1003,6 @@ onBeforeUnmount(() => {
           />
           <OrderInfoStrips :order="order" />
         </div>
-        <aside class="op-rail" aria-label="Gerar pedido">
-          <OrderClosingSection ref="closingSection" :order="order" />
-          <p class="op-total">
-            <span class="op-total-label">
-              Total de peças
-              <span class="op-num"
-                >{{ itemCount }} {{ itemCount === 1 ? 'item' : 'itens' }} ·
-                {{ deliveryLabel }}</span
-              >
-            </span>
-            <strong class="op-num">{{ order.totalPieces }}</strong>
-          </p>
-        </aside>
       </div>
 
       <OrderPriceBreakdown

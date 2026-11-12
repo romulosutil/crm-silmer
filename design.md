@@ -1525,7 +1525,7 @@ lugar da §20. Até cada tarefa ser entregue, a §9 descreve o que o código faz
   como botão que abre o detalhe, subtítulo abaixo.
 - Rodapé com divisor: "Recebido: …" à esquerda e "Falta receber: …" à
   direita, só no confirmado.
-- Em container de 44rem ou menos a mesma linha do tempo vira vertical, sem
+- Em container de 30rem ou menos a mesma linha do tempo vira vertical, sem
   rolagem lateral. O estado do ponto também está no nome acessível.
 
 ### Hierarquia
@@ -1547,7 +1547,7 @@ por espaço, não por caixa. Valores só da escala de 4 px.
   linha do tempo) declara `container-type: inline-size`, `inline-size: 100%`
   e `min-inline-size: 0`.
 - As grades internas usam `@container`: Resumo a 40rem, Arte a 32rem, Datas a
-  44rem. A única consulta de viewport do layout é a de 75rem do rail.
+  30rem. A única consulta de viewport do layout é a de 75rem do rail.
 - Nunca centralizar um container com `margin-inline: auto` dentro de grade ou
   flex sem largura explícita: sem largura intrínseca ele encolhe a zero (foi o
   defeito que colapsou a v2 do protótipo numa coluna de poucos pixels).

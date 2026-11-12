@@ -83,7 +83,7 @@ ficar lado a lado e que faltava responsividade aos componentes.
    tempo horizontal com data acima, ponto na trilha (concluído preenchido,
    próximo vazado), título sublinhado em pontilhado que abre o detalhe,
    subtítulo, e rodapé com "Recebido" e "Falta receber" (só confirmado).
-   Em container de 44rem ou menos vira vertical, sem rolagem lateral.
+   Em container de 30rem ou menos vira vertical, sem rolagem lateral.
 8. **Quatro níveis de hierarquia** (página, capítulo ou bloco do rail,
    subseção, rótulo e metadado) e ritmo vertical de 32 px entre capítulos, 24
    px entre subseções e 16 px entre campos, na escala de 4 px. Uma superfície

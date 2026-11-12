@@ -110,7 +110,7 @@ Verificação: leitura da árvore de regiões; busca por botões com nome
    pontilhado como botão que abre o detalhe, e subtítulo.
 3. O rodapé SHALL ter divisor, "Recebido: …" à esquerda e "Falta receber: …"
    à direita, só no confirmado.
-4. WHEN o container tem 44rem ou menos THEN a mesma linha do tempo SHALL virar
+4. WHEN o container tem 30rem ou menos THEN a mesma linha do tempo SHALL virar
    vertical, sem rolagem lateral.
 5. **Negativo:** a linha do tempo SHALL NOT sair do capítulo para o rail nem
    achatar em lista.
@@ -121,7 +121,7 @@ Verificação: leitura da árvore de regiões; busca por botões com nome
    o detalhe do evento; esta entrega não muda o conteúdo dele.
 
 Verificação: cenários do E2E das datas ("Datas do pedido", "Alterar data de
-entrega") a 1440 e a 390 px; medida do container a 44rem.
+entrega") a 1440 e a 390 px; medida do container a 30rem.
 
 ### PED-RD-05 — Dados do atendimento
 
@@ -301,7 +301,7 @@ em `40-order.css`, antes e depois (§19 do `design.md`).
    linha do tempo) SHALL declarar `container-type: inline-size`,
    `inline-size: 100%` e `min-inline-size: 0`.
 2. As grades internas SHALL reagir ao container com `@container`: Resumo a
-   40rem, Arte a 32rem, Datas a 44rem; a única consulta de viewport do layout
+   40rem, Arte a 32rem, Datas a 30rem; a única consulta de viewport do layout
    é a de 75rem do rail.
 3. SHALL NOT haver rolagem horizontal da página a 320 px nem a 200% de zoom.
 4. **Negativo:** nenhum container de layout SHALL ser centralizado com

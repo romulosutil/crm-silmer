@@ -133,7 +133,7 @@ ficar lado a lado e que faltava responsividade aos componentes.
   EDIT-01) e o texto da §9 "Ficha de Pedido" do `design.md`. PFI-01 também
   precisa de conferência da ordem. A emenda é a tarefa PED-RD-T00 e entra
   antes ou junto do primeiro PR de tela, porque a especificação tem precedência
-  sobre o `design.md`. Esta entrega não edita a spec de Pedidos MVP.
+  sobre o `design.md`; entrou na PR 358, junto da tela.
 - **Dependências:**
   - O campo "Frete" e a linha Peças + Frete = Total dependem de OLC-T01 e da
     [ADR 080](080-valor-final-com-frete.md); antes dele o rail mostra só o

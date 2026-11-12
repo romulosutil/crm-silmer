@@ -28,8 +28,9 @@ quebrado.
 - [x] Registrar a ADR 086, a §22 do `design.md` e o parágrafo de remissão da
       §9.
 - [x] Escrever esta spec e estas tarefas.
-- [ ] Emendar, em [Pedidos MVP](../pedidos-mvp/spec.md), antes ou junto do
-      primeiro PR de tela (não editados nesta entrega):
+- [x] Emendar, em [Pedidos MVP](../pedidos-mvp/spec.md), antes ou junto do
+      primeiro PR de tela (feito na PR 358, com o texto de cada emenda em
+      PFI-01, PFI-17 e PFI-18):
   - **PFI-01:** a ordem das seções passa a ser Resumo, Datas, Itens, Arte,
     Observações e Dados do atendimento; o Fechamento e pagamento é o rail.
   - **PFI-17:** o cabeçalho de capítulo passa a ter, além do estado e do

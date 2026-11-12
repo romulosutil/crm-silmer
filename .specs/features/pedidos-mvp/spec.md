@@ -175,6 +175,12 @@ batem com a ficha impressa, para garantir que o que imprimo está certo.
    Resumo (PLA-01). Emendado por PFI-18 e PFI-20 (RFC 024): "Controle de
    produção" sai da tela, o lastro aparece como "Datas do pedido" e, no
    celular, as seções viram acordeão.
+   Emendado em 12/11/2026 por PED-RD-01 e PED-RD-03 (ADR 086): a ficha é uma
+   folha só, na ordem Resumo do pedido, Datas do pedido, Itens e
+   especificações, Arte do pedido, Observações do pedido e Dados do
+   atendimento (por último, recolhido e não impresso). "Fechamento e
+   pagamento" deixa de ser a última seção e vira o rail, junto do progresso de
+   PFI-15 (PFI-18).
 2. **PFI-02** Resumo SHALL conter: cliente (vindo do contato, bloqueado; só
    nome confirmado desde a ADR 016, PIT-11; acompanha o contato enquanto o
    pedido está pendente desde a ADR 018, PCT-01),
@@ -1210,6 +1216,12 @@ LOJ-33, LOJ-34, REV-06, REV-10 e FIN-02.
    título e estado em texto e ganha o estado de salvamento. "Itens e
    especificações" é a primeira; as demais mantêm este critério até serem
    migradas.
+   Emendado em 12/11/2026 por PED-RD-04 e PED-RD-09 a PED-RD-12 (ADR 086):
+   Resumo, Arte e Observações também foram migradas e SHALL NOT ter "Editar
+   resumo", "Editar arte" nem "Editar observações". O cabeçalho do
+   capítulo SHALL levar, além do título, do estado em texto e do estado de
+   salvamento, a ação própria do capítulo quando existir: em Datas, "Confirmar
+   entrega" ("Alterar data de entrega" depois de confirmada).
 4. **PFI-18** WHEN a tela tem até 768 px THEN as seções do pedido SHALL formar
    um acordeão com uma seção aberta por vez, Dados do atendimento inclusive
    (PFI-08). Cada cabeçalho SHALL ser um botão com `aria-expanded` e
@@ -1223,6 +1235,14 @@ LOJ-33, LOJ-34, REV-06, REV-10 e FIN-02.
    Emendado em 10/11/2026 por EDIT-01 (ADR 083): uma seção com edição no
    lugar não tem rascunho e fecha como as outras; "em edição até Salvar ou
    Cancelar" vale só para as seções ainda não migradas.
+   Emendado em 12/11/2026 por PED-RD-01 e PED-RD-08 (ADR 086): o rail
+   "Fechamento e pagamento" (progresso e fechamento) é o primeiro filho do
+   layout e SHALL vir antes da ficha abaixo de 75rem, com a ordem de foco
+   igual à visual; a partir de 75rem fica à direita, ao lado da ficha. O
+   acordeão do celular segue a ordem nova da ficha, e o primeiro passo
+   pendente continua definindo a seção aberta. Acima de 768 px as seções
+   ficam abertas, salvo Dados do atendimento, que fica recolhido em qualquer
+   largura (PED-RD-05).
 5. **PFI-19** WHEN os três passos estão feitos e quem pode gerar aciona "Gerar
    pedido" THEN SHALL abrir o diálogo "Gerar o pedido" (`role="dialog"`,
    `aria-modal="true"`, foco contido) com a revisão do que vai ser gerado

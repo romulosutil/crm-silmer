@@ -25,8 +25,8 @@ alternativas na [ADR 086](../../../docs/adr/086-pedido-refinado.md).
 - Ferramentas administrativas do Olist (conferência, recuperação): ficam fora
   da jornada da vendedora e não mudam.
 - Pedido da loja (LOJ-07): mantém o fluxo próprio.
-- O orçamento de ações da §16 para os botões de remover tamanho: decisão do PO
-  em aberto (ver "Pendências do PO").
+- Os botões de remover tamanho, um por linha (EDIT-01): ficam como estão;
+  abaixo da primeira tela, não entram no orçamento da §16.
 
 ## Dependências
 
@@ -336,8 +336,10 @@ de tela (ainda não feita).
    ADR 083) da primeira tela do pedido SHALL ser medida a 390×844 e a
    1366×768, antes e depois, com dados sintéticos.
 2. **Negativo:** a meta da §16 SHALL NOT ser declarada atendida sem a medição;
-   enquanto os botões de remover tamanho continuarem um por linha, a meta
-   segue excedida e registrada como pendência.
+   ações abaixo da primeira tela (como os botões de remover tamanho, um por
+   linha) não entram nela.
+3. Medido em 12/11/2026: 3 ações no pendente a 390×844 e 3 a 1366×768, contra
+   12 e 16; `test/e2e/ux-budget.spec.js` (`pedidoPrimeiraTela`) trava o limite.
 
 Verificação: ver "Medidas a coletar".
 

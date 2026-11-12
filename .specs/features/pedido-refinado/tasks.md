@@ -203,9 +203,10 @@ quebrado.
 - [ ] Teste manual com leitor de tela e em aparelho real, registrado como
       feito ou como pendente. Pendente: não verificado.
 - Entregue em 6a1384a7 e nos commits de correção de medição: medição em 390,
-  1024, 1366 e 1440 px. Em 1366 px, pendente tem 19 ações e confirmado 8; a
-  meta de notebook da §16 (≤ 16) é excedida no pendente pelos botões de
-  remover por linha (decisão do PO pendente). E2E completo: 995 passou,
+  1024, 1366 e 1440 px. Na página inteira a 1366 px, pendente tem 19 ações
+  e confirmado 8. A meta da §16 conta a primeira tela: 3 ações a 390×844 e 3
+  a 1366×768 no pendente (metas 12 e 16), travadas por
+  `test/e2e/ux-budget.spec.js`. E2E completo: 995 passou,
   7 ignorados, 0 falhou; `npm run validate` verde.
 - Depends on: T09.
 - Done when: PED-RD-15 e PED-RD-16 com evidência; `npm run validate` e

@@ -141,12 +141,12 @@ ficar lado a lado e que faltava responsividade aos componentes.
     ([ADR 079](079-olist-a-partir-do-pedido-confirmado.md)).
   - O interior de "Cobranças e pagamentos" espera o PR 348
     (`codex/order-timeline`, BCS-01–09); o rail só mostra o resumo e o link.
-- **Orçamento de ações da §16:** continua excedido pelos botões de remover
-  tamanho de cada linha (um por tamanho); decisão do PO em aberto, listada na
-  §22 do `design.md`.
+- **Orçamento de ações da §16:** atendido na primeira tela, que é o que a
+  meta conta: 3 ações no pendente a 390×844 e 3 a 1366×768 (metas 12 e 16),
+  travadas por `test/e2e/ux-budget.spec.js`. Os botões de remover tamanho, um
+  por linha, ficam abaixo da primeira tela.
 - **Não verificado:** renderização no app real (o protótipo é estático e foi
-  conferido só como canvas), leitor de tela e aparelho real. A contagem de
-  ações a 390×844 e 1366×768 é medida na tarefa PED-RD-T10.
+  conferido só como canvas), leitor de tela e aparelho real.
 - Os seletores que o E2E principal (`test/e2e/orders.spec.js`) usa
   (regiões "Resumo do pedido", "Datas do pedido", "Itens e especificações",
   "Arte do pedido", "Fechamento e pagamento", "Dados do atendimento", classes

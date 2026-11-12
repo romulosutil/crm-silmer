@@ -639,14 +639,15 @@ agente ainda não usa esses IDs e conserva sua restrição de um pendente por
 Conversa até a atualização do workflow. O contrato novo valida o alvo antes
 de projetar na ficha e pergunta ou transfere quando a mensagem é ambígua.
 
-O template selecionado é `ficha-canonical-v8` (ADR 078): uma folha A4 retrato
-por item, aprovada provisoriamente pelo PO em 12/11/2026.
+O template selecionado é `ficha-canonical-v9` (ADR 087): duas folhas A4 retrato
+por item (observações e anotações na frente; controle de produção e arte no
+verso), aprovadas provisoriamente pelo PO em 12/11/2026. A v8 (ADR 078, uma
+folha por item) segue endereçável para rollback.
 Técnica pertence ao item e origem da arte ao pedido. Impressão exige Pedido
 confirmado e autorização de leitura. A API devolve HTML imprimível; o PDF
 sintético de aprovação é um artefato de revisão. Assinatura física de Rose
 e Operação continua pendente para produção. Versões v2 a v5 são preservadas.
-A v9 (ADR 087, duas folhas por item) está em revisão; a v8 continua
-selecionada até a aprovação do PO.
+A troca para a v9 foi um commit próprio (FPI-T06).
 
 A [ADR 037](docs/adr/037-gerar-pdf-da-ficha-para-uso-mobile.md) acrescenta
 `GET /api/v1/orders/:orderId/pdf` para baixar a ficha real em PDF e
@@ -725,7 +726,7 @@ Manter o deploy automático não comprova seu vínculo com CI, SHA ou imagem.
 Esses checks, saúde, rede e configurações observadas estão no
 [relatório operacional](docs/runbooks/production-readiness-checks.md).
 
-Go-live exige homologação WhatsApp, aprovação física da v8, monitor off-host,
+Go-live exige homologação WhatsApp, aprovação física da v9, monitor off-host,
 backup externo e drills com RPO de uma hora/RTO de quatro horas. Aplicar
 CRM/migrations compatíveis antes do workflow que depende do contrato novo.
 Rollback pausa a automação e preserva resultados incertos; não reativa o

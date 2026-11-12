@@ -1,7 +1,8 @@
 # RFC 065 — Ficha por item com o controle de produção no verso
 
 Data: 12/11/2026. Status: decidida na [ADR 087](../adr/087-ficha-por-item-controle-no-verso.md);
-template em revisão, aguardando a aprovação do PO das amostras.
+template aprovado pelo PO em 12/11/2026 para desenvolvimento e cloud-dev e
+selecionado em `PRINT_TEMPLATE`; assinatura física pendente.
 Responsável pela proposta: Tech Lead. Aprovador: proprietário do produto.
 Pedido do cliente trazido pelo proprietário em 12/11/2026.
 Requisitos [FPI-12 e FPI-13](../../.specs/features/ficha-por-item/spec.md);
@@ -73,7 +74,7 @@ rótulos (Modelo e Detalhe do modelo), conteúdo de fábrica e bloqueio financei
 (FPI-03 a FPI-10) e as regras de `artPreview` de FPI-11, exceto a divisão da
 área em metades.
 
-**Ativação.** `PRINT_TEMPLATE` continua em v8 até o PO aprovar a amostra v9,
+**Ativação.** `PRINT_TEMPLATE` passou à v9 depois de o PO aprovar a amostra,
 com o mesmo gate de FPI-09: aprovação provisória ligada ao hash das amostras,
 troca em commit próprio, assinatura física de Rose e Operação como gate de
 produção.
@@ -121,7 +122,7 @@ produção.
 
 | Área             | Efeito                                                                                                                                        |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Ficha impressa   | Template novo. `PRINT_TEMPLATE` continua em v8 até a aprovação provisória das amostras v9.                                                    |
+| Ficha impressa   | Template novo. `PRINT_TEMPLATE` passou à v9 com a aprovação provisória das amostras (FPI-T06).                                                |
 | Fichas v2 a v8   | Sem mudança, inclusive hashes, rótulos e o pacote de aprovação da v8.                                                                         |
 | Papel e duplex   | Duas folhas lógicas por item, mais as folhas extras de continuação; em duplex, uma folha física por item. Sem duplex, o custo de papel dobra. |
 | Observações      | Passam à página 1 do item; a folha final deixa de existir como regra e só aparece como continuação, quando o painel não comportar o texto.    |
@@ -167,5 +168,5 @@ A decisão de desenho está registrada na
 [ADR 087](../adr/087-ficha-por-item-controle-no-verso.md). A execução segue
 [FPI-T05](../../.specs/features/ficha-por-item/tasks.md) (implementação e pacote
 de revisão) e [FPI-T06](../../.specs/features/ficha-por-item/tasks.md)
-(aprovação do PO e troca de `PRINT_TEMPLATE`). O resultado fica a preencher
-pelo orquestrador quando as amostras forem aprovadas.
+(aprovação do PO e troca de `PRINT_TEMPLATE`). O PO aprovou as amostras em
+12/11/2026 e a troca foi feita em commit próprio.

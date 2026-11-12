@@ -13,7 +13,7 @@ import {
   TEMPLATE_V5,
   TEMPLATE_V6,
   TEMPLATE_V7,
-  TEMPLATE_V8,
+  TEMPLATE_V9,
 } from '../modules/orders/src/print/index.js';
 import { printSnapshot } from '../modules/orders/src/print/print-snapshot.js';
 import {
@@ -236,7 +236,7 @@ test('v7 package is locked by hash and its approval stays pending', async () => 
 });
 
 test('v7 is addressable but not selected: the switch refuses it without approval (OLIST-50, PIM-10)', () => {
-  assert.equal(PRINT_TEMPLATE, TEMPLATE_V8);
+  assert.equal(PRINT_TEMPLATE, TEMPLATE_V9);
   assert.notEqual(PRINT_TEMPLATE, TEMPLATE_V7);
   const switchTo = (/** @type {any} */ gateV7, template = TEMPLATE_V7) =>
     validateFichaPrintSwitch({

@@ -196,8 +196,8 @@ async function get(api, url) {
   return api.inject({ headers: readHeaders, method: 'GET', url });
 }
 
-test('the switch agrees with the recorded v8 approval (PIM-10, FPI-T02)', () => {
-  assert.equal(PRINT_TEMPLATE, TEMPLATE_V8);
+test('the switch agrees with the recorded v9 approval (PIM-10, FPI-T06)', () => {
+  assert.equal(PRINT_TEMPLATE, TEMPLATE_V9);
   assert.doesNotThrow(() =>
     validateFichaPrintSwitch({
       gate: v3Gate,
@@ -206,18 +206,19 @@ test('the switch agrees with the recorded v8 approval (PIM-10, FPI-T02)', () => 
       gateV6: v6Gate,
       gateV7: v7Gate,
       gateV8: v8Gate,
+      gateV9: v9Gate,
       printTemplate: PRINT_TEMPLATE,
     }),
   );
-  // Without the PO's recorded approval of the v8 sample the switch refuses it.
-  const pendingV8 = structuredClone(v8Gate);
-  pendingV8.provisionalApproval.status = 'pending-po-review';
-  pendingV8.provisionalApproval.approved = false;
+  // Without the PO's recorded approval of the v9 sample the switch refuses it.
+  const pendingV9 = structuredClone(v9Gate);
+  pendingV9.provisionalApproval.status = 'pending-po-review';
+  pendingV9.provisionalApproval.approved = false;
   assert.throws(
     () =>
       validateFichaPrintSwitch({
         gate: v3Gate,
-        gateV8: pendingV8,
+        gateV9: pendingV9,
         printTemplate: PRINT_TEMPLATE,
       }),
     /before its approval is recorded/u,
@@ -244,47 +245,44 @@ test('the switch agrees with the recorded v8 approval (PIM-10, FPI-T02)', () => 
   }
 });
 
-test('v9 is addressable but the switch refuses it without the PO approval of its sample (FPI-13)', () => {
-  assert.equal(PRINT_TEMPLATE, TEMPLATE_V8);
-  assert.notEqual(PRINT_TEMPLATE, TEMPLATE_V9);
-  // The recorded v9 package waits for the PO: the switch must not take it.
-  assert.equal(v9Gate.provisionalApproval.approved, false);
+test('v9 is selected only with the PO approval of its sample recorded (FPI-13, FPI-T06)', () => {
+  assert.equal(PRINT_TEMPLATE, TEMPLATE_V9);
+  // The PO approved the v9 sample; the physical signature stays pending.
+  assert.equal(v9Gate.provisionalApproval.approved, true);
   assert.equal(v9Gate.approval.approved, false);
-  assert.throws(
-    () =>
-      validateFichaPrintSwitch({
-        gate: v3Gate,
-        gateV8: v8Gate,
-        gateV9: v9Gate,
-        printTemplate: TEMPLATE_V9,
-      }),
-    /before its approval is recorded/u,
-  );
-  assert.throws(
-    () =>
-      validateFichaPrintSwitch({ gate: v3Gate, printTemplate: TEMPLATE_V9 }),
-    /before its approval is recorded/u,
-  );
-  // With the record of the PO's approval the same call is accepted.
-  const approved = structuredClone(v9Gate);
-  approved.provisionalApproval.status = 'approved';
-  approved.provisionalApproval.approved = true;
-  approved.provisionalApproval.reviewedBy.name = 'PO sintético';
-  approved.provisionalApproval.reviewedAt = '2026-11-13';
-  assert.doesNotThrow(() =>
-    validateFichaPrintSwitch({
-      gate: v3Gate,
-      gateV9: approved,
-      printTemplate: TEMPLATE_V9,
-    }),
-  );
-  // The v8 keeps passing with its own record.
   assert.doesNotThrow(() =>
     validateFichaPrintSwitch({
       gate: v3Gate,
       gateV8: v8Gate,
       gateV9: v9Gate,
-      printTemplate: PRINT_TEMPLATE,
+      printTemplate: TEMPLATE_V9,
+    }),
+  );
+  // Without the record the switch refuses v9, whatever else is recorded.
+  assert.throws(
+    () =>
+      validateFichaPrintSwitch({ gate: v3Gate, printTemplate: TEMPLATE_V9 }),
+    /before its approval is recorded/u,
+  );
+  const pending = structuredClone(v9Gate);
+  pending.provisionalApproval.status = 'pending-po-review';
+  pending.provisionalApproval.approved = false;
+  assert.throws(
+    () =>
+      validateFichaPrintSwitch({
+        gate: v3Gate,
+        gateV9: pending,
+        printTemplate: TEMPLATE_V9,
+      }),
+    /before its approval is recorded/u,
+  );
+  // The v8 keeps passing with its own record, for the rollback.
+  assert.doesNotThrow(() =>
+    validateFichaPrintSwitch({
+      gate: v3Gate,
+      gateV8: v8Gate,
+      gateV9: v9Gate,
+      printTemplate: TEMPLATE_V8,
     }),
   );
 });
@@ -374,13 +372,13 @@ test('the print route prints whatever the switch names (PIM-10)', async (t) => {
   assert.equal(unstamped, renderOrderFicha(order, PRINT_TEMPLATE));
 });
 
-test('orders print on v8, one A4 sheet per item, since the PO approved its sample (FPI-T02, PIM-10)', async (t) => {
+test('orders print on v9, two A4 sheets per item, since the PO approved its sample (FPI-T06, PIM-10)', async (t) => {
   const { order, response } = await printedThroughRoute(t);
 
-  assert.equal(PRINT_TEMPLATE, TEMPLATE_V8);
+  assert.equal(PRINT_TEMPLATE, TEMPLATE_V9);
   assert.equal(
     response.body.replace(PRINT_STAMP, ''),
-    renderOrderFicha(order, TEMPLATE_V8),
+    renderOrderFicha(order, TEMPLATE_V9),
   );
   assert.match(response.body, /A4 portrait/u);
   assert.match(response.body, /<article class="sheet/u);

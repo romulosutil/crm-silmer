@@ -74,15 +74,14 @@ Requisitos: [spec.md](spec.md). Decisão:
       na CSP da rota de impressão.
 - Depends on: FPI-T02.
 - Done when: FPI-12 e FPI-13 têm evidência nas amostras; templates v2 a v8 e
-  seus hashes intactos; `PRINT_TEMPLATE` em v8. Só o orquestrador marca esta
-  tarefa como feita.
+  seus hashes intactos; `PRINT_TEMPLATE` em v8 até FPI-T06.
 - Gate: checks do projeto e `git diff --check`, sem PII nas amostras.
 
 ### FPI-T06: aprovação das amostras v9 e troca de `PRINT_TEMPLATE`
 
-- [ ] Registrar a aprovação provisória do PO vinculada ao hash das amostras v9
-      (`docs/phase0/ficha-pdf-approval-v9.json`).
-- [ ] Trocar `PRINT_TEMPLATE` para `ficha-canonical-v9` em commit próprio.
+- [x] Registrar a aprovação provisória do PO vinculada ao hash das amostras v9
+      (12/11/2026, `docs/phase0/ficha-pdf-approval-v9.json`).
+- [x] Trocar `PRINT_TEMPLATE` para `ficha-canonical-v9` em commit próprio.
 - Depends on: FPI-T05.
 - Done when: a validação aceita a v9 com o registro e a recusa sem ele
   (FPI-13). Rollback: reverter só o commit que troca `PRINT_TEMPLATE`.

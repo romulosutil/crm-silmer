@@ -35,25 +35,22 @@ export {
  * PIM-10 (ADR 017): the single switch point for the printed ficha. Every
  * printed order uses this template; the print route never chooses one.
  *
- * It names `ficha-canonical-v8` (ADR 078, FPI-T02), one A4 sheet per item,
- * since the PO approved its synthetic sample on 12/11/2026 for development
- * and cloud-dev. The physical signature by Rose and Operação in
- * `docs/phase0/ficha-pdf-approval-v8.json` (FPI-T03) remains a production
- * go-live gate. The validator refuses an unapproved switch; v2–v7 stay
- * addressable and their approved artifacts remain unchanged.
- *
- * ADR 087 (FPI-T05): `ficha-canonical-v9`, two sheets per item (production
- * control and art on the back), is addressable and testable but NOT selected.
- * The validator refuses `PRINT_TEMPLATE = v9` until the PO's provisional
- * approval of its sample is recorded; the switch is its own commit (FPI-T06).
+ * It names `ficha-canonical-v9` (ADR 087, FPI-T06), two A4 sheets per item
+ * (observations on the front; production control and art on the back), since
+ * the PO approved its synthetic sample on 12/11/2026 for development and
+ * cloud-dev. The physical signature by Rose and Operação in
+ * `docs/phase0/ficha-pdf-approval-v9.json` (FPI-T03) remains a production
+ * go-live gate. The validator refuses an unapproved switch; v2–v8 stay
+ * addressable and their approved artifacts remain unchanged. Rollback is
+ * reverting the commit that changed this line: v8 prints again.
  *
  * OLIST-50 (RFC 050): `ficha-canonical-v7` (Aplicação, Previsão de entrega) is
- * addressable and testable but NOT selected: v8 supersedes it, and the
+ * addressable and testable but NOT selected: v8 and v9 supersede it, and the
  * validator refuses `PRINT_TEMPLATE = v7` until its own approval is recorded.
  *
  * @type {string}
  */
-export const PRINT_TEMPLATE = TEMPLATE_V8;
+export const PRINT_TEMPLATE = TEMPLATE_V9;
 
 /**
  * The printed document of an order in the public Order contract. The

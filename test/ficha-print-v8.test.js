@@ -17,6 +17,7 @@ import {
   TEMPLATE_V6,
   TEMPLATE_V7,
   TEMPLATE_V8,
+  TEMPLATE_V9,
   renderOrderFicha,
 } from '../modules/orders/src/print/index.js';
 import { safeArtPreview } from '../modules/orders/src/print/ficha-v8-content.js';
@@ -699,13 +700,13 @@ test('FPI-10: text estimates wrap, keep explicit breaks and break long tokens', 
   assert.deepEqual(plan, { items: [], extras: [] });
 });
 
-test('FPI-08: orders print on v8 and earlier templates do not change', () => {
+test('FPI-08: the v8 stays addressable and earlier templates do not change', () => {
   const order = sample.order;
-  assert.equal(PRINT_TEMPLATE, TEMPLATE_V8);
-  assert.equal(
+  assert.equal(PRINT_TEMPLATE, TEMPLATE_V9, 'v9 supersedes it (ADR 087)');
+  assert.notEqual(
     renderOrderFicha(order),
     renderOrderFicha(order, TEMPLATE_V8),
-    'the default is v8',
+    'the default is no longer v8',
   );
   assert.ok(!renderOrderFicha(order, TEMPLATE_V7).includes('sheet extra'));
   assert.ok(renderOrderFicha(order, TEMPLATE_V7).includes('Tipo de roupa'));

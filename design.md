@@ -1563,9 +1563,10 @@ por espaço, não por caixa. Valores só da escala de 4 px.
   inteira, 10 delas em "Itens e especificações" (EDIT-01), e não entram
   nessa meta.
 - **Frete no total:** o contrato do OLC-T01 (ADR 080) está no master, e o
-  campo no rail está na PR 364 (rascunho). Com ele, a altura do pedido no
-  celular fica no limite de 1800 px da meta da §16 e passa dele somada a
-  outra linha (decisão do PO).
+  campo no rail está na PR 364. Ela entra depois da PR 366, que leva
+  "Cancelar pedido" para "Mais ações do pedido" (decisão do PO de
+  12/11/2026); assim o pedido pendente com o frete cabe nos 1800 px da §16
+  no celular.
 - **Gerar no Olist:** depende de OLC-T03 e OLC-T04 (ADR 079); o texto final dos
   estados fica para o PO.
 - **Cobranças:** o resumo no rail (medidor e "Ver cobranças") está na PR 363,

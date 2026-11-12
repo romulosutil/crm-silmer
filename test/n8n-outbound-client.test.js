@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
 import test from 'node:test';
 
 import {
@@ -164,6 +165,130 @@ test('aborts a command request at the configured timeout', async () => {
     assert.equal(error.code, 'N8N_COMMAND_TIMEOUT');
     assert.equal(error.outcomeKnown, false);
     return true;
+  });
+});
+
+test('keeps the deadline active while reading a partial acknowledgement', async () => {
+  let calls = 0;
+  let aborted = false;
+  const client = createN8nCommandDeliveryClient({
+    clientId: 'crm-outbound',
+    clientSecret: 'outbound-secret',
+    endpoint: 'https://n8n.example.test/webhook/silmer/panel-command',
+    timeoutMs: 10,
+    fetchImpl: async (_url, init) => {
+      calls += 1;
+      return {
+        status: 202,
+        json: () =>
+          new Promise((resolve, reject) => {
+            // A finite fallback makes the pre-fix test fail without hanging.
+            const fallback = setTimeout(
+              () =>
+                resolve({
+                  accepted: true,
+                  command_id: COMMAND_ID,
+                }),
+              80,
+            );
+            init.signal?.addEventListener(
+              'abort',
+              () => {
+                aborted = true;
+                clearTimeout(fallback);
+                reject(
+                  Object.assign(new Error('remote-private-body'), {
+                    name: 'AbortError',
+                  }),
+                );
+              },
+              { once: true },
+            );
+          }),
+      };
+    },
+  });
+  await assert.rejects(client.deliver(command()), (error) => {
+    assert.ok(error instanceof N8nCommandDeliveryError);
+    assert.equal(error.code, 'N8N_COMMAND_TIMEOUT');
+    assert.equal(error.outcomeKnown, false);
+    assert.equal(error.retrySafe, false);
+    assert.doesNotMatch(JSON.stringify(error), /remote-private-body/);
+    return true;
+  });
+  assert.equal(aborted, true);
+  assert.equal(calls, 1);
+});
+
+test(
+  'aborts a real HTTP response whose headers arrive but JSON never finishes',
+  { timeout: 5000 },
+  async (t) => {
+    for (const status of [200, 202]) {
+      let requests = 0;
+      const server = createServer((_request, reply) => {
+        requests += 1;
+        reply.writeHead(status, { 'content-type': 'application/json' });
+        reply.write('{"accepted":');
+        // Deliberately leave the body open; this server has no provider effect.
+      });
+      await new Promise((resolve) =>
+        server.listen(0, '127.0.0.1', () => resolve(undefined)),
+      );
+      t.after(() => {
+        server.closeAllConnections();
+        server.close();
+      });
+      const address = server.address();
+      assert.ok(address && typeof address === 'object');
+      const client = createN8nCommandDeliveryClient({
+        clientId: 'synthetic-local',
+        clientSecret: 'synthetic-secret',
+        endpoint: `http://127.0.0.1:${address.port}/webhook/silmer/panel-command`,
+        allowInsecureLocal: true,
+        timeoutMs: 250,
+      });
+      await assert.rejects(client.deliver(command()), (error) => {
+        assert.ok(error instanceof N8nCommandDeliveryError);
+        assert.equal(error.code, 'N8N_COMMAND_TIMEOUT');
+        assert.deepEqual(
+          classifyN8nCommandDeliveryFailure(error, { effectStarted: true }),
+          {
+            errorCode: 'N8N_COMMAND_TIMEOUT',
+            outcome: 'outcome_unknown',
+            retryable: false,
+            retrySafe: false,
+          },
+        );
+        return true;
+      });
+      assert.equal(requests, 1);
+      server.closeAllConnections();
+      await new Promise((resolve) => server.close(() => resolve(undefined)));
+    }
+  },
+);
+
+test('refuses a valid acknowledgement returned after cancellation', async () => {
+  const client = createN8nCommandDeliveryClient({
+    clientId: 'synthetic-local',
+    clientSecret: 'synthetic-secret',
+    endpoint: 'https://n8n.example.test/webhook/silmer/panel-command',
+    timeoutMs: 10,
+    fetchImpl: async (_url, init) => ({
+      status: 202,
+      json: () =>
+        new Promise((resolve) => {
+          init.signal?.addEventListener(
+            'abort',
+            () => resolve({ accepted: true, command_id: COMMAND_ID }),
+            { once: true },
+          );
+        }),
+    }),
+  });
+  await assert.rejects(client.deliver(command()), {
+    code: 'N8N_COMMAND_TIMEOUT',
   });
 });
 

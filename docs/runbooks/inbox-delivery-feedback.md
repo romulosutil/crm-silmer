@@ -427,6 +427,44 @@ o gate local sem banco não os executa. Revisão Backend/QA sem bloqueantes.
 Rollback: publicar o worker anterior, mantendo jobs já reconciliados e todo
 o histórico. Sem migration, restauração de banco ou replay de mensagens.
 
+## Prazo da confirmação HTTP — 12/11/2026
+
+OPS-INBOX-SEND-10 / MSG-02–03, ORC-08 e PRV-01. O `fetch` resolve quando os
+cabeçalhos chegam. O cliente removia o timer nesse ponto e depois aguardava
+`response.json()` sem prazo. Isso permitia que um corpo parcial mantivesse o
+job em execução mesmo após o orçamento HTTP, até a recuperação do lease.
+
+O mesmo AbortController agora cobre cabeçalhos, leitura e validação do ACK;
+o timer é removido no `finally` da operação completa. Cancelamento durante o
+corpo produz `N8N_COMMAND_TIMEOUT`, sem conteúdo remoto no erro. Um ACK válido
+que termina após cancelamento também é recusado. Sem prova de replay seguro,
+o worker mantém `outcome_unknown` e nega retry, preservando a reconciliação
+tardia autenticada já existente. Não aumenta timeout nem lease.
+
+Regressões sintéticas cobrem corpo parcial, servidor HTTP real em loopback
+com respostas 200/202 que nunca terminam, ACK tardio e cliente integrado ao
+worker: exatamente uma chamada, estado incerto, sem recibo inventado ou PII.
+O teste vermelho anterior à correção aceitava o ACK após o prazo.
+
+A consulta somente leitura no EasyPanel encontrou, na execução temporalmente
+correlacionada ao incidente de 11/11 às 16h11, normalização de 11,452 segundos
+e falha na reserva antes de alcançar o nó do provedor. O pedido ao runner só
+aparece 9,687 segundos após iniciar o normalizador. O evento final tem a
+categoria padrão de requisição inválida do HTTP node. Não há vínculo retido
+do ID de comando com essa execução nem detalhe HTTP suficiente para afirmar
+o resultado individual ou atribuir a demora ao runner. A lacuna de leitura
+do ACK foi reproduzida separadamente; não é causa demonstrada desse incidente.
+
+Os 105 registros de API_5XX seguem distintos: o defeito da numeração acima
+de 99 foi corrigido, mas os 94 anteriores continuam sem atribuição individual.
+O conector de logs retorna HTTP 400; o buffer PostgreSQL disponível omite a
+janela histórica necessária. Saúde verde não prova resolução de cada evento.
+Não concluir os grupos incertos nem reexecutar workflows para testar o patch.
+Publicação e atualização da triagem ficam condicionadas à evidência operacional.
+
+Rollback: reverter somente a alteração do cliente e publicar a imagem anterior;
+preservar comandos, jobs, tentativas, eventos e respectivos estados.
+
 ## Atendimento e investigação
 
 **Ainda não conseguimos confirmar o envio** informa resultado incerto.

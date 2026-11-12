@@ -148,7 +148,63 @@ export class N8nCommandDeliveryClient {
         redirect: 'error',
         signal: controller.signal,
       });
+      const statusCode = Number(response.status);
+      if (statusCode === 200 || statusCode === 202) {
+        const acknowledgement = await safeAcknowledgement(response);
+        // fetch resolves at the headers. Keep the same deadline through the
+        // body: a partial acknowledgement must not hold the worker indefinitely
+        // or turn into a success after its deadline has already elapsed.
+        if (controller.signal.aborted) {
+          throw new N8nCommandDeliveryError('N8N_COMMAND_TIMEOUT', {
+            retryable: true,
+            retrySafe: this.#replaySafe,
+          });
+        }
+        if (acknowledgement.accepted === false) {
+          throw new N8nCommandDeliveryError('N8N_COMMAND_REJECTED', {
+            outcomeKnown: true,
+            statusCode,
+          });
+        }
+        if (
+          acknowledgement.accepted !== true ||
+          typeof acknowledgement.command_id !== 'string'
+        ) {
+          throw new N8nCommandDeliveryError('N8N_COMMAND_ACK_INVALID', {
+            statusCode,
+          });
+        }
+        if (acknowledgement.command_id !== request.commandId) {
+          throw new N8nCommandDeliveryError('N8N_COMMAND_ACK_MISMATCH', {
+            statusCode,
+          });
+        }
+        return Object.freeze({
+          duplicate: acknowledgement.duplicate === true,
+          providerExternalId: opaqueExternalId(
+            acknowledgement,
+            request.commandId,
+          ),
+          statusCode,
+        });
+      }
+
+      const retryable =
+        RETRYABLE_STATUS_CODES.has(statusCode) || statusCode >= 500;
+      throw new N8nCommandDeliveryError(
+        retryable
+          ? 'N8N_COMMAND_REMOTE_UNAVAILABLE'
+          : (DIAGNOSTIC_REJECTION_CODES.get(statusCode) ??
+              'N8N_COMMAND_REJECTED'),
+        {
+          outcomeKnown: !retryable,
+          retryable,
+          retrySafe: retryable && this.#replaySafe,
+          statusCode,
+        },
+      );
     } catch (error) {
+      if (error instanceof N8nCommandDeliveryError) throw error;
       const timedOut =
         controller.signal.aborted ||
         (error &&
@@ -165,53 +221,6 @@ export class N8nCommandDeliveryClient {
     } finally {
       clearTimeout(timeout);
     }
-
-    const statusCode = Number(response.status);
-    if (statusCode === 200 || statusCode === 202) {
-      const acknowledgement = await safeAcknowledgement(response);
-      if (acknowledgement.accepted === false) {
-        throw new N8nCommandDeliveryError('N8N_COMMAND_REJECTED', {
-          outcomeKnown: true,
-          statusCode,
-        });
-      }
-      if (
-        acknowledgement.accepted !== true ||
-        typeof acknowledgement.command_id !== 'string'
-      ) {
-        throw new N8nCommandDeliveryError('N8N_COMMAND_ACK_INVALID', {
-          statusCode,
-        });
-      }
-      if (acknowledgement.command_id !== request.commandId) {
-        throw new N8nCommandDeliveryError('N8N_COMMAND_ACK_MISMATCH', {
-          statusCode,
-        });
-      }
-      return Object.freeze({
-        duplicate: acknowledgement.duplicate === true,
-        providerExternalId: opaqueExternalId(
-          acknowledgement,
-          request.commandId,
-        ),
-        statusCode,
-      });
-    }
-
-    const retryable =
-      RETRYABLE_STATUS_CODES.has(statusCode) || statusCode >= 500;
-    throw new N8nCommandDeliveryError(
-      retryable
-        ? 'N8N_COMMAND_REMOTE_UNAVAILABLE'
-        : (DIAGNOSTIC_REJECTION_CODES.get(statusCode) ??
-            'N8N_COMMAND_REJECTED'),
-      {
-        outcomeKnown: !retryable,
-        retryable,
-        retrySafe: retryable && this.#replaySafe,
-        statusCode,
-      },
-    );
   }
 }
 

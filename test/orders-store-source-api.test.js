@@ -274,7 +274,7 @@ test('T24 authorized complements preserve checkout, paid receipt and first print
     })
   ).json().order;
   assert.equal(publicOrder.locked, true);
-  assert.equal(publicOrder.contactId, undefined);
+  assert.equal(publicOrder.contactId, null);
   assert.equal(publicOrder.legacySizePricing, undefined);
   assert.equal(publicOrder.ficha.sizePricing, undefined);
 });

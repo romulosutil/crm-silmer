@@ -7101,6 +7101,7 @@ components:
           id,
           number,
           conversationId,
+          contactId,
           status,
           effectiveStatus,
           cancelledAt,
@@ -7146,6 +7147,12 @@ components:
         conversationId:
           type: [string, 'null']
           description: Nulo em pedidos manuais de atendimento e da loja do site.
+        contactId:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            Cadastro do cliente (`/contacts/{contactId}`); nulo quando o pedido
+            não tem cliente vinculado.
         origin: { $ref: '#/components/schemas/OrderOrigin' }
         isTest:
           type: boolean

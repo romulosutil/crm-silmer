@@ -267,6 +267,7 @@ export function createOrderRuntime(options) {
       confirmedAt: order.confirmedAt,
       confirmedBy: person(order.confirmedBy),
       conversationId: order.conversationId,
+      contactId: order.contactId ?? null,
       createdAt: order.createdAt,
       deliveredOn: order.deliveredOn,
       fabCode: order.fabCode,

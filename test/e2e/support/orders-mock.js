@@ -27,6 +27,7 @@ const session = {
 export const confirmedOrder = {
   confirmedAt: '2026-09-09T19:20:00.000Z',
   confirmedBy: { id: 'seller-ricardo', name: 'Ricardo Lima' },
+  contactId: '4f6c1b52-8d1e-4a77-9b3a-2c5e7d0a1b05',
   conversationId: 'conversation-5',
   createdAt: '2026-09-08T12:00:00.000Z',
   fabCode: 'FAB 01',
@@ -84,6 +85,7 @@ export const confirmedOrder = {
 export const pendingOrder = {
   confirmedAt: null,
   confirmedBy: null,
+  contactId: '4f6c1b52-8d1e-4a77-9b3a-2c5e7d0a1b07',
   conversationId: 'conversation-7',
   createdAt: '2026-09-12T09:00:00.000Z',
   deliveredOn: null,

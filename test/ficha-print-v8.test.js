@@ -712,33 +712,43 @@ test('FPI-08: orders keep printing on v6 and earlier templates do not change', (
   assert.ok(renderOrderFicha(order, TEMPLATE_V6).includes('Tipo de roupa'));
 });
 
-test('FPI-08: the sample is locked by hash and its pending approval refuses the switch', async () => {
+test('FPI-08: the sample is locked by hash; the PO approval opens the switch, the physical signature stays pending', async () => {
   const gate = await validateFichaReviewV8();
   assert.equal(gate.templateVersion, TEMPLATE_V8);
-  assert.equal(gate.provisionalApproval.status, 'pending-po-review');
+  assert.equal(gate.provisionalApproval.status, 'approved');
+  assert.equal(gate.provisionalApproval.reviewedAt, '2026-11-12');
   assert.equal(gate.approval.status, 'pending-human-approval');
-  assert.equal(fichaV8Approved(gate), false);
+  assert.equal(fichaV8Approved(gate), true);
+  assert.doesNotThrow(() =>
+    validateFichaPrintSwitch({
+      gate: {},
+      gateV8: gate,
+      printTemplate: TEMPLATE_V8,
+    }),
+  );
+  const pending = structuredClone(gate);
+  pending.provisionalApproval.status = 'pending-po-review';
+  pending.provisionalApproval.approved = false;
+  assert.equal(fichaV8Approved(pending), false);
   assert.throws(
     () =>
       validateFichaPrintSwitch({
         gate: {},
-        gateV8: gate,
+        gateV8: pending,
         printTemplate: TEMPLATE_V8,
       }),
     /before its approval/u,
   );
   const fake = structuredClone(gate);
-  fake.provisionalApproval.approved = true;
-  fake.provisionalApproval.status = 'approved';
-  assert.equal(fichaV8Approved(fake), false, 'a status alone is not approval');
-  fake.provisionalApproval.reviewedBy.name = 'PO sintético';
-  fake.provisionalApproval.reviewedAt = '2026-11-10';
   fake.snapshotSha256 = createHash('sha256').update('outra').digest('hex');
   assert.equal(
     fichaV8Approved(fake),
     false,
     'approval cannot refer to a changed sample',
   );
+  const unnamed = structuredClone(gate);
+  unnamed.provisionalApproval.reviewedBy.name = '';
+  assert.equal(fichaV8Approved(unnamed), false, 'approval needs the reviewer');
 });
 
 test('FPI-10: only editable observations block; identity and item fields print', () => {

@@ -6,15 +6,15 @@ Rastreabilidade: [ADR 078](../adr/078-ficha-impressa-por-item.md),
 
 ## Estado
 
-**Preparada, não selecionada, com a revisão do PO pendente.** O registro
+**Aprovada pelo PO em 12/11/2026 para desenvolvimento e cloud-dev; assinatura
+física de Rose e Operação pendente.** O registro
 [`ficha-pdf-approval-v8.json`](ficha-pdf-approval-v8.json) trava os hashes da
-amostra, do HTML e do PDF com `provisionalApproval.status`
-`pending-po-review` e a assinatura física de Rose e Operação pendente.
-`PRINT_TEMPLATE` continua `ficha-canonical-v6`: a v8 é endereçável e testável
-(`renderOrderFicha(order, TEMPLATE_V8)`), mas nenhum pedido imprime nela. O
-validador (`validateFichaPrintSwitch`) recusa `PRINT_TEMPLATE` igual à v8
-enquanto a aprovação não estiver registrada. As versões v2 a v7, seus PDFs,
-amostras, aprovações e hashes não foram alterados.
+amostra, do HTML e do PDF com `provisionalApproval.status` `approved` e a
+assinatura física pendente (`FPI-T03`). A aprovação libera a troca de
+`PRINT_TEMPLATE` (`FPI-T02`), feita em commit à parte: o validador
+(`validateFichaPrintSwitch`) aceita `PRINT_TEMPLATE` igual à v8 só com essa
+aprovação registrada. A produção continua condicionada à assinatura física. As
+versões v2 a v7, seus PDFs, amostras, aprovações e hashes não foram alterados.
 
 ## O que muda da v7 para a v8
 
@@ -65,23 +65,25 @@ impressão admite o hash dela e `data:` em `font-src`, somente nessa rota
 Revisão do PO em 2026-11-11: o cabeçalho passou a destacar o público, a ficha
 perdeu Primeiro contato, FAB, passos numerados, caixas, o título "Tamanhos" e
 o aviso de divergência, as observações foram para a folha final e a prévia da
-arte entrou ao lado das Anotações (FPI-11). A v8 continua sem aprovação
-registrada, por isso os hashes mudaram no lugar.
+arte entrou ao lado das Anotações (FPI-11). Como a v8 ainda não tinha
+aprovação, os hashes mudaram no lugar; o PO aprovou o pacote final em
+2026-11-12 e, desde então, os hashes não mudam.
 
-- `scripts/ficha-pdf-review-v8.mjs` valida amostra, HTML, PDF, revisão do PO
-  pendente e assinatura física pendente.
+- `scripts/ficha-pdf-review-v8.mjs` valida amostra, HTML, PDF, a revisão do
+  PO aprovada e a assinatura física pendente.
 - `test/ficha-print-v8.test.js` cobre conteúdo, rótulos, campos, avisos, XSS e o
   gate; `test/e2e/ficha-v8-layout.spec.js` imprime no Chromium os casos comum,
   pior caso, limite dos campos e 50 itens, e confere uma página A4 por folha.
 
-## Como aprovar (pendente)
+## Como a aprovação foi registrada
 
-Nada foi aprovado nem assinado. Quando o PO revisar a amostra, ele registra em
-`ficha-pdf-approval-v8.json` o `status` `approved`, `approved: true`, o nome e a
-data em `provisionalApproval`; só então um commit à parte pode trocar
-`PRINT_TEMPLATE` para `ficha-canonical-v8` (`FPI-T02`). Rose e Operação assinam
-a amostra impressa antes da produção (`FPI-T03`). Qualquer correção do layout
-antes da aprovação regenera o pacote; depois, exige uma nova versão.
+O PO (Rômulo Sutil Corrêa) revisou a amostra e registrou em 2026-11-12, em
+`ficha-pdf-approval-v8.json`, `status` `approved`, `approved: true`, o nome e a
+data em `provisionalApproval`, ligados aos hashes da amostra, do HTML e do PDF.
+Um commit à parte trocou `PRINT_TEMPLATE` para `ficha-canonical-v8`
+(`FPI-T02`). Rose e Operação assinam a amostra impressa antes da produção
+(`FPI-T03`). Qualquer correção do layout depois da aprovação exige uma nova
+versão do template.
 
 ```bash
 node --test test/ficha-print-v8.test.js

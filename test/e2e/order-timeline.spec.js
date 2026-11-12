@@ -159,6 +159,8 @@ test('DTL: mixed receipts render once in the horizontal timeline with shared bil
       externalReceipts: [{ id: 'manual' }],
     },
   });
+  // PED-RD-04: horizontal only while the chapter container is wider than 44rem.
+  await page.setViewportSize({ width: 1600, height: 900 });
   await page.goto('/pedidos/order-confirmado');
   const section = sectionFor(page);
   await expect(section.locator('.order-timeline li')).toHaveCount(4);
@@ -668,7 +670,7 @@ test('DTL: a late response from another order cannot replace the current history
   await expect(sectionFor(page)).not.toContainText('InfinitePay');
 });
 
-test('DTL: mobile keeps horizontal scrolling, native keyboard details and a usable delivery dialog', async ({
+test('DTL: mobile stacks the timeline vertically without side scroll, keeps native keyboard details and a usable delivery dialog', async ({
   page,
 }) => {
   await setup(page);
@@ -687,11 +689,15 @@ test('DTL: mobile keeps horizontal scrolling, native keyboard details and a usab
         globalThis.innerWidth,
     ),
   ).toBe(true);
-  await region.focus();
-  await page.keyboard.press('ArrowRight');
-  await expect
-    .poll(() => region.evaluate((el) => el.scrollLeft))
-    .toBeGreaterThan(0);
+  // PED-RD-04: a narrow container stacks the entries, no lateral scroll.
+  await expect(section.getByText('Deslize para ver')).toHaveCount(0);
+  expect(await region.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
+    true,
+  );
+  const stack = await region
+    .locator('.order-timeline li')
+    .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().y));
+  expect(stack.every((y, i) => i === 0 || y > stack[i - 1])).toBe(true);
   await section
     .getByRole('button', { name: 'Confirmar entrega', exact: true })
     .click();

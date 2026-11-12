@@ -38,6 +38,26 @@ const events = computed(() =>
         : { managed: true, pendingDetails: true }),
   ),
 );
+// PED-RD-04: the state of each dot comes from the data already read: a
+// recorded date is done, the first date still ahead is next, later ones are
+// upcoming. The accessible name carries the state (never colour alone).
+const STATE_LABEL = Object.freeze({
+  done: 'Concluído',
+  next: 'Próximo',
+  upcoming: 'Futuro',
+});
+const timelineEvents = computed(() => {
+  const todayDay = operationalDay(new Date());
+  let nextTaken = false;
+  return events.value.map((event) => {
+    let state = 'done';
+    if (event.day > todayDay) {
+      state = nextTaken ? 'upcoming' : 'next';
+      nextTaken = true;
+    }
+    return { ...event, state, stateLabel: STATE_LABEL[state] };
+  });
+});
 const detailDialog = ref(null);
 const detailClose = ref(null);
 const timelineRegion = ref(null);
@@ -309,7 +329,11 @@ onBeforeUnmount(() => {
       </template>
     </OrderSheetHead>
 
-    <div id="order-milestones-body" class="op-sheet-body" :hidden="!open">
+    <div
+      id="order-milestones-body"
+      class="op-sheet-body milestones-body"
+      :hidden="!open"
+    >
       <p v-if="pendingRead" role="status" class="op-hint">
         Consultando recebimentos…
       </p>
@@ -332,19 +356,21 @@ onBeforeUnmount(() => {
       </p>
       <div
         ref="timelineRegion"
-        class="order-timeline-scroll"
+        class="order-timeline-region"
         role="region"
         aria-label="Cronologia do pedido"
-        tabindex="0"
+        tabindex="-1"
       >
         <ol class="order-timeline">
           <li
-            v-for="event in events"
+            v-for="event in timelineEvents"
             :key="event.id"
             :data-event-id="event.id"
             :data-kind="event.kind"
+            :data-state="event.state"
           >
             <time :datetime="event.day"
+              ><span class="timeline-sr">{{ event.stateLabel }}, </span
               ><span v-if="event.basisLabel" class="timeline-basis">{{
                 event.basisLabel
               }}</span
@@ -382,9 +408,6 @@ onBeforeUnmount(() => {
       </div>
       <p v-if="!events.length" class="op-hint">
         Nenhuma data registrada neste pedido.
-      </p>
-      <p class="op-hint timeline-scroll-hint">
-        Deslize para ver os próximos eventos.
       </p>
       <div v-if="showSummary" class="timeline-totals">
         <span
@@ -509,28 +532,31 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.order-timeline-scroll {
-  max-inline-size: 100%;
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
-  padding-block: var(--space-2) var(--space-4);
+/* PED-RD-04/14: the body is the size container; the track reads its width,
+   not the viewport. No horizontal scroll at any width. */
+.milestones-body {
+  container-type: inline-size;
+  inline-size: 100%;
+  min-inline-size: 0;
 }
-.order-timeline-scroll:focus-visible {
+.order-timeline-region:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-focus);
   outline-offset: var(--focus-ring-offset);
 }
 .order-timeline {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(8rem, 1fr);
   list-style: none;
   padding: 0;
   margin: 0;
+  padding-block: var(--space-2) var(--space-4);
 }
 .order-timeline > li {
   display: grid;
-  flex: 1 0 8.5rem;
-  min-inline-size: 0;
   grid-template-rows: 3.5rem var(--space-6) 1fr;
   align-content: start;
+  min-inline-size: 0;
 }
 time {
   display: flex;
@@ -538,9 +564,20 @@ time {
   justify-content: end;
   color: var(--color-text-muted);
   font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
 }
 .timeline-basis {
   display: block;
+}
+.timeline-sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .timeline-track {
   display: flex;
@@ -550,26 +587,38 @@ time {
 .timeline-track::after {
   content: '';
   position: absolute;
-  inset-inline: var(--space-2) 0;
+  inset-block-start: calc(50% - 0.5px);
+  inset-inline: var(--space-3) 0;
   block-size: 1px;
   background: var(--color-border);
 }
 li:last-child .timeline-track::after {
   display: none;
 }
+li[data-state='done'] .timeline-track::after {
+  background: var(--status-success-text);
+}
 .timeline-dot {
-  inline-size: var(--space-2);
-  block-size: var(--space-2);
-  background: var(--color-text-muted);
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  inline-size: var(--space-3);
+  block-size: var(--space-3);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border-strong);
   border-radius: var(--radius-pill);
 }
-[data-kind='receipt'] .timeline-dot,
-[data-kind='delivery'] .timeline-dot {
+li[data-state='done'] .timeline-dot {
   background: var(--status-success-text);
+  border-color: var(--status-success-text);
+}
+li[data-state='next'] .timeline-dot {
+  border-color: var(--color-text);
 }
 [data-kind='external_reversal'] .timeline-dot,
 [data-kind='refund'] .timeline-dot {
   background: var(--status-error-text);
+  border-color: var(--status-error-text);
   border-radius: 0;
 }
 .timeline-entry {
@@ -584,6 +633,7 @@ li:last-child .timeline-track::after {
 }
 .timeline-amount {
   margin-top: var(--space-1);
+  font-variant-numeric: tabular-nums;
 }
 .timeline-state {
   display: block;
@@ -616,6 +666,45 @@ li:last-child .timeline-track::after {
   outline: var(--focus-ring-width) solid var(--color-focus);
   outline-offset: var(--focus-ring-offset);
 }
+/* Narrow container: the same timeline turns vertical, line on the left. */
+@container (max-width: 44rem) {
+  .order-timeline {
+    grid-auto-flow: row;
+    grid-auto-columns: minmax(0, 1fr);
+    padding-block: 0;
+  }
+  .order-timeline > li {
+    grid-template-columns: var(--space-3) minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      'line date'
+      'line entry';
+    column-gap: var(--space-4);
+  }
+  time {
+    grid-area: date;
+    justify-content: flex-start;
+  }
+  .timeline-track {
+    grid-area: line;
+    align-items: flex-start;
+    justify-content: center;
+    padding-block-start: var(--space-1);
+  }
+  .timeline-track::after {
+    inset-block: var(--space-5) 0;
+    inset-inline: calc(50% - 0.5px) auto;
+    inline-size: 1px;
+    block-size: auto;
+  }
+  .timeline-entry {
+    grid-area: entry;
+    padding-block-end: var(--space-4);
+  }
+  li:last-child .timeline-entry {
+    padding-block-end: 0;
+  }
+}
 .timeline-detail-content {
   display: grid;
   gap: var(--space-4);
@@ -641,9 +730,6 @@ li:last-child .timeline-track::after {
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
 }
-.timeline-scroll-hint {
-  display: none;
-}
 .order-delivery-dialog form {
   display: grid;
   gap: var(--space-4);
@@ -657,10 +743,5 @@ li:last-child .timeline-track::after {
 }
 .order-delivery-dialog button {
   min-block-size: var(--target-min);
-}
-@media (max-width: 767px) {
-  .timeline-scroll-hint {
-    display: block;
-  }
 }
 </style>

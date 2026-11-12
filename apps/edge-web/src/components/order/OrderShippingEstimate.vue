@@ -1,14 +1,19 @@
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, inject, onBeforeUnmount, ref, watch } from 'vue';
 import { request } from '../../lib/api-client.js';
 import { amountLabel } from '../../lib/order-format.js';
 import { dateTimeBR } from '../../lib/format.js';
+import OrderSheetHead from './OrderSheetHead.vue';
 
 const props = defineProps({
   orderId: { type: String, required: true },
   revision: { type: Number, default: 0 },
   showEmpty: { type: Boolean, default: false },
 });
+// PED-RD-13: on the order page (which provides orderEditing) it is a chapter of
+// the ficha (h2, sheet head and body); elsewhere (the Inbox) it stays a titled
+// card with an h3.
+const chapter = Boolean(inject('orderEditing', null));
 const quote = ref(null);
 const loading = ref(false);
 const error = ref('');
@@ -55,53 +60,66 @@ onBeforeUnmount(() => controller?.abort());
 <template>
   <section
     v-if="showEmpty || selected"
-    class="shipping-estimate surface"
-    aria-label="Frete estimado"
+    class="shipping-estimate"
+    :class="chapter ? 'op-sheet' : 'surface'"
+    :aria-label="chapter ? undefined : 'Frete estimado'"
+    :aria-labelledby="chapter ? 'order-shipping-title' : undefined"
     :aria-busy="loading"
   >
-    <h3>Frete estimado</h3>
-    <p v-if="loading" role="status">Consultando frete estimado…</p>
-    <div v-else-if="error" role="alert">
-      <p>{{ error }}</p>
-      <button type="button" @click="load">
-        Tentar consultar frete novamente
-      </button>
+    <OrderSheetHead
+      v-if="chapter"
+      title-id="order-shipping-title"
+      title="Frete estimado"
+    />
+    <h3 v-else>Frete estimado</h3>
+    <div :class="{ 'op-sheet-body': chapter }">
+      <p v-if="loading" role="status">Consultando frete estimado…</p>
+      <div v-else-if="error" role="alert">
+        <p>{{ error }}</p>
+        <button type="button" @click="load">
+          Tentar consultar frete novamente
+        </button>
+      </div>
+      <template v-else-if="quote && selected">
+        <p v-if="quote.environment === 'sandbox'" class="shipping-stale">
+          Cotação de teste — Sandbox
+        </p>
+        <p>
+          <strong>{{ selected.company }} · {{ selected.name }}</strong> ·
+          {{ amountLabel(selected.priceCents) }} ·
+          {{ selected.deliveryDays }} dias úteis previstos
+        </p>
+        <p>
+          {{ quote.totalPieces }} peças · Cotado por
+          {{ quote.createdBy.name }} em {{ dateTimeBR(quote.createdAt) }}.
+        </p>
+        <p v-if="quote.stale" class="shipping-stale" role="status">
+          Cotação desatualizada. Consulte novamente antes de combinar o frete.
+        </p>
+        <p class="op-hint">
+          Estimativa separada do valor final do pedido. Preço e prazo sujeitos a
+          nova consulta.
+        </p>
+      </template>
+      <p v-else class="op-hint">Nenhum frete estimado vinculado ao pedido.</p>
     </div>
-    <template v-else-if="quote && selected">
-      <p v-if="quote.environment === 'sandbox'" class="shipping-stale">
-        Cotação de teste — Sandbox
-      </p>
-      <p>
-        <strong>{{ selected.company }} · {{ selected.name }}</strong> ·
-        {{ amountLabel(selected.priceCents) }} ·
-        {{ selected.deliveryDays }} dias úteis previstos
-      </p>
-      <p>
-        {{ quote.totalPieces }} peças · Cotado por {{ quote.createdBy.name }} em
-        {{ dateTimeBR(quote.createdAt) }}.
-      </p>
-      <p v-if="quote.stale" class="shipping-stale" role="status">
-        Cotação desatualizada. Consulte novamente antes de combinar o frete.
-      </p>
-      <p class="op-hint">
-        Estimativa separada do valor final do pedido. Preço e prazo sujeitos a
-        nova consulta.
-      </p>
-    </template>
-    <p v-else class="op-hint">Nenhum frete estimado vinculado ao pedido.</p>
   </section>
 </template>
 
 <style scoped>
-.shipping-estimate {
+.shipping-estimate.surface {
   padding: var(--space-4);
   margin-block: var(--space-3);
 }
-.shipping-estimate h3 {
+.shipping-estimate.surface h3 {
   margin-block-start: 0;
 }
 .shipping-estimate p {
   overflow-wrap: anywhere;
+}
+/* The chapter body already spaces its children (gap), as the other chapters. */
+.shipping-estimate.op-sheet p {
+  margin: 0;
 }
 .shipping-stale {
   font-weight: 600;

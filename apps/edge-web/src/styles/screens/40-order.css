@@ -30,7 +30,6 @@
 .op-label,
 .op-field > label:first-child,
 .op-points dt,
-.op-summary-main dt,
 .op-summary-meta dt,
 .op-service dt,
 .op-conditions legend {
@@ -727,49 +726,94 @@ button.op-sheet-toggle:hover:not([aria-disabled='true']) {
   padding-block: 0 1.25rem;
 }
 
-/* Summary: the same two rows the ficha prints */
-.op-summary-main,
-.op-summary-meta {
+/*
+ * Summary (PED-RD-09, EDIT-01): Cliente on its own row, then Nome do pedido
+ * and Previsão de entrega, side by side once the chapter body is 40rem wide.
+ * The layout answers the width of the chapter, not of the window.
+ */
+.op-summary {
+  inline-size: 100%;
+  container: op-summary / inline-size;
+}
+
+.op-summary-fields {
   display: grid;
-  grid-template-columns: 1.5fr 1.1fr 0.8fr 1.2fr;
-  margin: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem 1.25rem;
 }
 
-/* ADR 020: client, promised delivery and pieces; the technique is per item. */
-.op-summary-main {
-  grid-template-columns: 1.5fr 1.1fr 0.8fr;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.op-summary-main > div {
+.op-summary-client,
+.op-summary-field {
   display: grid;
   align-content: start;
-  gap: 0.2rem;
-  padding: 0.75rem 0.9rem;
-  border-inline-end: 1px solid var(--color-border-subtle);
+  justify-items: start;
+  gap: 0.35rem;
+  min-inline-size: 0;
 }
 
-.op-summary-main > div:last-child {
-  border-inline-end: 0;
+.op-summary-label,
+.op-summary-field > label {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: 1.25;
 }
 
-.op-summary-main dd,
-.op-summary-meta dd {
+.op-summary-text {
   margin: 0;
   overflow-wrap: anywhere;
-  font-weight: 600;
-}
-
-.op-summary-main dd {
   font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
 }
 
-.op-summary-main dd.op-pieces {
-  color: var(--color-accent-solid);
-  font-size: 1.625rem;
-  font-weight: 700;
-  line-height: 1.1;
+.op-summary-client .op-summary-text,
+.op-summary-field .op-summary-text {
+  min-block-size: var(--control-height);
+  padding-block: calc((var(--control-height) - 1.5em) / 2);
+}
+
+.op-summary-field > input {
+  inline-size: 100%;
+  max-inline-size: 100%;
+}
+
+.op-summary-edit input[type='text'],
+.op-summary-edit input[type='date'] {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+}
+
+.op-summary-edit input[aria-invalid='true'] {
+  border-color: var(--status-error-text);
+}
+
+.op-summary-edit input[aria-invalid='true']:focus-visible {
+  border-color: var(--status-error-text);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--status-error-text) 20%, transparent);
+}
+
+.op-summary-field .op-field-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem 0.5rem;
+}
+
+.op-summary-field button.link-button {
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--status-error-text) 20%, transparent);
+}
+
+@container op-summary (width >= 40rem) {
+  .op-summary-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .op-summary-client {
+    grid-column: 1 / -1;
+  }
 }
 
 .op-origin-note {
@@ -779,9 +823,12 @@ button.op-sheet-toggle:hover:not([aria-disabled='true']) {
   font-weight: 400;
 }
 
+/* Seller, order date and FAB stay here until Dados do atendimento shows them. */
 .op-summary-meta {
-  grid-template-columns: 1.6fr 1.3fr 1.2fr 0.7fr;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
+  margin: 0;
 }
 
 .op-summary-meta > div {
@@ -793,7 +840,10 @@ button.op-sheet-toggle:hover:not([aria-disabled='true']) {
 }
 
 .op-summary-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
   font-size: var(--text-sm);
+  font-weight: 600;
 }
 
 .op-summary-meta dd[data-muted],
@@ -803,15 +853,8 @@ button.op-sheet-toggle:hover:not([aria-disabled='true']) {
 }
 
 @media (width < 48rem) {
-  .op-summary-main,
   .op-summary-meta {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .op-summary-main > div:first-child {
-    grid-column: 1 / -1;
-    border-inline-end: 0;
-    border-block-end: 1px solid var(--color-border-subtle);
   }
 }
 

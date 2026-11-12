@@ -442,6 +442,11 @@ watch(cancelled, async (isCancelled) => {
 </template>
 
 <style scoped>
+/* PED-RD-T10: the page has no row gap, so the block keeps the 32 px between
+   chapters from the sheet above (the margin collapses with its siblings'). */
+.op-cancel {
+  margin-block-start: var(--space-8);
+}
 .op-cancel-body {
   display: grid;
   gap: var(--space-3);

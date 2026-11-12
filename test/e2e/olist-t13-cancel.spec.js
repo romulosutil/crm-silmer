@@ -12,8 +12,21 @@ import {
 // chamada real, nenhum efeito no Olist/ERP.
 
 const REASON = 'Cliente desistiu do evento';
-const TRIGGER = { exact: true, name: 'Cancelar pedido' };
+// PED-RD-02: "Cancelar pedido" is an item of the header menu, not a button at
+// the end of the page.
+const MORE = { exact: true, name: 'Mais ações do pedido' };
+const CANCEL_ITEM = { exact: true, name: 'Cancelar pedido' };
 const DIALOG = { name: 'Cancelar o pedido 07-CRM?' };
+
+/**
+ * Opens the header menu and chooses "Cancelar pedido".
+ *
+ * @param {import('@playwright/test').Page} page
+ */
+async function openCancel(page) {
+  await page.getByRole('button', MORE).click();
+  await page.getByRole('menuitem', CANCEL_ITEM).click();
+}
 
 /**
  * Cada POST de cancelamento que sai do navegador, com a chave idempotente.
@@ -116,11 +129,10 @@ test('cancels by keyboard, sends one reason, and lands on Cancelado with one ann
   ).toBeFocused();
   await expect(page.locator('.op-status')).toHaveText('Pendente');
 
-  const trigger = page.getByRole('button', TRIGGER);
-  await expect(trigger).toHaveAccessibleDescription(
-    /Encerra o pedido no CRM.*Não é exclusão nem estorno/u,
-  );
-  await trigger.focus();
+  const more = page.getByRole('button', MORE);
+  await more.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menuitem', CANCEL_ITEM)).toBeFocused();
   await page.keyboard.press('Enter');
 
   const dialog = page.getByRole('dialog', DIALOG);
@@ -190,7 +202,7 @@ test('cancels by keyboard, sends one reason, and lands on Cancelado with one ann
       ),
     ),
   ).toHaveLength(1);
-  await expect(page.getByRole('button', TRIGGER)).toHaveCount(0);
+  await expect(page.getByRole('button', MORE)).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: /Reabrir|Restaurar/u }),
   ).toHaveCount(0);
@@ -216,8 +228,8 @@ test('Esc and Voltar close without sending and give the focus back to the button
   await mockOrders(page, { orders: [pendingOrder] });
   await page.goto('/pedidos/order-pendente');
 
-  const trigger = page.getByRole('button', TRIGGER);
-  await trigger.click();
+  const trigger = page.getByRole('button', MORE);
+  await openCancel(page);
   const dialog = page.getByRole('dialog', DIALOG);
   await dialog.getByLabel('Motivo do cancelamento').fill(REASON);
   await page.keyboard.press('Escape');
@@ -225,7 +237,7 @@ test('Esc and Voltar close without sending and give the focus back to the button
   await expect(trigger).toBeFocused();
 
   // O texto não sobrevive a um recuo comum.
-  await trigger.click();
+  await openCancel(page);
   await expect(dialog.getByLabel('Motivo do cancelamento')).toHaveValue('');
   await dialog.getByRole('button', { name: 'Voltar' }).click();
   await expect(dialog).toHaveCount(0);
@@ -248,7 +260,7 @@ test('a double click sends one cancellation', async ({ page }) => {
   });
   await page.goto('/pedidos/order-pendente');
 
-  await page.getByRole('button', TRIGGER).click();
+  await openCancel(page);
   const dialog = page.getByRole('dialog', DIALOG);
   await dialog.getByLabel('Motivo do cancelamento').fill(REASON);
   const submit = dialog.getByRole('button', { name: 'Cancelar pedido 07-CRM' });
@@ -283,8 +295,8 @@ test('a version conflict keeps the typed reason, sends nothing over the new vers
   });
   await page.goto('/pedidos/order-pendente');
 
-  const trigger = page.getByRole('button', TRIGGER);
-  await trigger.click();
+  const trigger = page.getByRole('button', MORE);
+  await openCancel(page);
   const dialog = page.getByRole('dialog', DIALOG);
   const reason = dialog.getByLabel('Motivo do cancelamento');
   await reason.fill(REASON);
@@ -308,7 +320,7 @@ test('a version conflict keeps the typed reason, sends nothing over the new vers
   await dialog.getByRole('button', { name: 'Voltar' }).click();
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
-  await trigger.click();
+  await openCancel(page);
   await expect(reason).toHaveValue(REASON);
   await expect(dialog.getByRole('alert')).toHaveCount(0);
   await dialog.getByRole('button', { name: 'Cancelar pedido 07-CRM' }).click();
@@ -336,7 +348,7 @@ test('a Olist lock that wins the race is explained in Portuguese and the persist
   });
   await page.goto('/pedidos/order-pendente');
 
-  await page.getByRole('button', TRIGGER).click();
+  await openCancel(page);
   const dialog = page.getByRole('dialog', DIALOG);
   await dialog.getByLabel('Motivo do cancelamento').fill(REASON);
   await dialog.getByRole('button', { name: 'Cancelar pedido 07-CRM' }).click();
@@ -352,7 +364,7 @@ test('a Olist lock that wins the race is explained in Portuguese and the persist
   await expect(
     page.getByText('A composição não pode ser editada, reaberta ou cancelada.'),
   ).toBeVisible();
-  await expect(page.getByRole('button', TRIGGER)).toHaveCount(0);
+  await expect(page.getByRole('button', MORE)).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: /Tentar novamente/u }),
   ).toHaveCount(0);
@@ -376,7 +388,7 @@ test('an order cancelled elsewhere is reported and shown as Cancelado', async ({
     },
   });
   await page.goto('/pedidos/order-pendente');
-  await page.getByRole('button', TRIGGER).click();
+  await openCancel(page);
   const dialog = page.getByRole('dialog', DIALOG);
   await dialog.getByLabel('Motivo do cancelamento').fill(REASON);
   await dialog.getByRole('button', { name: 'Cancelar pedido 07-CRM' }).click();
@@ -408,7 +420,7 @@ test('a 403 keeps the dialog and the typed reason and asks to check the session,
     },
   });
   await page.goto('/pedidos/order-pendente');
-  await page.getByRole('button', TRIGGER).click();
+  await openCancel(page);
   const dialog = page.getByRole('dialog', DIALOG);
   const reason = dialog.getByLabel('Motivo do cancelamento');
   await reason.fill(REASON);
@@ -449,7 +461,7 @@ test('a 200 without the cancelled order is an uncertain result: the dialog close
     }),
   );
   await page.goto('/pedidos/order-pendente');
-  await page.getByRole('button', TRIGGER).click();
+  await openCancel(page);
   const dialog = page.getByRole('dialog', DIALOG);
   await dialog.getByLabel('Motivo do cancelamento').fill(REASON);
   await dialog.getByRole('button', { name: 'Cancelar pedido 07-CRM' }).click();
@@ -463,7 +475,7 @@ test('a 200 without the cancelled order is an uncertain result: the dialog close
   await expect.poll(() => details).toBeGreaterThanOrEqual(2);
   // The persisted state still says Pendente, and the action is offered again.
   await expect(page.locator('.op-status')).toHaveText('Pendente');
-  await expect(page.getByRole('button', TRIGGER)).toBeVisible();
+  await expect(page.getByRole('button', MORE)).toBeVisible();
   await expect(
     page.getByRole('heading', { name: 'Cancelado no CRM' }),
   ).toHaveCount(0);
@@ -482,7 +494,7 @@ test('a 204 without a body is also an uncertain result, with no silent error', a
     route.fulfill({ status: 204 }),
   );
   await page.goto('/pedidos/order-pendente');
-  await page.getByRole('button', TRIGGER).click();
+  await openCancel(page);
   const dialog = page.getByRole('dialog', DIALOG);
   await dialog.getByLabel('Motivo do cancelamento').fill(REASON);
   await dialog.getByRole('button', { name: 'Cancelar pedido 07-CRM' }).click();
@@ -498,7 +510,7 @@ test('the dialog warns that the reason is shown to whoever reads the order and m
 }) => {
   await mockOrders(page, { orders: [pendingOrder] });
   await page.goto('/pedidos/order-pendente');
-  await page.getByRole('button', TRIGGER).click();
+  await openCancel(page);
   const dialog = page.getByRole('dialog', DIALOG);
   const reason = dialog.getByLabel('Motivo do cancelamento');
   await expect(reason).toHaveAccessibleDescription(
@@ -515,7 +527,7 @@ test('an unavailable service keeps the dialog and retries the very same command'
     writeFailure: { body: { code: 'UNAVAILABLE' }, status: 503 },
   });
   await page.goto('/pedidos/order-pendente');
-  await page.getByRole('button', TRIGGER).click();
+  await openCancel(page);
   const dialog = page.getByRole('dialog', DIALOG);
   await dialog.getByLabel('Motivo do cancelamento').fill(REASON);
   const submit = dialog.getByRole('button', { name: 'Cancelar pedido 07-CRM' });
@@ -558,7 +570,7 @@ test('offers no cancellation to a locked order, to a reader without commercial a
   await expect(
     page.getByText('A composição não pode ser editada, reaberta ou cancelada.'),
   ).toBeVisible();
-  await expect(page.getByRole('button', TRIGGER)).toHaveCount(0);
+  await expect(page.getByRole('button', MORE)).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: /Reabrir pedido/u }),
   ).toHaveCount(0);
@@ -567,7 +579,7 @@ test('offers no cancellation to a locked order, to a reader without commercial a
   // Quem só lê (outro responsável) não vê a ação, e nenhum botão de escrita.
   await page.goto('/pedidos/order-outro-dono');
   await expect(page.getByText('Somente Ricardo Lima ou um')).toBeVisible();
-  await expect(page.getByRole('button', TRIGGER)).toHaveCount(0);
+  await expect(page.getByRole('button', MORE)).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: /Reabrir pedido/u }),
   ).toHaveCount(0);
@@ -575,7 +587,7 @@ test('offers no cancellation to a locked order, to a reader without commercial a
   // Cancelado é terminal: sem Cancelar, sem Reabrir, com o motivo guardado.
   await page.goto('/pedidos/order-cancelado');
   await expect(page.locator('.op-status')).toHaveText('Cancelado');
-  await expect(page.getByRole('button', TRIGGER)).toHaveCount(0);
+  await expect(page.getByRole('button', MORE)).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: /Reabrir pedido|Restaurar/u }),
   ).toHaveCount(0);
@@ -586,7 +598,7 @@ test('offers no cancellation to a locked order, to a reader without commercial a
 
   // Controle positivo: o responsável por um pedido livre da trava vê as duas.
   await page.goto('/pedidos/order-confirmado');
-  await expect(page.getByRole('button', TRIGGER)).toBeVisible();
+  await expect(page.getByRole('button', MORE)).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Reabrir pedido' }),
   ).toBeVisible();
@@ -616,7 +628,7 @@ test('a paid order and a store order add the no-refund notice; a store order nee
 
   // Pago: o aviso extra entra na descrição do diálogo.
   await page.goto('/pedidos/order-confirmado');
-  await page.getByRole('button', TRIGGER).click();
+  await openCancel(page);
   const dialog = page.getByRole('dialog', {
     name: 'Cancelar o pedido 05-CRM?',
   });
@@ -630,7 +642,7 @@ test('a paid order and a store order add the no-refund notice; a store order nee
   // Loja, sem ser administrador: sem ação.
   await page.goto('/pedidos/order-loja');
   await expect(page.getByText('Loja · LJ-0001')).toBeVisible();
-  await expect(page.getByRole('button', TRIGGER)).toHaveCount(0);
+  await expect(page.getByRole('button', MORE)).toHaveCount(0);
 });
 
 test('a store order offers the cancellation to an administrator, with the notice', async ({
@@ -660,7 +672,7 @@ test('a store order offers the cancellation to an administrator, with the notice
     user: { capabilities: adminCapabilities, id: 'admin-synthetic' },
   });
   await page.goto('/pedidos/order-loja');
-  await page.getByRole('button', TRIGGER).click();
+  await openCancel(page);
   const dialog = page.getByRole('dialog', {
     name: 'Cancelar o pedido 12-CRM?',
   });
@@ -685,10 +697,8 @@ for (const viewport of [
     await page.goto('/pedidos/order-pendente');
     await expectNoOverflow(page);
 
-    // No celular a ação está na seção, abaixo do pedido; o teclado a alcança.
-    const trigger = page.getByRole('button', TRIGGER);
-    await trigger.scrollIntoViewIfNeeded();
-    await trigger.click();
+    // No celular a ação está no menu do cabeçalho; o teclado a alcança.
+    await openCancel(page);
     const dialog = page.getByRole('dialog', DIALOG);
     await expect(dialog).toBeVisible();
     await expectNoOverflow(page);

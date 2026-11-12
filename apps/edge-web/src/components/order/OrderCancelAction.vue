@@ -55,15 +55,12 @@ let pending = null;
 let announceNext = false;
 
 const cancelled = computed(() => Boolean(props.order.cancelledAt));
+// The trigger lives in the page header menu (PED-RD-02): this block only
+// renders the cancelled facts, a definitive refusal and the dialog.
 const visible = computed(
-  () => props.canCancel || cancelled.value || outcome.value !== '',
+  () => cancelled.value || outcome.value !== '' || open.value,
 );
 const paymentNotice = computed(() => needsPaymentNotice(props.order));
-const triggerHint = computed(() =>
-  props.disabled
-    ? 'Salve ou cancele a seção em edição antes de cancelar o pedido.'
-    : 'Encerra o pedido no CRM: sai das vendas ativas e das filas. Não é exclusão nem estorno.',
-);
 const describedBy = computed(() =>
   [
     'order-cancel-description',
@@ -76,6 +73,8 @@ const describedBy = computed(() =>
 const reasonDescribedBy = computed(() =>
   reasonError.value ? 'order-cancel-reason-error' : 'order-cancel-reason-hint',
 );
+
+defineExpose({ open: requestCancel });
 
 /**
  * @param {EventTarget|null} trigger o botão que pediu, para onde Esc e Voltar
@@ -280,7 +279,11 @@ watch(cancelled, async (isCancelled) => {
 </script>
 
 <template>
-  <div v-if="visible" class="op-cancel">
+  <div
+    v-if="visible"
+    class="op-cancel"
+    :data-spaced="cancelled || outcome !== '' || undefined"
+  >
     <p
       v-if="outcome"
       ref="outcomeAlert"
@@ -325,19 +328,6 @@ watch(cancelled, async (isCancelled) => {
         </p>
       </div>
     </section>
-
-    <div v-else-if="canCancel" class="op-cancel-action">
-      <p id="order-cancel-hint" class="op-hint">{{ triggerHint }}</p>
-      <button
-        type="button"
-        class="danger"
-        :aria-disabled="disabled || undefined"
-        aria-describedby="order-cancel-hint"
-        @click="requestCancel($event.currentTarget)"
-      >
-        Cancelar pedido
-      </button>
-    </div>
 
     <dialog
       v-if="open"
@@ -446,18 +436,8 @@ watch(cancelled, async (isCancelled) => {
   display: grid;
   gap: var(--space-3);
 }
-.op-cancel-action {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2) var(--space-4);
-}
-.op-cancel-action .op-hint {
-  flex: 1 1 16rem;
-}
-.op-cancel-action button {
-  min-block-size: var(--target-min);
+.op-cancel[data-spaced] {
+  margin-block-start: var(--space-8);
 }
 .op-cancel-facts {
   display: grid;

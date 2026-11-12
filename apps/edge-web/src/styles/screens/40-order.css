@@ -2867,3 +2867,63 @@ button.op-generate {
 .op-billing-summary-go {
   justify-self: start;
 }
+
+/* PED-RD-02: "Mais ações do pedido", the header's disclosure menu. Same
+   surface as the item menu; the button is quiet, never primary. */
+.op-more {
+  position: relative;
+}
+
+button.op-more-button {
+  inline-size: var(--target-min);
+  min-block-size: var(--target-min);
+  block-size: var(--target-min);
+  color: var(--color-text-muted);
+}
+
+.op-more-list {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-1));
+  inset-inline-end: 0;
+  z-index: 5;
+  display: grid;
+  min-inline-size: 15rem;
+  max-inline-size: min(20rem, calc(100vw - var(--space-8)));
+  padding: var(--space-1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elevation-floating);
+}
+
+/* On a phone the actions wrap to the start of the head: open toward the end. */
+@media (width < 48rem) {
+  .op-more-list {
+    inset-inline: 0 auto;
+  }
+}
+
+.op-more-list button {
+  justify-content: flex-start;
+  min-block-size: var(--target-min);
+  padding: var(--space-2);
+  text-align: start;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+
+.op-more-list button[data-danger] {
+  color: var(--status-error-text);
+}
+
+.op-more-list button:disabled,
+.op-more-list button[aria-disabled='true'] {
+  color: var(--color-text-muted);
+}
+
+.op-more-list .op-hint {
+  margin: 0;
+  padding: var(--space-1) var(--space-2) var(--space-2);
+}

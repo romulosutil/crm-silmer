@@ -489,9 +489,32 @@
     box-shadow var(--duration-fast) var(--easing-standard);
 }
 
-.op-sheet[data-editing] {
-  border-color: var(--color-focus);
-  box-shadow: 0 0 0 4px var(--color-surface-active);
+/* PED-RD-01 (ADR 086, decision 2): the ficha is ONE surface. The chapters
+   lose their own card and are told apart by a divider and the head padding;
+   the rail, the item cards and the other .op-sheet users keep their card.
+   No overflow clip, so focus rings are never cut at the edge. */
+.op-ficha {
+  gap: 0;
+  align-content: start;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.op-ficha > :is(.op-sheet, .shipping-estimate.surface) {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+}
+
+.op-ficha > :is(.op-sheet, .shipping-estimate.surface) + * {
+  border-block-start: 1px solid var(--color-border-subtle);
+}
+
+.op-ficha > .shipping-estimate.surface {
+  padding: var(--space-4) var(--space-5);
 }
 
 .op-sheet-head {

@@ -16,7 +16,7 @@ export function registerSubjectRoutes(api, subjects, contextFor) {
         if (typeof orderQuery !== 'string' || orderQuery.length > 40) {
           throw problem(400, 'INVALID_ORDER_QUERY');
         }
-        await subjects.authorizeRead({
+        const principal = await subjects.authorizeRead({
           action: 'conversation.read',
           authorization: request.headers.authorization,
           cookie: request.headers.cookie,
@@ -26,7 +26,9 @@ export function registerSubjectRoutes(api, subjects, contextFor) {
         privateHeaders(reply);
         return reply
           .code(200)
-          .send(await subjects.list(conversationId, orderQuery));
+          .send(
+            await subjects.list(conversationId, orderQuery, principal.actor),
+          );
       }),
   );
 

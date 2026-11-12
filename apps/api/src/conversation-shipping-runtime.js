@@ -5,7 +5,7 @@ import {
   randomBytes,
   randomUUID,
 } from 'node:crypto';
-import { authorize } from '@crm-silmer/identity-access';
+import { authorize, canReadConversation } from '@crm-silmer/identity-access';
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 
 export class ConversationShippingError extends Error {
@@ -297,10 +297,13 @@ export function createConversationShippingRuntime(database, options) {
   /** @param {any} client @param {string} quoteId */
   async function rowFor(client, quoteId) {
     const result = await client.query(
-      `SELECT quote.*,u.name AS creator_name,orders.version AS current_order_version
+      `SELECT quote.*,u.name AS creator_name,orders.version AS current_order_version,
+              conversation.assigned_user_id AS conversation_owner_id
        FROM crm.shipping_quotes quote
        JOIN crm.users u ON u.id=quote.created_by
-       JOIN crm.orders orders ON orders.id=quote.order_id WHERE quote.id=$1`,
+       JOIN crm.orders orders ON orders.id=quote.order_id
+       JOIN crm.conversations conversation ON conversation.id=quote.conversation_id
+       WHERE quote.id=$1`,
       [quoteId],
     );
     if (!result.rows[0])
@@ -308,16 +311,23 @@ export function createConversationShippingRuntime(database, options) {
     return result.rows[0];
   }
 
-  /** @param {any} row */
-  function present(row) {
+  /** @param {any} row @param {any} [actor] */
+  function present(row, actor) {
     const { providerContext, ...payload } = decrypt(row, key);
     return {
       id: row.id,
-      conversationId: row.conversation_id,
-      subjectId: row.subject_id,
       orderId: row.order_id,
       orderVersion: Number(row.order_version),
       ...payload,
+      // Commercial estimates stay shared; their private conversation does not.
+      conversationId:
+        !actor || canReadConversation(actor, row.conversation_owner_id)
+          ? row.conversation_id
+          : null,
+      subjectId:
+        !actor || canReadConversation(actor, row.conversation_owner_id)
+          ? row.subject_id
+          : null,
       totalPieces: row.total_pieces,
       selectedServiceId: row.selected_service_id,
       selectedAt: row.selected_at
@@ -490,7 +500,7 @@ export function createConversationShippingRuntime(database, options) {
     async read(input) {
       options.requireConfigured();
       return database.transaction(async (/** @type {any} */ client) => {
-        await actorFor(client, input.actor, 'order.read');
+        const actor = await actorFor(client, input.actor, 'order.read');
         const orderId = identifier(input.orderId);
         const order = await client.query(
           'SELECT id FROM crm.orders WHERE id=$1',
@@ -505,7 +515,7 @@ export function createConversationShippingRuntime(database, options) {
         );
         return {
           quote: result.rows[0]
-            ? present(await rowFor(client, result.rows[0].id))
+            ? present(await rowFor(client, result.rows[0].id), actor)
             : null,
         };
       });

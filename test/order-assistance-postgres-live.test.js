@@ -55,7 +55,12 @@ test(
       CONTACT_IDENTITY_LOOKUP_KEY: lookupKey.toString('base64'),
       FAB_CODE: 'FAB-TEST',
     };
-    const actor = { id: 'oa-seller', kind: 'human', capabilities: [] };
+    const actor = {
+      id: 'oa-seller',
+      kind: 'human',
+      functionName: 'Vendedor',
+      capabilities: [],
+    };
     const runtime = createOrderAssistanceRuntime({
       database,
       environment,

@@ -1,5 +1,19 @@
 # TDD — CRM Silmer MVP
 
+## CONV-ACL-01 — Escopo de leitura da conversa (12/11/2026)
+
+[ADR 088](docs/adr/088-leitura-de-conversas-por-responsavel.md): a sessão atual
+fornece ator e capacidades; filtros do cliente só refinam acesso. Admin lê todas;
+Vendedor lê `assigned_user_id IS NULL OR assigned_user_id = actor.id`, inclusive
+em IA, encerradas e arquivadas. Aplicar antes de LIMIT e count; vincular cursores
+a leitor/abrangência. Detalhe e auxiliares (mídia, assuntos, contexto, handoff,
+assistência ao pedido) repetem a ACL; histórico do Contato filtra conversas.
+SSE revalida sessão e posse, substituindo evento oculto por reset sem payload.
+Transferência remove conteúdo na UI e replay revalida antes de devolver recibo.
+A leitura comercial do Pedido permanece, com vínculo/metadados da conversa
+ocultos para quem não pode lê-la. Sem migração. [Runbook](docs/runbooks/conversation-visibility.md).
+
+
 ## Recuperação de leads após Sem retorno (11/11/2026)
 
 [ADR 085](docs/adr/085-recuperacao-de-leads-por-modo-de-atendimento.md) /

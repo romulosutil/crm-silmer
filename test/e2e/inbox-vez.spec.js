@@ -799,7 +799,6 @@ test.describe('A3: ação só quando permitida, com motivo em texto', () => {
   }
 
   for (const scene of [
-    { id: 's-tiago', reason: /Só quem atende a conversa ou um administrador/u },
     { id: 's-xavier', reason: /atendimento humano/u },
     { id: 's-zeca', reason: /Assuma a conversa/u },
     { id: 's-vitor', reason: /Há pedido em aberto/u },
@@ -825,11 +824,11 @@ test.describe('A3: ação só quando permitida, com motivo em texto', () => {
     });
   }
 
-  test('quem não é dono ainda pode lembrar a si mesmo', async ({
+  test('administrador pode lembrar a si mesmo em conversa de outro vendedor', async ({
     page,
     context,
   }) => {
-    const log = await silentStrip(page, context, 's-tiago');
+    const log = await silentStrip(page, context, 's-tiago', { admin: true });
     await page
       .getByRole('button', { name: 'Lembrar depois', exact: true })
       .click();
@@ -856,7 +855,7 @@ test.describe('A3: ação só quando permitida, com motivo em texto', () => {
     ).toMatchObject({ outcome: 'lost', expectedOutcomeVersion: 0 });
   });
 
-  test('Perdidos: Reabrir de outro vendedor fica desabilitado com o motivo', async ({
+  test('CONV-ACL-01: vendedor não consulta nem reabre conversa perdida de outro', async ({
     page,
     context,
   }) => {
@@ -864,16 +863,21 @@ test.describe('A3: ação só quando permitida, com motivo em texto', () => {
       page,
       context,
       '/inbox/l-celia?aba=perdidos',
-      {},
-      { ready: '.inbox-turn-notice' },
+      { enforceVisibility: true },
+      { ready: null },
     );
-    const reopen = page.getByRole('button', { name: 'Reabrir', exact: true });
-    await expect(reopen).toHaveAttribute('aria-disabled', 'true');
-    await expect(page.locator('#inbox-outcome-reason')).toContainText(
-      /Só quem atende a conversa ou um administrador/u,
-    );
-    await reopen.click({ force: true });
-    await expect(page.locator('dialog.reopen-dialog[open]')).toHaveCount(0);
+    await expect(
+      page
+        .getByText('Esta conversa não está disponível para seu acesso.', {
+          exact: true,
+        })
+        .first(),
+    ).toBeVisible();
+    await expect(page.locator('.conv-head')).toHaveCount(0);
+    await expect(row(page, 'l-celia')).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Reabrir', exact: true }),
+    ).toHaveCount(0);
     expect(log.writes).toEqual([]);
   });
 });
@@ -1367,7 +1371,7 @@ test('7: a releitura de 60 s espera um diálogo aberto', async ({
   await expect.poll(() => lists).toBeGreaterThan(before);
 });
 
-test('8a: conversa de outro vendedor mostra o cabeçalho, sem assumir nem enviar', async ({
+test('8a: CONV-ACL-01 impede vendedor de ler ou responder conversa de outro', async ({
   page,
   context,
 }) => {
@@ -1375,16 +1379,21 @@ test('8a: conversa de outro vendedor mostra o cabeçalho, sem assumir nem enviar
     page,
     context,
     '/inbox/r-bruno',
-    {},
-    { ready: '.conv-head' },
+    { enforceVisibility: true },
+    { ready: null },
   );
-  await expect(page.locator('.conv-head')).toContainText('Carlos Lima');
   await expect(
-    page.getByRole('button', { name: 'Assumir atendimento', exact: true }),
+    page
+      .getByText('Esta conversa não está disponível para seu acesso.', {
+        exact: true,
+      })
+      .first(),
+  ).toBeVisible();
+  await expect(page.locator('.conv-head')).toHaveCount(0);
+  await expect(row(page, 'r-bruno')).toHaveCount(0);
+  await expect(
+    page.getByRole('textbox', { name: 'Responder', exact: true }),
   ).toHaveCount(0);
-  await expect(
-    page.getByRole('button', { name: 'Enviar resposta', exact: true }),
-  ).toBeDisabled();
   expect(log.writes).toEqual([]);
 });
 
@@ -1458,11 +1467,13 @@ test('8c: sem /inbox/buckets as abas dizem "total indisponível"', async ({
   await expect(row(page, 'r-joao')).toBeVisible();
 });
 
-test('8e: Limpar filtros no vazio com filtro, e o chip de PNL-06', async ({
+test('8e: administrador limpa filtros no vazio e consulta equipe pelo chip de PNL-06', async ({
   page,
   context,
 }) => {
-  await open(page, context, '/inbox?responsavel=seller-carlos');
+  await open(page, context, '/inbox?responsavel=seller-carlos', {
+    admin: true,
+  });
   const summary = page.getByRole('group', { name: 'Filtro:' });
   await expect(summary.getByText('Conversas de Carlos Lima')).toBeVisible();
   await expect(page.locator('.conversation-row')).toHaveCount(2);
@@ -1474,7 +1485,7 @@ test('8e: Limpar filtros no vazio com filtro, e o chip de PNL-06', async ({
     page,
     context,
     '/inbox?responsavel=seller-carlos&situacao=fechar',
-    {},
+    { admin: true },
     { ready: '.empty-list h2' },
   );
   await expect(
@@ -1542,7 +1553,13 @@ test.describe('8f: os links antigos abrem o estado certo', () => {
         )
           lists.push(Object.fromEntries(url.searchParams));
       });
-      await open(page, context, scene.url, {}, { ready: null });
+      await open(
+        page,
+        context,
+        scene.url,
+        { admin: scene.url.includes('responsavel=') },
+        { ready: null },
+      );
       const summary = page.getByRole('group', { name: 'Filtro:' });
       if (scene.chips.length)
         await expect(

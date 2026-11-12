@@ -317,12 +317,14 @@ const stream = new LiveEventStream({
     announce('Conteúdo atualizado automaticamente.');
   },
   onReset() {
+    clearUnreadState();
     void refreshShellSession();
     activeView.value?.reset();
     liveEvent.value = { receivedAt: Date.now(), reset: true };
     announce('A conexão foi ressincronizada.');
   },
   onSessionExpired() {
+    clearUnreadState();
     void refreshShellSession();
     activeView.value?.reset();
     liveEvent.value = { receivedAt: Date.now(), reset: true };

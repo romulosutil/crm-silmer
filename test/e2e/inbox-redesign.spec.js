@@ -664,8 +664,10 @@ test.describe('INBOX-RD-05: compositor', () => {
   test('a group with no visible tool is not drawn, nor is its divider', async ({
     page,
   }) => {
-    // Not the Vendedor who owns it and not an administrator: no order tools.
-    await mockConversationShipping(page, { owner: 'someone-else' });
+    // CONV-ACL-01: an own closed conversation remains readable, while its
+    // composer cannot send or offer order tools.
+    const { conversations } = await mockConversationShipping(page);
+    for (const conversation of conversations) conversation.state = 'encerrada';
     await page.goto('/inbox/shipping-conversation-1');
     const composer = page.locator(COMPOSER);
     await expect(
@@ -793,12 +795,11 @@ test.describe('INBOX-RD-05: compositor', () => {
     page,
   }) => {
     await fakeRecorder(page);
-    const { calls } = await mockConversationShipping(page, {
-      owner: 'someone-else',
-    });
+    const { calls, conversations } = await mockConversationShipping(page);
+    for (const conversation of conversations) conversation.state = 'encerrada';
     await page.goto('/inbox/shipping-conversation-1');
     const composer = page.locator(COMPOSER);
-    const reason = 'Somente o vendedor responsável pode responder.';
+    const reason = 'A conversa está encerrada.';
     const help = page.locator('#reply-help');
     await expect(help).toBeVisible();
     await expect(help).toHaveText(reason);
@@ -940,7 +941,8 @@ test.describe('INBOX-RD-05: compositor', () => {
       globalThis.document.documentElement.dataset.theme = 'dark';
     });
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-    await mockConversationShipping(page, { owner: 'someone-else' });
+    const { conversations } = await mockConversationShipping(page);
+    for (const conversation of conversations) conversation.state = 'encerrada';
     await page.goto('/inbox/shipping-conversation-1');
     await expect(page.locator('#reply-help')).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);

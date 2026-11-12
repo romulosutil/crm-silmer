@@ -33,11 +33,19 @@ export class PostgresHandoffReadRepository {
     this.n8nEnvelopeKey = n8nEnvelopeKey && Buffer.from(n8nEnvelopeKey);
   }
 
-  /** @param {{after: null|{id: string, updatedAt: string}, limit: number}} input */
-  async listOpen(input) {
+  /** @param {{after: null|{id: string, updatedAt: string}, limit: number}} input @param {{visibilityActorId?: string}} [reader] */
+  async listOpen(input, reader = {}) {
     return this.#snapshot(async (database) => {
       const values = [];
       const predicates = ["handoff.status = 'pending'"];
+      if (reader.visibilityActorId) {
+        values.push(reader.visibilityActorId);
+        predicates.push(
+          `(conversation.assigned_user_id IS NULL OR conversation.assigned_user_id=$${values.length})`,
+        );
+      }
+      const countValues = [...values];
+      const countWhere = predicates.join(' AND ');
       if (input.after) {
         values.push(input.after.updatedAt, input.after.id);
         predicates.push(
@@ -68,8 +76,10 @@ export class PostgresHandoffReadRepository {
           values,
         ),
         database.query(
-          "SELECT count(*)::integer count FROM crm.handoffs WHERE status = 'pending'",
-          [],
+          `SELECT count(*)::integer count FROM crm.handoffs handoff
+           JOIN crm.conversations conversation ON conversation.id=handoff.conversation_id
+           WHERE ${countWhere}`,
+          countValues,
         ),
       ]);
       const hasMore = page.rows.length > input.limit;
@@ -88,9 +98,9 @@ export class PostgresHandoffReadRepository {
    * or accepted), for the Inbox. At most one is open per conversation; null
    * when there is none.
    *
-   * @param {string} conversationId
+   * @param {string} conversationId @param {{visibilityActorId?: string}} [reader]
    */
-  async getOpenForConversation(conversationId) {
+  async getOpenForConversation(conversationId, reader = {}) {
     return this.#snapshot(async (database) => {
       const result = await database.query(
         `SELECT handoff.id, handoff.deal_id, handoff.conversation_id,
@@ -99,12 +109,14 @@ export class PostgresHandoffReadRepository {
                 preferred.id preferred_id,
                 split_part(preferred.name, ' ', 1) preferred_first_name
          FROM crm.handoffs handoff
+         JOIN crm.conversations conversation ON conversation.id=handoff.conversation_id
          LEFT JOIN crm.users preferred ON preferred.id = handoff.preferred_user_id
          WHERE handoff.conversation_id = $1
+           AND ($2::text IS NULL OR conversation.assigned_user_id IS NULL OR conversation.assigned_user_id=$2)
            AND handoff.status IN ('pending', 'accepted')
          ORDER BY handoff.created_at DESC, handoff.id DESC
          LIMIT 1`,
-        [conversationId],
+        [conversationId, reader.visibilityActorId ?? null],
       );
       const row = result.rows[0];
       if (!row) return null;

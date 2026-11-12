@@ -452,7 +452,9 @@ test('Painel: owner=me lists only the session seller orders', async () => {
 });
 
 test('orders expose last-message delivery state without message content', async () => {
-  const { api, latestMessageStates, runtime } = orderHarness();
+  const { api, latestMessageStates, runtime } = orderHarness({
+    readActor: SELLER,
+  });
   const order = await createPending(runtime, 'conversation-1');
   latestMessageStates.set('conversation-1', {
     direction: 'outbound',
@@ -601,7 +603,7 @@ test('GET /orders/:orderId answers 404 ORDER_NOT_FOUND', async (t) => {
 });
 
 test('GET /orders filters by status, searches and pages with counts', async (t) => {
-  const { api, runtime } = orderHarness();
+  const { api, runtime } = orderHarness({ readActor: SELLER });
   t.after(() => api.close());
   await createConfirmed(runtime, 'conversation-1');
   await createPending(runtime, 'conversation-2');
@@ -719,7 +721,7 @@ test('phone search stays in a protected POST body, never in an order URL', async
 });
 
 test('GET /conversations/:conversationId/order returns the current order or null', async (t) => {
-  const { api, runtime } = orderHarness();
+  const { api, runtime } = orderHarness({ readActor: SELLER });
   t.after(() => api.close());
   const confirmed = await createConfirmed(runtime, 'conversation-1');
 
@@ -1698,7 +1700,7 @@ test('PIM-14: PDF generation is limited to ten requests per minute', async (t) =
 });
 
 test('the client follows a renamed contact while pending and stays on the generated order and its paper (ADR 018)', async (t) => {
-  const { api, contactNames, runtime } = orderHarness();
+  const { api, contactNames, runtime } = orderHarness({ readActor: SELLER });
   t.after(() => api.close());
   const pending = await createPending(runtime, 'conversation-1');
   assert.equal(pending.ficha.summary.cliente, 'Cliente Sintetico');
@@ -2769,4 +2771,41 @@ test('POST /orders/:id/freight denies an admin who is not the responsible seller
   assert.equal(allowed.statusCode, 200);
   assert.equal(allowed.json().order.freight.cents, 3750);
   assert.equal(allowed.json().order.freight.setBy.id, 'admin-1');
+});
+
+test('CONV-ACL-01: order detail and list remain readable without exposing another conversation', async (t) => {
+  const { api, latestMessageStates, runtime } = orderHarness({
+    readActor: OTHER,
+  });
+  t.after(() => api.close());
+  const order = await createPending(runtime, 'conversation-1');
+  latestMessageStates.set('conversation-1', {
+    direction: 'outbound',
+    occurredAt: '2026-10-03T12:00:00.000Z',
+    sentAt: null,
+    deliveryStatus: 'failed',
+    status: 'sent',
+  });
+  for (const url of [`/api/v1/orders/${order.id}`, '/api/v1/orders']) {
+    const response = await api.inject({
+      headers: readHeaders,
+      method: 'GET',
+      url,
+    });
+    assert.equal(response.statusCode, 200);
+    const shown = response.json().order ?? response.json().items[0];
+    assert.equal(shown.id, order.id);
+    assert.equal(shown.conversationId, null);
+    assert.equal(shown.lastMessage, null);
+    assert.equal(shown.seller.id, SELLER.id);
+  }
+  const hidden = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: '/api/v1/conversations/conversation-1/order',
+  });
+  assert.equal(hidden.statusCode, 404);
+  assert.deepEqual(hidden.json(), {
+    error: { code: 'CONVERSATION_NOT_FOUND' },
+  });
 });

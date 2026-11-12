@@ -419,17 +419,17 @@ test('commands require an idempotency key and an expected version', async () => 
   );
 });
 
-test('reads need no ownership and the runtime forwards session guards', async () => {
+test('order reads preserve the commercial ACL while conversation reads require visibility', async () => {
   const { access, assignmentReads, runtime } = harness();
   const { order } = await create(runtime, OWNER, 'conversation-1');
   assignmentReads.length = 0;
   assert.equal((await runtime.get(order.id)).order.id, order.id);
   assert.equal(
-    (await runtime.currentForConversation('conversation-1')).order?.id,
+    (await runtime.currentForConversation('conversation-1', OWNER)).order?.id,
     order.id,
   );
   assert.equal((await runtime.list({})).items.length, 1);
-  assert.deepEqual(assignmentReads, []);
+  assert.deepEqual(assignmentReads, ['conversation-1']);
   assert.equal(runtime.authorizeRead, access.authorizeRead);
   assert.equal(runtime.authorizeWrite, access.authorizeWrite);
 });
@@ -627,7 +627,7 @@ test('T12 commercial readers receive current Olist locks without needing an Olis
     false,
   );
   assert.equal(
-    (await runtime.currentForConversation('conversation-1')).order
+    (await runtime.currentForConversation('conversation-1', OWNER)).order
       ?.olistConfirmationAllowed,
     true,
   );
@@ -739,5 +739,49 @@ test('T12 PostgreSQL metadata aggregates all account locks and only completed ac
   assert.deepEqual(
     await repository.readOlistCommercialMetadata([seed]),
     new Map(),
+  );
+});
+
+test('CONV-ACL-01: the current conversation order requires current visibility and follows a transfer', async () => {
+  const { assignments, runtime } = harness();
+  const { order } = await create(runtime, OWNER, 'conversation-1');
+  for (const actor of [OWNER, ADMIN]) {
+    assert.equal(
+      (await runtime.currentForConversation('conversation-1', actor)).order?.id,
+      order.id,
+    );
+    assert.equal(
+      (await runtime.get(order.id, actor)).order.conversationId,
+      'conversation-1',
+    );
+  }
+  await assert.rejects(
+    runtime.currentForConversation('conversation-1', OTHER),
+    { code: 'CONVERSATION_NOT_FOUND', statusCode: 404 },
+  );
+  await assert.rejects(runtime.currentForConversation('conversation-1'), {
+    code: 'CONVERSATION_NOT_FOUND',
+    statusCode: 404,
+  });
+  assert.equal((await runtime.get(order.id, OTHER)).order.conversationId, null);
+  assignments['conversation-1'] = OTHER.id;
+  await assert.rejects(
+    runtime.currentForConversation('conversation-1', OWNER),
+    { code: 'CONVERSATION_NOT_FOUND', statusCode: 404 },
+  );
+  assert.equal(
+    (await runtime.currentForConversation('conversation-1', OTHER)).order?.id,
+    order.id,
+  );
+  assert.equal((await runtime.get(order.id, OWNER)).order.conversationId, null);
+  assert.equal((await runtime.list({}, OWNER)).items[0].conversationId, null);
+  assert.equal(
+    (await runtime.list({}, ADMIN)).items[0].conversationId,
+    'conversation-1',
+  );
+  assignments['conversation-1'] = null;
+  assert.equal(
+    (await runtime.currentForConversation('conversation-1', OWNER)).order?.id,
+    order.id,
   );
 });

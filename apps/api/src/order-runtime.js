@@ -1,7 +1,11 @@
 import { createHash } from 'node:crypto';
 
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
-import { authorize, CAPABILITIES } from '@crm-silmer/identity-access';
+import {
+  authorize,
+  CAPABILITIES,
+  canReadConversation,
+} from '@crm-silmer/identity-access';
 import {
   createIdempotentCommandExecutor,
   PostgresIdempotencyRecordStore,
@@ -209,9 +213,9 @@ export function createOrderRuntime(options) {
    * the lead time of its colour and the payment InfinitePay confirmed, with
    * the receipt link kept in its ficha.
    *
-   * @param {any[]} orders
+   * @param {any[]} orders @param {any} [actor]
    */
-  async function present(orders) {
+  async function present(orders, actor) {
     if (orders.length === 0) return [];
     // T12: commercial readers need the same cross-account freeze as writers.
     // Only booleans cross this boundary; no ERP identity or grant is exposed.
@@ -281,7 +285,12 @@ export function createOrderRuntime(options) {
       effectiveStatus: order.cancelledAt ? 'cancelado' : order.status,
       confirmedAt: order.confirmedAt,
       confirmedBy: person(order.confirmedBy),
-      conversationId: order.conversationId,
+      conversationId:
+        !actor ||
+        !order.conversationId ||
+        canReadConversation(actor, owners.get(order.conversationId))
+          ? order.conversationId
+          : null,
       contactId:
         currentContactIds.get(order.contactId) ?? order.contactId ?? null,
       createdAt: order.createdAt,
@@ -323,7 +332,10 @@ export function createOrderRuntime(options) {
         : null,
       id: order.id,
       isTest: order.isTest === true,
-      lastMessage: latestMessageStates.get(order.conversationId) ?? null,
+      lastMessage:
+        !actor || canReadConversation(actor, owners.get(order.conversationId))
+          ? (latestMessageStates.get(order.conversationId) ?? null)
+          : null,
       leadTimeBusinessDays: order.leadTimeBusinessDays ?? null,
       locked: order.origin === 'loja' || Boolean(order.cancelledAt),
       olistLocked: olistMetadata.get(order.id)?.locked === true,
@@ -355,10 +367,10 @@ export function createOrderRuntime(options) {
    * is best effort and never a block: without the shipping configuration, on
    * a list or when it cannot be read, it stays null.
    *
-   * @param {any} order
+   * @param {any} order @param {any} [actor]
    */
-  async function presentOne(order) {
-    const [shown] = await present([order]);
+  async function presentOne(order, actor) {
+    const [shown] = await present([order], actor);
     const quotes = options.freightQuotes;
     if (
       typeof quotes?.notice === 'function' &&
@@ -822,17 +834,17 @@ export function createOrderRuntime(options) {
       return { recorded };
     },
 
-    /** @param {string} orderId */
-    async get(orderId) {
-      return { order: await presentOne(await service.get(orderId)) };
+    /** @param {string} orderId @param {any} [actor] */
+    async get(orderId, actor) {
+      return { order: await presentOne(await service.get(orderId), actor) };
     },
 
-    /** @param {Parameters<typeof service.list>[0]} [filters] */
-    async list(filters) {
+    /** @param {Parameters<typeof service.list>[0]} [filters] @param {any} [actor] */
+    async list(filters, actor) {
       const page = await service.list(filters);
       return {
         counts: page.counts,
-        items: await present(page.items),
+        items: await present(page.items, actor),
         nextCursor: page.nextCursor,
       };
     },
@@ -841,11 +853,22 @@ export function createOrderRuntime(options) {
      * The pending order, else the latest confirmed one, else null; a
      * conversation that does not exist is a 404 rather than "no order".
      *
-     * @param {string} conversationId
+     * @param {string} conversationId @param {any} [actor]
      */
-    async currentForConversation(conversationId) {
+    async currentForConversation(conversationId, actor) {
+      const assignment = await conversations.readAssignment(conversationId);
+      if (
+        !assignment ||
+        !actor ||
+        !canReadConversation(actor, assignment.assignedUserId)
+      ) {
+        throw new OrderNotFoundError(
+          'Conversation was not found',
+          'CONVERSATION_NOT_FOUND',
+        );
+      }
       const order = await service.currentForConversation(conversationId);
-      if (order) return { order: await presentOne(order) };
+      if (order) return { order: await presentOne(order, actor) };
       if (!(await conversations.readAssignment(conversationId))) {
         throw new OrderNotFoundError(
           'Conversation was not found',

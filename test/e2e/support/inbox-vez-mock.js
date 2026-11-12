@@ -61,6 +61,7 @@ const SILENT_AFTER_MINUTES = 72 * 60;
  *   extras?: boolean,      // round-2 fixtures (see fixtures.mjs)
  *   bulk?: boolean,        // 104 fillers each in silent/lost: P1-C targets past page one
  *   admin?: boolean,       // the session user is a COMMERCIAL_ADMIN
+ *   enforceVisibility?: boolean, // CONV-ACL-01 in focused authorization UI scenes
  *   failBuckets?: boolean,  // GET /inbox/buckets answers 503
  *   commandErrors?: Record<string, {status: number, code: string}>, // forced refusal per command path ('lead-outcome', 'reminder')
  *   legacyApi?: boolean,   // P1-D: pre-RFC-052 API (no bucket/turnAsOf, no /inbox/buckets)
@@ -73,7 +74,13 @@ export async function installMocks(page, log = {}, options = {}) {
   const items = structuredClone(
     buildItems(nowIso, { extras: options.extras, bulk: options.bulk }),
   );
-  const open = () => items.filter((item) => !item.archivedAt);
+  const isReadable = (item) =>
+    !options.enforceVisibility ||
+    options.admin === true ||
+    !item.assignedUser ||
+    item.assignedUser.id === ME.id;
+  const open = () =>
+    items.filter((item) => !item.archivedAt && isReadable(item));
   /** The instant the "SQL" computed this response; one per response. */
   const clockNow = () => (realClock ? new Date().toISOString() : nowIso);
 
@@ -200,7 +207,7 @@ export async function installMocks(page, log = {}, options = {}) {
         return problem(json, 400, 'INVALID_FILTER');
       let matches;
       if (params.get('archived') === 'true')
-        matches = items.filter((item) => item.archivedAt);
+        matches = items.filter((item) => item.archivedAt && isReadable(item));
       else if (params.get('terminal') === 'true') matches = [];
       else if (params.has('bucket') && !legacy) {
         const bucket = params.get('bucket');
@@ -247,6 +254,8 @@ export async function installMocks(page, log = {}, options = {}) {
       ? items.find((candidate) => candidate.id === conversationPath[1])
       : null;
     const tail = conversationPath?.[2] ?? '';
+    if (item && !isReadable(item))
+      return problem(json, 404, 'CONVERSATION_NOT_FOUND');
 
     if (method !== 'GET') {
       let body = null;

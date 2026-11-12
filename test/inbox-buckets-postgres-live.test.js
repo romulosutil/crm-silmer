@@ -857,8 +857,14 @@ test(
           (filter.assignedUserId === undefined ||
             OWNER[item.owner ?? 'none'] === filter.assignedUserId),
       );
+    // The global matrix exercises an administrator's view; actorId still
+    // names the same reader for ownership chips and personal reminders.
+    const adminReader = (/** @type {string} */ actorId) => ({
+      actorId,
+      capabilities: ['COMMERCIAL_ADMIN'],
+    });
     const list = (/** @type {Record<string, any>} */ query, actor = A) =>
-      reads.listInbox(query, { actorId: actor });
+      reads.listInbox(query, adminReader(actor));
     const fullList = async (
       /** @type {Record<string, any>} */ query,
       actor = A,
@@ -1058,7 +1064,7 @@ test(
         { assignedUserId: B },
         { owner: 'all', assignedUserId: A },
       ]) {
-        const counts = await reads.countInboxBuckets(filter, { actorId: A });
+        const counts = await reads.countInboxBuckets(filter, adminReader(A));
         assert.deepEqual(Object.keys(counts), BUCKETS);
         for (const bucket of BUCKETS) {
           const result = await list({ bucket, limit: 1, ...filter });
@@ -1078,7 +1084,7 @@ test(
       // The count follows the reader for `mine`.
       const asB = await reads.countInboxBuckets(
         { owner: 'mine' },
-        { actorId: B },
+        adminReader(B),
       );
       assert.equal(
         asB.respond,
@@ -1166,6 +1172,7 @@ test(
                 bucket: 'respond',
                 owner: 'all',
                 orderReady: false,
+                visibility: { actorId: A, readAll: true },
                 orderVersion: 'latest-message-v1',
               }),
             )
@@ -1258,6 +1265,70 @@ test(
       },
     );
 
+    await t.test(
+      'CONV-ACL-01: a seller only reads own or unassigned rows, counts and detail',
+      async () => {
+        const sellerReader = { actorId: A, capabilities: [] };
+        const visibleCases = cases.filter((item) => item.owner !== 'B');
+        const counts = await reads.countInboxBuckets({}, sellerReader);
+        for (const bucket of BUCKETS) {
+          const result = await reads.listInbox(
+            { bucket, limit: 100 },
+            sellerReader,
+          );
+          assert.deepEqual(
+            labelsOf(result.items),
+            expectedOrder(bucket, visibleCases),
+            bucket,
+          );
+          assert.equal(result.totalCount, result.items.length, bucket);
+          assert.equal(counts[bucket], result.totalCount, bucket);
+        }
+        const forced = await reads.listInbox(
+          { bucket: 'respond', assignedUserId: B, limit: 100 },
+          sellerReader,
+        );
+        assert.equal(forced.totalCount, 0);
+        assert.deepEqual(forced.items, []);
+        assert.deepEqual(
+          await reads.countInboxBuckets({ assignedUserId: B }, sellerReader),
+          { respond: 0, awaiting: 0, silent: 0, lost: 0 },
+        );
+        await assert.rejects(
+          reads.getConversation(
+            {
+              conversationId: /** @type {string} */ (
+                idByLabel.get('respond_other_owner')
+              ),
+            },
+            sellerReader,
+          ),
+          { code: 'CONVERSATION_NOT_FOUND', statusCode: 404 },
+        );
+        for (const query of [{ terminal: true }, { archived: true }]) {
+          const result = await reads.listInbox(
+            { ...query, limit: 100 },
+            sellerReader,
+          );
+          assert.ok(
+            result.items.every(
+              (/** @type {any} */ item) =>
+                !item.assignedUser || item.assignedUser.id === A,
+            ),
+          );
+        }
+        const adminPage = await list({ bucket: 'respond', limit: 1 });
+        assert.ok(adminPage.nextCursor);
+        await assert.rejects(
+          reads.listInbox(
+            { bucket: 'respond', limit: 1, cursor: adminPage.nextCursor },
+            sellerReader,
+          ),
+          { code: 'INVALID_CURSOR' },
+        );
+      },
+    );
+
     await t.test('invalid combinations are refused', async () => {
       for (const query of [
         { bucket: 'respond', workQueue: 'attention' },
@@ -1286,12 +1357,12 @@ test(
       await assert.rejects(
         reads.countInboxBuckets(
           { owner: 'mine', assignedUserId: B },
-          { actorId: A },
+          adminReader(A),
         ),
         { code: 'INVALID_FILTER' },
       );
       await assert.rejects(
-        reads.countInboxBuckets({ bucket: 'respond' }, { actorId: A }),
+        reads.countInboxBuckets({ bucket: 'respond' }, adminReader(A)),
         {
           code: 'INVALID_FILTER',
         },
@@ -1306,7 +1377,7 @@ test(
           for (const item of items) {
             const detail = await reads.getConversation(
               { conversationId: item.id },
-              { actorId: A },
+              adminReader(A),
             );
             const label = labelById.get(item.id);
             for (const field of [
@@ -1328,7 +1399,7 @@ test(
         }
         const closed = await reads.getConversation(
           { conversationId: /** @type {string} */ (idByLabel.get('closed')) },
-          { actorId: A },
+          adminReader(A),
         );
         assert.equal(closed.conversation.bucket, null);
         assert.equal(closed.conversation.turnAsOf, null);
@@ -1339,7 +1410,7 @@ test(
               idByLabel.get('reminder_own')
             ),
           },
-          { actorId: B },
+          adminReader(B),
         );
         assert.equal(asOther.conversation.bucket, 'silent');
         assert.equal(asOther.conversation.reminder.mine, false);
@@ -1347,7 +1418,7 @@ test(
     );
 
     await t.test(
-      'older filters keep their cursor fingerprint and gain the turn fields',
+      'CONV-ACL-01: older filters bind visibility and keep their turn fields',
       async () => {
         const fingerprint = (/** @type {unknown} */ value) =>
           createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -1360,15 +1431,26 @@ test(
         const urgency = await list({ sort: 'urgency', limit: 2 });
         assert.equal(
           decode(urgency.nextCursor).fingerprint,
-          fingerprint({ sort: 'urgency', actorId: A }),
+          fingerprint({
+            sort: 'urgency',
+            actorId: A,
+            visibility: { actorId: A, readAll: true },
+          }),
         );
         const attention = await list({ workQueue: 'attention', limit: 1 });
         assert.equal(
           decode(attention.nextCursor).fingerprint,
-          fingerprint({ workQueue: 'attention', actorId: A }),
+          fingerprint({
+            workQueue: 'attention',
+            actorId: A,
+            visibility: { actorId: A, readAll: true },
+          }),
         );
         const plain = await list({ limit: 1 });
-        assert.equal(decode(plain.nextCursor).fingerprint, fingerprint({}));
+        assert.equal(
+          decode(plain.nextCursor).fingerprint,
+          fingerprint({ visibility: { actorId: A, readAll: true } }),
+        );
         const archivedPage = await list({ archived: true, limit: 100 });
         assert.deepEqual(labelsOf(archivedPage.items), ['archived']);
 

@@ -117,7 +117,9 @@ export function registerOrderRoutes(
       privateReadHeaders(reply);
       return reply
         .code(200)
-        .send(await orders.list(withOwner(input, access.actor.id)));
+        .send(
+          await orders.list(withOwner(input, access.actor.id), access.actor),
+        );
     }),
   );
 
@@ -156,7 +158,12 @@ export function registerOrderRoutes(
         privateReadHeaders(reply);
         return reply
           .code(200)
-          .send(await orders.list(withOwner(input, principal.actor.id)));
+          .send(
+            await orders.list(
+              withOwner(input, principal.actor.id),
+              principal.actor,
+            ),
+          );
       }),
   );
 
@@ -183,9 +190,9 @@ export function registerOrderRoutes(
     respond(reply, async () => {
       const params = requireObject(request.params);
       const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
-      await authorizeRead(request, orders);
+      const access = await authorizeRead(request, orders);
       privateReadHeaders(reply);
-      return reply.code(200).send(await orders.get(orderId));
+      return reply.code(200).send(await orders.get(orderId, access.actor));
     }),
   );
 
@@ -297,11 +304,13 @@ export function registerOrderRoutes(
           params.conversationId,
           'CONVERSATION_ID',
         );
-        await authorizeRead(request, orders);
+        const access = await authorizeRead(request, orders);
         privateReadHeaders(reply);
         return reply
           .code(200)
-          .send(await orders.currentForConversation(conversationId));
+          .send(
+            await orders.currentForConversation(conversationId, access.actor),
+          );
       }),
   );
 

@@ -494,7 +494,7 @@ const BUCKET_ORDER = {
 /**
  * The reader and the server instant the turn is worked out on, with the
  * thresholds as instants. `null` when the caller gave none.
- * @param {{actorId?: string|null, now?: Date, stallMinutes?: number}} reader
+ * @param {{actorId?: string|null, visibilityActorId?: string, now?: Date, stallMinutes?: number}} reader
  * @param {string|undefined} fallbackActor
  */
 function turnContext(reader, fallbackActor) {
@@ -556,7 +556,7 @@ export class PostgresInboxReadRepository {
 
   /**
    * @param {Record<string, any>} input
-   * @param {{actorId?: string|null, now?: Date, stallMinutes?: number}} [reader]
+   * @param {{actorId?: string|null, visibilityActorId?: string, now?: Date, stallMinutes?: number}} [reader]
    *   INBOX-VEZ-01: the reader and the server instant the turn is worked out
    *   on. Without it the item carries no turn fields.
    */
@@ -564,6 +564,12 @@ export class PostgresInboxReadRepository {
     return this.#snapshot(async (database) => {
       const values = [];
       const predicates = [];
+      if (reader.visibilityActorId) {
+        values.push(reader.visibilityActorId);
+        predicates.push(
+          `(conversation.assigned_user_id IS NULL OR conversation.assigned_user_id=$${values.length})`,
+        );
+      }
       predicates.push(
         input.archived
           ? 'conversation.archived_at IS NOT NULL'
@@ -717,7 +723,7 @@ export class PostgresInboxReadRepository {
 
   /**
    * @param {string} conversationId
-   * @param {{actorId?: string|null, now?: Date, stallMinutes?: number}} [reader]
+   * @param {{actorId?: string|null, visibilityActorId?: string, now?: Date, stallMinutes?: number}} [reader]
    *   INBOX-VEZ-01: without it the turn fields stay empty.
    */
   async get(conversationId, reader = {}) {
@@ -726,8 +732,9 @@ export class PostgresInboxReadRepository {
       const [conversation, messages, suggestion, turnRows] =
         await runSequential([
           () =>
-            database.query(
-              `SELECT conversation.id, conversation.state,
+            database
+              .query(
+                `SELECT conversation.id, conversation.state,
                     conversation.automation_state, conversation.automation_epoch,
                     conversation.assigned_user_id, conversation.version,
                     conversation.opened_at, conversation.last_message_at,
@@ -767,9 +774,14 @@ export class PostgresInboxReadRepository {
              ${CURRENT_ORDER_JOIN}
              ${REVIEW_ORDER_JOIN}
              ${WAITING_JOIN}
-             WHERE conversation.id=$1`,
-              [conversationId],
-            ),
+             WHERE conversation.id=$1
+               AND ($2::text IS NULL OR conversation.assigned_user_id IS NULL OR conversation.assigned_user_id=$2)`,
+                [conversationId, reader.visibilityActorId ?? null],
+              )
+              .then((/** @type {any} */ result) => {
+                if (!result.rows[0]) throw notFound('CONVERSATION_NOT_FOUND');
+                return result;
+              }),
           () =>
             database.query(
               `SELECT message.id, message.conversation_id, message.direction,
@@ -840,9 +852,15 @@ export class PostgresInboxReadRepository {
    *   null `unansweredMinutes` returns null and runs no query. Seller ids,
    *   seller names and counts only; nothing about the customer.
    *
-   * @param {{actorId: string, now: Date, stallMinutes: number, unansweredMinutes?: number|null}} input
+   * @param {{actorId: string, now: Date, stallMinutes: number, unansweredMinutes?: number|null, readAll?: boolean}} input
    */
-  async summary({ actorId, now, stallMinutes, unansweredMinutes = null }) {
+  async summary({
+    actorId,
+    now,
+    stallMinutes,
+    unansweredMinutes = null,
+    readAll = true,
+  }) {
     const at = now.toISOString();
     const stalledBefore = new Date(
       now.getTime() - stallMinutes * 60_000,
@@ -889,8 +907,9 @@ export class PostgresInboxReadRepository {
            ) last_message ON true
            WHERE conversation.archived_at IS NULL
              AND conversation.state NOT IN
-               ('convertida_em_lead','sem_lead','encerrada')`,
-          [actorId, at, stalledBefore],
+               ('convertida_em_lead','sem_lead','encerrada')
+             AND ($4::boolean OR conversation.assigned_user_id IS NULL OR conversation.assigned_user_id=$1)`,
+          [actorId, at, stalledBefore, readAll],
         ),
         database.query(
           // The seller's pending orders, by the rule that names the seller:
@@ -917,8 +936,11 @@ export class PostgresInboxReadRepository {
            FROM crm.messages message
            WHERE message.direction='outbound'
              AND message.occurred_at > $1::timestamptz
-             AND message.occurred_at <= $2::timestamptz`,
-          [dayAgo, at],
+             AND message.occurred_at <= $2::timestamptz
+             AND ($3::boolean OR EXISTS (SELECT 1 FROM crm.conversations visible
+               WHERE visible.id=message.conversation_id
+                 AND (visible.assigned_user_id IS NULL OR visible.assigned_user_id=$4)))`,
+          [dayAgo, at, readAll, actorId],
         ),
         unansweredMinutes === null
           ? null
@@ -1216,15 +1238,12 @@ export class PostgresInboxReadRepository {
    * turn, for the seller who takes the conversation over. Codes and counts
    * only; 404 when the conversation does not exist.
    *
-   * @param {string} conversationId
+   * @param {string} conversationId @param {{visibilityActorId?: string}} [reader]
    */
-  async assistantContext(conversationId) {
+  async assistantContext(conversationId, reader = {}) {
     return this.#snapshot(async (database) => {
       const [conversation, turn, messages] = await runSequential([
-        () =>
-          database.query('SELECT id FROM crm.conversations WHERE id=$1', [
-            conversationId,
-          ]),
+        () => this.assertReadable(conversationId, reader, database),
         () =>
           database.query(
             `SELECT asked_field, answer_status, ficha_filled, ficha_total,
@@ -1258,6 +1277,20 @@ export class PostgresInboxReadRepository {
           : null,
       });
     });
+  }
+
+  /** CONV-ACL-01: use the same snapshot for auxiliary reads.
+   * @param {string} conversationId @param {{visibilityActorId?: string}} [reader]
+   * @param {any} [database]
+   */
+  async assertReadable(conversationId, reader = {}, database = this.database) {
+    const result = await database.query(
+      `SELECT id FROM crm.conversations WHERE id=$1
+         AND ($2::text IS NULL OR assigned_user_id IS NULL OR assigned_user_id=$2)`,
+      [conversationId, reader.visibilityActorId ?? null],
+    );
+    if (!result.rows[0]) throw notFound('CONVERSATION_NOT_FOUND');
+    return result;
   }
 
   /**
@@ -1356,7 +1389,7 @@ export class PostgresInboxReadRepository {
    * `assignedUserId` narrow it exactly as they narrow the list.
    *
    * @param {{owner?: string, orderReady?: boolean, assignedUserId?: string, actorId?: string}} input
-   * @param {{actorId?: string|null, now?: Date, stallMinutes?: number}} reader
+   * @param {{actorId?: string|null, visibilityActorId?: string, now?: Date, stallMinutes?: number}} reader
    */
   async bucketCounts(input, reader) {
     const turn = turnContext(reader, input.actorId);
@@ -1368,6 +1401,12 @@ export class PostgresInboxReadRepository {
         'conversation.terminal_at IS NULL',
         "conversation.state NOT IN ('convertida_em_lead','sem_lead','encerrada')",
       ];
+      if (reader.visibilityActorId) {
+        values.push(reader.visibilityActorId);
+        predicates.push(
+          `(conversation.assigned_user_id IS NULL OR conversation.assigned_user_id=$${values.length})`,
+        );
+      }
       if (input.assignedUserId !== undefined) {
         values.push(input.assignedUserId);
         predicates.push(`conversation.assigned_user_id = $${values.length}`);

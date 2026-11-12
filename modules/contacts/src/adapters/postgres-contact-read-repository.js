@@ -24,8 +24,8 @@ export class PostgresContactReadRepository {
     this.lookupKey = Buffer.from(lookupKey);
   }
 
-  /** @param {{after: null|{updatedAt: string, id: string}, limit: number, q?: string}} input */
-  async list(input) {
+  /** @param {{after: null|{updatedAt: string, id: string}, limit: number, q?: string}} input @param {{visibilityActorId?: string}} [reader] */
+  async list(input, reader = {}) {
     return this.#snapshot(async (database) => {
       const values = [];
       const afterPredicate = input.after
@@ -44,6 +44,13 @@ export class PostgresContactReadRepository {
             : `%${searchPattern}%`,
         );
       const searchValue = values.length;
+      const visibilityValue = values.length + 1;
+      if (reader.visibilityActorId) values.push(reader.visibilityActorId);
+      /** @param {string} alias @param {number} [position] */
+      const visible = (alias, position = visibilityValue) =>
+        reader.visibilityActorId
+          ? `(${alias}.assigned_user_id IS NULL OR ${alias}.assigned_user_id=$${position})`
+          : 'true';
       const searchPredicate = q
         ? phone
           ? `(EXISTS (
@@ -62,6 +69,7 @@ export class PostgresContactReadRepository {
                JOIN crm.contact_identities site_identity
                  ON site_identity.id = site_conversation.contact_identity_id
                WHERE site_identity.current_contact_id = contact.id
+                 AND ${visible('site_conversation')}
                  AND site_claim.phone_hash = $${searchValue}
              ))`
           : `contact.display_name ILIKE $${searchValue} ESCAPE '\\'`
@@ -95,7 +103,8 @@ export class PostgresContactReadRepository {
                               FROM crm.contact_identities linked_identity
                               JOIN crm.conversations conversation
                                 ON conversation.contact_identity_id=linked_identity.id
-                              WHERE linked_identity.current_contact_id=contact_page.id),
+                              WHERE linked_identity.current_contact_id=contact_page.id
+                                AND ${visible('conversation')}),
                              contact_page.updated_at)
                   ) latest_activity_at
            FROM contact_page
@@ -110,6 +119,7 @@ export class PostgresContactReadRepository {
              JOIN crm.contact_identities site_identity
                ON site_identity.id = site_conversation.contact_identity_id
              WHERE site_identity.current_contact_id = contact_page.id
+               AND ${visible('site_conversation')}
                ${phone ? `AND site_claim.phone_hash = $${searchValue}` : ''}
              ORDER BY site_claim.updated_at DESC, site_claim.id DESC
              LIMIT 1
@@ -139,18 +149,25 @@ export class PostgresContactReadRepository {
              JOIN crm.contact_identities site_identity
                ON site_identity.id = site_conversation.contact_identity_id
              WHERE site_identity.current_contact_id = contact.id
+               AND ${visible('site_conversation', 2)}
                AND site_claim.phone_hash = $1
            )`
                  : "contact.display_name ILIKE $1 ESCAPE '\\'"
                : 'true'
            }`,
-          q
-            ? [
-                phone
-                  ? contactPhoneHash(phone, this.lookupKey)
-                  : `%${searchPattern}%`,
-              ]
-            : [],
+          [
+            ...(q
+              ? [
+                  phone
+                    ? contactPhoneHash(phone, this.lookupKey)
+                    : `%${searchPattern}%`,
+                ]
+              : []),
+            // Only a phone search's count query uses the conversation scope.
+            ...(reader.visibilityActorId && phone
+              ? [reader.visibilityActorId]
+              : []),
+          ],
         ),
       ]);
       const contacts = groupContacts(
@@ -167,8 +184,8 @@ export class PostgresContactReadRepository {
     });
   }
 
-  /** @param {string} contactId */
-  async get(contactId) {
+  /** @param {string} contactId @param {{visibilityActorId?: string}} [reader] */
+  async get(contactId, reader = {}) {
     return this.#snapshot(async (database) => {
       const [contact, identities, conversations, siteClaims] =
         await runSequential([
@@ -199,8 +216,9 @@ export class PostgresContactReadRepository {
              JOIN crm.contact_identities identity
                ON identity.id=conversation.contact_identity_id
              WHERE identity.current_contact_id=$1
+               AND ($2::text IS NULL OR conversation.assigned_user_id IS NULL OR conversation.assigned_user_id=$2)
              ORDER BY conversation.last_message_at DESC, conversation.id DESC`,
-              [contactId],
+              [contactId, reader.visibilityActorId ?? null],
             ),
           () =>
             database.query(
@@ -211,8 +229,9 @@ export class PostgresContactReadRepository {
              JOIN crm.contact_identities site_identity
                ON site_identity.id = site_conversation.contact_identity_id
              WHERE site_identity.current_contact_id=$1
+               AND ($2::text IS NULL OR site_conversation.assigned_user_id IS NULL OR site_conversation.assigned_user_id=$2)
              ORDER BY site_claim.updated_at DESC, site_claim.id DESC LIMIT 1`,
-              [contactId],
+              [contactId, reader.visibilityActorId ?? null],
             ),
         ]);
       const row = contact.rows[0];

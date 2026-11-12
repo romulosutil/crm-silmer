@@ -316,3 +316,37 @@ function requireNonEmpty(value, field) {
     throw new TypeError(`${field} must be a non-empty string`);
   }
 }
+
+/** CONV-ACL-01: only the current administrator reads another seller's conversation.
+ * @param {any} actor @param {string|null|undefined} assignedUserId
+ */
+export function canReadConversation(actor, assignedUserId) {
+  return Boolean(
+    actor?.id &&
+    actor.functionName === 'Vendedor' &&
+    actor.kind !== 'assistant' &&
+    !actor.disabledAt &&
+    (actor.capabilities?.includes(CAPABILITIES.COMMERCIAL_ADMIN) ||
+      assignedUserId === null ||
+      assignedUserId === actor.id),
+  );
+}
+
+/** Server-owned read scope; a missing actor never grants team access.
+ * @param {any} actor
+ */
+export function conversationReadScope(actor) {
+  if (
+    !actor?.id ||
+    actor.functionName !== 'Vendedor' ||
+    actor.kind === 'assistant' ||
+    actor.disabledAt
+  ) {
+    throw forbidden('Forbidden');
+  }
+  return {
+    actorId: actor.id,
+    readAll:
+      actor.capabilities?.includes(CAPABILITIES.COMMERCIAL_ADMIN) === true,
+  };
+}

@@ -72,7 +72,7 @@ test('INBOX-HANDOFF-01: reads the n8n summary as the plain text the agent wrote'
     summary: SUMMARY,
     version: 1,
   });
-  assert.deepEqual(queries[0].values, ['conversation-1']);
+  assert.deepEqual(queries[0].values, ['conversation-1', null]);
   assert.match(queries[0].sql, /status IN \('pending', 'accepted'\)/u);
   assert.doesNotMatch(JSON.stringify(handoff), /ciphertext|summary_envelope/u);
 });

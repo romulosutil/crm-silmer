@@ -72,6 +72,7 @@ async function setup(page, options = {}) {
     return route.fulfill({
       status: healthResponse?.status ?? 200,
       contentType: 'application/json',
+      headers: { date: new Date().toUTCString() },
       body: JSON.stringify(
         healthResponse?.body ?? {
           status: 'ok',
@@ -666,6 +667,43 @@ test('OPSUI-02/03: degraded 503 is useful, network failure never preserves green
   await page.getByRole('button', { name: 'Atualizar', exact: true }).click();
   await expect(summary).toHaveCount(0);
 });
+
+for (const skew of [-10 * 60_000, 10 * 60_000]) {
+  test(`OPSUI-03: server clock preserves healthy, degraded and stale states with device skew ${skew}ms`, async ({
+    page,
+  }) => {
+    await page.clock.install({ time: new Date(Date.now() + skew) });
+    const mock = await setup(page);
+    await page.goto('/saude-erros');
+    const summary = page.getByRole('region', {
+      name: 'Resumo operacional',
+      exact: true,
+    });
+    await expect(summary).toContainText('Operação saudável');
+    mock.setOperational({
+      status: 503,
+      body: {
+        status: 'degraded',
+        checkedAt: new Date().toISOString(),
+        checks: { worker: 'ok', queue: 'degraded', commands: 'ok' },
+      },
+    });
+    await page.getByRole('button', { name: 'Atualizar', exact: true }).click();
+    await expect(summary).toContainText('Operação precisa de atenção');
+    await expect(summary).toContainText('Atrasada');
+    mock.setOperational({
+      status: 200,
+      body: {
+        status: 'ok',
+        checkedAt: new Date(Date.now() - 180_000).toISOString(),
+        checks: { worker: 'ok', queue: 'ok', commands: 'ok' },
+      },
+    });
+    await page.getByRole('button', { name: 'Atualizar', exact: true }).click();
+    await expect(summary).toContainText('Saúde operacional indisponível');
+    await expect(summary).not.toContainText('Operação saudável');
+  });
+}
 
 test('OPSUI-03: leaving the page cancels the pending health read', async ({
   page,

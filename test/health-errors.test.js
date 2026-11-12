@@ -203,6 +203,90 @@ test('OPS-ERR-04: API collection persists no exception, body, URL, foreign code 
   assert.doesNotMatch(serialized, /private|secret|customer|PRIVATE_CODE/iu);
 });
 
+test('OPS-ERR-04/05: nginx trace bits survive intake and authorized projection without accepting free text', async () => {
+  const nginx = 'ABCDEF012345FEDC0123456789ABCDEF';
+  const canonical = 'abcdef01-2345-fedc-0123-456789abcdef';
+  const uuid = '742351d6-a4b4-42e9-b3f8-8d84a8e002a8';
+  for (const [input, expected] of [
+    [nginx, canonical],
+    [canonical, canonical],
+    [uuid, uuid],
+    [uuid.toUpperCase(), uuid],
+    ['synthetic@example.test', null],
+    ['+5511000000000', null],
+    ['5511000000000', null],
+    ['a'.repeat(31), null],
+    ['a'.repeat(33), null],
+    [' abcdef012345fedc0123456789abcdef', null],
+    ['abcdef012345fedc0123456789abcdef ', null],
+    ['abcdef01-2345-fedc0123-456789abcdef', null],
+    ['', null],
+    [null, null],
+    [undefined, null],
+    [{ toString: () => nginx }, null],
+  ]) {
+    /** @type {any} */
+    let stored;
+    const at = new Date();
+    const client = {
+      query: async (
+        /** @type {string} */ sql,
+        /** @type {unknown[]} */ args = [],
+      ) => {
+        if (sql.includes('INSERT INTO crm.operational_incidents')) {
+          stored = {
+            id: args[0],
+            source: args[1],
+            code: args[2],
+            first_seen_at: at,
+            last_seen_at: at,
+            updated_at: at,
+            request_id: args[4],
+            correlation_id: args[5],
+            status: 'new',
+            version: 1,
+            occurrences: 1,
+          };
+          return { rows: [stored] };
+        }
+        if (sql.includes('INSERT INTO crm.operational_incident_receipts'))
+          return { rows: [{ event_key: args[0] }] };
+        if (sql.startsWith('SELECT i.*')) return { rows: [stored] };
+        return { rows: [] };
+      },
+    };
+    const runtime = createHealthErrorsRuntime({
+      database: { transaction: (/** @type {Function} */ work) => work(client) },
+      identity: {
+        allowedOrigins: [],
+        authorizeHealthErrors: async () => ({ actor: allowed }),
+      },
+      envelopeKey: Buffer.alloc(32),
+    });
+    await runtime.recordApiFailure(
+      /** @type {any} */ ({
+        statusCode: 500,
+        requestId: input,
+        correlationId: input,
+      }),
+    );
+    assert.equal(stored.request_id, expected);
+    assert.equal(stored.correlation_id, expected);
+    const result = await runtime.list({
+      cookie: 'crm_session=synthetic',
+      secFetchSite: 'same-origin',
+    });
+    assert.equal(result.items.length, 1);
+    assert.equal(result.items[0].requestId, expected ?? undefined);
+    assert.equal(result.items[0].correlationId, expected ?? undefined);
+    if (expected)
+      assert.equal(
+        result.items[0].requestId.replaceAll('-', ''),
+        String(input).replaceAll('-', '').toLowerCase(),
+      );
+  }
+});
+
 test('OPS-ERR-05: API collector does not delay response, does not recurse and drains before database close', async () => {
   /** @type {() => void} */
   let release = () => {};

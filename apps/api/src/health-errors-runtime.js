@@ -17,8 +17,22 @@ const CODES = new Map([
   ['N8N_OUTCOME_UNKNOWN', 'n8n'],
   ['N8N_PROCESSING_EXPIRED', 'n8n'],
 ]);
-const UUID =
-  /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/iu;
+/** Preserve all 128 opaque nginx/UUID bits in the existing uuid columns.
+ * A trace identifier is not a versioned domain UUID; never rewrite its bits.
+ * @param {unknown} value
+ * @returns {string|null}
+ */
+function normalizeTrace(value) {
+  if (
+    typeof value !== 'string' ||
+    !/^(?:[a-f0-9]{32}|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/iu.test(
+      value,
+    )
+  )
+    return null;
+  const hex = value.replaceAll('-', '').toLowerCase();
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 const RETENTION_SQL = [
   `DELETE FROM crm.operational_incident_receipts WHERE event_key IN (
      SELECT event_key FROM crm.operational_incident_receipts
@@ -95,6 +109,8 @@ function incidentView(row) {
     !STATUSES.has(row.status)
   )
     throw failure(503, 'SERVICE_UNAVAILABLE');
+  const requestId = normalizeTrace(row.request_id);
+  const correlationId = normalizeTrace(row.correlation_id);
   return {
     id: String(row.id),
     source: String(row.source),
@@ -112,10 +128,8 @@ function incidentView(row) {
     lastSeenAt: new Date(row.last_seen_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
     version: Number(row.version),
-    ...(UUID.test(String(row.request_id)) ? { requestId: row.request_id } : {}),
-    ...(UUID.test(String(row.correlation_id))
-      ? { correlationId: row.correlation_id }
-      : {}),
+    ...(requestId ? { requestId } : {}),
+    ...(correlationId ? { correlationId } : {}),
     history: (Array.isArray(row.history) ? row.history : []).map(
       (/** @type {any} */ event) => ({
         status: STATUSES.has(event.status) ? event.status : 'new',
@@ -163,8 +177,6 @@ async function recordIncident(client, input) {
   await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [
     id,
   ]);
-  const trace = (/** @type {unknown} */ value) =>
-    typeof value === 'string' && UUID.test(value) ? value : null;
   const created = await client.query(
     `INSERT INTO crm.operational_incidents
       (id, source, code, first_seen_at, last_seen_at, updated_at, request_id, correlation_id)
@@ -175,8 +187,8 @@ async function recordIncident(client, input) {
       input.source,
       input.code,
       input.at,
-      trace(input.requestId),
-      trace(input.correlationId),
+      normalizeTrace(input.requestId),
+      normalizeTrace(input.correlationId),
     ],
   );
   const receipt = await client.query(
@@ -201,7 +213,12 @@ async function recordIncident(client, input) {
         version = nextval('crm.operational_incident_version'),
         request_id = $3, correlation_id = $4
        WHERE id = $1 RETURNING *`,
-      [id, input.at, trace(input.requestId), trace(input.correlationId)],
+      [
+        id,
+        input.at,
+        normalizeTrace(input.requestId),
+        normalizeTrace(input.correlationId),
+      ],
     );
     row = updated.rows[0];
     if (row.status === previous.rows[0].status) return;

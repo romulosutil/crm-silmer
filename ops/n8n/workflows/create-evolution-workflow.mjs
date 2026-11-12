@@ -131,6 +131,18 @@ export function validateEvolutionEvent(root, config) {
   ].find((name) => message[name]);
   const media = mediaKey ? message[mediaKey] : null;
   const text = message.conversation ?? message.extendedTextMessage?.text ?? '';
+  // INBOX-ALBUM-01: an album announces child media; it is not customer content.
+  // Drop only the standalone envelope before identity lookup/CRM/agent work.
+  // Each child image/video keeps its own provider ID and normal media path.
+  if (
+    message.albumMessage &&
+    typeof message.albumMessage === 'object' &&
+    !Array.isArray(message.albumMessage) &&
+    Object.keys(message).every((name) =>
+      ['albumMessage', 'messageContextInfo'].includes(name),
+    )
+  )
+    return null;
   const quoted =
     payload.contextInfo?.stanzaId ??
     media?.contextInfo?.stanzaId ??

@@ -119,15 +119,40 @@ test(
         false,
       );
 
+      const originalRequestId = randomUUID();
+      const originalCorrelationId = randomUUID();
       await runtime.recordApiFailure({
         statusCode: 500,
-        requestId: randomUUID(),
-        correlationId: randomUUID(),
+        requestId: originalRequestId,
+        correlationId: originalCorrelationId,
       });
+      assert.deepEqual(
+        (
+          await pool.query(
+            "SELECT request_id, correlation_id FROM crm.operational_incidents WHERE code='API_5XX'",
+          )
+        ).rows[0],
+        {
+          request_id: originalRequestId,
+          correlation_id: originalCorrelationId,
+        },
+      );
+      // nginx generates arbitrary 128-bit hex, without UUID version/variant.
+      const nginxRequestId = 'ABCDEF012345FEDC0123456789ABCDEF';
+      const nginxCanonical = 'abcdef01-2345-fedc-0123-456789abcdef';
       await runtime.recordApiFailure({
         statusCode: 503,
-        requestId: randomUUID(),
+        requestId: nginxRequestId,
+        correlationId: nginxCanonical,
       });
+      assert.deepEqual(
+        (
+          await pool.query(
+            "SELECT request_id, correlation_id FROM crm.operational_incidents WHERE code='API_5XX'",
+          )
+        ).rows[0],
+        { request_id: nginxCanonical, correlation_id: nginxCanonical },
+      );
       const read = (view = 'active') =>
         api.inject({
           url: `/api/v1/admin/health-errors?view=${view}`,
@@ -140,6 +165,12 @@ test(
         .items.find((/** @type {any} */ item) => item.code === 'API_5XX');
       assert.equal(initial.occurrences, 2);
       assert.equal(initial.status, 'new');
+      assert.equal(initial.requestId, nginxCanonical);
+      assert.equal(initial.correlationId, nginxCanonical);
+      assert.equal(
+        initial.requestId.replaceAll('-', ''),
+        nginxRequestId.toLowerCase(),
+      );
       assert.equal(response.headers['cache-control'], 'private, no-store');
       for (const headers of [
         otherAdmin,

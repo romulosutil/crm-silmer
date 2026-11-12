@@ -101,6 +101,14 @@ Export operacional privado, backup, revisão e autorização de publicação
 pertencem à futura release. Importação, ativação e publicação não fazem parte
 da SIL-36.
 
+INBOX-ALBUM-01 (12/11/2026) atualiza intencionalmente somente o validador do
+gerador Evolution para ignorar anúncios isolados de álbum; o ledger registra
+os hashes anterior/novo em `candidateEvolutions`. O export operacional
+sanitizado e seus fingerprints permanecem intactos, inclusive para reproduzir
+o bug. `ops/n8n/patch-evolution-albums.mjs` prepara o delta restrito sobre um
+export privado atual, sem executar ou publicar workflows. Procedimento e
+rollback no [runbook](../../../docs/runbooks/evolution-baileys.md#álbum-recebido-como-unsupported--inbox-album-01-12112026).
+
 ## Verificação da reconciliação
 
 Após rebase sobre a master, `npm run validate` aprovou 1.757 testes, com 16 ignorados, nenhuma falha e

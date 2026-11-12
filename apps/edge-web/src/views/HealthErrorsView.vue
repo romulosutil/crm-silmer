@@ -104,20 +104,22 @@ async function loadOperational() {
   operationalLoading.value = true;
   try {
     let data;
+    let serverTime;
     try {
-      data = (
-        await request('/api/health/operations', {
-          signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
-        })
-      ).data;
+      const response = await request('/api/health/operations', {
+        signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
+      });
+      data = response.data;
+      serverTime = response.serverTime;
     } catch (cause) {
       if (!(cause instanceof ApiError) || cause.status !== 503) throw cause;
       data = cause.problem;
+      serverTime = cause.serverTime;
     }
     if (disposed || denied.value || signal.aborted) return;
     operational.value = data;
     operationalFailed.value = false;
-    operationalReadAt.value = Date.now();
+    operationalReadAt.value = serverTime ?? Date.now();
   } catch {
     if (disposed || denied.value || signal.aborted) return;
     operationalFailed.value = true;

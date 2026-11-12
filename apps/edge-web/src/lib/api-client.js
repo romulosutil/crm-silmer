@@ -1,11 +1,12 @@
 export class ApiError extends Error {
-  /** @param {number} status @param {Record<string, any>} problem */
-  constructor(status, problem) {
+  /** @param {number} status @param {Record<string, any>} problem @param {number|null} [serverTime] */
+  constructor(status, problem, serverTime = null) {
     super(String(problem.detail ?? problem.message ?? 'Falha na solicitação'));
     this.name = 'ApiError';
     this.status = status;
     this.code = String(problem.code ?? problem.error ?? 'REQUEST_FAILED');
     this.problem = problem;
+    this.serverTime = serverTime;
   }
 }
 
@@ -53,6 +54,14 @@ export async function request(url, options = {}) {
         : JSON.stringify(options.body),
     signal: options.signal,
   });
+  // The server's HTTP clock lets snapshot consumers check freshness even when
+  // the device clock is inaccurate. Reject missing or noncanonical dates.
+  const date = response.headers.get('date');
+  const parsedDate = date === null ? NaN : Date.parse(date);
+  const serverTime =
+    Number.isFinite(parsedDate) && new Date(parsedDate).toUTCString() === date
+      ? parsedDate
+      : null;
   if (response.status === 304) {
     return {
       data: null,
@@ -72,9 +81,10 @@ export async function request(url, options = {}) {
       nested && typeof nested === 'object'
         ? { ...problem, ...nested }
         : problem,
+      serverTime,
     );
   }
-  return { data, etag: response.headers.get('etag') };
+  return { data, etag: response.headers.get('etag'), serverTime };
 }
 
 export function commandKey() {

@@ -286,6 +286,42 @@ as 12 marcas de arquivo WAHA e todos os resultados incertos. Não reativar WAHA.
 
 Não promover um `200` de health ou evento ignorado a prova de entrega real.
 
+## Álbum recebido como unsupported — INBOX-ALBUM-01 (12/11/2026)
+
+INB-01, MSG-01/02 e ORC-08: o WhatsApp pode enviar um `albumMessage`
+anunciando as fotos/vídeos que chegam em mensagens filhas. O adaptador
+anterior classificava esse anúncio sem texto como `unsupported`, criando
+uma linha artificial na Inbox e podendo acionar o handoff por conteúdo não
+suportado. O contrato de álbum e contagem dos filhos está nos
+[tipos do Baileys](https://github.com/WhiskeySockets/Baileys/blob/master/src/Types/Message.ts).
+
+O validador agora ignora somente o envelope isolado `albumMessage`, com
+`messageContextInfo` opcional, após autenticar a origem e antes de consultar
+identidade, registrar inbound ou chamar o agente. Cada filho conserva seu
+ID, MIME, legenda, referência e caminho de persistência. Fotos continuam
+como mensagens individuais na Inbox. Texto/mídia ou outro conteúdo junto
+ao campo de álbum não é descartado; unsupported genuíno e recibos mantêm
+o comportamento anterior. Não remove mensagens ou handoffs já persistidos.
+
+Aplicação operacional, separada da PR:
+
+1. Exportar privadamente a versão atual do principal e guardar checksum.
+   Não gerar novamente a jornada a partir de um template histórico.
+2. Executar `node ops/n8n/patch-evolution-albums.mjs <current.json> <review.json>`.
+   O helper aceita um workflow, recusa sobrescrever arquivos e exige o
+   validador anterior/novo exato; divergência exige revisão do export atual.
+3. Conferir que somente o código de **Evolution - Validar origem (MVP)** mudou.
+   IDs, conexões, configurações, credenciais e demais workflows são preservados.
+4. Publicar a versão revisada pelo procedimento existente e observar um
+   álbum natural novo. Sem replay de mensagens, comandos ou execuções antigas.
+5. Rollback restaura somente esse nó do export privado anterior. Não restaurar
+   banco, apagar histórico ou reenviar mensagens por causa desta correção.
+
+Regressão sintética reproduz o anúncio unsupported no export sanitizado
+anterior e valida a remoção apenas dele, preservando quatro fotos e o pairing
+dos itens. Cobre wrappers, LID sem identidade, autenticação, ACK, conteúdo
+misto, drift e proteção da CLI. Publicação/homologação real permanecem pendentes.
+
 ## Suspensão e recuperação
 
 Interromper somente o gateway e o transporte da ponte. Preservar volumes,

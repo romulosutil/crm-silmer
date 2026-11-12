@@ -9,7 +9,7 @@ Base: [ADR 078](078-ficha-impressa-por-item.md) e
 Requisitos [FPI-12 e FPI-13](../../.specs/features/ficha-por-item/spec.md);
 tarefas [FPI-T05 e FPI-T06](../../.specs/features/ficha-por-item/tasks.md).
 Pacote de revisão: [FICHA-PDF-REVIEW-V9](../phase0/FICHA-PDF-REVIEW-V9.md).
-PR: a preencher pelo orquestrador. Sem issue específica.
+PR: [romulosutil/crm-silmer#368](https://github.com/romulosutil/crm-silmer/pull/368). Sem issue específica.
 Não supersede a ADR 078 por inteiro: altera, só para o template v9, o layout da
 folha do item e o FPI-02 (seção "O que muda na ADR 078").
 

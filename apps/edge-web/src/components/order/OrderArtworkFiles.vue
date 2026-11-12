@@ -597,7 +597,7 @@ onBeforeUnmount(() => {
           <button
             ref="addButton"
             type="button"
-            class="op-save"
+            class="op-files-add"
             @click="choose('reference')"
           >
             <OrderIcon name="plus" />Adicionar arquivos da arte

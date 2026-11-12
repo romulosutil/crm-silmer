@@ -74,7 +74,7 @@ quebrado.
 - [ ] Refinar `OrderMilestonesSection.vue` como em PED-RD-04: contador, ação
       no cabeçalho, trilha horizontal com ponto de dois estados, título em
       pontilhado, rodapé Recebido/Falta receber.
-- [ ] Linha do tempo vertical em container de 44rem ou menos (`@container`),
+- [ ] Linha do tempo vertical em container de 30rem ou menos (`@container`),
       sem rolagem lateral.
 - [ ] Posição de 2º capítulo da ficha.
 - Depends on: T01. Não toca o conteúdo do detalhe de cada data nem a cobrança

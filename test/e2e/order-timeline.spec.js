@@ -159,7 +159,7 @@ test('DTL: mixed receipts render once in the horizontal timeline with shared bil
       externalReceipts: [{ id: 'manual' }],
     },
   });
-  // PED-RD-04: horizontal only while the chapter container is wider than 44rem.
+  // PED-RD-04: horizontal only while the chapter container is wider than 30rem.
   await page.setViewportSize({ width: 1600, height: 900 });
   await page.goto('/pedidos/order-confirmado');
   const section = sectionFor(page);

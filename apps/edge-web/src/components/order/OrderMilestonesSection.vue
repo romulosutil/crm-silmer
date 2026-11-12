@@ -546,7 +546,7 @@ onBeforeUnmount(() => {
 .order-timeline {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(8rem, 1fr);
+  grid-auto-columns: minmax(0, 1fr);
   list-style: none;
   padding: 0;
   margin: 0;
@@ -666,8 +666,10 @@ li[data-state='next'] .timeline-dot {
   outline: var(--focus-ring-width) solid var(--color-focus);
   outline-offset: var(--focus-ring-offset);
 }
-/* Narrow container: the same timeline turns vertical, line on the left. */
-@container (max-width: 44rem) {
+/* Narrow container (30rem, about the phone): the same timeline turns
+   vertical, line on the left. From the 1366 px notebook up it stays
+   horizontal, with columns that share the width and never scroll. */
+@container (max-width: 30rem) {
   .order-timeline {
     grid-auto-flow: row;
     grid-auto-columns: minmax(0, 1fr);

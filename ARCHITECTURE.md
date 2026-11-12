@@ -142,7 +142,7 @@ Sem transporte criador, migration, dependência ou infraestrutura nova; geraçã
 real permanece desligada. [Contrato, evidências e rollback](docs/runbooks/olist-phase4.md).
 T11 iniciou F4; T12 foi concluída na continuação acima. T25 trouxe os rótulos
 Previsão de entrega/Aplicação e a `ficha-canonical-v7`, preparada e não
-selecionada (`PRINT_TEMPLATE` segue na v6). T13 foi concluída (seção acima); os gates operacionais F5/F6
+selecionada (a v8 a substituiu em `PRINT_TEMPLATE`, ADR 078). T13 foi concluída (seção acima); os gates operacionais F5/F6
 continuam pendentes.
 
 ## OLIST-T10 — guardas comerciais e recuperação (06/11/2026)
@@ -639,7 +639,8 @@ agente ainda não usa esses IDs e conserva sua restrição de um pendente por
 Conversa até a atualização do workflow. O contrato novo valida o alvo antes
 de projetar na ficha e pergunta ou transfere quando a mensagem é ambígua.
 
-O template selecionado é `ficha-canonical-v6` (ADR 025).
+O template selecionado é `ficha-canonical-v8` (ADR 078): uma folha A4 retrato
+por item, aprovada provisoriamente pelo PO em 12/11/2026.
 Técnica pertence ao item e origem da arte ao pedido. Impressão exige Pedido
 confirmado e autorização de leitura. A API devolve HTML imprimível; o PDF
 sintético de aprovação é um artefato de revisão. Assinatura física de Rose
@@ -722,7 +723,7 @@ Manter o deploy automático não comprova seu vínculo com CI, SHA ou imagem.
 Esses checks, saúde, rede e configurações observadas estão no
 [relatório operacional](docs/runbooks/production-readiness-checks.md).
 
-Go-live exige homologação WhatsApp, aprovação física da v6, monitor off-host,
+Go-live exige homologação WhatsApp, aprovação física da v8, monitor off-host,
 backup externo e drills com RPO de uma hora/RTO de quatro horas. Aplicar
 CRM/migrations compatíveis antes do workflow que depende do contrato novo.
 Rollback pausa a automação e preserva resultados incertos; não reativa o

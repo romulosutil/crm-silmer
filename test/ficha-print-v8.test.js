@@ -699,13 +699,13 @@ test('FPI-10: text estimates wrap, keep explicit breaks and break long tokens', 
   assert.deepEqual(plan, { items: [], extras: [] });
 });
 
-test('FPI-08: orders keep printing on v6 and earlier templates do not change', () => {
+test('FPI-08: orders print on v8 and earlier templates do not change', () => {
   const order = sample.order;
-  assert.equal(PRINT_TEMPLATE, TEMPLATE_V6);
+  assert.equal(PRINT_TEMPLATE, TEMPLATE_V8);
   assert.equal(
     renderOrderFicha(order),
-    renderOrderFicha(order, TEMPLATE_V6),
-    'the default stays v6',
+    renderOrderFicha(order, TEMPLATE_V8),
+    'the default is v8',
   );
   assert.ok(!renderOrderFicha(order, TEMPLATE_V7).includes('sheet extra'));
   assert.ok(renderOrderFicha(order, TEMPLATE_V7).includes('Tipo de roupa'));

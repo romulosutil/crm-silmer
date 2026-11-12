@@ -22,8 +22,9 @@ Requisitos: [spec.md](spec.md). Decisão:
 
 ### FPI-T02: aprovação das amostras e troca de `PRINT_TEMPLATE`
 
-- [ ] Registrar a aprovação provisória do PO vinculada ao hash das amostras v8.
-- [ ] Trocar `PRINT_TEMPLATE` para `ficha-canonical-v8` em commit próprio.
+- [x] Registrar a aprovação provisória do PO vinculada ao hash das amostras v8
+      (12/11/2026, `docs/phase0/ficha-pdf-approval-v8.json`).
+- [x] Trocar `PRINT_TEMPLATE` para `ficha-canonical-v8` em commit próprio.
 - Depends on: FPI-T01.
 - Done when: a validação aceita a v8 com o registro e o recusa sem ele (FPI-09).
 

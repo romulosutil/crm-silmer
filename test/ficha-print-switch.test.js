@@ -16,6 +16,7 @@ import {
   TEMPLATE_V5,
   TEMPLATE_V6,
   TEMPLATE_V7,
+  TEMPLATE_V8,
   renderOrderFicha,
 } from '../modules/orders/src/print/index.js';
 import { printSnapshot } from '../modules/orders/src/print/print-snapshot.js';
@@ -53,6 +54,12 @@ const v6Gate = JSON.parse(
 const v7Gate = JSON.parse(
   await readFile(
     new URL('docs/phase0/ficha-pdf-approval-v7.json', rootUrl),
+    'utf8',
+  ),
+);
+const v8Gate = JSON.parse(
+  await readFile(
+    new URL('docs/phase0/ficha-pdf-approval-v8.json', rootUrl),
     'utf8',
   ),
 );
@@ -182,7 +189,8 @@ async function get(api, url) {
   return api.inject({ headers: readHeaders, method: 'GET', url });
 }
 
-test('the switch agrees with the recorded v6 approval (PIM-10)', () => {
+test('the switch agrees with the recorded v8 approval (PIM-10, FPI-T02)', () => {
+  assert.equal(PRINT_TEMPLATE, TEMPLATE_V8);
   assert.doesNotThrow(() =>
     validateFichaPrintSwitch({
       gate: v3Gate,
@@ -190,8 +198,22 @@ test('the switch agrees with the recorded v6 approval (PIM-10)', () => {
       gateV5: v5Gate,
       gateV6: v6Gate,
       gateV7: v7Gate,
+      gateV8: v8Gate,
       printTemplate: PRINT_TEMPLATE,
     }),
+  );
+  // Without the PO's recorded approval of the v8 sample the switch refuses it.
+  const pendingV8 = structuredClone(v8Gate);
+  pendingV8.provisionalApproval.status = 'pending-po-review';
+  pendingV8.provisionalApproval.approved = false;
+  assert.throws(
+    () =>
+      validateFichaPrintSwitch({
+        gate: v3Gate,
+        gateV8: pendingV8,
+        printTemplate: PRINT_TEMPLATE,
+      }),
+    /before its approval is recorded/u,
   );
   // OLIST-50: v7 is addressable but not selected while its sample waits for
   // the PO; the switch refuses it without a recorded approval.
@@ -204,6 +226,7 @@ test('the switch agrees with the recorded v6 approval (PIM-10)', () => {
         gateV5: v5Gate,
         gateV6: v6Gate,
         gateV7: v7Gate,
+        gateV8: v8Gate,
         printTemplate: TEMPLATE_V7,
       }),
     /before its approval is recorded/u,
@@ -287,46 +310,48 @@ async function printedThroughRoute(t) {
   return { order, response };
 }
 
+/** The route stamps the print time; the bare renderer has none (v8 footer). */
+const PRINT_STAMP = / · impresso em \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/gu;
+
 test('the print route prints whatever the switch names (PIM-10)', async (t) => {
   const { order, response } = await printedThroughRoute(t);
 
-  assert.equal(response.body, renderOrderFicha(order));
-  assert.equal(response.body, renderOrderFicha(order, PRINT_TEMPLATE));
+  assert.ok(response.body.match(PRINT_STAMP));
+  const unstamped = response.body.replace(PRINT_STAMP, '');
+  assert.equal(unstamped, renderOrderFicha(order));
+  assert.equal(unstamped, renderOrderFicha(order, PRINT_TEMPLATE));
 });
 
-test('orders print on v6 since the PO approved its sample (T100, PIM-10)', async (t) => {
+test('orders print on v8, one A4 sheet per item, since the PO approved its sample (FPI-T02, PIM-10)', async (t) => {
   const { order, response } = await printedThroughRoute(t);
 
-  assert.equal(PRINT_TEMPLATE, TEMPLATE_V6);
-  assert.equal(response.body, renderOrderFicha(order, TEMPLATE_V6));
-  assert.match(response.body, /5<\/b> Modelo de malha/u);
-  assert.match(response.body, /Tipo de roupa/u);
-  assert.match(response.body, /4<\/b> Técnica/u);
-  assert.match(
-    response.body,
-    /Arte do pedido<\/span><strong>O cliente envia a arte/u,
+  assert.equal(PRINT_TEMPLATE, TEMPLATE_V8);
+  assert.equal(
+    response.body.replace(PRINT_STAMP, ''),
+    renderOrderFicha(order, TEMPLATE_V8),
   );
-  assert.match(response.body, /Lastro do pedido/u);
+  assert.match(response.body, /A4 portrait/u);
+  assert.match(response.body, /<article class="sheet/u);
+  assert.match(response.body, /Modelo<\/span>/u);
+  assert.match(response.body, /Aplicação<\/span>/u);
   assert.match(response.body, /Data do pedido<\/span><strong>02\/10\/2026</u);
   assert.match(
     response.body,
-    /Entrega prometida<\/span><strong>24\/10\/2026</u,
-  );
-  assert.match(response.body, /Primeiro contato<\/span><strong>28\/09\/2026</u);
-  assert.match(response.body, /Pago em<\/span><strong>02\/10\/2026</u);
-  assert.match(
-    response.body,
-    /Entregue em<\/span><strong><span class="empty">—<\/span>/u,
+    /Previsão de entrega<\/span><strong>24\/10\/2026</u,
   );
   assert.doesNotMatch(
     response.body,
-    />Modelo|>Viés gola|Tipo de serviço|Serviços dos itens/u,
+    /Tipo de roupa|Lastro do pedido|Primeiro contato|Entrega prometida/u,
   );
   // A printed order carries no sample band, review box or signature lines.
   assert.doesNotMatch(
     response.body,
     /Amostra sint|<div class="review-box">|<div class="signatures">/u,
   );
+  // The earlier approved templates stay addressable and unchanged.
+  const v6 = renderOrderFicha(order, TEMPLATE_V6);
+  assert.match(v6, /5<\/b> Modelo de malha/u);
+  assert.match(v6, /Tipo de roupa/u);
 });
 
 test('v2 still renders byte for byte through the switch function', async (t) => {

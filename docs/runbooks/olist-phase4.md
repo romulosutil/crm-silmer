@@ -263,7 +263,7 @@ migration, flag, credencial, acesso ERP ou deploy; geração real segue desligad
 - `ficha-canonical-v7` é a v6 com apenas esses dois rótulos trocados, mesma
   folha de estilos (hash de CSP já admitido) e nenhum dinheiro novo. Exportada
   por `TEMPLATE_V7`; `printSnapshot` a aceita como v4–v6. `PRINT_TEMPLATE`
-  **permanece v6**; o validador recusa a seleção da v7 enquanto
+  **permanecia v6** (desde FPI-T02, 12/11/2026, é a v8); o validador recusa a seleção da v7 enquanto
   `docs/phase0/ficha-pdf-approval-v7.json` estiver pendente. A amostra sintética,
   o PDF e os hashes ficam em `docs/phase0/` e `output/pdf/`. v2–v6, seus PDFs,
   hashes e aprovações não foram alterados.

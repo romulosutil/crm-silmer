@@ -12,6 +12,7 @@ import {
   TEMPLATE_V6,
   TEMPLATE_V7,
   TEMPLATE_V8,
+  TEMPLATE_V9,
   renderOrderFicha,
 } from '../modules/orders/src/print/index.js';
 
@@ -51,10 +52,11 @@ test('the print route alone permits the exact styles of supported ficha template
     TEMPLATE_V6,
     TEMPLATE_V7,
     TEMPLATE_V8,
+    TEMPLATE_V9,
   ]) {
-    // v8 refuses explicit financial text in the fixture's observations.
+    // v8 and v9 refuse explicit financial text in the fixture's observations.
     const printableOrder = structuredClone(fixture.order);
-    if (template === TEMPLATE_V8) {
+    if (template === TEMPLATE_V8 || template === TEMPLATE_V9) {
       printableOrder.ficha.observations = ['Amostra sintética de produção.'];
     }
     const html = renderOrderFicha(printableOrder, template);
@@ -95,6 +97,7 @@ test('the print route alone permits the exact styles of supported ficha template
       TEMPLATE_V6,
       TEMPLATE_V7,
       TEMPLATE_V8,
+      TEMPLATE_V9,
     ].includes(PRINT_TEMPLATE),
     'the active template must be included in the permitted set',
   );
@@ -141,7 +144,7 @@ test('the print route alone permits the exact styles of supported ficha template
   );
   assert.equal(
     permittedHashes.size,
-    8,
+    9,
     'no other inline stylesheet is allowed',
   );
 });

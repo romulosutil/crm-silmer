@@ -21,6 +21,7 @@ import {
   TEMPLATE_V6,
   TEMPLATE_V7,
   TEMPLATE_V8,
+  TEMPLATE_V9,
   printSnapshot,
 } from '../modules/orders/src/print/print-snapshot.js';
 import { PRINT_TEMPLATE } from '../modules/orders/src/print/index.js';
@@ -44,6 +45,10 @@ import {
   fichaV8ApprovalStages,
   validateFichaReviewV8,
 } from './ficha-pdf-review-v8.mjs';
+import {
+  fichaV9ApprovalStages,
+  validateFichaReviewV9,
+} from './ficha-pdf-review-v9.mjs';
 
 const rootUrl = new URL('../', import.meta.url);
 const snapshotUrl = new URL('docs/phase0/ficha-pdf-synthetic.json', rootUrl);
@@ -1022,9 +1027,10 @@ export function validateFichaApprovalEvidenceV3(evidence, gate) {
  * ADR 020: v5 likewise needs the PO's provisional approval of its sample,
  * and so does v6 (ADR 025). OLIST-50 (RFC 050): v7 is addressable but not
  * selected; the validator refuses PRINT_TEMPLATE = v7 until its approval is
- * recorded. ADR 078: v8 follows the same rule.
+ * recorded. ADR 078: v8 follows the same rule. ADR 087: so does v9, which
+ * stays unselected until the PO approves its sample.
  *
- * @param {{gate: any, gateV4?: any, gateV5?: any, gateV6?: any, gateV7?: any, gateV8?: any, printTemplate: string}} input
+ * @param {{gate: any, gateV4?: any, gateV5?: any, gateV6?: any, gateV7?: any, gateV8?: any, gateV9?: any, printTemplate: string}} input
  */
 export function validateFichaPrintSwitch({
   gate,
@@ -1033,6 +1039,7 @@ export function validateFichaPrintSwitch({
   gateV6,
   gateV7,
   gateV8,
+  gateV9,
   printTemplate,
 }) {
   invariant(
@@ -1044,6 +1051,7 @@ export function validateFichaPrintSwitch({
       TEMPLATE_V6,
       TEMPLATE_V7,
       TEMPLATE_V8,
+      TEMPLATE_V9,
     ].includes(printTemplate),
     'PRINT_TEMPLATE must name a known ficha template',
   );
@@ -1088,6 +1096,13 @@ export function validateFichaPrintSwitch({
       (gateV8?.templateVersion === TEMPLATE_V8 &&
         (v8Stages.provisional || v8Stages.final)),
     'PRINT_TEMPLATE selects ficha-canonical-v8 before its approval is recorded',
+  );
+  const v9Stages = fichaV9ApprovalStages(gateV9);
+  invariant(
+    printTemplate !== TEMPLATE_V9 ||
+      (gateV9?.templateVersion === TEMPLATE_V9 &&
+        (v9Stages.provisional || v9Stages.final)),
+    'PRINT_TEMPLATE selects ficha-canonical-v9 before its approval is recorded',
   );
 }
 
@@ -1321,6 +1336,7 @@ async function validateV3() {
   const gateV6 = await validateFichaReviewV6();
   const gateV7 = await validateFichaReviewV7();
   const gateV8 = await validateFichaReviewV8();
+  const gateV9 = await validateFichaReviewV9();
   validateFichaPrintSwitch({
     gate,
     gateV4,
@@ -1328,11 +1344,12 @@ async function validateV3() {
     gateV6,
     gateV7,
     gateV8,
+    gateV9,
     printTemplate: PRINT_TEMPLATE,
   });
   const stages = fichaV3ApprovalStages(gate);
   console.log(
-    `Ficha v3 PDF review gate valid: provisional ${gate.provisionalApproval.status} (${gate.provisionalApproval.scope}); final ${gate.approval.status}${stages.final ? '' : ' (physical signature by Rose and Operação required before production)'}; v4 provisional ${gateV4.provisionalApproval.status}; v4 final ${gateV4.approval.status}; v5 provisional ${gateV5.provisionalApproval.status}; v5 final ${gateV5.approval.status}; v6 provisional ${gateV6.provisionalApproval.status}; v6 final ${gateV6.approval.status}; v7 provisional ${gateV7.provisionalApproval.status}; v7 final ${gateV7.approval.status}; v8 provisional ${gateV8.provisionalApproval.status}; v8 final ${gateV8.approval.status}; orders print on ${PRINT_TEMPLATE}.`,
+    `Ficha v3 PDF review gate valid: provisional ${gate.provisionalApproval.status} (${gate.provisionalApproval.scope}); final ${gate.approval.status}${stages.final ? '' : ' (physical signature by Rose and Operação required before production)'}; v4 provisional ${gateV4.provisionalApproval.status}; v4 final ${gateV4.approval.status}; v5 provisional ${gateV5.provisionalApproval.status}; v5 final ${gateV5.approval.status}; v6 provisional ${gateV6.provisionalApproval.status}; v6 final ${gateV6.approval.status}; v7 provisional ${gateV7.provisionalApproval.status}; v7 final ${gateV7.approval.status}; v8 provisional ${gateV8.provisionalApproval.status}; v8 final ${gateV8.approval.status}; v9 provisional ${gateV9.provisionalApproval.status}; v9 final ${gateV9.approval.status}; orders print on ${PRINT_TEMPLATE}.`,
   );
 }
 

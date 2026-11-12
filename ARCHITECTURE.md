@@ -645,6 +645,8 @@ Técnica pertence ao item e origem da arte ao pedido. Impressão exige Pedido
 confirmado e autorização de leitura. A API devolve HTML imprimível; o PDF
 sintético de aprovação é um artefato de revisão. Assinatura física de Rose
 e Operação continua pendente para produção. Versões v2 a v5 são preservadas.
+A v9 (ADR 087, duas folhas por item) está em revisão; a v8 continua
+selecionada até a aprovação do PO.
 
 A [ADR 037](docs/adr/037-gerar-pdf-da-ficha-para-uso-mobile.md) acrescenta
 `GET /api/v1/orders/:orderId/pdf` para baixar a ficha real em PDF e

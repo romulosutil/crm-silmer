@@ -810,7 +810,8 @@ Audit trail comercial não depende de logs do EasyPanel.
 - [ ] Ficha impressa v8 com aprovação final: assinatura física de Rose e
       Operação na amostra impressa registrada em
       `docs/phase0/ficha-pdf-approval-v8.json` (ADR 078). A aprovação provisória
-      do PO vale só para desenvolvimento e cloud-dev.
+      do PO vale só para desenvolvimento e cloud-dev. A v9 (ADR 087) está em revisão;
+      a v8 continua selecionada até a aprovação do PO.
 - [ ] Monitor externo detecta parada da VPS.
 - [ ] Responsável de Privacidade aprova storage, IA e observabilidade.
 

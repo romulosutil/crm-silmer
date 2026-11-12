@@ -17,6 +17,7 @@ import {
   TEMPLATE_V6,
   TEMPLATE_V7,
   TEMPLATE_V8,
+  TEMPLATE_V9,
   renderOrderFicha,
 } from '../modules/orders/src/print/index.js';
 import { printSnapshot } from '../modules/orders/src/print/print-snapshot.js';
@@ -60,6 +61,12 @@ const v7Gate = JSON.parse(
 const v8Gate = JSON.parse(
   await readFile(
     new URL('docs/phase0/ficha-pdf-approval-v8.json', rootUrl),
+    'utf8',
+  ),
+);
+const v9Gate = JSON.parse(
+  await readFile(
+    new URL('docs/phase0/ficha-pdf-approval-v9.json', rootUrl),
     'utf8',
   ),
 );
@@ -235,6 +242,51 @@ test('the switch agrees with the recorded v8 approval (PIM-10, FPI-T02)', () => 
   if (!stages.provisional && !stages.final) {
     assert.equal(PRINT_TEMPLATE, TEMPLATE_V2, 'v2 prints while v3 is pending');
   }
+});
+
+test('v9 is addressable but the switch refuses it without the PO approval of its sample (FPI-13)', () => {
+  assert.equal(PRINT_TEMPLATE, TEMPLATE_V8);
+  assert.notEqual(PRINT_TEMPLATE, TEMPLATE_V9);
+  // The recorded v9 package waits for the PO: the switch must not take it.
+  assert.equal(v9Gate.provisionalApproval.approved, false);
+  assert.equal(v9Gate.approval.approved, false);
+  assert.throws(
+    () =>
+      validateFichaPrintSwitch({
+        gate: v3Gate,
+        gateV8: v8Gate,
+        gateV9: v9Gate,
+        printTemplate: TEMPLATE_V9,
+      }),
+    /before its approval is recorded/u,
+  );
+  assert.throws(
+    () =>
+      validateFichaPrintSwitch({ gate: v3Gate, printTemplate: TEMPLATE_V9 }),
+    /before its approval is recorded/u,
+  );
+  // With the record of the PO's approval the same call is accepted.
+  const approved = structuredClone(v9Gate);
+  approved.provisionalApproval.status = 'approved';
+  approved.provisionalApproval.approved = true;
+  approved.provisionalApproval.reviewedBy.name = 'PO sintético';
+  approved.provisionalApproval.reviewedAt = '2026-11-13';
+  assert.doesNotThrow(() =>
+    validateFichaPrintSwitch({
+      gate: v3Gate,
+      gateV9: approved,
+      printTemplate: TEMPLATE_V9,
+    }),
+  );
+  // The v8 keeps passing with its own record.
+  assert.doesNotThrow(() =>
+    validateFichaPrintSwitch({
+      gate: v3Gate,
+      gateV8: v8Gate,
+      gateV9: v9Gate,
+      printTemplate: PRINT_TEMPLATE,
+    }),
+  );
 });
 
 test('v4 switch fails closed without a recorded provisional approval', () => {
@@ -418,7 +470,7 @@ test('the same order renders on all three templates through one function (PIM-10
   }
   assert.doesNotMatch(v3, /<div class="review-box">/u);
   assert.throws(
-    () => renderOrderFicha(order, 'ficha-canonical-v9'),
+    () => renderOrderFicha(order, 'ficha-canonical-v10'),
     /Unknown/u,
   );
 });

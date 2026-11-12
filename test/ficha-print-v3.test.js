@@ -592,5 +592,5 @@ test('builds the v2 snapshot exactly as before and adds the trail only to v3', (
   });
   assert.equal(v3.pedido.data, '02/10/2026');
   assert.equal(v3.pedido.data_entrega_confirmada, '24/10/2026');
-  assert.throws(() => printSnapshot(source, 'ficha-canonical-v9'), /Unknown/u);
+  assert.throws(() => printSnapshot(source, 'ficha-canonical-v10'), /Unknown/u);
 });

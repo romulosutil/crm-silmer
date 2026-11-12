@@ -1,5 +1,6 @@
 import { blankProduction } from './ficha-canonical-v2.js';
 import { PRODUCTION_FIELDS_V8 } from './ficha-canonical-v8.js';
+import { PRODUCTION_FIELDS_V9 } from './ficha-canonical-v9.js';
 import { factoryContent, safeArtPreview } from './ficha-v8-content.js';
 
 export const TEMPLATE_V2 = 'ficha-canonical-v2';
@@ -9,6 +10,7 @@ export const TEMPLATE_V5 = 'ficha-canonical-v5';
 export const TEMPLATE_V6 = 'ficha-canonical-v6';
 export const TEMPLATE_V7 = 'ficha-canonical-v7';
 export const TEMPLATE_V8 = 'ficha-canonical-v8';
+export const TEMPLATE_V9 = 'ficha-canonical-v9';
 
 /** A field nobody filled prints blank, never "null". @param {unknown} value */
 function printedText(value) {
@@ -77,6 +79,9 @@ function printedTrail(order) {
  * production fields left on the sheet. The optional art preview (FPI-11) of
  * the order and of each item passes through only as an inline raster image.
  *
+ * v9 (ADR 087) takes the snapshot of v8 as it is: the two sheets per item
+ * change the layout, not what the paper carries.
+ *
  * @param {any} order
  * @param {string} [templateVersion]
  */
@@ -88,10 +93,13 @@ export function printSnapshot(order, templateVersion = TEMPLATE_V2) {
     templateVersion !== TEMPLATE_V5 &&
     templateVersion !== TEMPLATE_V6 &&
     templateVersion !== TEMPLATE_V7 &&
-    templateVersion !== TEMPLATE_V8
+    templateVersion !== TEMPLATE_V8 &&
+    templateVersion !== TEMPLATE_V9
   ) {
     throw new Error(`Unknown ficha template: ${templateVersion}`);
   }
+  const factory =
+    templateVersion === TEMPLATE_V8 || templateVersion === TEMPLATE_V9;
   const { items, observations, summary } = order.ficha;
   /** @type {Record<string, unknown>} */
   const pedido = {
@@ -103,19 +111,15 @@ export function printSnapshot(order, templateVersion = TEMPLATE_V2) {
     itens: items,
     nome: printedText(summary.nome),
     numero: printedText(order.number),
-    observacoes:
-      templateVersion === TEMPLATE_V8
-        ? factoryContent(order.ficha)
-        : observations,
+    observacoes: factory ? factoryContent(order.ficha) : observations,
     quantidade_total: order.totalPieces,
     vendedor: printedText(order.confirmedBy?.name),
   };
   if (templateVersion !== TEMPLATE_V2) {
     const trail = printedTrail(order);
-    pedido.lastro =
-      templateVersion === TEMPLATE_V8
-        ? { entrega_realizada: trail.entrega_realizada }
-        : trail;
+    pedido.lastro = factory
+      ? { entrega_realizada: trail.entrega_realizada }
+      : trail;
   }
   if (
     templateVersion === TEMPLATE_V4 ||
@@ -129,7 +133,7 @@ export function printSnapshot(order, templateVersion = TEMPLATE_V2) {
       files: [],
     };
   }
-  if (templateVersion === TEMPLATE_V8) {
+  if (factory) {
     delete pedido.fab;
     pedido.itens = (Array.isArray(items) ? items : []).map(
       (/** @type {any} */ item) => ({
@@ -143,7 +147,10 @@ export function printSnapshot(order, templateVersion = TEMPLATE_V2) {
     return {
       pedido,
       producao: Object.fromEntries(
-        PRODUCTION_FIELDS_V8.map((field) => [field, blank[field]]),
+        (templateVersion === TEMPLATE_V9
+          ? PRODUCTION_FIELDS_V9
+          : PRODUCTION_FIELDS_V8
+        ).map((field) => [field, blank[field]]),
       ),
     };
   }

@@ -5,6 +5,7 @@ import { renderFichaHtmlV5 } from './ficha-canonical-v5.js';
 import { renderFichaHtmlV6 } from './ficha-canonical-v6.js';
 import { renderFichaHtmlV7 } from './ficha-canonical-v7.js';
 import { renderFichaHtmlV8 } from './ficha-canonical-v8.js';
+import { renderFichaHtmlV9 } from './ficha-canonical-v9.js';
 import { renderStoreFichaHtml, TEMPLATE_STORE_V1 } from './ficha-loja-v1.js';
 import {
   TEMPLATE_V2,
@@ -14,6 +15,7 @@ import {
   TEMPLATE_V6,
   TEMPLATE_V7,
   TEMPLATE_V8,
+  TEMPLATE_V9,
   printSnapshot,
 } from './print-snapshot.js';
 
@@ -26,6 +28,7 @@ export {
   TEMPLATE_V6,
   TEMPLATE_V7,
   TEMPLATE_V8,
+  TEMPLATE_V9,
 };
 
 /**
@@ -38,6 +41,11 @@ export {
  * `docs/phase0/ficha-pdf-approval-v8.json` (FPI-T03) remains a production
  * go-live gate. The validator refuses an unapproved switch; v2–v7 stay
  * addressable and their approved artifacts remain unchanged.
+ *
+ * ADR 087 (FPI-T05): `ficha-canonical-v9`, two sheets per item (production
+ * control and art on the back), is addressable and testable but NOT selected.
+ * The validator refuses `PRINT_TEMPLATE = v9` until the PO's provisional
+ * approval of its sample is recorded; the switch is its own commit (FPI-T06).
  *
  * OLIST-50 (RFC 050): `ficha-canonical-v7` (Aplicação, Previsão de entrega) is
  * addressable and testable but NOT selected: v8 supersedes it, and the
@@ -65,6 +73,12 @@ export function renderOrderFicha(
 ) {
   if (order?.origin === 'loja') return renderStoreFichaHtml(order);
   const snapshot = printSnapshot(order, template);
+  if (template === TEMPLATE_V9) {
+    return renderFichaHtmlV9(snapshot, {
+      printedAt: options.printedAt,
+      synthetic: false,
+    });
+  }
   if (template === TEMPLATE_V8) {
     return renderFichaHtmlV8(snapshot, {
       printedAt: options.printedAt,

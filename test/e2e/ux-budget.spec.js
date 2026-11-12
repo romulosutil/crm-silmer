@@ -5,6 +5,7 @@ import {
   confirmedOrder,
   extraPending,
   pendingOrder,
+  pricedPendingOrder,
 } from './support/orders-mock.js';
 import { mockPainel } from './support/painel-mock.js';
 import {
@@ -243,7 +244,32 @@ for (const screen of SCREENS) {
       page,
     }) => {
       await page.clock.setFixedTime(TODAY);
-      await mockOrders(page, { orders: [pendingOrder] });
+      // PED-RD-T07: a size-priced order, as the API presents it (freight 0,
+      // no source), so the rail draws Peças + Frete = Total and its field.
+      await mockOrders(page, {
+        orders: [
+          {
+            ...pricedPendingOrder,
+            amounts: {
+              freightCents: 0,
+              piecesCents: 480000,
+              totalCents: 480000,
+            },
+            freight: {
+              cents: 0,
+              pricingRule: 'pieces-v1',
+              quoteId: null,
+              quoteNotice: null,
+              quotedCents: null,
+              serviceId: null,
+              setAt: null,
+              setBy: null,
+              source: null,
+            },
+            missingFields: pendingOrder.missingFields,
+          },
+        ],
+      });
       await page.goto('/pedidos/order-pendente');
       await expect(
         page.getByRole('heading', { name: 'Pedido 07-CRM' }),

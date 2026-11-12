@@ -331,9 +331,9 @@ test('lists exactly what is missing to generate, point by point, and fills the i
   await expect(progress.getByRole('button')).toHaveText([
     'Informar previsão de entrega',
   ]);
-  await expect(progress).toContainText(
-    'Valor e forma de pagamento: você informa ao gerar o pedido.',
-  );
+  // PED-RD-06: the value and where it is asked live once, in the closing.
+  await expect(progress).not.toContainText('você informa ao gerar');
+  await expect(closing).toContainText('Valor do pedido');
   // PFI-16: what is filled elsewhere keeps "Gerar pedido" unavailable but
   // focusable; activating it leads to the next step and never confirms.
   const generate = closing.getByRole('button', { name: 'Gerar pedido' });

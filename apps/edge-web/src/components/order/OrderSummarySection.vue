@@ -248,6 +248,15 @@ watch(
               vem da conversa
             </span>
           </p>
+          <RouterLink
+            v-if="order.contactId"
+            class="button-link quiet-link"
+            :to="`/clientes/${encodeURIComponent(order.contactId)}`"
+            :aria-label="
+              summary.cliente ? `Ver cadastro de ${summary.cliente}` : undefined
+            "
+            >Ver cadastro</RouterLink
+          >
         </div>
 
         <div class="op-summary-field" data-field="nome">

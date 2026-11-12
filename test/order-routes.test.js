@@ -41,6 +41,7 @@ const ORDER_KEYS = [
   'cancellationReason',
   'confirmedAt',
   'confirmedBy',
+  'contactId',
   'conversationId',
   'createdAt',
   'deliveredOn',

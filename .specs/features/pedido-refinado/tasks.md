@@ -91,8 +91,8 @@ quebrado.
 
 - [x] Resumo com Cliente (texto), Nome do pedido e Previsão de entrega em
       `Field` em linha, lado a lado a partir de 40rem, em edição no lugar.
-- [ ] Link "Ver cadastro" ao lado do Cliente. Pendente: o payload do pedido
-      não traz o id do cliente.
+- [x] Link "Ver cadastro" ao lado do Cliente. Entregue (PED-RD-09): o payload
+      do pedido traz `contactId` e o link abre `/clientes/:contactId`.
 - [x] Remover "Editar resumo", "Salvar resumo" e Cancelar; `SaveStatus` no
       cabeçalho; vendedor, data e FAB para Dados do atendimento.
 - [x] Migrar os testes que usam "Editar resumo" e "Salvar resumo".

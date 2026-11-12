@@ -5806,3 +5806,31 @@ test('reads the filled extras of a confirmed order for the shop floor, one by on
     items.getByText('Quantidade informada', { exact: true }),
   ).toHaveCount(0);
 });
+
+test('PED-RD-09: Ver cadastro leva ao cadastro do cliente', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  const link = summary.getByRole('link', { name: /Ver cadastro/u });
+  await expect(link).toHaveCount(1);
+  await expect(link).toHaveAttribute(
+    'href',
+    '/clientes/4f6c1b52-8d1e-4a77-9b3a-2c5e7d0a1b07',
+  );
+});
+
+test('PED-RD-09: sem cliente vinculado, o Resumo não mostra Ver cadastro', async ({
+  page,
+}) => {
+  await mockOrders(page, { orders: [{ ...pendingOrder, contactId: null }] });
+  await page.goto('/pedidos/order-pendente');
+
+  const summary = page.getByRole('region', { name: 'Resumo do pedido' });
+  await expect(summary.getByText('Cliente', { exact: true })).toBeVisible();
+  await expect(
+    summary.getByRole('link', { name: /Ver cadastro/u }),
+  ).toHaveCount(0);
+});

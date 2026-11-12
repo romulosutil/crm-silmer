@@ -2,6 +2,12 @@
 
 ## Decisão de 12/11/2026
 
+- [087 — Ficha por item com o controle de produção no verso](087-ficha-por-item-controle-no-verso.md),
+  RFC 065 / FPI-12–13: `ficha-canonical-v9` com duas folhas por item
+  (Observações e anotações na página 1; Controle de produção e arte ampliados na
+  página 2); altera a ADR 078 só no layout da folha e no FPI-02. A v8 segue
+  selecionada até a aprovação do PO.
+
 - [086 — Pedido refinado](086-pedido-refinado.md), PED-RD-01–16 /
   `design.md` §22: ficha numa folha na ordem impressa (Resumo, Datas, Itens,
   Arte, Observações, Dados do atendimento), rail de Fechamento e pagamento

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "task": "FPI-T05",
+  "adr": "087",
+  "requirements": [
+    "FPI-03",
+    "FPI-04",
+    "FPI-05",
+    "FPI-06",
+    "FPI-07",
+    "FPI-08",
+    "FPI-09",
+    "FPI-10",
+    "FPI-11",
+    "FPI-12",
+    "FPI-13"
+  ],
+  "syntheticOnly": true,
+  "snapshotVersion": "synthetic-order-v9",
+  "templateVersion": "ficha-canonical-v9",
+  "snapshotSha256": "8b6ab8a143816488db975c8136a5fd2413312ad301d67436dfe2ebfb6b22e18d",
+  "renderedHtmlSha256": "3950bba02a4e10234ba3f22dad39b6aa8caa5748fe794164ad2b3ef1c2beaf4f",
+  "artifact": {
+    "path": "output/pdf/ficha-canonica-sintetica-v9.pdf",
+    "sha256": "a08cd4f3c2b2af1f4a1ee31a87b434424f8faa2fe2289072435ce53b3a94c3e8",
+    "pageCount": 9
+  },
+  "provisionalApproval": {
+    "status": "pending-po-review",
+    "approved": false,
+    "scope": "development/cloud-dev",
+    "reviewedBy": { "role": "PO", "name": null },
+    "reviewedAt": null,
+    "snapshotSha256": "8b6ab8a143816488db975c8136a5fd2413312ad301d67436dfe2ebfb6b22e18d",
+    "renderedHtmlSha256": "3950bba02a4e10234ba3f22dad39b6aa8caa5748fe794164ad2b3ef1c2beaf4f",
+    "artifactSha256": "a08cd4f3c2b2af1f4a1ee31a87b434424f8faa2fe2289072435ce53b3a94c3e8",
+    "decisionRef": "docs/phase0/FICHA-PDF-REVIEW-V9.md"
+  },
+  "approval": {
+    "status": "pending-human-approval",
+    "approved": false,
+    "requiredBefore": "production",
+    "signature": "physical",
+    "reviewedBy": { "rose": null, "operation": null },
+    "reviewedAt": null,
+    "signedPaperKeptAt": null,
+    "criteria": {
+      "legibility": null,
+      "content": null,
+      "order": null,
+      "grade": null,
+      "totals": null,
+      "printing": null
+    },
+    "evidenceRef": null
+  },
+  "versioning": {
+    "overwriteApprovedVersion": false,
+    "correctionsRequireNewTemplateVersion": true,
+    "supersedesTemplateVersion": "ficha-canonical-v8"
+  }
+}

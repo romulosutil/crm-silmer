@@ -1,5 +1,12 @@
 # Request for Comments
 
+## Decisão de 12/11/2026
+
+- [065 — Ficha por item com o controle de produção no verso](065-ficha-por-item-controle-no-verso.md),
+  decidida na [ADR 087](../adr/087-ficha-por-item-controle-no-verso.md) /
+  FPI-T05–T06: `ficha-canonical-v9`, duas folhas por item; template em revisão,
+  com a v8 selecionada até a aprovação do PO.
+
 ## Decisão de 11/11/2026
 
 - [064 — Linha do tempo dos recebimentos do pedido](064-linha-do-tempo-dos-recebimentos-do-pedido.md),

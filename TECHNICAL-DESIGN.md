@@ -890,7 +890,8 @@ item, ADR 078), escolhida em `modules/orders/src/print/index.js` e aprovada
 provisoriamente pelo PO em 12/11/2026. PDF sintético e hashes são artefatos
 de aprovação, sem prova de envio externo. V2 a v7 não são sobrescritas.
 Assinatura física de Rose/Operação na v8 segue obrigatória antes da
-produção.
+produção. A v9 (ADR 087, duas folhas por item) está em revisão; a v8 continua
+selecionada até a aprovação do PO.
 
 `GET /api/v1/orders/:orderId/pdf` usa a mesma permissão e a mesma ficha,
 renderizada no Chromium headless incluído na imagem do runtime (ADR 037).

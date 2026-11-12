@@ -41,8 +41,8 @@ quebrado.
     passo pendente continua definindo a seção aberta.
   - Conferir PFI-15 (progresso no rail), PFI-16 (rodapé) e PFI-20 (Arte) só
     quanto à posição; o texto não muda.
-- [ ] Acrescentar o índice da ADR 086 em `docs/adr/README.md` (não feito aqui:
-      o escopo desta entrega era só os quatro arquivos).
+- [x] Acrescentar o índice da ADR 086 em `docs/adr/README.md` (feito em
+      57d5e4d9).
 - Depends on: none.
 - Done when: PED-RD-01 a 16 existem na spec e na §22, as emendas acima estão
   na spec de Pedidos MVP e as pendências estão marcadas como pendentes.
@@ -50,17 +50,19 @@ quebrado.
 
 ### PED-RD-T01: casca do layout e ordem do rail
 
-- [ ] Reordenar o DOM de `OrderView.vue`: rail primeiro; ficha depois. Trocar
+- [x] Reordenar o DOM de `OrderView.vue`: rail primeiro; ficha depois. Trocar
       o `@media (width >= 75rem)` atual de `.op-layout` por
       `grid-template-areas`, com o rail à direita, sticky, em
       `minmax(20rem, 24rem)`.
-- [ ] Containers de layout com `container-type: inline-size`,
+- [x] Containers de layout com `container-type: inline-size`,
       `inline-size: 100%` e `min-inline-size: 0`.
-- [ ] Cabeçalho com a linha de fatos-chave como fonte única (PED-RD-02) e sem
+- [x] Cabeçalho com a linha de fatos-chave como fonte única (PED-RD-02) e sem
       repetição nos blocos.
 - [ ] Ficha como uma folha com capítulos separados por divisor, sem cartão por
       seção (PED-RD-01).
 - [ ] Rodapé fixo do celular acompanhando o rail antes da ficha (PED-RD-08).
+- Entregue em 70bb636d. Pendentes: ficha em folha única (as seções ainda são
+  cartões `.op-sheet`); rodapé mantido, sem mudança.
 - Depends on: T00.
 - Arquivos: `OrderView.vue`, `OrderSheetHead.vue`, `OrderInfoStrips.vue`,
   `40-order.css`.
@@ -71,12 +73,13 @@ quebrado.
 
 ### PED-RD-T02: capítulo Datas refinado
 
-- [ ] Refinar `OrderMilestonesSection.vue` como em PED-RD-04: contador, ação
+- [x] Refinar `OrderMilestonesSection.vue` como em PED-RD-04: contador, ação
       no cabeçalho, trilha horizontal com ponto de dois estados, título em
       pontilhado, rodapé Recebido/Falta receber.
-- [ ] Linha do tempo vertical em container de 30rem ou menos (`@container`),
+- [x] Linha do tempo vertical em container de 30rem ou menos (`@container`),
       sem rolagem lateral.
-- [ ] Posição de 2º capítulo da ficha.
+- [x] Posição de 2º capítulo da ficha.
+- Entregue em 65697179 e e402851c (Datas horizontal no notebook).
 - Depends on: T01. Não toca o conteúdo do detalhe de cada data nem a cobrança
   (PR 348).
 - Arquivos: `OrderMilestonesSection.vue`, `40-order.css`.
@@ -84,11 +87,14 @@ quebrado.
 
 ### PED-RD-T03: Resumo em edição no lugar
 
-- [ ] Resumo com Cliente (texto + "Ver cadastro"), Nome do pedido e Previsão de
-      entrega em `Field` em linha, lado a lado a partir de 40rem.
-- [ ] Remover "Editar resumo", "Salvar resumo" e Cancelar; `SaveStatus` no
+- [x] Resumo com Cliente (texto), Nome do pedido e Previsão de entrega em
+      `Field` em linha, lado a lado a partir de 40rem, em edição no lugar.
+- [ ] Link "Ver cadastro" ao lado do Cliente. Pendente: o payload do pedido
+      não traz o id do cliente.
+- [x] Remover "Editar resumo", "Salvar resumo" e Cancelar; `SaveStatus` no
       cabeçalho; vendedor, data e FAB para Dados do atendimento.
-- [ ] Migrar os testes que usam "Editar resumo" e "Salvar resumo".
+- [x] Migrar os testes que usam "Editar resumo" e "Salvar resumo".
+- Entregue em 26f35b16.
 - Depends on: T01 (e T06 para o destino de vendedor, data e FAB).
 - Arquivos: `OrderSummarySection.vue`, `40-order.css`, `orders.spec.js`.
 - Done when: PED-RD-09 e PED-RD-12 no Resumo.
@@ -96,11 +102,13 @@ quebrado.
 ### PED-RD-T04: Arte em edição no lugar, lado a lado
 
 - [ ] "Quem faz a arte" como chips de alternância que salvam ao tocar.
-- [ ] "Arte final" e "Arquivos da arte" em duas colunas a partir de 32rem; um
+      Mantidos como checkboxes, para preservar rótulos e testes.
+- [x] "Arte final" e "Arquivos da arte" em duas colunas a partir de 32rem; um
       só "Adicionar arquivo" por lista.
-- [ ] Remover "Editar arte"; `SaveStatus` no cabeçalho.
-- [ ] Preservar o fluxo de "Enviar arte final" e a regra de que referências
+- [x] Remover "Editar arte"; `SaveStatus` no cabeçalho.
+- [x] Preservar o fluxo de "Enviar arte final" e a regra de que referências
       não vão para a produção.
+- Entregue em b4af9c87.
 - Depends on: T01. Não rodar junto de T03 e T05 no mesmo checkout.
 - Arquivos: `OrderArtworkSection.vue`, `OrderArtworkFiles.vue`,
   `40-order.css`, `orders.spec.js`.
@@ -108,19 +116,23 @@ quebrado.
 
 ### PED-RD-T05: Observações em edição no lugar
 
-- [ ] Lista numerada com cabeçalho visível das colunas, `BlankRow` no fim e
+- [x] Lista numerada com cabeçalho visível das colunas, `BlankRow` no fim e
       dica de uma linha; limite de 5 linhas de 200 caracteres.
-- [ ] Remover "Editar observações"; `SaveStatus` no cabeçalho.
+- [x] Remover "Editar observações"; `SaveStatus` no cabeçalho.
+- Entregue em 5afca49f.
 - Depends on: T01.
 - Arquivos: `OrderObservationsSection.vue`, `40-order.css`.
 - Done when: PED-RD-11 e PED-RD-12 nas Observações.
 
 ### PED-RD-T06: Dados do atendimento como último capítulo
 
-- [ ] Capítulo recolhido por padrão, com `button` de `aria-expanded` e
+- [x] Capítulo recolhido por padrão, com `button` de `aria-expanded` e
       `aria-controls` no `h2` e o aviso "Não vai para a ficha impressa.".
-- [ ] Receber vendedor, data do pedido, FAB, origem e campanha.
-- [ ] Atenção ao acordeão do celular (PFI-18): a mesma seção, sem duplicar.
+- [x] Receber vendedor, data do pedido e FAB.
+- [ ] Receber origem e campanha. Pendente: esses dados não existem no payload
+      do pedido.
+- [x] Atenção ao acordeão do celular (PFI-18): a mesma seção, sem duplicar.
+- Entregue em 651898b2.
 - Depends on: T01.
 - Arquivos: `OrderInfoStrips.vue` (onde a seção existe hoje), `OrderView.vue`,
   `40-order.css`.
@@ -128,15 +140,19 @@ quebrado.
 
 ### PED-RD-T07: Fechamento, pedido pendente
 
-- [ ] Rail com "Para gerar o pedido: N de 3" (só o próximo passo com botão,
-      `soft` no notebook), "Valor do pedido" e a única primária "Gerar
-      pedido" com `aria-disabled` e motivo.
-- [ ] Manter "Revisar pendências" e o total 4; manter o cadastro incompleto
+- [x] Rail com "Para gerar o pedido: N de 3", "Valor do pedido" e a única
+      primária "Gerar pedido" com `aria-disabled` e motivo.
+- [x] Só o próximo passo com botão. Ele continua `primary`, como em PFI-13 e
+      PFI-16: enquanto há pendência, "Gerar pedido" fica `aria-disabled` e
+      fora do estilo primário, então a região tem uma só primária. O `soft`
+      fica para decisão do PO, porque contraria o E2E de PFI-16.
+- [x] Manter "Revisar pendências" e o total 4; manter o cadastro incompleto
       fora do progresso.
 - [ ] **Slot do frete (gated por OLC-T01):** Peças + Frete = Total, campo
       "Frete" em edição no lugar, "Usar cotação" e aviso de cotação vencida.
       Sem OLC-T01, o slot não é renderizado e o rail mostra só o total
-      atual.
+      atual. Pendente (OLC-T01): não renderizado.
+- Entregue em a9d37d24.
 - Depends on: T01; o slot do frete depende de OLC-T01 (ADR 080). Pode entrar
   o resto e deixar o slot para um PR seguinte, sem marcar esta tarefa como
   concluída até ele.
@@ -147,13 +163,16 @@ quebrado.
 
 ### PED-RD-T08: Fechamento, pedido confirmado
 
-- [ ] Fechamento em leitura: selo de confirmação, Valor do pedido, Forma de
+- [x] Fechamento em leitura: selo de confirmação, Valor do pedido, Forma de
       pagamento, "Ficha v{N}" e "Baixar ficha em PDF".
 - [ ] Resumo de Cobranças com `Meter` e "Ver cobranças"; sem tocar o interior
-      da cobrança.
-- [ ] Linha com cadeado no topo da ficha; campos em leitura.
+      da cobrança. Pendente: PR 348.
+- [x] Linha com cadeado no topo da ficha; campos em leitura.
 - [ ] **Bloco Olist (gated por OLC-T03 e OLC-T04):** estados da PED-RD-07
-      item 4. Sem eles, o bloco não é renderizado.
+      item 4. Sem eles, o bloco não é renderizado. Pendente: OLC-T03 e
+      OLC-T04.
+- Entregue em a9d37d24. "Ficha v{N}" mostra "Ficha {número} · gerada {data}":
+  o pedido não tem campo de versão.
 - Depends on: T07; Cobranças depende do PR 348 para qualquer mudança além do
   resumo; Olist depende de OLC-T03 e OLC-T04.
 - Arquivos: `OrderClosingSection.vue`, `OrderBillingSection.vue` (só o
@@ -162,9 +181,11 @@ quebrado.
 
 ### PED-RD-T09: hierarquia e ritmo na escala de 4 px
 
-- [ ] Níveis de texto de PED-RD-13 aplicados nas regras de `40-order.css`.
-- [ ] Ritmo de 32/24/16 px e valores fora da escala viram `--space-*`; regras
+- [x] Níveis de texto de PED-RD-13 aplicados nas regras de `40-order.css`.
+- [x] Ritmo de 32/24/16 px e valores fora da escala viram `--space-*`; regras
       sem marcação saem.
+- Entregue em f36b12a4: valores fora da escala de 216 para 4 (as linhas em
+  `calc` com `em` foram mantidas); regras sem marcação removidas.
 - Depends on: T01 a T08 (limpa depois que a marcação nova existe).
 - Arquivos: `40-order.css`.
 - Done when: PED-RD-13 com a contagem antes e depois; regressão visual das
@@ -172,15 +193,20 @@ quebrado.
 
 ### PED-RD-T10: medição e E2E
 
-- [ ] Medir e registrar, na §22 do `design.md`, as "Medidas a coletar" da spec
+- [x] Medir e registrar, na §22 do `design.md`, as "Medidas a coletar" da spec
       (ações a 390×844 e 1366×768, repetições dos fatos-chave, distância até
       "Gerar pedido", tamanhos e pesos de texto, espaços fora da escala).
-- [ ] Atualizar `test/e2e/orders.spec.js` para o fluxo final, preservando os
+- [x] Atualizar `test/e2e/orders.spec.js` para o fluxo final, preservando os
       seletores listados no topo e acrescentando: ordem do rail, ordem de Tab,
       sem rolagem horizontal a 320 px, nenhum "Editar <seção>" nos capítulos
       migrados.
 - [ ] Teste manual com leitor de tela e em aparelho real, registrado como
-      feito ou como pendente.
+      feito ou como pendente. Pendente: não verificado.
+- Entregue em 6a1384a7 e nos commits de correção de medição: medição em 390,
+  1024, 1366 e 1440 px. Em 1366 px, pendente tem 19 ações e confirmado 8; a
+  meta de notebook da §16 (≤ 16) é excedida no pendente pelos botões de
+  remover por linha (decisão do PO pendente). E2E completo: 995 passou,
+  7 ignorados, 0 falhou; `npm run validate` verde.
 - Depends on: T09.
 - Done when: PED-RD-15 e PED-RD-16 com evidência; `npm run validate` e
   `npx playwright test test/e2e/orders.spec.js` verdes.

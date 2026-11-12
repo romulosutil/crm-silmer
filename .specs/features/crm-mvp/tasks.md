@@ -983,6 +983,31 @@ fila/prioridades de INBOX-UX-02, permissões, pedidos e infraestrutura.
       por vendedores em notebook. Não enviar ou encerrar atendimentos reais
       somente para validar apresentação.
 
+## INBOX-ALBUM-01 — regressão de álbum e saúde (12/11/2026)
+
+Correção solicitada pelo operador; INB-01, MSG-01/02, ORC-08,
+OPS-ERR-04/05 e OPS-HEALTH-T01. Sem nova arquitetura ou infraestrutura.
+
+- [x] Reproduzir no validador publicado sanitizado o anúncio de álbum
+      classificado como unsupported; filtrar apenas o envelope isolado antes
+      de identidade/CRM/agente e preservar fotos, IDs, legendas e recibos.
+- [x] Preparar helper offline de delta sobre export privado atual, com
+      contexto exato, idempotência e proteção contra sobrescrita.
+- [x] Reproduzir a falsa indisponibilidade com relógio do dispositivo atrasado;
+      usar HTTP Date na validade do snapshot e preservar 503/stale/falhas.
+- [x] Preservar os 128 bits dos IDs nginx na coleta/projeção da central,
+      sem migração, texto livre ou preenchimento retroativo de referências.
+- [x] Testes sintéticos de álbum, privacidade do helper, skew de relógio,
+      expiração, teclado, ACL e acessibilidade; runbooks atualizados.
+- [x] Executar gates locais e revisão; preparar entrega atômica isolada em
+      `codex/inbox-health-fixes`. Commit/push e PR são registrados no handoff.
+- [ ] Publicar delta do workflow e observar álbum natural novo; não reexecutar
+      mensagens antigas. Merge/deploy do código não publica o workflow n8n.
+- [ ] Investigar as falhas API_5XX e o resultado desconhecido com logs e
+      correlação do efeito; conector EasyPanel falhou (HTTP 400), consulta
+      READ ONLY pela interface confirmou timeout sem recibo/reserva.
+      Não resolver/reenviar apenas pela ausência de novas falhas.
+
 ## INBOX-UX-02 — prioridades do vendedor e alertas (03/11/2026)
 
 PCX-15a–f, PCX-03/04/13/14 e AGT-03/05. Proposta revisada e implementação

@@ -179,6 +179,61 @@ entrega de alertas externos.
 
 ## Saúde operacional — ADR 060 / OPS-HEALTH-T01
 
+### Relógio do dispositivo — correção em 12/11/2026
+
+OPS-HEALTH-T01 / OPSUI-03: a interface comparava `checkedAt` ao relógio do
+dispositivo. Um computador cerca de 45 segundos atrasado podia mostrar
+**Saúde operacional indisponível**, mesmo com HTTP 200 e os três checks `ok`.
+Atualizar às vezes parecia resolver, dependendo da idade da amostra de 60s.
+
+A leitura agora usa o cabeçalho HTTP `Date` canônico da mesma resposta como
+referência, tanto no sucesso quanto no JSON 503. Sem um Date válido, conserva
+o fallback local. Continua recusando amostras com mais de 120s, mais de 5s
+no futuro da referência, corpo inválido ou falha de rede. Não transforma
+503 degradado em saudável e não modifica os relógios do sistema operacional.
+O servidor/proxy deve manter seu próprio relógio sincronizado.
+
+Na inspeção de 12/11, o endpoint público estava saudável; a central mantinha
+94 ocorrências API_5XX e uma operação incerta projetada em worker e n8n.
+Esses registros não são resolvidos pela correção de apresentação nem pelo
+filtro de álbum. O conector EasyPanel retornou HTTP 400; a sessão autorizada
+da interface permitiu consulta técnica em transação `READ ONLY`, limitada
+a estados, códigos e datas. O comando terminou com `N8N_COMMAND_TIMEOUT`,
+sem recibo de provedor, reserva ou tentativa de entrega registrada no CRM.
+Ausência desses registros não autoriza reenvio nem comprova entrega.
+Não reenviar, arquivar ou marcar resolvido para limpar o painel.
+
+No mesmo intervalo, o event bus do principal registra uma execução com
+espera de cerca de 11,5s pelo runner no normalizador e interrupção em
+**CRM - Reservar envio humano (MVP)**. Isso é compatível com expiração do
+HTTP de 10s antes da reserva. A correlação temporal não substitui vínculo
+inequívoco com o comando e não resolve seu resultado. Não aumentar o timeout
+para 30s sem tratar o lease/renovação do job; ver
+[guardas de timeout](inbox-delivery-feedback.md#reconciliação-da-fila-após-confirmação-tardia--03112026).
+
+### Referências nginx — OPS-ERR-04/05
+
+A coleta anterior descartava IDs nginx de 32 hex ao exigir versão/variant
+de UUID. Os registros API_5XX inspecionados não tinham referência de request.
+A correção conserva os mesmos 128 bits em `request_id`/`correlation_id`, no
+formato canônico `8-4-4-4-12` das colunas UUID existentes. Não gera novos IDs
+nem altera os bits de versão/variant de identificadores opacos. Para buscar
+o ID nos logs nginx, remover os hífens; letras são normalizadas para minúsculas.
+UUIDs existentes são preservados e a leitura usa a mesma normalização.
+Texto livre, telefone, endereço e formatos/tamanhos inadequados são recusados.
+Não há migração, novo payload de diagnóstico ou preenchimento retroativo.
+As causas dos 5xx históricos permanecem abertas até correlação comprovada.
+
+Testes de intake e projeção cobrem UUID e nginx com bits arbitrários, casos
+negativos sem PII e persistência/atualização em PostgreSQL no gate live do CI.
+
+Regressão cobre relógios do navegador dez minutos adiantados/atrasados,
+sucesso, JSON 503 degradado, amostra vencida/futura e Date ausente/inválido,
+além de ACL, abort, teclado e acessibilidade existentes. Rollback restaura
+somente o código anterior do edge-web; sem migração ou alteração de dados.
+
+### Contrato do endpoint e amostragem
+
 GET /api/health/operations é público, sem dados pessoais e sem I/O por request.
 Retorna200 com status ok ou503 com degraded/unavailable, checkedAt e checks
 worker/queue/commands. Não usar para restart ou readiness de roteamento.

@@ -989,6 +989,22 @@ fila/prioridades de INBOX-UX-02, permissões, pedidos e infraestrutura.
       por vendedores em notebook. Não enviar ou encerrar atendimentos reais
       somente para validar apresentação.
 
+## ORD-NUM-01 — criação de pedidos após 99 (12/11/2026)
+
+CP-03, PCL-10, LOJ-21 e CONV-ACL-01; falha reportada na criação manual.
+
+- [x] Diagnóstico READ ONLY: sequência em 110, maior pedido salvo em 99;
+      reproduzir HTTP 500/SQLSTATE 23514 em PostgreSQL sintético no pedido 100.
+- [x] Corrigir os dois escritores preservando todos os dígitos, sem migration,
+      reset da sequência ou ampliação da leitura de conversas.
+- [x] Regressão real de vendedor comum, conversa oculta, Financeiro negado,
+      99/100, 999/1000, concorrência e replay idempotente; loja incluída.
+- [x] Gate local validate: 2.716 aprovados, 53 skips existentes; PostgreSQL
+      dedicado: 47 aprovados; E2E/axe de Pedidos/Loja/ACL: 172 aprovados.
+      Evidências e rollback no
+      [runbook](../../../docs/runbooks/order-numbering.md).
+- [ ] CI, merge/deploy e conferência da próxima criação natural em produção.
+
 ## INBOX-ALBUM-01 — regressão de álbum e saúde (12/11/2026)
 
 Correção solicitada pelo operador; INB-01, MSG-01/02, ORC-08,
@@ -1007,8 +1023,10 @@ OPS-ERR-04/05 e OPS-HEALTH-T01. Sem nova arquitetura ou infraestrutura.
       expiração, teclado, ACL e acessibilidade; runbooks atualizados.
 - [x] Executar gates locais e revisão; preparar entrega atômica isolada em
       `codex/inbox-health-fixes`. Commit/push e PR são registrados no handoff.
-- [ ] Publicar delta do workflow e observar álbum natural novo; não reexecutar
-      mensagens antigas. Merge/deploy do código não publica o workflow n8n.
+- [x] Publicar o delta pela UI do n8n em 12/11: versão ativa igual ao esperado,
+      144 nós, conexões/settings preservados e outros 46 workflows inalterados.
+      Regressão sintética do código ativo sem executar workflow ou enviar.
+- [ ] Observar álbum natural novo; não reexecutar mensagens antigas.
 - [ ] Investigar as falhas API_5XX e o resultado desconhecido com logs e
       correlação do efeito; conector EasyPanel falhou (HTTP 400), consulta
       READ ONLY pela interface confirmou timeout sem recibo/reserva.

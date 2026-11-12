@@ -211,6 +211,31 @@ inequívoco com o comando e não resolve seu resultado. Não aumentar o timeout
 para 30s sem tratar o lease/renovação do job; ver
 [guardas de timeout](inbox-delivery-feedback.md#reconciliação-da-fila-após-confirmação-tardia--03112026).
 
+### Publicação e investigação — 12/11/2026
+
+O delta de álbum da PR 360 foi publicado pela UI do n8n na versão
+`1d1cc78c-9b3a-492b-ad78-0f278e537255`. Export privado publicado e rascunho
+antes da edição eram idênticos (144 nós). O helper do commit mesclado foi
+verificado por SHA-256 e aplicado à cópia privada. Comparação READ ONLY antes
+e depois da publicação confirmou nodes/connections/settings iguais ao delta
+esperado; outros 46 workflows conservaram os fingerprints. Álbum isolado,
+imagem filha e texto passaram com entradas sintéticas no código conferido,
+sem executar o workflow nem enviar mensagens. Backups permanecem privados no
+volume persistente; não versionar exports com configuração real.
+
+Os API_5XX somavam 105. A investigação do bloqueio atual de criação encontrou
+o escritor truncando números acima de 99; ver
+[ORD-NUM-01](order-numbering.md). A agregação histórica não identifica uma
+causa única. O conector de logs continua HTTP 400 e a configuração de agregação
+retornou ausente. O buffer obtido pela UI não continha a referência da última
+falha; não inferir ausência de erro a partir dessa amostra incompleta.
+
+O comando incerto de 11/11 continua `outcome_unknown`, com
+`N8N_COMMAND_TIMEOUT`, sem ID externo e com retry/replay desabilitados.
+Não foi reenviado, arquivado ou reconciliado apenas para limpar alertas.
+O event bus preserva falha na reserva humana no mesmo intervalo; falta vínculo
+inequívoco da execução com o comando para declarar seu resultado.
+
 ### Referências nginx — OPS-ERR-04/05
 
 A coleta anterior descartava IDs nginx de 32 hex ao exigir versão/variant

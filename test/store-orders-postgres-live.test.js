@@ -88,6 +88,27 @@ if (connectionString) {
     await pool.end();
   });
 
+  test('LOJ-21 / ORD-NUM-01: store orders retain every digit across 99/100 and 999/1000', async () => {
+    for (const [index, previous] of [
+      [9001, 98],
+      [9003, 998],
+    ]) {
+      await pool.query("SELECT setval('crm.order_number_seq',$1,true)", [
+        previous,
+      ]);
+      for (let offset = 1; offset <= 2; offset++) {
+        const body = paid(index + offset);
+        const saved = await record(body);
+        assert.equal(saved.created, true);
+        assert.equal(saved.order.number, `${previous + offset}-CRM`);
+        const replay = await record(body);
+        assert.equal(replay.created, false);
+        assert.equal(replay.order.id, saved.order.id);
+        assert.equal(replay.order.number, saved.order.number);
+      }
+    }
+  });
+
   test('LOJ-21: a paid store order is born confirmed with its receipt, event and audit', async () => {
     const { created, order } = await record(paid(1));
     assert.equal(created, true);

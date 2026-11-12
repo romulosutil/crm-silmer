@@ -9,7 +9,12 @@ import {
   createShippingQuoteReader,
 } from '../apps/api/src/conversation-shipping-runtime.js';
 import { readDashboardPerformance } from '../apps/api/src/dashboard-runtime.js';
-import { createOrderRuntime } from '../apps/api/src/order-runtime.js';
+import { createApi } from '../apps/api/src/app.js';
+import {
+  createOrderApiRuntime,
+  createOrderRuntime,
+} from '../apps/api/src/order-runtime.js';
+import { authorize } from '../modules/identity-access/src/index.js';
 import { PostgresAuditTrail } from '../modules/audit-privacy/src/index.js';
 import { PostgresIdempotencyRecordStore } from '../modules/integration-reliability/src/index.js';
 import {
@@ -163,6 +168,97 @@ if (connectionString) {
     await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
     await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
     await pool.end();
+  });
+
+  test('CP-03 / CONV-ACL-01: a seller creates manual orders across 99/100 without access to the contact conversation', async (t) => {
+    const database = databaseFor(pool);
+    /** @type {import('../modules/identity-access/src/authorization.js').AccessActor} */
+    const seller = {
+      id: 'seller-contract',
+      kind: 'human',
+      functionName: 'Vendedor',
+      capabilities: [],
+    };
+    let actor = seller;
+    const runtime = createOrderApiRuntime(database, {
+      access: {
+        authorizeRead: async () => {
+          authorize(actor, 'order.read');
+          return { actor };
+        },
+        authorizeWrite: async (input) => {
+          authorize(actor, String(input.action));
+          return { actor };
+        },
+      },
+      environment: {
+        FAB_CODE: '01',
+        N8N_INTEGRATION_ENVELOPE_KEY: ENVELOPE_KEY.toString('base64'),
+        CONTACT_IDENTITY_ENVELOPE_KEY: CONTACT_KEY.toString('base64'),
+        CONTACT_IDENTITY_LOOKUP_KEY: Buffer.alloc(32, 63).toString('base64'),
+        IDEMPOTENCY_ENVELOPE_KEY: Buffer.alloc(32, 66).toString('base64'),
+      },
+    });
+    const api = createApi({}, { orders: runtime });
+    t.after(() => api.close());
+    const conversationId = await seedConversation(pool, {
+      channel: 'whatsapp',
+    });
+    await pool.query(
+      "INSERT INTO crm.users(id,email,password_hash,name) VALUES('other-numbering-seller','other-numbering@example.test','$argon2id$synthetic','Outro vendedor sintético')",
+    );
+    await pool.query(
+      'UPDATE crm.conversations SET assigned_user_id=$2 WHERE id=$1',
+      [conversationId, 'other-numbering-seller'],
+    );
+    const contactId = (
+      await pool.query(
+        'SELECT identity.current_contact_id FROM crm.conversations c JOIN crm.contact_identities identity ON identity.id=c.contact_identity_id WHERE c.id=$1',
+        [conversationId],
+      )
+    ).rows[0].current_contact_id;
+    const hidden = await api.inject({
+      method: 'GET',
+      url: `/api/v1/conversations/${conversationId}/order`,
+    });
+    assert.equal(hidden.statusCode, 404);
+    await pool.query("SELECT setval('crm.order_number_seq',98,true)");
+    /** @param {string} key */
+    const create = (key) =>
+      api.inject({
+        method: 'POST',
+        url: '/api/v1/orders',
+        headers: { 'idempotency-key': key },
+        payload: { contactId },
+      });
+    for (const sequence of [99, 100, 101]) {
+      const key = `numbering-${sequence}`;
+      const result = await create(key);
+      assert.equal(result.statusCode, 201, result.body);
+      const order = result.json().order;
+      assert.equal(order.number, `${sequence}-CRM`);
+      assert.equal(order.conversationId, null);
+      assert.equal(order.seller.id, seller.id);
+      const replay = await create(key);
+      assert.equal(replay.statusCode, 201);
+      assert.equal(replay.json().order.id, order.id);
+    }
+    await pool.query("SELECT setval('crm.order_number_seq',998,true)");
+    const concurrent = await Promise.all([
+      create('numbering-999'),
+      create('numbering-1000'),
+    ]);
+    assert.deepEqual(
+      concurrent
+        .map((r) => {
+          assert.equal(r.statusCode, 201, r.body);
+          return r.json().order.number;
+        })
+        .sort(),
+      ['1000-CRM', '999-CRM'],
+    );
+    actor = { ...seller, functionName: 'Financeiro' };
+    assert.equal((await create('numbering-forbidden')).statusCode, 403);
   });
 
   defineOrderRepositoryContract('PostgreSQL', async () => ({

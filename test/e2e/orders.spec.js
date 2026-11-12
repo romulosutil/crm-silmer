@@ -218,7 +218,7 @@ test('opens the order page inside Pedidos, with the trail and the sections in or
     'Itens e especificações',
     'Arte do pedido',
     'Observações do pedido',
-    'Dados do atendimento',
+    /^Dados do atendimento/u,
   ]);
 
   const results = await new AxeBuilder({ page }).analyze();
@@ -691,12 +691,28 @@ test('reads the order summary with the customer as text and no repeated key fact
   await expect(summary).not.toContainText('Total de peças');
   await expect(summary).not.toContainText('peças');
   await expect(page.getByLabel('Fatos do pedido')).toContainText('150');
-  // Until Dados do atendimento shows them (PED-RD-T06), the summary keeps the
-  // seller, the order date and the FAB.
-  await expect(summary).toContainText('Marina Aguiar');
+  // PED-RD-05: the seller, the order date and the FAB live in the last
+  // chapter, not in the summary.
+  await expect(summary).not.toContainText('Marina Aguiar');
+  await expect(summary).not.toContainText('definida ao gerar');
+  const service = page.getByRole('region', { name: 'Dados do atendimento' });
+  await expect(
+    service.getByText('Não vai para a ficha impressa.'),
+  ).toBeVisible();
+  const serviceToggle = service.getByRole('button', {
+    name: /^Dados do atendimento/u,
+  });
+  await expect(serviceToggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(serviceToggle).toHaveAttribute(
+    'aria-controls',
+    'order-service-body',
+  );
+  await serviceToggle.click();
+  await expect(serviceToggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(service).toContainText('Marina Aguiar');
   // D14: the number exists from creation; only the date waits for the
   // confirmation.
-  await expect(summary).toContainText('definida ao gerar');
+  await expect(service).toContainText('definida ao gerar');
   await expect(summary.getByRole('button')).toHaveCount(0);
 });
 
@@ -1491,8 +1507,11 @@ test('shows real milestones in chronological order without the repeated dates su
     /10\/09\/2026\s*Quitação registrada\s*Sem detalhamento de recebimentos/u,
   ]);
   const summary = page.getByRole('region', { name: 'Resumo do pedido' });
-  await expect(summary).toContainText('Data do pedido');
+  await expect(summary).not.toContainText('Data do pedido');
   await expect(summary).toContainText('Previsão de entrega');
+  const service = page.getByRole('region', { name: 'Dados do atendimento' });
+  await service.getByRole('button', { name: /^Dados do atendimento/u }).click();
+  await expect(service).toContainText('Data do pedido');
   await expect(trail).not.toContainText('Pedido fechado');
   await expect(trail).not.toContainText('Previsão de entrega');
 
@@ -2116,8 +2135,11 @@ test('names the fields the way the PO asked (PIT-10)', async ({ page }) => {
     });
   });
   await page.reload();
-  await service.getByRole('button', { name: 'Ver' }).click();
+  await service.getByRole('button', { name: /^Dados do atendimento/u }).click();
   await expect(service.locator('dt')).toHaveText([
+    'Vendedor',
+    'Data do pedido',
+    'FAB',
     'Técnica informada',
     'Tamanhos informados',
   ]);
@@ -3647,7 +3669,10 @@ test('opens the section of the hash and of the next step, and never folds a sect
 
   // Going wide keeps every section open.
   await page.setViewportSize({ height: 800, width: 1280 });
-  await expect(page.locator('main h2 button')).toHaveCount(0);
+  // Only "Dados do atendimento" keeps its own disclosure (PED-RD-05).
+  await expect(page.locator('main h2 button')).toHaveText([
+    /^Dados do atendimento/u,
+  ]);
   await expect(summary).toContainText('20/11/2026');
   expect(writes).toHaveLength(1);
 });
@@ -3748,8 +3773,11 @@ test('keeps every section open and the heads plain on a wide screen (PFI-18)', a
 
   // No accordion: no head button, no aria-expanded on a heading, every
   // body on screen and no "Editar" left (EDIT-01, PED-RD-T05).
-  await expect(page.locator('main h2 button')).toHaveCount(0);
-  await expect(page.locator('main h2 [aria-expanded]')).toHaveCount(0);
+  // The last chapter alone has a disclosure button in its h2 (PED-RD-05).
+  await expect(page.locator('main h2 button')).toHaveText([
+    /^Dados do atendimento/u,
+  ]);
+  await expect(page.locator('main h2 [aria-expanded]')).toHaveCount(1);
   for (const body of [
     '#order-summary-body',
     '#order-milestones-body',
@@ -3765,11 +3793,11 @@ test('keeps every section open and the heads plain on a wide screen (PFI-18)', a
     'edit',
   );
   await expect(page.locator('main .op-sheet-state')).toHaveCount(5);
-  // "Dados do atendimento" keeps its own "Ver" on a wide screen.
+  // "Dados do atendimento" is collapsed by default on a wide screen.
   await expect(
     page
       .getByRole('region', { name: 'Dados do atendimento' })
-      .getByRole('button', { name: 'Ver' }),
+      .getByRole('button', { name: /^Dados do atendimento/u }),
   ).toHaveAttribute('aria-expanded', 'false');
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
@@ -3943,8 +3971,8 @@ test('leaves production to the printed ficha and shows service data as not print
   );
 
   const service = page.getByRole('region', { name: 'Dados do atendimento' });
-  await expect(service).toContainText('não saem na ficha impressa');
-  await service.getByRole('button', { name: 'Ver' }).click();
+  await expect(service).toContainText('Não vai para a ficha impressa.');
+  await service.getByRole('button', { name: /^Dados do atendimento/u }).click();
   await expect(service).toContainText('Arte');
   await expect(service).toContainText('Arte recebida do cliente');
   await expect(service).toContainText('Salvador/BA');
@@ -3978,7 +4006,7 @@ test('keeps the sections in the order of the printed ficha (PFI-01, PLA-01)', as
     'Itens e especificações',
     'Arte do pedido',
     'Observações do pedido',
-    'Dados do atendimento',
+    /^Dados do atendimento/u,
   ]);
 });
 

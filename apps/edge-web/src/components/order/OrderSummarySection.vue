@@ -1,10 +1,6 @@
 <script setup>
 import { computed, h, inject, nextTick, reactive, ref, watch } from 'vue';
-import {
-  fabLabel,
-  orderSteps,
-  quantityWarning,
-} from '../../lib/order-format.js';
+import { orderSteps, quantityWarning } from '../../lib/order-format.js';
 import { createSaveQueue } from '../../lib/order-items-inline.js';
 import OrderIcon from './OrderIcon.vue';
 import OrderSheetHead from './OrderSheetHead.vue';
@@ -339,25 +335,6 @@ watch(
       <p v-if="warning" class="op-quantity-warning">
         <OrderIcon name="alert" />{{ warning }}
       </p>
-
-      <!-- Moves to Dados do atendimento with PED-RD-T06; until that chapter
-           shows them, the summary keeps them (PED-RD-09 negative). -->
-      <dl class="op-summary-meta">
-        <div>
-          <dt>Vendedor</dt>
-          <dd>{{ order.seller?.name || 'sem vendedor' }}</dd>
-        </div>
-        <div>
-          <dt>Data do pedido</dt>
-          <dd class="op-num" :data-muted="!order.orderDate || undefined">
-            {{ dateBR(order.orderDate) || 'definida ao gerar' }}
-          </dd>
-        </div>
-        <div>
-          <dt>FAB</dt>
-          <dd>{{ fabLabel(order.fabCode) }}</dd>
-        </div>
-      </dl>
     </div>
   </section>
 </template>

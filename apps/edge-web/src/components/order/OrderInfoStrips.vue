@@ -1,5 +1,6 @@
 <script setup>
 import { computed, inject, ref } from 'vue';
+import { fabLabel } from '../../lib/order-format.js';
 import OrderIcon from './OrderIcon.vue';
 import OrderSheetHead from './OrderSheetHead.vue';
 
@@ -67,15 +68,24 @@ const serviceEntries = computed(() =>
 
 /*
  * PFI-08, PFI-18: on a phone this section is one more fold of the accordion,
- * so its head opens it like the others and the "Ver" disclosure steps aside;
- * on a wide screen it keeps "Ver" and "Ocultar".
+ * so its head opens it like the others and the chapter's own disclosure steps
+ * aside; on a wide screen the h2 holds that disclosure button (PED-RD-05).
  */
 const editing = inject('orderEditing', null);
 const accordion = computed(() => Boolean(editing?.isPhone?.value));
 const open = computed(() => editing?.isSectionOpen?.(SECTION) ?? true);
-const showEntries = computed(() =>
+// One mechanism per width: the accordion on a phone, this chapter's own
+// disclosure on a wide screen (PED-RD-05).
+const showBody = computed(() =>
   accordion.value ? open.value : serviceOpen.value,
 );
+
+/** The stored value is an ISO day; the operation reads dd/mm/yyyy. */
+/** @param {unknown} value */
+function dateBR(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(String(value ?? ''));
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : '';
+}
 const headState = computed(() => {
   const count = serviceEntries.value.length;
   if (count === 0) return 'Sem dados · não sai na ficha';
@@ -93,33 +103,45 @@ const headState = computed(() => {
       :section="SECTION"
       body-id="order-service-body"
     />
-    <div v-else class="op-sheet-head">
-      <h2 id="order-service-title">Dados do atendimento</h2>
-      <span class="op-quiet-tag">não sai na ficha</span>
-      <button
-        type="button"
-        class="op-edit op-disclosure"
-        aria-controls="order-service-body"
-        :aria-expanded="serviceOpen"
-        @click="serviceOpen = !serviceOpen"
-      >
-        {{ serviceOpen ? 'Ocultar' : 'Ver' }}
-        <OrderIcon name="chevron" />
-      </button>
+    <div v-else class="op-sheet-head op-service-head">
+      <h2>
+        <button
+          type="button"
+          class="op-disclosure op-sheet-toggle"
+          aria-controls="order-service-body"
+          :aria-expanded="serviceOpen"
+          @click="serviceOpen = !serviceOpen"
+        >
+          <span class="op-sheet-toggle-text">
+            <span id="order-service-title">Dados do atendimento</span>
+            <span class="op-hint">Não vai para a ficha impressa.</span>
+          </span>
+          <OrderIcon name="chevron" />
+        </button>
+      </h2>
     </div>
-    <div id="order-service-body" class="op-sheet-body" :hidden="!open">
-      <p class="op-hint">
-        Arte, locais, logística, finalidade e perfil de compra, e o que o
-        cliente disse sem virar campo do pedido — ficam no CRM e não saem na
-        ficha impressa.
-      </p>
-      <dl v-if="showEntries && serviceEntries.length" class="op-service">
+    <div id="order-service-body" class="op-sheet-body" :hidden="!showBody">
+      <dl v-if="showBody" class="op-service op-attendance">
+        <div>
+          <dt>Vendedor</dt>
+          <dd>{{ order.seller?.name || 'sem vendedor' }}</dd>
+        </div>
+        <div>
+          <dt>Data do pedido</dt>
+          <dd class="op-num" :data-muted="!order.orderDate || undefined">
+            {{ dateBR(order.orderDate) || 'definida ao gerar' }}
+          </dd>
+        </div>
+        <div>
+          <dt>FAB</dt>
+          <dd>{{ fabLabel(order.fabCode) }}</dd>
+        </div>
         <div v-for="entry in serviceEntries" :key="entry.key">
           <dt>{{ entry.label }}</dt>
           <dd>{{ entry.value }}</dd>
         </div>
       </dl>
-      <p v-else-if="showEntries" class="op-empty">
+      <p v-if="showBody && !serviceEntries.length" class="op-empty">
         A conversa ainda não trouxe dados de atendimento.
       </p>
     </div>

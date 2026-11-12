@@ -213,6 +213,47 @@ export class PostgresOrderConversationPort {
     );
   }
 
+  /**
+   * Read-only display lookup: each contact id mapped to the contact that
+   * survives its merges. It follows the ACTIVE identity links (source to
+   * target, immutable history) one hop per step, taking the latest link when a
+   * contact has several, with a depth cap and a visited-path guard against
+   * cycles. Nothing is written, so an unmerge (link no longer active) resolves
+   * the id back to itself. Writes and authorization keep using the stored
+   * `orders.contact_id`.
+   *
+   * @param {string[]} contactIds
+   * @returns {Promise<Map<string, string>>}
+   */
+  async readCurrentContactIds(contactIds) {
+    if (contactIds.length === 0) return new Map();
+    const result = await this.#database.query(
+      `WITH RECURSIVE walk(start_id, contact_id, depth, path) AS (
+         SELECT id, id, 0, ARRAY[id]::text[]
+         FROM unnest($1::text[]) AS id
+         UNION ALL
+         SELECT walk.start_id, hop.target_contact_id, walk.depth + 1,
+                walk.path || hop.target_contact_id
+         FROM walk
+         CROSS JOIN LATERAL (
+           SELECT link.target_contact_id
+           FROM crm.identity_links AS link
+           WHERE link.status = 'active'
+             AND link.source_contact_id = walk.contact_id
+           ORDER BY link.merged_at DESC, link.id DESC
+           LIMIT 1
+         ) AS hop
+         WHERE walk.depth < 8
+           AND NOT hop.target_contact_id = ANY(walk.path)
+       )
+       SELECT DISTINCT ON (start_id) start_id, contact_id
+       FROM walk
+       ORDER BY start_id, depth DESC`,
+      [contactIds],
+    );
+    return new Map(result.rows.map((row) => [row.start_id, row.contact_id]));
+  }
+
   /** Current operator-entered names of contacts used by manual orders. */
   /** @param {string[]} contactIds */
   async readContactNames(contactIds) {

@@ -40,6 +40,7 @@ import { createFreightQuoteReader } from './shipping-runtime.js';
  *   readLatestMessageStates(conversationIds: string[]): Promise<Map<string, {direction: string, occurredAt: string, sentAt: string|null, deliveryStatus: string|null, status: string}>>,
  *   readOrderContexts(conversationIds: string[]): Promise<Map<string, any>>,
  *   readContactNames?(contactIds: string[]): Promise<Map<string, string|null>>,
+ *   readCurrentContactIds?(contactIds: string[]): Promise<Map<string, string>>,
  *   readUserNames(userIds: string[]): Promise<Map<string, string|null>>,
  *   searchConversationIds(query: string): Promise<string[]>,
  *   searchContactIds?(query: string): Promise<string[]>,
@@ -250,6 +251,20 @@ export function createOrderRuntime(options) {
       }
     }
     const names = await conversations.readUserNames([...people]);
+    // PED-RD-09: a merged contact's orders keep the stored contact_id; only the
+    // payload shows the surviving contact so "Ver cadastro" opens the full
+    // record. Display only: commands and ACL read the stored column.
+    const storedContactIds = [
+      ...new Set(
+        orders
+          .map((order) => order.contactId)
+          .filter((id) => typeof id === 'string'),
+      ),
+    ];
+    const currentContactIds =
+      storedContactIds.length && conversations.readCurrentContactIds
+        ? await conversations.readCurrentContactIds(storedContactIds)
+        : new Map();
     /** @param {string|null|undefined} id */
     const person = (id) => {
       if (!id) return null;
@@ -267,7 +282,8 @@ export function createOrderRuntime(options) {
       confirmedAt: order.confirmedAt,
       confirmedBy: person(order.confirmedBy),
       conversationId: order.conversationId,
-      contactId: order.contactId ?? null,
+      contactId:
+        currentContactIds.get(order.contactId) ?? order.contactId ?? null,
       createdAt: order.createdAt,
       deliveredOn: order.deliveredOn,
       fabCode: order.fabCode,

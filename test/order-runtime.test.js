@@ -25,7 +25,8 @@ const ADMIN = Object.freeze({
   id: 'admin-1',
 });
 
-function harness() {
+/** @param {{merged?: Record<string, string>}} [options] */
+function harness(options = {}) {
   /** @type {Record<string, string|null>} */
   const assignments = {
     'conversation-1': 'seller-1',
@@ -68,6 +69,8 @@ function harness() {
             .filter((id) => id === 'contact-1')
             .map((id) => [id, 'Cliente Sintético']),
         ),
+      readCurrentContactIds: async (/** @type {string[]} */ ids) =>
+        new Map(ids.map((id) => [id, options.merged?.[id] ?? id])),
       readUserNames: async (/** @type {string[]} */ ids) =>
         new Map(ids.map((id) => [id, `Nome ${id}`])),
       searchConversationIds: async () => [],
@@ -108,6 +111,29 @@ test('a seller creates a manual contact order and its owner may edit it', async 
     }),
   );
   assert.equal(edited.ficha.summary.nome, 'Evento');
+});
+
+test('the order payload shows the surviving contact while the stored one is kept', async () => {
+  const merged = { 'contact-1': 'contact-survivor' };
+  const { runtime, repository } = harness({ merged });
+  const created = await runtime.createForContact(
+    command(OWNER, { contactId: 'contact-1' }),
+  );
+  assert.equal(created.contactId, 'contact-survivor');
+  assert.equal(
+    (await runtime.get(created.id)).order.contactId,
+    'contact-survivor',
+  );
+  assert.equal(
+    (await runtime.list({})).items.find(
+      (/** @type {any} */ item) => item.id === created.id,
+    )?.contactId,
+    'contact-survivor',
+  );
+  // Read-only: the stored order and its ACL input are untouched.
+  assert.equal((await repository.findById(created.id))?.contactId, 'contact-1');
+  delete (/** @type {any} */ (merged)['contact-1']);
+  assert.equal((await runtime.get(created.id)).order.contactId, 'contact-1');
 });
 
 let commandSequence = 0;

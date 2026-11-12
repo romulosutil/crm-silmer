@@ -3047,4 +3047,153 @@ if (connectionString) {
       totalCents: null,
     });
   });
+
+  test('PED-RD-09: the order payload resolves a merged contact on read, follows chains and unmerge', async () => {
+    const runId = randomUUID().replaceAll('-', '');
+    const database = databaseFor(pool);
+    const { contacts } = channelServices(pool);
+    const actor = { capabilities: [], id: 'seller-contract', kind: 'human' };
+    const operator = { functionName: 'Vendedor', id: actor.id, kind: 'human' };
+    /** @param {string} conversationId */
+    const identityOf = async (conversationId) =>
+      (
+        await pool.query(
+          `SELECT identity.id, identity.version, identity.current_contact_id
+           FROM crm.conversations conversation
+           JOIN crm.contact_identities identity
+             ON identity.id = conversation.contact_identity_id
+           WHERE conversation.id = $1`,
+          [conversationId],
+        )
+      ).rows[0];
+    const idX = await identityOf(await seedConversation(pool));
+    const idY = await identityOf(await seedConversation(pool));
+    const idZ = await identityOf(await seedConversation(pool));
+    const [x, y, z] = [idX, idY, idZ].map((row) => row.current_contact_id);
+    const service = createOrderService({
+      authorizeOwnership: async () => undefined,
+      authorizeManualOwnership: async () => undefined,
+      clock: () => NOW,
+      conversations: {
+        readOrderContexts: async () => new Map(),
+        readContactNames: async () => new Map([[x, 'Cliente Sintético']]),
+        searchConversationIds: async () => [],
+      },
+      fabCode: '01',
+      repository,
+    });
+    const created = await service.createForContact({
+      actor,
+      contactId: x,
+      correlationId: `correlation-ped-rd-${runId}`,
+      idempotencyKey: randomUUID(),
+    });
+    const runtime = createOrderRuntime({
+      access: {
+        authorizeRead: async () => ({ actor }),
+        authorizeWrite: async () => ({ actor }),
+      },
+      auditTrail: new PostgresAuditTrail(database),
+      conversations: new PostgresOrderConversationPort({
+        contactEnvelopeKey: CONTACT_KEY,
+        contactLookupKey: Buffer.alloc(32, 66),
+        database,
+        envelopeKey: ENVELOPE_KEY,
+      }),
+      fabCode: '01',
+      idempotencyStore: new PostgresIdempotencyRecordStore({
+        database,
+        envelopeKey: Buffer.alloc(32, 66),
+      }),
+      repository,
+    });
+    const shownIds = async () => ({
+      detail: (await runtime.get(created.id)).order.contactId,
+      listed: (await runtime.list({ limit: 100 })).items.find(
+        (/** @type {any} */ item) => item.id === created.id,
+      )?.contactId,
+    });
+    const stored = async () =>
+      (
+        await pool.query('SELECT contact_id FROM crm.orders WHERE id = $1', [
+          created.id,
+        ])
+      ).rows[0].contact_id;
+    /** @param {any} identity @param {string} target @param {string} key */
+    const merge = async (identity, target, key) =>
+      contacts.mergeIdentity({
+        actor: operator,
+        correlationId: `correlation-${key}-${runId}`,
+        expectedVersion: Number(
+          (await identityOf(await conversationOf(identity.id))).version,
+        ),
+        idempotencyKey: `${key}-${runId}`,
+        identityId: identity.id,
+        reason: 'Vínculo sintético confirmado por operador',
+        targetContactId: target,
+      });
+    /** @param {string} identityId */
+    const conversationOf = async (identityId) =>
+      (
+        await pool.query(
+          'SELECT id FROM crm.conversations WHERE contact_identity_id = $1',
+          [identityId],
+        )
+      ).rows[0].id;
+
+    assert.deepEqual(await shownIds(), { detail: x, listed: x });
+
+    const xToY = await merge(idX, y, 'merge-xy');
+    assert.deepEqual(await shownIds(), { detail: y, listed: y });
+    assert.equal(await stored(), x, 'the stored contact_id is never written');
+
+    await merge(idY, z, 'merge-yz');
+    assert.deepEqual(await shownIds(), { detail: z, listed: z });
+    assert.equal(await stored(), x);
+
+    const unmergedXY = await contacts.unmergeIdentity({
+      actor: operator,
+      correlationId: `correlation-unmerge-${runId}`,
+      expectedVersion: Number(
+        (await identityOf(await conversationOf(idX.id))).version,
+      ),
+      idempotencyKey: `unmerge-${runId}`,
+      linkId: xToY.link.id,
+      reason: 'Vínculo sintético revertido por operador',
+    });
+    assert.equal(unmergedXY.link.status, 'reverted');
+    // X's link is gone; Y still resolves to Z, X resolves back to itself.
+    assert.deepEqual(await shownIds(), { detail: x, listed: x });
+    assert.equal(await stored(), x);
+
+    // A cycle (Z back to Y on another identity) is cut, not looped.
+    await pool.query(
+      `INSERT INTO crm.identity_links
+         (id, contact_identity_id, source_contact_id, target_contact_id,
+          status, merged_by, merge_reason, merge_correlation_id,
+          merge_idempotency_key, merge_fingerprint, merged_at)
+       VALUES ($1, $2, $3, $4, 'active', 'seller-contract', 'ciclo sintético',
+               $5, $6, $7, $8)`,
+      [
+        randomUUID(),
+        idZ.id,
+        z,
+        y,
+        `correlation-cycle-${runId}`,
+        `cycle-${runId}`,
+        'f'.repeat(64),
+        NOW,
+      ],
+    );
+    const port = new PostgresOrderConversationPort({
+      contactEnvelopeKey: CONTACT_KEY,
+      contactLookupKey: Buffer.alloc(32, 66),
+      database,
+      envelopeKey: ENVELOPE_KEY,
+    });
+    assert.deepEqual(
+      Object.fromEntries(await port.readCurrentContactIds([y, z, x])),
+      { [y]: z, [z]: y, [x]: x },
+    );
+  });
 }

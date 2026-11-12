@@ -1555,10 +1555,13 @@ por espaço, não por caixa. Valores só da escala de 4 px.
 
 ### Pendências (dependem do PO)
 
-- **Orçamento de ações (§16):** os botões de remover tamanho, um por linha,
-  mantêm a primeira tela do pedido acima da meta. A contagem a 390×844 e
-  1366×768 é medida na tarefa PED-RD-T10; até lá, a meta é meta, não medição
-  (§19).
+- **Orçamento de ações (§16), resolvido por medição em 12/11/2026:** a meta
+  conta a primeira tela. O pendente tem 3 ações a 390×844 (Abrir conversa,
+  Resumo do pedido, Gerar pedido) e 3 a 1366×768 (Abrir conversa, Gerar PDF,
+  Gerar pedido), contra 12 e 16; `test/e2e/ux-budget.spec.js`
+  (`pedidoPrimeiraTela`) trava o limite. As 19 ações a 1366 px são a página
+  inteira, 10 delas em "Itens e especificações" (EDIT-01), e não entram
+  nessa meta.
 - **Frete no total:** depende de OLC-T01 (ADR 080).
 - **Gerar no Olist:** depende de OLC-T03 e OLC-T04 (ADR 079); o texto final dos
   estados fica para o PO.

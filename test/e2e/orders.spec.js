@@ -225,6 +225,51 @@ test('opens the order page inside Pedidos, with the trail and the sections in or
   expect(results.violations).toEqual([]);
 });
 
+test('shows the freight estimate as a chapter of the ficha (PED-RD-01, PED-RD-13)', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.route('**/api/v1/orders/*/shipping-quote', (route) =>
+    route.fulfill({
+      json: {
+        quote: {
+          id: 'quote-1',
+          orderId: 'order-pendente',
+          services: [
+            {
+              id: 1,
+              name: 'PAC',
+              company: 'Correios',
+              priceCents: 2350,
+              deliveryDays: 5,
+            },
+          ],
+          selectedServiceId: 1,
+          createdAt: '2026-11-10T15:00:00.000Z',
+          createdBy: { id: 'seller-marina', name: 'Marina Aguiar' },
+          totalPieces: 150,
+          stale: false,
+        },
+      },
+    }),
+  );
+  await page.goto('/pedidos/order-pendente');
+
+  // A chapter named by its own h2, a direct child of the ficha.
+  const chapter = page.locator('.op-ficha > section.op-sheet', {
+    has: page.getByRole('heading', { level: 2, name: 'Frete estimado' }),
+  });
+  await expect(chapter).toHaveCount(1);
+  await expect(chapter).toHaveAccessibleName('Frete estimado');
+  await expect(chapter).toContainText('Correios · PAC');
+  await expect(
+    page.getByRole('heading', { level: 3, name: 'Frete estimado' }),
+  ).toHaveCount(0);
+
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations).toEqual([]);
+});
+
 test('keeps the trail without an origin when the list opened the order', async ({
   page,
 }) => {

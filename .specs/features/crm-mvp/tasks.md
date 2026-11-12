@@ -597,6 +597,21 @@ incluindo parcelamento pela InfinitePay no pagamento integral.
 Análise concluída e sucedida por COB-DEL-01 acima. Ativação real permanece
 no gate COB-OPS-01.
 
+## OPS-INBOX-SEND-10 — Prazo integral da confirmação HTTP (12/11/2026)
+
+MSG-02/03, ORC-08 e PRV-01. Investigação de envio incerto encontrou uma
+lacuna independente: o cliente cancelava o timer ao receber os cabeçalhos,
+antes de ler a confirmação. Um corpo parcial podia prender a tentativa.
+
+- [x] Reproduzir em teste vermelho a confirmação que ultrapassa o prazo.
+- [x] Manter o prazo original durante leitura/validação da confirmação.
+- [x] Cobrir HTTP 200/202 com corpo aberto, confirmação tardia e integração
+      cliente/worker sem nova chamada ou conclusão fictícia de envio.
+- [ ] Publicar após os gates e validar release/saúde em produção.
+
+Evidência e limites em [inbox-delivery-feedback](../../../docs/runbooks/inbox-delivery-feedback.md#prazo-da-confirmação-http--12112026).
+A correção não prova o resultado de comandos históricos e não os reexecuta.
+
 ## OPS-INBOX-SEND-09 — Mídia reservada após timeout HTTP (05/11/2026)
 
 MSG-02/03, ORC-08, PRV-01 e OPS-ERR-03/06/08/10. Os dois alertas de

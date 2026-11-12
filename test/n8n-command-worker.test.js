@@ -3,8 +3,11 @@ import test from 'node:test';
 
 import {
   createN8nCommandJobHandler,
+  createN8nCommandDeliveryClient,
+  canonicalJsonStringify,
   N8nCommandDeliveryError,
   reconcileN8nCommandOutcome,
+  sha256Hex,
 } from '../modules/integration-reliability/src/index.js';
 
 const COMMAND_ID = 'e8c63771-08dd-42c4-9053-ab3c82fd7377';
@@ -171,6 +174,59 @@ test('timeout after the point of no return becomes outcome_unknown', async () =>
     store.calls.map((call) => call[0]),
     ['load', 'processing', 'unknown'],
   );
+});
+
+test('partial HTTP acknowledgement settles the command as unknown without resending', async () => {
+  const store = storeFixture();
+  const payload = { action: 'send_message', command_id: COMMAND_ID };
+  const payloadHash = sha256Hex(canonicalJsonStringify(payload));
+  store.loadForDelivery = async (commandId, context) => {
+    store.calls.push(['load', commandId, context]);
+    return { commandId, payload, payloadHash };
+  };
+  let calls = 0;
+  const client = createN8nCommandDeliveryClient({
+    clientId: 'synthetic-local',
+    clientSecret: 'synthetic-secret',
+    endpoint: 'https://n8n.example.test/webhook/silmer/panel-command',
+    timeoutMs: 10,
+    fetchImpl: async (_url, init) => {
+      calls += 1;
+      return {
+        status: 202,
+        json: () =>
+          new Promise((_resolve, reject) => {
+            init.signal?.addEventListener(
+              'abort',
+              () =>
+                reject(
+                  Object.assign(new Error('private-remote-data'), {
+                    name: 'AbortError',
+                  }),
+                ),
+              { once: true },
+            );
+          }),
+      };
+    },
+  });
+  const handler = createN8nCommandJobHandler({ client, commandStore: store });
+  assert.deepEqual(
+    await handler(job(), { markEffectStarted: async () => true }),
+    {
+      errorCode: 'N8N_COMMAND_TIMEOUT',
+      outcome: 'outcome_unknown',
+      retryable: false,
+      retrySafe: false,
+    },
+  );
+  assert.equal(calls, 1);
+  assert.deepEqual(
+    store.calls.map((call) => call[0]),
+    ['load', 'processing', 'unknown'],
+  );
+  assert.equal(store.calls.at(-1)[2].errorCode, 'N8N_COMMAND_TIMEOUT');
+  assert.doesNotMatch(JSON.stringify(store.calls), /private-remote-data/);
 });
 
 test('remote reservation proof permits replay with the same command', async () => {

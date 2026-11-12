@@ -1,5 +1,13 @@
 # Architecture Decision Records
 
+## Decisão de 12/11/2026
+
+- [086 — Pedido refinado](086-pedido-refinado.md), PED-RD-01–16 /
+  `design.md` §22: ficha numa folha na ordem impressa (Resumo, Datas, Itens,
+  Arte, Observações, Dados do atendimento), rail de Fechamento e pagamento
+  primeiro no DOM, fatos-chave só no cabeçalho, edição no lugar em todas as
+  seções da ficha e componentes que refluem por container.
+
 ## Decisão de 11/11/2026
 
 - [085 — Recuperação de leads por modo de atendimento](085-recuperacao-de-leads-por-modo-de-atendimento.md),

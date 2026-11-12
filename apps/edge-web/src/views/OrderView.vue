@@ -11,6 +11,7 @@ import {
 } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import OrderCancelAction from '../components/order/OrderCancelAction.vue';
+import OrderMoreActions from '../components/order/OrderMoreActions.vue';
 import OrderOlistPanel from '../components/order/OrderOlistPanel.vue';
 import OrderPriceBreakdown from '../components/order/OrderPriceBreakdown.vue';
 import OrderBillingSummary from '../components/order/OrderBillingSummary.vue';
@@ -83,6 +84,8 @@ const notFound = ref(false);
 const error = ref('');
 const pdfError = ref('');
 const pdfBusy = ref(false);
+/** @type {import('vue').Ref<{open: (opener: EventTarget|null) => void}|null>} */
+const cancelAction = ref(null);
 const shareAvailable = canSharePdf();
 // PFI-06: one section in edit at a time, decided here so two open forms can
 // never disagree about the version they are saving over.
@@ -963,15 +966,15 @@ onBeforeUnmount(() => {
               pdfBusy ? 'Gerando PDF…' : 'Gerar PDF'
             }}
           </button>
-          <button
-            v-if="shareAvailable && !isPending"
-            type="button"
-            class="op-print"
-            :disabled="pdfBusy"
-            @click="generatePdf(true)"
-          >
-            Compartilhar PDF
-          </button>
+          <OrderMoreActions
+            :can-cancel="canCancel"
+            :cancel-disabled="editingSection !== ''"
+            cancel-hint="Salve ou cancele a seção em edição antes de cancelar o pedido."
+            :can-share="shareAvailable && !isPending && !isPhone"
+            :share-disabled="pdfBusy"
+            @cancel="cancelAction?.open($event)"
+            @share="generatePdf(true)"
+          />
         </div>
       </header>
 
@@ -1074,6 +1077,7 @@ onBeforeUnmount(() => {
         @operation="olistOperation = $event"
       />
       <OrderCancelAction
+        ref="cancelAction"
         :order="order"
         :can-cancel="canCancel"
         :disabled="editingSection !== ''"

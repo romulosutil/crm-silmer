@@ -1887,7 +1887,10 @@ test('T13 cancelling the order on its page removes the preview, the conference a
   });
   await expect(controls).toHaveCount(2);
   await page
-    .getByRole('button', { name: 'Cancelar pedido', exact: true })
+    .getByRole('button', { name: 'Mais ações do pedido', exact: true })
+    .click();
+  await page
+    .getByRole('menuitem', { name: 'Cancelar pedido', exact: true })
     .click();
   const dialog = page.getByRole('dialog', {
     name: 'Cancelar o pedido 41-CRM?',

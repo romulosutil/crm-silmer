@@ -248,7 +248,9 @@ test('T12 Financeiro searches another owner and opens a restricted deep link by 
     page.getByRole('link', { name: 'Caixa de Entrada', exact: true }),
   ).toHaveCount(0);
   await expect(
-    page.getByRole('button', { name: /Editar|Reabrir|Cancelar pedido/u }),
+    page.getByRole('button', {
+      name: /Editar|Reabrir|Cancelar pedido|Mais ações do pedido/u,
+    }),
   ).toHaveCount(0);
   expectNoEffectsOrGeneralRead(state);
 });
@@ -398,7 +400,9 @@ for (const [label, status, issue] of [
       page.getByRole('button', { name: 'Enviar para Olist', exact: true }),
     ).toHaveCount(0);
     await expect(
-      page.getByRole('button', { name: /Editar|Reabrir|Cancelar pedido/u }),
+      page.getByRole('button', {
+        name: /Editar|Reabrir|Cancelar pedido|Mais ações do pedido/u,
+      }),
     ).toHaveCount(0);
     await expect(
       page.getByRole('textbox', { name: /Subtotal|Valor final/u }),

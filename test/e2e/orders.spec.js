@@ -536,10 +536,75 @@ test('shows the order read-only to whoever does not own the conversation (PAU-01
   await expect(
     page.getByRole('button', { name: 'Reabrir pedido' }),
   ).toHaveCount(0);
+  // PED-RD-02: nothing is allowed, so there is no "Mais ações do pedido" either.
+  await expect(
+    page.getByRole('button', { name: 'Mais ações do pedido' }),
+  ).toHaveCount(0);
   // PFI-15: no progress to generate for whoever cannot generate.
   await expect(
     page.getByRole('region', { name: 'Para gerar o pedido' }),
   ).toHaveCount(0);
+});
+
+test('PED-RD-02: "Mais ações do pedido" holds Cancelar pedido; there is no cancel block at the end of the page', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-pendente');
+
+  const more = page.getByRole('button', { name: 'Mais ações do pedido' });
+  const menu = page.getByRole('menu', { name: 'Mais ações do pedido' });
+  const item = page.getByRole('menuitem', { name: 'Cancelar pedido' });
+  const dialog = page.getByRole('dialog', { name: /^Cancelar o pedido/u });
+
+  // No cancel block at the end of the page, nor a bottom "Cancelar pedido".
+  await expect(page.locator('.op-cancel-action')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Cancelar pedido', exact: true }),
+  ).toHaveCount(0);
+  await expect(more).toHaveAttribute('aria-haspopup', 'menu');
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  expect((await more.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  await expect(more).not.toHaveClass(/primary/u);
+
+  // Keyboard: Enter and Space open it and land on the first item.
+  await more.focus();
+  await page.keyboard.press('Enter');
+  await expect(menu).toBeVisible();
+  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  await expect(more).toHaveAttribute('aria-controls', 'order-more-menu');
+  await expect(item).toBeFocused();
+  await expect(async () => {
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations).toEqual([]);
+  }).toPass();
+
+  // Esc closes and returns the focus to the button.
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await expect(more).toBeFocused();
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await page.keyboard.press('Space');
+  await expect(menu).toBeVisible();
+  await expect(item).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(more).toBeFocused();
+
+  // A click outside closes it.
+  await more.click();
+  await expect(menu).toBeVisible();
+  await page.getByRole('heading', { level: 1 }).click();
+  await expect(menu).toHaveCount(0);
+
+  // The item opens the existing dialog; closing it returns to the button.
+  await more.click();
+  await item.click();
+  await expect(menu).toHaveCount(0);
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel('Motivo do cancelamento')).toBeFocused();
+  await dialog.getByRole('button', { name: 'Voltar' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(more).toBeFocused();
 });
 
 test('shows no progress to generate on a confirmed order or a store order (PFI-15, LOJ-34)', async ({

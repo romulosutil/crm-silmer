@@ -93,7 +93,11 @@ quebrado.
 - [x] Resumo com Cliente (texto), Nome do pedido e Previsão de entrega em
       `Field` em linha, lado a lado a partir de 40rem, em edição no lugar.
 - [x] Link "Ver cadastro" ao lado do Cliente. Entregue (PED-RD-09): o payload
-      do pedido traz `contactId` e o link abre `/clientes/:contactId`.
+      do pedido traz `contactId` e o link abre `/clientes/:contactId`. Com
+      contato fundido, o `contactId` do payload é o contato sobrevivente,
+      resolvido na leitura pelos `identity_links` ativos (decisão do PO de
+      12/11/2026). O `orders.contact_id` gravado não muda, e comandos e ACL
+      continuam lendo a coluna.
 - [x] Remover "Editar resumo", "Salvar resumo" e Cancelar; `SaveStatus` no
       cabeçalho; vendedor, data e FAB para Dados do atendimento.
 - [x] Migrar os testes que usam "Editar resumo" e "Salvar resumo".

@@ -7151,8 +7151,11 @@ components:
           type: [string, 'null']
           format: uuid
           description: >-
-            Cadastro do cliente (`/contacts/{contactId}`); nulo quando o pedido
-            não tem cliente vinculado.
+            Cadastro atual do cliente (`/contacts/{contactId}`): se o contato do
+            pedido foi mesclado, é o contato que sobreviveu (vínculos de
+            identidade ativos, resolvido na leitura; o desfazer da mesclagem
+            devolve o contato original). Nulo quando o pedido não tem cliente
+            vinculado.
         origin: { $ref: '#/components/schemas/OrderOrigin' }
         isTest:
           type: boolean

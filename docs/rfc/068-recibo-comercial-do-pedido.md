@@ -12,9 +12,29 @@ afetadas e à síntese técnica. Sem issue específica; PR vinculada no handoff.
 ## Objetivo e fluxo
 
 Adicionar um único botão **Recibo do pedido** no cabeçalho do detalhe, sem
-seção adicional de documentos ou outro ponto de entrada. O vendedor abre a prévia,
+seção adicional de documentos no detalhe. O vendedor abre a prévia,
 confere os dados salvos e escolhe **Baixar PDF**. Pode repetir o download sem
 confirmar novamente, alterar o pedido ou produzir efeitos na integração.
+
+No cabeçalho completo, preservar **Abrir conversa**, **Gerar PDF** da ficha de
+produção e **Mais ações (⋯)**. O novo **Recibo do pedido** é uma ação secundária,
+entre Abrir conversa e Gerar PDF; a ficha conserva o destaque e seu bloqueio
+para pendentes. Compartilhar PDF e Cancelar pedido continuam no menu conforme
+as regras e permissões vigentes. No celular, as ações quebram em duas linhas,
+sem esconder o recibo em outro menu ou duplicar a entrada.
+
+Revisão do solicitante: na **lista de pedidos**, incluir um botão **Recibo**
+imediatamente após **Gerar PDF** e antes de **Abrir pedido**, na linha de cada
+pedido autorizado. O acesso abre a mesma prévia diretamente; voltar preserva
+a lista, os filtros e o foco no Recibo daquela linha. No detalhe, permanece
+somente a ação do cabeçalho, sem seção de documentos. Em pendentes, onde a
+lista atual não oferece Gerar PDF, a proposta é Recibo ao lado de Abrir pedido.
+
+**RCP-12:** WHEN a lista exibe um pedido autorizado THEN SHALL oferecer
+**Recibo** após Gerar PDF, quando existir, e antes de Abrir pedido; ao voltar
+da prévia, SHALL preservar filtro, posição e foco da linha de origem.
+RCP-T03 inclui também `apps/edge-web/src/views/OrdersView.vue` e E2E da lista
+até o download/retorno. RCP-01 continua descrevendo a entrada no detalhe.
 
 O recibo apresenta um resumo comercial para o cliente. A referência visual
 orienta a organização: marca e número no cabeçalho, cliente, quantidade,

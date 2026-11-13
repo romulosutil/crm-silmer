@@ -1,8 +1,8 @@
 # WhatsApp por vendedor — plano em duas etapas
 
 [RFC 067](../../../docs/rfc/067-whatsapp-por-vendedor-e-meus-clientes.md),
-[WAP-01–19 propostos](spec.md). Uma tarefa, entrega atômica, commit e push.
-WAP-T00 e seu complemento WAP-T00a são documentais e autorizados. As tarefas
+[WAP-01–24 propostos](spec.md). Uma tarefa, entrega atômica, commit e push.
+WAP-T00 e seus complementos WAP-T00a/b são documentais e autorizados. As tarefas
 seguintes são planejamento; implementação/ativação dependem da decisão da RFC.
 
 ## WAP-T00 — RFC, requisitos e plano
@@ -27,9 +27,33 @@ documental; não há novo endpoint, migração, workflow ou pareamento nesta ent
 - [x] Alinhar tarefas e referências; verificar documentação e publicar o
       complemento em commit/push na PR 372 da RFC, sem alterar runtime.
 
+## WAP-T00b — revisar Cliente oficial, vínculo e primeira mensagem
+
+- [x] Conferir Contact, cadastro manual, colisão de telefone, identidade por
+      conta e envio atual que exige conversa; preservar ADR 033 e regra 2.
+- [x] Explicitar quando o Cliente aparece, vínculo antes de parear, reutilização
+      do contactId e limites de compartilhamento; WAP-20–24 e cenários negativos.
+- [x] Propor primeiro envio humano na etapa 1 sem inbound fictícia, separado de
+      salvar/vincular; acrescentar D5 e impacto transacional em WAP-T01/02/04/05.
+- [x] Validar documentação, revisar consistência, commit/push e PR de revisão.
+
+Protótipo conceitual da conversa usa dados simulados; não é implementação,
+prova do provedor ou mudança no CRM local. Regras propostas continuam sujeitas
+ao aceite da RFC e ADR; esta tarefa não muda RULES ou runtime.
+
+Evidência WAP-T00b: formatação dos quatro documentos focalizados e 213
+referências locais nos cinco arquivos verificadas; 24 IDs de requisito únicos;
+`git diff --check` sem falhas. Revisão independente confirmou Contact/vínculos,
+identidade, colisões e envio humano; corrigiu a contradição do onboarding para
+permitir cadastro antes de parear e aprovou o delta final. Sem testes de runtime
+para esta entrega documental. A prévia simulada foi conferida em 320 px e no
+desktop: cadastro sem pareamento, vínculo/replay sem cópia, duplicata com
+conferência, primeiro envio por Enter sem inbound no mesmo Cliente, cobrança
+separada e bloqueio de envio offline; zero erro JavaScript. Não é prova live.
+
 ## Antes da implementação — decisão de produto
 
-- [ ] Resolver D1–D4 na RFC, criar ADR vinculado e alinhar somente os trechos
+- [ ] Resolver D1–D5 na RFC, criar ADR vinculado e alinhar somente os trechos
       necessários em RULES, spec/PRD e ARCHITECTURE/TECHNICAL-DESIGN.
 - [ ] Confirmar imagem Evolution, privacidade de QR/códigos e contrato n8n de
       controle sem armazenamento de segredos temporários; provar o caminho mobile.
@@ -38,10 +62,13 @@ documental; não há novo endpoint, migração, workflow ou pareamento nesta ent
 
 ### WAP-T01 — linha e controle de conexão
 
-WAP-02–05, 10–12. Backend/Dados, Integrações e QA/Privacidade.
+WAP-02–05, 10–12, 20–24. Backend/Dados, Integrações e QA/Privacidade.
 
 - [ ] Fechar API/capacidades humanas e técnicas, estados/gerações, constraints,
       ledger, segredo efêmero e contrato de orquestração n8n sem inbound fictícia.
+- [ ] Fechar contratos de Cliente/vínculo durável e primeiro envio propostos
+      na RFC: versões, elegibilidade, conflitos privados e estados incertos;
+      separar vínculo de carteira da geração da linha e identidade de canal.
 - [ ] Implementar migração expand e comandos de conectar/estado/QR/desconectar,
       conciliando timeout antes de novo efeito. Sem cadastro manual por vendedor.
 - [ ] Testar concorrência entre usuários/abas, número indevido/duplicado,
@@ -50,7 +77,7 @@ WAP-02–05, 10–12. Backend/Dados, Integrações e QA/Privacidade.
 
 ### WAP-T02 — roteamento, carteira e autorização
 
-WAP-04–08, 10–12, 17–19. Backend/Dados, Integrações e QA.
+WAP-04–08, 10–12, 17–24. Backend/Dados, Integrações e QA.
 
 - [ ] Vincular conta de canal à linha/geração no CRM; atribuição/modo humano
       atômicos conforme ADR aprovado, sem alterar a linha compartilhada.
@@ -61,6 +88,15 @@ WAP-04–08, 10–12, 17–19. Backend/Dados, Integrações e QA.
 - [ ] Vincular cadastro manual à carteira sem exigir inbound ou inventar
       identidade; compor serviços comerciais existentes e preservar contexto
       Contato/Conversa/Assunto/Pedido e ACL de pedido/cobrança.
+- [ ] Reutilizar o Contact oficial e seus validadores; salvar cadastro/vínculo
+      atomicamente e vincular existente por seleção autorizada/idempotente.
+      Reconciliar só vínculos comerciais comprovados; não inferir posse pelo
+      criador, copiar base global ou liberar duplicata por telefone coincidente.
+- [ ] Implementar primeiro envio humano sem inbound: validar destino/linha,
+      vincular identidade de saída ao mesmo contactId, compor conversa ativa e
+      mensagem/outbox/auditoria; novo atendimento após encerramento anterior.
+      Reusar ativo e reconciliar replay/eco/resposta sem duplicar ou mover
+      identidades de outro Cliente. Testar concorrência e timeout com ledger.
 - [ ] Garantir envio de cobrança/ficha pelo número correto, sem vincular
       emissão ou callback financeiro à disponibilidade do WhatsApp; testar
       concorrência, duas linhas com o mesmo cliente e pagamento após disconnect.
@@ -80,15 +116,22 @@ WAP-06, 09–12. Integrações, Backend/Dados e QA.
 
 ### WAP-T04 — Meus clientes e Meu WhatsApp
 
-WAP-01–04, 06–08, 11–12, 17–19. Frontend/A11y, Backend/Dados e QA.
+WAP-01–04, 06–08, 11–12, 17–24. Frontend/A11y, Backend/Dados e QA.
 
 - [ ] Compor a aba/configuração nos tokens e componentes Vue existentes; sem
       nova identidade visual, estado global ou domínio em window.
-- [ ] Abrir onboarding sem linha; pedir número/ação de conectar e mostrar QR;
-      conectado abre carteira; desconectado mantém histórico e reconexão.
+- [ ] Manter carteira, Novo cliente e Vincular existente antes de parear;
+      oferecer onboarding dispensável/fechável sem linha, com número e ação
+      explícita para QR. Conexão habilita sincronização/envio; ausência ou perda
+      de conexão mantém ações locais e histórico com reconexão visível.
 - [ ] Reutilizar o atendimento comercial atual: salvar/editar contato, criar e
       acompanhar pedido, ficha/arquivos e cobrança com as mesmas guardas, sem
       adiar essas ações para a etapa 2. Falha do canal não remove ações locais.
+- [ ] Distinguir Novo cliente/Vincular existente e Sem conversa/Iniciar conversa;
+      cadastro usa nome/telefone/e-mail atuais. Manter o mesmo cadastro/contexto
+      e primeira mensagem explícita com destino/remetente conferidos,
+      sem enviar ao salvar, abrir ou apenas compor. Tratar duplicata acessível,
+      conferência privada, canal indisponível e resultado incerto sem fallback.
 - [ ] Reutilizar configuração em Conta, alternativa mobile homologada, estados,
       cancelamento de leituras e expiração; respostas tardias não reabrem QR
       após fechar ou perder sessão. Nenhum segredo em storage/telemetria.
@@ -97,7 +140,7 @@ WAP-01–04, 06–08, 11–12, 17–19. Frontend/A11y, Backend/Dados e QA.
 
 ### WAP-T05 — piloto e operação da etapa 1
 
-WAP-01–12, 16–19. Tech Lead, DevOps, Integrações e QA/Privacidade.
+WAP-01–12, 16–24. Tech Lead, DevOps, Integrações e QA/Privacidade.
 
 - [ ] Provisionamento por configuração com flags desligadas, allowlist privada,
       limites por usuário/serviço e política de retenção aplicada no gateway/n8n.
@@ -110,6 +153,11 @@ WAP-01–12, 16–19. Tech Lead, DevOps, Integrações e QA/Privacidade.
       envio pela linha de origem → recebimento único, nas duas carteiras;
       repetir sem canal disponível e com acesso alheio. Pagamentos sintéticos/
       sandbox autorizado, sem ativação financeira real implícita.
+- [ ] Demonstrar cadastro antes de parear, vínculo de existente sem duplicar,
+      primeira saída sem inbound, resposta no mesmo Cliente/conversa e mesmo
+      Cliente em duas carteiras autorizadas com históricos privados separados.
+      Testar destino inválido, conflito privado, encerrado, duas abas, eco antes
+      de HTTP, revogação, timeout e reconexão sem duplicação.
 - [ ] Confirmar limites do canal, ACL negativa, fences e rollback sem perda de
       ledger/ACL. Registrar aceite e evidências sem PII; commit/push do runbook.
 

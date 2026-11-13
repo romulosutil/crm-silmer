@@ -3,12 +3,14 @@
 ## WAP-T00 — proposta de WhatsApp por vendedor (12/11/2026)
 
 [RFC 067](../../../docs/rfc/067-whatsapp-por-vendedor-e-meus-clientes.md),
-[requisitos propostos WAP-01–19](../seller-whatsapp/spec.md) e
+[requisitos propostos WAP-01–24](../seller-whatsapp/spec.md) e
 [plano em duas etapas](../seller-whatsapp/tasks.md): configuração pessoal por
 QR, Meus clientes com contatos, pedidos, cobranças e sincronização corrente;
 depois, carteira anterior e sucessão. WAP-T00a explicita a operação comercial
-completa desde a etapa 1. Escopo exclusivo de WhatsApp. Somente elaboração
-documental autorizada; D1–D4 e ADR ainda pendentes, sem runtime ou pareamento.
+completa desde a etapa 1. WAP-T00b explicita Cliente oficial, vínculo de carteira
+durável e primeiro envio humano sem inbound (13/11/2026). Escopo exclusivo de
+WhatsApp. Somente elaboração documental autorizada; D1–D5 e ADR ainda
+pendentes, sem runtime ou pareamento.
 
 ## CONV-ACL-T01 — Leitura por responsável (12/11/2026)
 

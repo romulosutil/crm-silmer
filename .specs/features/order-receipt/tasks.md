@@ -1,6 +1,7 @@
 # Recibo comercial — tarefas
 
-Status: implementação autorizada em 12/11/2026. Executar com tlc-spec-driven.
+Status: implementação e verificação local concluídas em 13/11/2026.
+Autorizada em 12/11/2026, executada com tlc-spec-driven.
 Requisitos: [spec.md](spec.md). Protótipo aprovado na RFC 068.
 
 ## Test Coverage Matrix
@@ -196,9 +197,22 @@ patch. O Tech Lead executa os gates finais no ambiente Linux dedicado.
 
 **Done when**:
 
-- [ ] Gates completos e evidências da integração registrados em validation.md.
-- [ ] Verifier independente PASS por requisito e discriminação dos cenários negativos.
-- [ ] Status de requisitos somente então verified; commit/push de verificação e PR atualizados.
+- [x] Gates completos e evidências da integração registrados em validation.md.
+- [x] Verifier independente PASS por requisito e discriminação dos cenários negativos.
+- [x] Status de requisitos somente então verified; commit/push de verificação no PR 375.
+
+Evidência T5: [validation.md](validation.md), PASS independente sobre
+`ac8169de..1ed008e0`, 11/11 critérios cobrindo RCP-01–12 e nove mutações
+comportamentais detectadas. Baselines independentes 32/32 Node e 2/2 E2E
+de autosave; isolamento e descarte comprovados. Sem finding pendente.
+
+Gates integrados: validate com 2.758 aprovados/zero falhas/53 skips antigos
+de banco, build e audit sem vulnerabilidades. E2E integral: 1.052 passaram
+diretamente, um teste antigo de áudio passou no retry 1 e sete cenários
+legados ignorados; total 1.060. Os 19 testes novos do recibo passaram sem
+retry. Log local completo em `tmp/receipt-final-e2e.log`. O CI de PostgreSQL
+da revisão de código `1ed008e0` passou; os demais checks remotos seguem no PR.
+Este fechamento só altera documentação e não modifica o código verificado.
 
 ## Cross-check
 

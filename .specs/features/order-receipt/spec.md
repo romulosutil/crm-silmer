@@ -1,6 +1,6 @@
 # Recibo comercial do pedido
 
-Status: aprovado pelo solicitante em 12/11/2026 para implementação.
+Status: implementado e verificado localmente em 13/11/2026; autorizado em 12/11/2026.
 Fontes: [RFC 068](../../../docs/rfc/068-recibo-comercial-do-pedido.md),
 [ADR 089](../../../docs/adr/089-recibo-comercial-na-lista-e-no-pedido.md).
 
@@ -72,15 +72,15 @@ Auditoria `order.receipt.download`: ator, pedido, revisão, correlação e açã
 
 | ID     | Tarefa | Status       |
 | ------ | ------ | ------------ |
-| RCP-01 | T4     | implementing |
-| RCP-02 | T4     | implementing |
-| RCP-03 | T2     | implementing |
-| RCP-04 | T2     | implementing |
-| RCP-05 | T2     | implementing |
-| RCP-06 | T3     | implementing |
-| RCP-07 | T3, T4 | implementing |
-| RCP-08 | T3, T4 | implementing |
-| RCP-09 | T4     | implementing |
-| RCP-10 | T2, T3 | implementing |
-| RCP-11 | T2, T4 | implementing |
-| RCP-12 | T4     | implementing |
+| RCP-01 | T4     | verified     |
+| RCP-02 | T4     | verified     |
+| RCP-03 | T2     | verified     |
+| RCP-04 | T2     | verified     |
+| RCP-05 | T2     | verified     |
+| RCP-06 | T3     | verified     |
+| RCP-07 | T3, T4 | verified     |
+| RCP-08 | T3, T4 | verified     |
+| RCP-09 | T4     | verified     |
+| RCP-10 | T2, T3 | verified     |
+| RCP-11 | T2, T4 | verified     |
+| RCP-12 | T4     | verified     |

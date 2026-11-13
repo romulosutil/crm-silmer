@@ -2,6 +2,10 @@
 
 ## Decisão de 12/11/2026
 
+- [089 — Recibo comercial na lista e no pedido](089-recibo-comercial-na-lista-e-no-pedido.md),
+  RFC 068 / RCP-01–12: prévia e PDF comercial, separados da ficha da fábrica,
+  com provisório em pendentes, ACL comercial e revisão/fingerprint conferidos.
+
 - [087 — Ficha por item com o controle de produção no verso](087-ficha-por-item-controle-no-verso.md),
   RFC 065 / FPI-12–13: `ficha-canonical-v9` com duas folhas por item
   (Observações e anotações na página 1; Controle de produção e arte ampliados na

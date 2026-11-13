@@ -1,5 +1,16 @@
 # Regras do CRM Silmer
 
+## Recibo comercial — decisão de 12/11/2026
+
+[ADR 089](docs/adr/089-recibo-comercial-na-lista-e-no-pedido.md), RCP-01–12:
+Recibo na lista e no detalhe oferece prévia e PDF comercial ao responsável ou
+Admin humano ativo. Permite provisório em pendente/reaberto e histórico
+cancelado identificado, como extensão restrita às regras 9/10. A ficha da
+fábrica continua exigindo confirmação/completude. Recibo não declara pagamento,
+não confirma pedido nem registra primeira impressão da loja. Preços/frete
+oficiais, ausência explícita, ACL/revisão revalidadas e auditoria mínima são
+obrigatórios. Sem nova infraestrutura ou envio automático.
+
 ## Visibilidade de conversas — decisão de 12/11/2026
 
 [ADR 088](docs/adr/088-leitura-de-conversas-por-responsavel.md), CONV-ACL-01:
@@ -7,7 +18,6 @@ somente administradores ativos leem conversas de outros vendedores. Vendedor
 lê suas próprias conversas e as sem responsável, incluindo as atendidas pela IA.
 Modo IA não libera conversa com outro dono. API, mídia, contexto, histórico,
 contagens e eventos seguem a posse atual; transferência revoga acesso anterior.
-
 
 ## Cadastro do comprador e envio Olist em 10/11/2026
 

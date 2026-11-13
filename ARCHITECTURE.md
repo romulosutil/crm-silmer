@@ -1,5 +1,15 @@
 # Arquitetura — baseline do CRM Silmer
 
+## Recibo comercial do pedido — 12/11/2026
+
+[ADR 089](docs/adr/089-recibo-comercial-na-lista-e-no-pedido.md) /
+[RFC 068](docs/rfc/068-recibo-comercial-do-pedido.md), RCP-01–12: documento
+comercial separado da ficha da fábrica, com acesso pela lista e pelo detalhe.
+Prévia JSON mínima, modal local e PDF no Chromium existente; ACL comercial,
+fingerprint/revisão e auditoria de download, sem efeito de primeira impressão.
+Pendentes/reabertos são provisórios; cancelados são históricos identificados.
+Implementação e evidências em `.specs/features/order-receipt/`.
+
 ## Leitura de conversas por responsável — 12/11/2026
 
 [ADR 088](docs/adr/088-leitura-de-conversas-por-responsavel.md) / [RFC 066](docs/rfc/066-visibilidade-de-conversas-por-responsavel.md),
@@ -8,7 +18,6 @@ incluindo IA. Filtros SQL precedem contagens e paginação, leituras auxiliares
 seguem a conversa, SSE revalida acesso e a interface limpa conteúdo após perda
 de posse. Pedido mantém ACL comercial independente, sem expor conversa oculta.
 Sem migração ou infraestrutura nova; publicação precisa do gate de CI.
-
 
 ## Recuperação após Sem retorno (11/11/2026)
 

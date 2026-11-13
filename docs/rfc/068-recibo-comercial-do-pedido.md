@@ -1,13 +1,15 @@
 # RFC 068 — Recibo comercial do pedido
 
-Data: 12/11/2026. Status: **proposta em revisão**. Entrega: **RCP-P01**.
+Data: 12/11/2026. Status: **aprovada para implementação**, após revisão do
+protótipo RCP-P01–04. Decisão: [ADR 089](../adr/089-recibo-comercial-na-lista-e-no-pedido.md).
 Pedido de produto: permitir que o vendedor baixe, dentro do pedido do cliente,
 um recibo simplificado inspirado no talão apresentado pelo solicitante.
 
-Esta entrega contém planejamento e protótipo. A autorização de implementar o
-runtime e a decisão sobre documentos de pedidos pendentes continuam em revisão.
-Não há ADR novo: após a decisão, vincular o ADR correspondente aqui, às regras
-afetadas e à síntese técnica. Sem issue específica; PR vinculada no handoff.
+O solicitante aprovou o protótipo e autorizou implementar Recibo na lista e
+no detalhe. O contrato executável e as tarefas estão na
+[spec](../../.specs/features/order-receipt/spec.md) e no
+[plano](../../.specs/features/order-receipt/tasks.md), que fecham as propostas
+abaixo. Sem issue específica; [PR #375](https://github.com/romulosutil/crm-silmer/pull/375).
 
 ## Objetivo e fluxo
 

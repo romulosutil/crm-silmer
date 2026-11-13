@@ -1,5 +1,15 @@
 # TDD — CRM Silmer MVP
 
+## Recibo comercial — 12/11/2026
+
+[ADR 089](docs/adr/089-recibo-comercial-na-lista-e-no-pedido.md), RCP-01–12:
+`GET /orders/:id/receipt` e `/receipt/pdf` na API v1, com sessão humana,
+ACL comercial e comparação de revisão/fingerprint antes e após renderização.
+Projeção permitida e template A5 próprios, Chromium existente, modal Vue
+compartilhado entre lista/detalhe. PDF não usa recordFirstPrint, não muda
+pagamento/status e não é persistido. Contrato e gates na
+[spec](.specs/features/order-receipt/spec.md).
+
 ## CONV-ACL-01 — Escopo de leitura da conversa (12/11/2026)
 
 [ADR 088](docs/adr/088-leitura-de-conversas-por-responsavel.md): a sessão atual
@@ -12,7 +22,6 @@ SSE revalida sessão e posse, substituindo evento oculto por reset sem payload.
 Transferência remove conteúdo na UI e replay revalida antes de devolver recibo.
 A leitura comercial do Pedido permanece, com vínculo/metadados da conversa
 ocultos para quem não pode lê-la. Sem migração. [Runbook](docs/runbooks/conversation-visibility.md).
-
 
 ## Recuperação de leads após Sem retorno (11/11/2026)
 

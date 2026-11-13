@@ -51,6 +51,13 @@
     --weight-semibold: 600;
     --weight-bold: 700;
 
+    /* RCP-11: the printable receipt stays paper-white in both app themes. */
+    --color-document-surface: #ffffff;
+    --color-document-text: #201634;
+    --color-document-muted: #625a6e;
+    --color-document-border: #dcd6e4;
+    --color-document-accent: #6544ee;
+
     /* Roles separate selection, a local action and operational state. */
     --color-action-soft: var(--color-selected);
     --color-action-soft-text: var(--color-link);

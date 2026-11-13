@@ -21,6 +21,7 @@ import AppIcon from '../components/AppIcon.vue';
 import FilterSheet from '../components/FilterSheet.vue';
 import FilterChip from '../components/FilterChip.vue';
 import AppHint from '../components/AppHint.vue';
+import OrderReceiptPreview from '../components/order/OrderReceiptPreview.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import { dateTimeBR, formatPhoneNumber } from '../lib/format.js';
 import { openDialog } from '../lib/ui.js';
@@ -172,6 +173,11 @@ const hasLoaded = ref(false);
 const error = ref('');
 const pdfError = ref('');
 const pdfBusyId = ref('');
+/** @type {import('vue').Ref<{open:(order:any,trigger:EventTarget|null)=>Promise<void>}|null>} */
+const receiptPreview = ref(null);
+function receiptFocusFallback() {
+  return orderSearch.value ?? heading.value;
+}
 const errorMode = ref('');
 // The clock is refreshed on every load, so the inactivity signal does not freeze at the
 // value the first render happened to compute.
@@ -1343,6 +1349,14 @@ onBeforeUnmount(() => {
                 </td>
                 <td class="order-cell-actions">
                   <div class="row-actions">
+                    <button
+                      v-if="order.receiptAvailable === true"
+                      type="button"
+                      :disabled="Boolean(pdfBusyId)"
+                      @click="receiptPreview?.open(order, $event.currentTarget)"
+                    >
+                      Recibo<span class="sr-only"> {{ order.number }}</span>
+                    </button>
                     <RouterLink class="button-link" :to="`/pedidos/${order.id}`"
                       >Abrir pedido<span class="sr-only">
                         {{ order.number }}</span
@@ -1468,6 +1482,14 @@ onBeforeUnmount(() => {
                       {{ pdfBusyId === order.id ? 'Gerando PDF…' : 'Gerar PDF'
                       }}<span class="sr-only"> {{ order.number }}</span>
                     </button>
+                    <button
+                      v-if="order.receiptAvailable === true"
+                      type="button"
+                      :disabled="Boolean(pdfBusyId)"
+                      @click="receiptPreview?.open(order, $event.currentTarget)"
+                    >
+                      Recibo<span class="sr-only"> {{ order.number }}</span>
+                    </button>
                     <RouterLink class="button-link" :to="`/pedidos/${order.id}`"
                       >Abrir pedido<span class="sr-only">
                         {{ order.number }}</span
@@ -1490,6 +1512,11 @@ onBeforeUnmount(() => {
     >
       {{ loadingMore ? 'Carregando…' : 'Ver mais' }}
     </button>
+    <OrderReceiptPreview
+      ref="receiptPreview"
+      :orders="items"
+      :fallback-focus="receiptFocusFallback"
+    />
   </div>
 </template>
 

@@ -11,6 +11,7 @@ import {
 } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import OrderCancelAction from '../components/order/OrderCancelAction.vue';
+import OrderReceiptPreview from '../components/order/OrderReceiptPreview.vue';
 import OrderMoreActions from '../components/order/OrderMoreActions.vue';
 import OrderOlistPanel from '../components/order/OrderOlistPanel.vue';
 import OrderPriceBreakdown from '../components/order/OrderPriceBreakdown.vue';
@@ -84,6 +85,73 @@ const notFound = ref(false);
 const error = ref('');
 const pdfError = ref('');
 const pdfBusy = ref(false);
+/** @type {import('vue').Ref<{open:(order:any,trigger:EventTarget|null)=>Promise<void>}|null>} */
+const receiptPreview = ref(null);
+const receiptPreparing = ref(false);
+const receiptError = ref('');
+const pendingSectionWrites = ref(0);
+const pendingOrderCommands = ref(0);
+const failedSectionWrites = ref(new Set());
+let receiptDisposed = false;
+function receiptFocusFallback() {
+  return heading.value;
+}
+
+function blurReceiptDraft() {
+  const focused = globalThis.document.activeElement;
+  if (
+    focused instanceof HTMLElement &&
+    focused.matches('input,textarea,select,[contenteditable="true"]')
+  ) {
+    focused.blur();
+    return true;
+  }
+  return false;
+}
+
+/** RCP-09: blur saves before the click; wait for the complete queue, not one snapshot. @param {Event} event */
+async function openReceipt(event) {
+  if (
+    receiptPreparing.value ||
+    pendingOrderCommands.value > 0 ||
+    order.value?.receiptAvailable !== true
+  )
+    return;
+  const id = props.orderId;
+  const trigger = event.currentTarget;
+  receiptPreparing.value = true;
+  receiptError.value = '';
+  try {
+    await nextTick();
+    let waiting;
+    do {
+      blurReceiptDraft();
+      await nextTick();
+      waiting = sectionWrites;
+      await waiting;
+      // A seller may continue typing while an earlier save is slow. Blur that
+      // field too, then drain the save it starts before opening the modal.
+    } while (waiting !== sectionWrites || blurReceiptDraft());
+    if (receiptDisposed || props.orderId !== id) return;
+    if (
+      editingSection.value !== '' ||
+      pendingOrderCommands.value > 0 ||
+      pendingSectionWrites.value > 0 ||
+      failedSectionWrites.value.size > 0
+    ) {
+      receiptError.value =
+        'Corrija ou salve novamente as seções com erro antes de abrir o recibo.';
+      return;
+    }
+    if (order.value?.receiptAvailable !== true) {
+      receiptError.value = 'Seu acesso ao recibo mudou. Atualize o pedido.';
+      return;
+    }
+    await receiptPreview.value?.open(order.value, trigger);
+  } finally {
+    receiptPreparing.value = false;
+  }
+}
 /** @type {import('vue').Ref<{open: (opener: EventTarget|null) => void}|null>} */
 const cancelAction = ref(null);
 const shareAvailable = canSharePdf();
@@ -268,7 +336,12 @@ function saveSection(section, value) {
   // PED-RD-12: sections edited in place save on blur, so two of them may be
   // typed over the same order; each write reads its version only once the
   // one before it has answered.
-  const turn = sectionWrites.then(() => writeSection(section, value));
+  pendingSectionWrites.value += 1;
+  const turn = sectionWrites
+    .then(() => writeSection(section, value))
+    .finally(() => {
+      pendingSectionWrites.value -= 1;
+    });
   sectionWrites = turn.then(
     () => undefined,
     () => undefined,
@@ -292,6 +365,7 @@ async function writeSection(section, value) {
       },
     );
     order.value = response.data.order;
+    failedSectionWrites.value.delete(section);
     // EDIT-01: a save of a section edited in place may still be in flight
     // when another section opens its editor over the same version; that
     // editor then rides the version this answer brought, not a stale one.
@@ -300,6 +374,7 @@ async function writeSection(section, value) {
     }
     return { ok: true };
   } catch (cause) {
+    failedSectionWrites.value.add(section);
     if (Number(cause?.status) === 409) {
       // With no editor open nothing waits for Salvar or Cancelar: the page
       // refreshes now, so the next in-place save does not meet the same 409.
@@ -324,6 +399,7 @@ async function writeSection(section, value) {
  * @param {'confirm'|'reopen'} action @param {Record<string, unknown>} body
  */
 async function runCommand(action, body) {
+  pendingOrderCommands.value += 1;
   try {
     const response = await request(
       `/api/v1/orders/${encodeURIComponent(props.orderId)}/${action}`,
@@ -348,6 +424,8 @@ async function runCommand(action, body) {
       // 0 when the request never reached the server (connection lost).
       status: Number(/** @type {any} */ (cause)?.status) || 0,
     };
+  } finally {
+    pendingOrderCommands.value -= 1;
   }
 }
 
@@ -776,6 +854,10 @@ async function load(silent = false, force = false) {
         JSON.stringify(next) !== JSON.stringify(order.value))
     ) {
       order.value = next;
+      if (force) {
+        failedSectionWrites.value.clear();
+        receiptError.value = '';
+      }
       replaced = true;
     }
     notFound.value = false;
@@ -861,6 +943,7 @@ onMounted(() => {
   void load();
 });
 onBeforeUnmount(() => {
+  receiptDisposed = true;
   controller?.abort();
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
 });
@@ -956,6 +1039,22 @@ onBeforeUnmount(() => {
             >Abrir conversa</RouterLink
           >
           <button
+            v-if="order.receiptAvailable === true"
+            type="button"
+            :disabled="
+              receiptPreparing ||
+              pdfBusy ||
+              pendingOrderCommands > 0 ||
+              editingSection !== ''
+            "
+            :aria-describedby="
+              editingSection !== '' ? 'order-receipt-editing' : undefined
+            "
+            @click="openReceipt"
+          >
+            {{ receiptPreparing ? 'Preparando recibo…' : 'Recibo do pedido' }}
+          </button>
+          <button
             type="button"
             class="op-print"
             :disabled="isPending || pdfBusy"
@@ -983,6 +1082,16 @@ onBeforeUnmount(() => {
       </p>
       <p v-if="error" role="alert" class="op-alert">{{ error }}</p>
       <p v-if="pdfError" role="alert" class="op-alert">{{ pdfError }}</p>
+      <p
+        v-if="order.receiptAvailable === true && editingSection !== ''"
+        id="order-receipt-editing"
+        class="op-hint"
+      >
+        Salve ou cancele a seção em edição antes de abrir o recibo.
+      </p>
+      <p v-if="receiptError" role="alert" class="op-alert">
+        {{ receiptError }}
+      </p>
       <button v-if="error" type="button" @click="load(true)">
         Tentar novamente
       </button>
@@ -1136,6 +1245,11 @@ onBeforeUnmount(() => {
         </button>
       </div>
     </template>
+    <OrderReceiptPreview
+      ref="receiptPreview"
+      :orders="order ? [order] : []"
+      :fallback-focus="receiptFocusFallback"
+    />
   </div>
 </template>
 

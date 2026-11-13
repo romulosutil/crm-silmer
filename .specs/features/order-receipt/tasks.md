@@ -26,7 +26,7 @@ order-runtime.test.js, orders-list.spec.js e orders.spec.js.
 ## Execution Plan
 
 ```text
-T1 -> T2 -> T3 -> T4
+T1 -> T2 -> T3 -> T4 -> T5
 ```
 
 ## Task Breakdown
@@ -128,7 +128,7 @@ skip introduzido ou assertion existente enfraquecida.
 **Where**: `apps/edge-web/src/components/order/OrderReceiptPreview.vue`
 **Depends on**: T3
 **Tests**: e2e + unit
-**Gate**: Build
+**Gate**: Full
 
 Suporte: cliente HTTP, OrdersView, OrderView, tokens de papel, testes de cliente
 e E2E, runbook e verificação independente. Premissas: modal local preserva a
@@ -136,9 +136,69 @@ lista; autosave termina antes de ler a prévia; PDF da fábrica mantém seu flux
 
 **Done when**:
 
-- [ ] Botões atendem RCP-01/12 e fluxo atende RCP-02/07/08/09/11.
-- [ ] Estados negativos, teclado, contraste, 320 px e regressão da ficha passam.
-- [ ] Gates completos e Verifier PASS com evidências; commit/push e PR atualizados.
+- [x] Botões atendem RCP-01/12 e fluxo atende RCP-02/07/08/09/11.
+- [x] Estados negativos, teclado, contraste, 320 px e regressão da ficha passam.
+- [x] Gates de implementação completos e entrega atômica de código com commit/push no PR 375.
+
+Evidência local T4 (Windows, Node 24.14.1): cliente HTTP 7/7; E2E dedicado
+19 casos mais `orders-list.spec.js` e `orders.spec.js`, 172/172 sem skips.
+Typecheck, lint global, design tokens e diff-check passaram. A UI mantém a
+ficha existente e seu PDF, inclusive o botão móvel no rodapé. Nenhum teste ou
+fixture existente foi alterado; o mock de pedidos foi reutilizado sem patch.
+
+| Critério T4  | Evidência de assertion                                                                                                                                                                                                                                    |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| RCP-01/02/12 | E2E `list action is between PDF/open...`: ordem exata das ações, busca estabilizada, Escape, mesmo foco, rolagem e URL.                                                                                                                                   |
+| RCP-03/04/06 | E2E `list downloads a confirmed receipt...` e `detail preserves existing actions...`: estado confirmado sem provisório; pendente com aviso, total A definir e sem zero inventado; nomes independentes do recibo e ficha.                                  |
+| RCP-07/08    | E2E `PDF failure permits explicit retry...`, `permission loss...`, quatro casos SSE e dois de resposta tardia: 409 remove artigo/download; 403 não permite retry; evento alheio preserva artigo; evento relevante e metadata revogada removem dados.      |
+| RCP-09       | E2E `opening waits for blur autosave...`: segunda seção digitada durante espera também salva, prévia só abre na versão 4; `another successful section cannot clear...`: erro em uma seção bloqueia apesar de outra salvar, até corrigir a seção original. |
+| RCP-10/11    | Quatro E2E 320/390 px × claro/escuro: payload HTML aparece como texto, sem img/script/iframe; overflow ≤ 1 px, papel branco e todos os td escuros; axe zero violações. Tab/Shift+Tab, Escape e retorno de foco explícitos.                                |
+| RCP-07/08/09 | `test/order-receipt-client.test.js`: credenciais/signal, ordem/schema/fingerprint, versão/query, MIME, códigos negativos, abort após Blob e nomes por estado.                                                                                             |
+
+Âncoras de adequação, com resultado esperado derivado da spec:
+
+| Critério | Assertion e resultado definido |
+| -------- | ------------------------------ |
+| RCP-01/12 | `test/e2e/order-receipt.spec.js:113`, `toHaveText(/Gerar PDF\s*05-CRM\s*Recibo\s*05-CRM\s*Abrir pedido/u)`; `:189`, `expect(open).toBeVisible()` no detalhe. |
+| RCP-02/11 | `test/e2e/order-receipt.spec.js:141`, `expect(button).toBeFocused()`; `:143`, `expect(await list.evaluate((el) => el.scrollTop)).toBe(before)`; `:163`, Fechar focado após Tab. |
+| RCP-03/04/06 | `test/e2e/order-receipt.spec.js:156`, `not.toContainText('provisório')`; `:198`, total `A definir`; `:201`, `not.toContainText('R$ 0,00')`; `:170` e `:177`, nomes exatos e distintos dos dois PDFs. |
+| RCP-07/08 | `test/e2e/order-receipt.spec.js:239`, `getByRole('article').toHaveCount(0)` após 409; `:266`, nenhum botão de retry após 403; `:353`, documento descartado após perda de acesso; `:410`, `expect(downloads).toBe(0)` após troca de alvo. |
+| RCP-07/09 | `test/e2e/order-receipt.spec.js:283`, prévia recuperada contém `Buffet Casa Rosa`; `:324`, alerta ausente para evento alheio; `:449`, rodapé contém `Versão 4`; `:483`, `expect(control.previewReads).toBe(0)` após autosave falho. |
+| RCP-10/11 | `test/e2e/order-receipt.spec.js:523`, HTML ativo ausente; `:533`, overflow no máximo 1 px; `:534`, papel `rgb(255, 255, 255)`; `:535`, todas as células `rgb(32, 22, 52)`; `:539`, `expect(axe.violations).toEqual([])`. |
+| Cliente RCP-07/08/09 | `test/order-receipt-client.test.js:54`, payload exato da prévia; `:74`, resposta inválida rejeitada; `:125`, códigos/status exatos; `:149`, MIME inválido rejeitado com 502; `:173`, bytes abortados rejeitados com `AbortError`. |
+
+Mapeamento reverso: os casos E2E iniciados em `:92`, `:147`, `:180`, `:207`,
+`:225`, `:253`, `:271`, `:292` (três eventos), `:328`, `:362`, `:387`, `:413`,
+`:452` e `:500` (quatro combinações) se vinculam aos IDs RCP de seus títulos.
+Os sete casos do cliente em `:42`, `:62`, `:83`, `:109`, `:134`, `:157` e
+`:181` também trazem o ID RCP. Nenhum caso sem requisito ou assertion rasa;
+locais e padrões seguem CONTRIBUTING e as suítes existentes de pedidos.
+
+Gate Linux T4: Node 24.20.0/npm 11.19.0, `npm run validate` passou com 2.758
+testes aprovados, zero falhas e 53 skips de PostgreSQL sem banco de teste;
+formatação, tipos, lint, fronteiras, contratos e build passaram. `npm audit
+--audit-level=high` encontrou zero vulnerabilidades. E2E integral e Verifier
+ficam em T5. Screenshots sintéticos: `test-results/order-receipt-*/receipt-*.png`.
+Smoke no CRM local 4180 confirmou ambas as entradas, download PDF real de
+19.910 bytes e pedido idêntico antes/depois, com dados exclusivamente sintéticos.
+RCP permanece `implementing`; T5 registra a verificação independente.
+
+### T5: Verificar a entrega integrada — RCP-T05
+
+**Where**: `.specs/features/order-receipt/validation.md`
+**Depends on**: T4
+**Tests**: independent verification
+**Gate**: Build
+
+Suporte: spec, tasks, matriz de cobertura e revisão independente. Premissas:
+T4 recebe o commit de código antes da auditoria; o Verifier não reescreve o
+patch. O Tech Lead executa os gates finais no ambiente Linux dedicado.
+
+**Done when**:
+
+- [ ] Gates completos e evidências da integração registrados em validation.md.
+- [ ] Verifier independente PASS por requisito e discriminação dos cenários negativos.
+- [ ] Status de requisitos somente então verified; commit/push de verificação e PR atualizados.
 
 ## Cross-check
 
@@ -148,6 +208,7 @@ lista; autosave termina antes de ler a prévia; PDF da fábrica mantém seu flux
 | T2   | T1         | T1 -> T2 | unit + render |
 | T3   | T2         | T2 -> T3 | integration   |
 | T4   | T3         | T3 -> T4 | e2e + unit    |
+| T5   | T4         | T4 -> T5 | independent   |
 
 Cada tarefa entrega um contrato, um documento, uma fronteira HTTP ou um fluxo
 de interface verificável. O autor executa os gates; o Verifier não altera o patch.

@@ -257,6 +257,38 @@ sucesso, JSON 503 degradado, amostra vencida/futura e Date ausente/inválido,
 além de ACL, abort, teclado e acessibilidade existentes. Rollback restaura
 somente o código anterior do edge-web; sem migração ou alteração de dados.
 
+### Transformações anteriores à reserva — OPS-INBOX-SEND-11
+
+O delta `ops/n8n/patch-panel-reservation-fast-path.mjs` prepara offline a
+substituição de dois Code nodes por Edit Fields (Set 3.4), em modo JSON com
+expressão: `Normalizar comando do painel (MVP)` e
+`Preparar reserva de envio humano (MVP)`. A transformação mantém a lógica,
+mas deixa de despachar essas duas tarefas ao runner externo. A reserva HTTP,
+fences, idempotência, credenciais e envio ao provedor permanecem inalterados.
+
+Usar somente export privado recém-obtido do workflow publicado. Guardar
+publicado e draft antes da alteração; interromper se houver edição concorrente.
+Executar `node ops/n8n/patch-panel-reservation-fast-path.mjs current.json review.json`
+em diretório privado, fora do Git. O helper exige hashes, IDs únicos, contexto e
+conexões conhecidos; recusa drift e aplicação parcial. Não publica nem executa
+o workflow. Conferir que o diff contém somente os dois nós e publicar o delta
+pela interface do n8n, preservando os demais workflows. Reaplicar esta proteção
+em futuras publicações que partam de templates antigos.
+
+Validar no runtime instalado com entrada sintética, avaliando somente os dois
+Set nodes isolados, sem executar workflow, webhook ou HTTP. Conferir JSON de
+saída, pairedItem e descarte de headers/binários. Regressão local cobre 360
+combinações de roteamento, equivalência da reserva, contexto divergente,
+atomicidade e idempotência. Conferir a versão efetivamente publicada e os hashes
+dos demais nós, conexões, settings e workflows após publicar. Rollback restaura
+somente esses dois nós do backup revisado; nunca reproduz uma execução antiga.
+
+Esta mitigação não prova o resultado de um envio histórico. A execução temporal
+95228 teve 9,687s antes de solicitar a tarefa ao runner e 11,452s no normalizador;
+a falha posterior ocorreu na reserva. Sem vínculo e recibo conclusivos, manter
+os incidentes `WORKER_OUTCOME_UNKNOWN` e `N8N_OUTCOME_UNKNOWN` em análise,
+sem retry, replay ou alteração do estado da mensagem.
+
 ### Códigos PostgreSQL nos logs — OPS-ERR-DIAG-01
 
 O hook HTTP já entregava `error.code` ao logger, mas a allowlist descartava os

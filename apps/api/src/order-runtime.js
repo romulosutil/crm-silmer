@@ -14,6 +14,7 @@ import {
   createOrderFileService,
   createOrderService,
   orderAmounts,
+  projectOrderReceipt,
   parseFreightCents,
   readFreightCommand,
   sizePricingSummary,
@@ -283,6 +284,14 @@ export function createOrderRuntime(options) {
       // settled and counted by. `finalAmountCents` stays that same total.
       amounts: orderAmounts(order),
       effectiveStatus: order.cancelledAt ? 'cancelado' : order.status,
+      receiptAvailable: Boolean(
+        actor?.kind === 'human' &&
+        actor.functionName === 'Vendedor' &&
+        ((actor.capabilities ?? []).includes(CAPABILITIES.COMMERCIAL_ADMIN) ||
+          (order.origin !== 'loja' &&
+            (order.manualOwnerId ?? owners.get(order.conversationId)) ===
+              actor.id)),
+      ),
       confirmedAt: order.confirmedAt,
       confirmedBy: person(order.confirmedBy),
       conversationId:
@@ -539,6 +548,33 @@ export function createOrderRuntime(options) {
     },
     authorizeRead: access.authorizeRead,
     authorizeWrite: access.authorizeWrite,
+    /** RCP-04/08: authorize before projecting any commercial document data.
+     * @param {string} orderId @param {OrderActor} actor */
+    async getReceipt(orderId, actor) {
+      const raw = await service.getForReceipt(orderId, actor);
+      const [order] = await present([raw], actor);
+      return projectOrderReceipt(
+        {
+          ...order,
+          ficha: raw.legacySizePricing
+            ? { ...raw.ficha, sizePricing: raw.legacySizePricing }
+            : raw.ficha,
+        },
+        { issuedAt: options.clock?.() ?? new Date() },
+      );
+    },
+    /** RCP-10: called only after a successful render and final access check.
+     * @param {{actor:OrderActor,orderId:string,version:number,correlationId:string}} input */
+    async recordReceiptDownload(input) {
+      await options.auditTrail.append({
+        action: 'order.receipt.download',
+        actor: input.actor.id,
+        correlationId: input.correlationId,
+        reason: 'order.receipt.download',
+        target: { id: input.orderId, type: 'order' },
+        version: input.version,
+      });
+    },
     ensurePendingFromIntent: service.ensurePendingFromIntent,
     projectAgentBriefing: service.projectAgentBriefing,
     summary: service.summary,

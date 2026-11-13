@@ -102,9 +102,26 @@ runtime. Premissas: order.read mais ACL explícita; loja e sem dono só Admin.
 
 **Done when**:
 
-- [ ] Prévia/PDF revalidam ACL e revisão; mudanças durante render negam bytes.
-- [ ] Download audita sem PII, sem mutação comercial ou primeira impressão.
-- [ ] Cenários 400/401/403/404/409/429/503, HEAD e falha de auditoria testados.
+- [x] Prévia/PDF revalidam ACL e revisão; mudanças durante render negam bytes.
+- [x] Download audita sem PII, sem mutação comercial ou primeira impressão.
+- [x] Cenários 400/401/403/404/409/429/503, HEAD e falha de auditoria testados.
+
+Gate T3: 11 testes HTTP novos e 100 regressões de rotas/runtime/loja/leitura
+passaram sem skips. Typecheck, lint global, design tokens e diff-check passaram.
+O campo aditivo receiptAvailable foi incluído na assertion estrita do contrato
+existente, preservando a conferência de todas as chaves anteriores.
+
+| Critério                       | Evidência e resultado definido                                                                                                                                                     |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| RCP-06/10, leitura e auditoria | `test/order-receipt-routes.test.js:144`, `assert.equal(pdf.statusCode, 200)`; `:154`, auditoria com ator/ação/pedido/revisão exatos; `:169`, pedido igual ao snapshot anterior.    |
+| RCP-08, ACL/transferência      | `test/order-receipt-routes.test.js:183`, 403 ao outro vendedor/Financeiro/automação; `:250`, download negado após transferência; `:255`, sem dono nega vendedor; `:257`, Admin lê. |
+| RCP-07, fonte corrente         | `test/order-receipt-routes.test.js:321`, 409 após versão/cliente/vendedor mudar; `:322`, código RECEIPT_STALE; `:364`, alteração durante render impede bytes.                      |
+| RCP-09/10, falhas              | `test/order-receipt-routes.test.js:379`, 503; `:380`, corpo sanitizado; `:385`, sem auditoria de download; `:387`, repetição explícita retorna 200.                                |
+| HEAD e limites                 | `test/order-receipt-routes.test.js:395`, HEAD 200 vazio, `:427`, sem render; `:438`, décima primeira geração recebe 429.                                                           |
+
+Mapeamento reverso: todos os onze testes dessa suíte têm IDs RCP no título,
+checando resultados/códigos/dados e não somente chamadas. Sem teste removido,
+skip introduzido ou assertion existente enfraquecida.
 
 ### T4: Integrar uma prévia nas duas telas — RCP-T03/04
 

@@ -329,3 +329,26 @@ backups, mensagens persistidas e resultados incertos; reconciliar antes de
 reenviar. Não reativar WAHA nem restaurar a baseline Meta automaticamente.
 O rollback de workflow preserva suas credenciais e webhooks comerciais; não
 restaura o banco CRM como consequência de falha do canal.
+
+## Diagnóstico temporário: formato do unsupported — INBOX-UNSUPPORTED-DIAG (13/11/2026)
+
+INB-01, MSG-01/02: em 13/11 uma edição do cliente ("sme" → "sem braço", 14:08)
+apareceu como uma linha extra `[Mensagem do tipo unsupported …]` na Inbox. O
+Evolution 2.3.7 descarta edições antes de emitir `messages.upsert`
+(`whatsapp.baileys.service.ts`, bloco `editedMessage`), então o formato real do
+evento ainda não é conhecido e nenhuma correção foi feita por hipótese.
+
+`ops/n8n/patch-evolution-unsupported-shape.mjs` prepara, offline, um export com
+dois nós alterados (`Evolution - Validar origem (MVP)` e `Evolution - Montar
+evento WhatsApp (MVP)`). Um `unsupported` passa a dizer, no placeholder já
+existente, quais campos o provedor enviou, por exemplo
+`unsupported:editedMessage+messageContextInfo`. Só nomes de campo (letras e
+dígitos, no máximo seis) saem do validador; nenhum texto, chave, mídia ou
+contato. O tipo canônico, `ai_readable` e o handoff não mudam.
+
+1. Exportar o workflow vivo, rodar o script (`node
+   ops/n8n/patch-evolution-unsupported-shape.mjs atual.json revisao.json`) e
+   aplicar só os dois nós, conferindo o diff contra o export.
+2. Publicar anotando o `versionId` anterior; o rollback é publicar esse id.
+3. Na próxima edição ou unsupported, ler o rótulo, corrigir com teste sobre o
+   formato real e desfazer o diagnóstico.

@@ -72,15 +72,15 @@ Auditoria `order.receipt.download`: ator, pedido, revisão, correlação e açã
 
 | ID     | Tarefa | Status       |
 | ------ | ------ | ------------ |
-| RCP-01 | T4     | pending      |
-| RCP-02 | T4     | pending      |
+| RCP-01 | T4     | implementing |
+| RCP-02 | T4     | implementing |
 | RCP-03 | T2     | implementing |
 | RCP-04 | T2     | implementing |
 | RCP-05 | T2     | implementing |
-| RCP-06 | T3     | pending      |
-| RCP-07 | T3, T4 | pending      |
-| RCP-08 | T3, T4 | pending      |
-| RCP-09 | T4     | pending      |
+| RCP-06 | T3     | implementing |
+| RCP-07 | T3, T4 | implementing |
+| RCP-08 | T3, T4 | implementing |
+| RCP-09 | T4     | implementing |
 | RCP-10 | T2, T3 | implementing |
 | RCP-11 | T2, T4 | implementing |
-| RCP-12 | T4     | pending      |
+| RCP-12 | T4     | implementing |

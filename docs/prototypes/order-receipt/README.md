@@ -36,3 +36,10 @@ seus bloqueios e o registro de primeira impressão permanecem inalterados.
 
 Cobertura restrita ao protótipo. ACL real, autosave, concorrência com edições,
 paginação longa e integração com o pedido aguardam RCP-T01–T04.
+
+## RCP-P02 — Contraste da tabela na conversa
+
+Correção vinculada a RCP-11: quantidade, descrição e valores agora definem
+explicitamente a cor escura sobre o papel branco. O recibo isola seu esquema
+claro das cores de tabelas do tema da conversa. Conferência com estilos globais
+de tabela/célula claros sobrepostos, em 320 e 1024 px, nos dois temas.

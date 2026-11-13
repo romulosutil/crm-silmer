@@ -304,7 +304,9 @@
         --paper-ink: #201634;
         --paper-muted: #625a6e;
         --paper-line: #dcd6e4;
-        background: #fff;
+        --paper-background: #fff;
+        color-scheme: light;
+        background: var(--paper-background);
         color: var(--paper-ink);
         padding: 32px;
         box-shadow: 0 3px 12px #0c042d0d;
@@ -374,12 +376,15 @@
         color: var(--paper-ink);
       }
       #receipt-prototype .rc-table {
+        color: var(--paper-ink);
+        background: var(--paper-background);
         width: 100%;
         border-collapse: collapse;
         font-size: 13px;
         table-layout: fixed;
       }
       #receipt-prototype .rc-table th {
+        background: var(--paper-background);
         border-block: 1px solid var(--paper-line);
         padding: 10px 5px;
         text-align: left;
@@ -387,6 +392,8 @@
         color: var(--paper-muted);
       }
       #receipt-prototype .rc-table td {
+        color: var(--paper-ink);
+        background: var(--paper-background);
         border-bottom: 1px solid var(--paper-line);
         padding: 18px 5px;
         vertical-align: top;

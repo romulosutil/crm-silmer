@@ -1,7 +1,9 @@
 # Protótipo do recibo do pedido — RCP-P01
 
-Abra `index.html` em um navegador. No detalhe, o único botão **Recibo do pedido**
-abre a prévia. **Voltar ao pedido** retorna ao detalhe e devolve o foco ao botão.
+Abra `index.html` em um navegador. Na lista, **Recibo** aparece entre **Gerar PDF**
+e **Abrir pedido** e abre a prévia diretamente. **Voltar para pedidos** retorna
+à lista e devolve foco à linha original. **Abrir pedido** mostra o detalhe com
+o cabeçalho completo; ali, **Recibo do pedido** abre a mesma prévia.
 
 O seletor **Cenário**, fora da interface do produto, oferece Confirmado,
 Pendente, Dados parciais e Falha ao gerar PDF. Os três primeiros baixam PDFs
@@ -49,3 +51,24 @@ Por revisão do solicitante, remover a seção “Documento para o cliente” e 
 ação duplicada. RCP-01/02 passam a usar somente o botão do cabeçalho. A área
 de itens ocupa a largura disponível; abrir, voltar e devolver foco foram
 conferidos em celular e desktop.
+
+## RCP-P04 — Cabeçalho e acesso direto na lista
+
+RCP-01/11/12: mostrar Abrir conversa, Recibo do pedido, Gerar PDF e Mais ações,
+com destaque para a ficha de produção. No celular, o grupo usa duas linhas.
+O menu demonstra Compartilhar PDF no confirmado e Cancelar pedido no pendente;
+a ficha continua indisponível antes da confirmação. As ações anteriores são
+somente contexto visual: ao acioná-las, a explicação aparece fora da interface
+simulada, sem navegação ou efeito real. O fluxo do recibo continua interativo.
+
+Na lista, a ação **Recibo** fica entre Gerar PDF e Abrir pedido, conforme a
+referência do solicitante. A lista usa um pedido fictício; buscar, abrir recibo,
+voltar com foco e abrir o detalhe são interativos. O termo da busca é
+preservado na navegação. No cenário pendente, Gerar PDF sai da linha e Recibo
+continua disponível, conforme a proposta provisória em revisão.
+
+Verificação desta revisão: Chromium/axe em 320, 390, 736 e 1024 px, claro e
+escuro, sem violações A/AA ou rolagem horizontal. Conferidos ordem dos botões,
+abertura por Enter, retorno à origem com foco/busca preservados, navegação ao
+detalhe, disponibilidade no pendente e download do PDF pela lista. Lista longa
+e preservação da rolagem dependem da integração futura em RCP-T03.

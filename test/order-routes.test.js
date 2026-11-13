@@ -46,6 +46,7 @@ const ORDER_KEYS = [
   'createdAt',
   'deliveredOn',
   'effectiveStatus',
+  'receiptAvailable',
   'fabCode',
   'ficha',
   'fichaFirstPrintedAt',

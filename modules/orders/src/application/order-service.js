@@ -457,6 +457,19 @@ export function createOrderService(options) {
   }
 
   return Object.freeze({
+    /** RCP-08: receipt access is narrower than printing; an Admin may also
+     * read historical, unassigned and store orders without changing them.
+     * @param {string} orderId @param {OrderActor} actor */
+    async getForReceipt(orderId, actor) {
+      if (actor?.kind !== 'human' || !actor.id) throw new OrderForbiddenError();
+      const order = await repository.findById(requireId(orderId, 'orderId'));
+      if (!order) throw new OrderNotFoundError();
+      if (!(actor.capabilities ?? []).includes('COMMERCIAL_ADMIN')) {
+        if (order.origin === 'loja') throw new OrderForbiddenError();
+        await requireOwner(actor, order);
+      }
+      return readOne(order);
+    },
     /** @param {any} input */
     async assertCancellationAccess(input) {
       const order = await repository.findById(

@@ -6,6 +6,7 @@ import {
   renderOrderFicha,
 } from '@crm-silmer/orders';
 import { renderOrderPdf } from './order-pdf.js';
+import { registerOrderReceiptRoutes } from './order-receipt-routes.js';
 
 const ORDER_STATUSES = new Set(['pendente', 'confirmado']);
 const ORDER_ORIGINS = new Set(['atendimento', 'loja']);
@@ -93,6 +94,7 @@ export function registerOrderRoutes(
   pdfRenderer = renderOrderPdf,
   fichaRenderer = renderOrderFicha,
 ) {
+  registerOrderReceiptRoutes(api, orders, contextFor, pdfRenderer);
   api.get('/api/v1/orders/summary', async (request, reply) =>
     respond(reply, async () => {
       const query = requireObject(request.query ?? {});

@@ -58,8 +58,37 @@ projeção autorizada; sem rede, sem texto interno, sem preço médio.
 
 **Done when**:
 
-- [ ] Projeção mínima e HTML A5 atendem RCP-03/04/05/10/11, incluindo continuação.
-- [ ] Testes discriminam preço exato, preço fracionário, frete, ausências e escaping.
+- [x] Projeção mínima e HTML A5 atendem RCP-03/04/05/10/11, incluindo continuação.
+- [x] Testes discriminam preço exato, preço fracionário, frete, ausências e escaping.
+
+Evidência T2: `node --test test/order-receipt.test.js` passou 14/14, sem skip;
+typecheck e ESLint do escopo passaram. Os cinco PDFs sintéticos (curto,
+pendente, cancelado, longo e valor máximo) não fizeram requests externos.
+Chromium confirmou zero overflow de linhas/rodapés; pypdf confirmou páginas
+1/1/1/19/1 iguais ao plano. Poppler foi inspecionado no curto, pendente e nas
+páginas intermediária/final do longo. Artefatos locais em `tmp/pdfs/receipt/`.
+
+Adequação: todos os testes de T2 têm âncora RCP-03/04/05/10/11; não testam
+transporte ou auditoria, que pertencem a T3. Assertions de conteúdo recompõem
+as linhas e continuam exigindo o texto original escapado, sem HTML ativo.
+
+| Critério T2                          | Evidência de assertion                                                                                                                                                                                   |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Preços exatos e frete (RCP-05)       | `test/order-receipt.test.js:79`, `assert.deepEqual(receipt.items, [...])`; `:99`, `assert.equal(receipt.totalCents, 530500)`.                                                                            |
+| Frações e revisão (RCP-04/05)        | `test/order-receipt.test.js:117`, `assert.equal(receipt.items[0].unitCents, null)`; `:118`, subtotal 10000; `:131`, `assert.equal(receipt.totalCents, null)`.                                            |
+| Ausências e legado (RCP-04)          | `test/order-receipt.test.js:156`, quantidade null; `:163`, `assert.doesNotMatch(visible(html), /R\$ 0,00\|undefined\|null/u)`; `:171`, total legado 530500.                                              |
+| Privacidade e imutabilidade (RCP-10) | `test/order-receipt.test.js:194`, chaves exatas; `:221`, `assert.doesNotMatch(JSON.stringify(receipt), /PRIVATE-\|https:/u)`; `:222`, `assert.deepEqual(input, before)`.                                 |
+| Estados por página (RCP-03)          | `test/order-receipt.test.js:242`, texto provisório; `:247`, cancelado; `:250`, `assert.doesNotMatch(visible(page), /provisório/u)` no confirmado.                                                        |
+| Escaping/fontes (RCP-10)             | `test/order-receipt.test.js:262`, texto escapado recomposto; `:270`, data URI da fonte; `:272`, `assert.doesNotMatch(html, /<script\|<img\|<link\|<iframe\|\s(?:href\|src)="https?:/u)`.                 |
+| Paginação (RCP-11)                   | `test/order-receipt.test.js:295`, total somente uma vez; `:301`, `assert.ok(plan.every((page) => page.usedHeight <= page.availableHeight))`; `:302`, todo texto preservado; `:364`, curto em uma página. |
+
+Mapeamento reverso: casos iniciados em `test/order-receipt.test.js:77`, `:102`,
+`:109`, `:122`, `:135`, `:144`, `:166`, `:178`, `:225`, `:256`, `:283`, `:315`,
+`:331` e `:358` se vinculam aos IDs RCP dos seus títulos. Não há testes de
+framework, transporte ou comportamento fora do contrato do documento.
+
+RCP-10 e RCP-11 permanecem em implementação até os gates HTTP/UI e a revisão
+independente. O documento não amplia autorização nem registra primeira impressão.
 
 ### T3: Disponibilizar a leitura comercial protegida — RCP-T02b
 

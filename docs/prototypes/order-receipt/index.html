@@ -231,7 +231,7 @@
       }
       #receipt-prototype .rc-order-layout {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 240px;
+        grid-template-columns: minmax(0, 1fr);
         gap: 20px;
       }
       #receipt-prototype .rc-section {
@@ -586,7 +586,7 @@
           ><span class="rc-user">Vendedor exemplo · Pedidos</span>
         </header>
         <main class="rc-content">
-          <section id="rc-order" aria-label="Detalhe do pedido" hidden>
+          <section id="rc-order" aria-label="Detalhe do pedido">
             <div class="rc-trail">
               <span>Pedidos</span><span aria-hidden="true">/</span
               ><span>87-CRM</span>
@@ -641,22 +641,9 @@
                   <span>Entrega</span><span>Retirada na loja</span>
                 </div>
               </section>
-              <aside class="rc-section">
-                <h2>Documento para o cliente</h2>
-                <p class="rc-muted">
-                  Um resumo do pedido com itens, quantidades, valores e previsão
-                  de entrega.
-                </p>
-                <button type="button" id="rc-open-aside">
-                  Visualizar recibo
-                </button>
-                <p class="rc-muted" style="margin-top: 16px; font-size: 13px">
-                  Disponível com os dados salvos do pedido.
-                </p>
-              </aside>
             </div>
           </section>
-          <section id="rc-preview" aria-label="Prévia do recibo">
+          <section id="rc-preview" aria-label="Prévia do recibo" hidden>
             <button type="button" id="rc-back" class="rc-quiet rc-back">
               <i data-lucide="arrow-left" aria-hidden="true"></i>Voltar ao
               pedido
@@ -821,9 +808,9 @@
           } else opener.focus();
         };
         root
-          .querySelectorAll('#rc-open, #rc-open-aside')
-          .forEach((button) =>
-            button.addEventListener('click', () => show('preview', button)),
+          .querySelector('#rc-open')
+          .addEventListener('click', (event) =>
+            show('preview', event.currentTarget),
           );
         root
           .querySelector('#rc-back')

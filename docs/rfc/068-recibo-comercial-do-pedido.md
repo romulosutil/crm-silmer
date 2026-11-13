@@ -11,7 +11,8 @@ afetadas e à síntese técnica. Sem issue específica; PR vinculada no handoff.
 
 ## Objetivo e fluxo
 
-Adicionar **Recibo do pedido** ao detalhe do pedido. O vendedor abre a prévia,
+Adicionar um único botão **Recibo do pedido** no cabeçalho do detalhe, sem
+seção adicional de documentos ou outro ponto de entrada. O vendedor abre a prévia,
 confere os dados salvos e escolhe **Baixar PDF**. Pode repetir o download sem
 confirmar novamente, alterar o pedido ou produzir efeitos na integração.
 

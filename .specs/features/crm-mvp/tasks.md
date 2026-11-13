@@ -15,7 +15,6 @@ documental autorizada; D1–D4 e ADR ainda pendentes, sem runtime ou pareamento.
 [CONV-ACL-01 e tarefas](../conversation-visibility/tasks.md), ADR 088: Admin lê
 todas; vendedor lê próprias e sem dono, com enforcement na API e interface.
 
-
 ## REC-T00 — recuperação de leads sem retorno (11/11/2026)
 
 [REC-01–12](../lead-recovery/spec.md),
@@ -23,9 +22,9 @@ todas; vendedor lê próprias e sem dono, com enforcement na API e interface.
 [ADR 085](../../../docs/adr/085-recuperacao-de-leads-por-modo-de-atendimento.md).
 
 - [x] Registrar a escolha do PO: n8n dedicado, sugestão para vendedor humano
-  e envio automático apenas nas conversas com o agente.
+      e envio automático apenas nas conversas com o agente.
 - [x] Mapear aba derivada, limite de silêncio, lembrete e reserva inbound no
-  código atual; preparar RFC, ADR, requisitos e plano de tarefas.
+      código atual; preparar RFC, ADR, requisitos e plano de tarefas.
 - [x] Concluir verificação documental, commit, push e PR (handoff da REC-T00).
 - [ ] Implementação e ativação em [REC-T01–T04](../lead-recovery/tasks.md).
 
@@ -606,6 +605,20 @@ incluindo parcelamento pela InfinitePay no pagamento integral.
 
 Análise concluída e sucedida por COB-DEL-01 acima. Ativação real permanece
 no gate COB-OPS-01.
+
+## OPS-INBOX-SEND-11 — Transformações nativas antes da reserva (12/11/2026)
+
+Requisitos: MSG-02/03, ORC-08 e PRV-01; continuidade da reserva e da idempotência
+de OPS-INBOX-SEND-09/10. Operação: `docs/runbooks/saude-erros.md`.
+
+- [x] Preparar delta estrito para os dois Code nodes puros anteriores à reserva,
+      usando Set 3.4 e preservando envelopes, fences, credenciais e conexões.
+- [x] Cobrir equivalência, entradas inválidas, atomicidade, drift e reexecução
+      do preparador com testes sintéticos, sem chamadas externas.
+- [ ] Publicar e conferir o delta no workflow ativo, com backup privado e
+      avaliação isolada no runtime instalado, sem reenviar mensagens.
+- [ ] Encerrar envio incerto somente com prova conclusiva vinculada ao comando;
+      ausência de evento ou coincidência temporal não basta.
 
 ## OPS-INBOX-SEND-10 — Prazo integral da confirmação HTTP (12/11/2026)
 

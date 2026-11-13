@@ -11,7 +11,9 @@
   em revisão, WAP-T00: duas etapas exclusivas de WhatsApp, conexão pessoal por
   QR, carteira isolada e operação CRM completa com contatos, pedidos, cobranças
   e sincronização corrente; depois, importação controlada e sucessão de linha.
-  Complemento WAP-T00a; ADR pendente, sem implementação ou ativação.
+  Complementos WAP-T00a/b; revisão de 13/11 explicita Cliente oficial,
+  vínculos duráveis e primeiro envio humano sem inbound na etapa 1 (D5).
+  Requisitos WAP-01–24; ADR pendente, sem implementação ou ativação.
 
 ## Decisão de 12/11/2026
 

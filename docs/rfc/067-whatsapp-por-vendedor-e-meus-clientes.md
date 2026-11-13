@@ -3,7 +3,7 @@
 Data: 12/11/2026. Status: **proposta em revisão**. Responsável: Tech Lead.
 Solicitante e aprovador de produto: proprietário do CRM Silmer. Revisão técnica:
 Backend/Dados, Integrações, Frontend/A11y e QA/Privacidade/Operação conforme a
-fatia. Requisitos propostos [WAP-01–19](../../.specs/features/seller-whatsapp/spec.md);
+fatia. Requisitos propostos [WAP-01–24](../../.specs/features/seller-whatsapp/spec.md);
 entrega documental WAP-T00 e [plano WAP-T01–07](../../.specs/features/seller-whatsapp/tasks.md).
 Sem issue específica; PR desta entrega vinculada no handoff.
 
@@ -13,6 +13,9 @@ abaixo tratam exclusivamente de WhatsApp. Instagram não integra esta proposta.
 A elaboração foi autorizada; recomendações de produto e exceções às regras
 vigentes ainda precisam de aceite e ADR correspondente. Não há implementação,
 pareamento, mudança de workflow ou ativação de produção nesta entrega.
+Revisão de 13/11/2026: o proprietário esclareceu que o cliente deve ser a
+mesma entidade Cliente do CRM e pediu regras explícitas de cadastro, vínculos
+e primeira mensagem. WAP-T00b detalha essa proposta; D1–D5 seguem em revisão.
 
 ## Problema e resultado esperado
 
@@ -27,7 +30,8 @@ contatos, criando e acompanhando pedidos, fazendo cobranças e usando as demais
 ações existentes conforme as permissões e regras de cada domínio. Essa
 paridade integra a etapa 1; não fica adiada para importação de histórico.
 
-**Sim, Meus clientes pode abrir a configuração e mostrar o QR code.** O QR é
+**Sim, Meus clientes pode abrir a configuração e mostrar o QR code.** Essa
+configuração é dispensável/fechável e não bloqueia carteira ou cadastro. O QR é
 gerado pela Evolution e exibido por uma API autenticada do CRM. O navegador
 nunca fala diretamente com o gateway. Depois de conectado, abrir a aba mostra
 a carteira, sem pedir novo QR a cada acesso.
@@ -117,10 +121,137 @@ ou registro de recebimento por desconexão/rollback da linha. Uma cobrança já
 criada é preservada; o envio posterior exige nova validação do mesmo link,
 cliente, Pedido, destino e linha, sem emitir cobrança duplicada para reconectar.
 
+## Cliente oficial, carteira e primeira conversa — revisão de 13/11/2026
+
+**Cliente é o `Contact` já existente no CRM.** Meus clientes é uma visão
+desse cadastro, com vínculos e permissões comerciais; não cria um cadastro
+paralelo de cliente do WhatsApp ou uma cópia por vendedor. Cadastro, vínculo
+com a carteira e identidade/conversa de canal são registros diferentes:
+
+| Conceito                     | Fonte e regra                                                                                                                                                                                                          |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cliente                      | `Contact`, com o mesmo `contactId`, nome, telefone, cadastro e serviços comerciais usados em Clientes/Pedidos. Cadastro manual exige nome e telefone normalizado; e-mail continua opcional (ADR 033).                  |
+| Vínculo de carteira          | Associação explícita do `contactId` ao vendedor responsável pela carteira, com origem, estado, versão e auditoria. Não é uma cópia do Cliente e pode existir antes do pareamento ou de qualquer conversa.              |
+| Linha de trabalho            | Identidade do remetente, com titular e geração próprios. Reconectar a mesma linha não recria os vínculos; trocar o número ou o titular segue a operação administrativa prevista, sem mover históricos silenciosamente. |
+| Identidade/conversa WhatsApp | Associação do destinatário no escopo da conta de origem ao Cliente correto. O telefone digitado é um destino declarado, não uma identidade de canal já comprovada nem autorização para ler histórico.                  |
+
+O vínculo de carteira é durável e independente da geração de pareamento.
+Pode ser registrado para o vendedor antes de existir linha conectada; o
+envio posteriormente resolve e revalida sua linha ativa. Número de telefone,
+sessão do navegador, autoria antiga de um pedido ou um QR lido não substituem
+esse vínculo. Não reinterpretar `manually_created_by` como posse definitiva.
+
+### Quando um cliente aparece
+
+| Origem                                      | Quando aparece em Meus clientes                                                                                                                            | Efeito no canal                                                                                |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| **Novo cliente**                            | Imediatamente após salvar o Cliente oficial e o vínculo à carteira, na mesma transação. Funciona antes de uma mensagem e também com WhatsApp desconectado. | Nenhuma conversa, mensagem, identidade confirmada, pedido ou cobrança é criada pelo cadastro.  |
+| **Vincular cliente existente**              | Após seleção explícita de um Cliente que o ator pode consultar e autorização do vínculo. Reutiliza o mesmo `contactId`; repetir não duplica vínculo.       | Não copia nem abre conversas de outra linha; não troca responsáveis de pedidos.                |
+| Mensagem nova recebida na linha pessoal     | Após resolução da identidade pelo CRM e vínculo ao titular ativo, atomicamente com a conversa. Se o Cliente já foi resolvido, conserva seu `contactId`.    | Conversa humana da linha correta, sem janela sem dono ou início de bot.                        |
+| Primeira saída pelo aparelho após a conexão | Ao receber o evento autenticado de uma mensagem que realmente saiu. Resolver destinatário/Cliente e vínculo sem fingir inbound.                            | Registrar o fato uma vez; não reenviar nem atribuir a digitação a uma pessoa física presumida. |
+| Agenda e histórico anteriores do aparelho   | Somente após importação selecionada e autorizada da etapa 2, conforme os dados realmente disponíveis.                                                      | Sem importação automática ao ler o QR e sem disparos retroativos.                              |
+
+Clientes já existentes no CRM aparecem quando há vínculo comercial vigente
+comprovado ou ele é estabelecido pelo fluxo autorizado. O rollout deve
+preservar vínculos comprovados numa reconciliação controlada; casos ambíguos
+exigem revisão. Não adicionar a base global inteira, inferir a carteira por
+telefone ou usar apenas o criador de um cadastro/pedido como prova de posse.
+Encerrar conversa, desconectar ou renovar QR não remove o Cliente da carteira.
+
+### Iniciar uma mensagem sem inbound anterior — etapa 1
+
+**Sim: a proposta passa a incluir o vendedor iniciar a conversa do zero.**
+Depois de cadastrar ou vincular o Cliente, a tela mostra **Sem conversa** e
+**Iniciar conversa**. A pessoa confere o telefone cadastrado, a própria linha
+remetente e escreve a primeira mensagem. Somente **Enviar primeira mensagem**
+executa o comando; salvar o Cliente, abrir sua tela ou clicar para compor não
+envia nem fabrica uma mensagem recebida. Essa extensão depende do aceite D5.
+
+O servidor revalida sessão, carteira, capacidade de envio, Cliente/telefone,
+linha/titular/geração e destinatário elegível no provedor. Uma consulta do
+provedor confirma o destino de canal, não a identidade civil do Cliente nem
+acesso a dados de terceiros. Mudança durante a composição exige releitura.
+Número inválido/sem WhatsApp, bloqueio, falta de telefone no legado ou canal
+indisponível mantêm o cadastro e impedem o envio com erro recuperável adequado;
+nenhuma outra linha é usada. A viabilidade real deve ser provada no piloto,
+sem presumir que aceitação HTTP seja entrega.
+
+O comando novo compõe os módulos existentes. Resolve ou cria identidade de
+saída para **o mesmo `contactId` selecionado**, e cria/reutiliza conversa humana
+daquela conta, mensagem de saída, outbox e auditoria na fronteira transacional
+autorizada. Não chama `resolveInboundIdentity` com evento inventado. Se já há
+conversa ativa autorizada na mesma linha/destino, ela é reutilizada. Se a
+anterior está encerrada, o comando explícito cria novo atendimento humano no
+mesmo Cliente/linha e preserva a conversa anterior encerrada. Conversa de
+outra linha nunca é usada como atalho.
+
+Repetir o comando ou abrir duas abas não cria duas conversas/saídas. Se a
+validação do destino falhar antes da reserva, não criar conversa ou mensagem
+enviada. Após reservar, falha/timeout ficam no ledger e no estado real da saída;
+resultado incerto exige reconciliação, não novo envio cego. A resposta/eco ou
+primeira inbound posterior usa a identidade já vinculada, mantém o Cliente e
+não duplica a mensagem, o cadastro ou a conversa ativa. Não há IA, pedido,
+cobrança ou conversão comercial disparados pelo primeiro contato humano.
+
+### Reutilização e privacidade dos vínculos
+
+O mesmo Cliente oficial pode ter vínculos com duas carteiras quando isso é
+explicitamente autorizado. Exemplo: Cliente `C-123` nas carteiras de A e B
+continua sendo `C-123`; cada relação de canal tem origem, remetente e histórico
+próprios. O cadastro comum segue a ACL e a versão do CRM. Notas, identidades,
+atributos e conversas exclusivos de uma linha não se tornam campos globais
+compartilhados por causa desse vínculo. Pedidos/cobranças mantêm a ACL própria.
+
+Na busca/cadastro, reutilizar Cliente acessível após conferência humana de
+possível duplicata. O runtime atual devolve `CONTACT_PHONE_MATCH` quando há
+colisão; a nova composição deve tratar esse conflito, não criar outro Cliente
+para contornar a proteção. Um telefone igual não comprova que duas pessoas ou
+cadastros são a mesma entidade. Identidades já ligadas a outro `contactId` não
+podem ser movidas silenciosamente para o escolhido no primeiro envio.
+Aplicar a correlação verificável/auditada dos contratos atuais. Caso o possível
+cadastro/vínculo não seja acessível, não retornar nome, ID ou histórico alheio;
+encaminhar a conferência para administração sem expor candidatos privados.
+
+**Vincular** inclui um Cliente autorizado em outra carteira; **transferir**
+troca uma responsabilidade e exige sua operação própria. Nenhum dos dois
+gestos equivale a unir Clientes, mover conversa, transferir número ou alterar
+crédito comercial anterior. Na etapa 1 continua proibida a transferência
+genérica de conversa pessoal para outro vendedor.
+
+### Impacto técnico da revisão
+
+Fontes conferidas: `RULES.md`, regra 2; ADR 033;
+`apps/api/src/operation-runtime.js` (`createContact`, normalização, deduplicação,
+idempotência e auditoria); `operation-routes.js` (cadastro/busca oficiais);
+`modules/contacts/src/application/contact-identity-service.js` e seu repositório
+PostgreSQL (identidade por conta e correlação explícita);
+`apps/api/src/conversation-routes.js` e
+`modules/inbox-channels/src/application/inbox-service.js` (o envio atual exige
+uma conversa existente). Não existe hoje o comando de primeira conversa aqui
+proposto: ele exige implementação/validação próprias em WAP-T02/T04/T05.
+
+WAP-T01/T02 devem fechar contrato e migração do vínculo durável com constraints
+de unicidade por carteira/Cliente, estado/versão e proveniência, separado da
+geração do canal. Nomes HTTP são propostos, a fechar em WAP-T01:
+
+| Operação           | Contrato proposto e fronteira                                                                                                                                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Consultar carteira | `GET /api/v1/me/clients`: projeção dos Clientes oficiais vinculados, estado do vínculo e disponibilidade de iniciar/continuar conversa; escopo antes de busca/contagem/paginação.                                                                       |
+| Novo cliente       | `POST /api/v1/me/clients`: nome/telefone/e-mail nos validadores e serviços oficiais de Contato; Cliente mais vínculo atômicos e idempotentes. Não basta fazer duas escritas independentes pelo browser.                                                 |
+| Vincular existente | `POST /api/v1/me/clients/links`: `contactId` e versão esperada; servidor deriva a carteira da sessão e valida o acesso ao Cliente, sem aceitar vendedor arbitrário.                                                                                     |
+| Primeiro envio     | `POST /api/v1/contacts/:contactId/whatsapp/conversations`: primeira mensagem e versões esperadas de Cliente/vínculo/linha; destino e remetente derivados/revalidados no servidor, chave idempotente e intenção durável antes do despacho n8n existente. |
+
+Rotas definitivas, envelopes e códigos por falha pertencem ao contrato de
+implementação. Não criar outro cadastro, API de pedidos/cobranças ou transporte
+paralelos. Cadastros e vínculos devem continuar utilizáveis sem WhatsApp;
+identidade de canal e primeiro envio só ficam disponíveis com validação atual.
+
 ## Jornada pessoal proposta
 
-1. Vendedor ativo abre **Meus clientes**. Sem linha configurada, abre o painel
-   **Conectar meu WhatsApp de trabalho**, com explicação e campo do número.
+1. Vendedor ativo abre **Meus clientes** e pode consultar sua carteira,
+   **Novo cliente** e **Vincular cliente existente**, inclusive sem parear.
+   Sem linha configurada, oferecer **Conectar meu WhatsApp de trabalho**;
+   o painel tem explicação/campo do número e pode ser fechado ou ignorado.
 2. A pessoa informa/confirma o número de trabalho e aciona **Conectar WhatsApp**.
    Essa ação autenticada cria ou retoma uma única tentativa; navegar/GET não
    cria instância, reinicia sessão ou desconecta outra conta.
@@ -129,7 +260,8 @@ cliente, Pedido, destino e linha, sem emitir cobrança duplicada para reconectar
    **Gerar novo QR**; falha mostra orientação e tentativa segura.
 4. O servidor confirma conexão e número efetivo pelo provedor. Somente após
    validar identidade, exclusividade e configuração do webhook, a linha fica
-   operacional e a tela abre a carteira. QR lido ou HTTP 200 isolado não bastam.
+   operacional para sincronizar/enviar na carteira já acessível. QR lido ou
+   HTTP 200 isolado não bastam; a validação não condiciona o cadastro local.
 5. Em **Conta → Meu WhatsApp**, a pessoa consulta número, estado, última
    confirmação e ações **Reconectar** e **Desconectar**. A mesma configuração
    é acessível pela aba; não existem dois cadastros ou duas sessões.
@@ -172,9 +304,11 @@ Registro/roteamento pelo n8n continua automático; chamar IA ou responder com bo
 não decorre do pareamento. Esse modo humano inicial e a atribuição por linha
 são propostas de exceção restrita às regras atuais de jornada/handoff.
 
-Meus clientes lista Contatos com vínculo comercial à própria linha, não apenas
-conversas atualmente abertas; inclui os contatos salvos manualmente nessa
-carteira. Encerrar atendimento ou desconectar não apaga
+Meus clientes lista os Clientes oficiais com vínculo comercial durável à
+carteira do vendedor, não apenas conversas atualmente abertas; inclui os
+cadastros manuais e vínculos explícitos sem conversa. A linha ativa determina
+o remetente, sem ser a identidade do Cliente ou a condição para cadastrá-lo.
+Encerrar atendimento ou desconectar não apaga
 carteira. Leituras de conversas continuam exigindo posse atual (ADR 088), com
 proteção adicional da linha pessoal. Outro vendedor não ganha acesso pela
 condição sem responsável, pelo filtro Todas, pela busca geral de clientes ou
@@ -182,8 +316,9 @@ por um ID conhecido. Projeções de Contato, histórico e contagens precisam
 ocultar vínculos e dados exclusivos de linhas alheias também fora desta aba.
 Pedidos preservam sua ACL comercial própria e não liberam chat oculto.
 
-O mesmo cliente em duas linhas mantém relacionamentos separados; não fundir
-automaticamente cadastros por nome, telefone ou IA. Uma correlação verificável
+O mesmo `contactId` pode integrar duas carteiras autorizadas, conservando
+relacionamentos de canal separados; não criar cópia por vendedor nem fundir
+cadastros automaticamente por nome, telefone ou IA. Uma correlação verificável
 não pode abrir conversas/atributos privados da outra linha. Permissões precedem
 paginação, busca e contagens e alcançam mídia, assuntos, contexto, comandos
 repetidos, notificações e SSE. Admin humano ativo conserva visão administrativa;
@@ -296,6 +431,11 @@ Pontos de produto ainda em revisão, sem bloquear a entrega desta RFC:
   confirmar recorte/período e retenção de dados importados antes de implementá-la.
 - D4: homologar código de pareamento para uso no mesmo celular; se indisponível,
   decidir explicitamente sobre o requisito de duas telas antes do piloto.
+- D5 (revisão de 13/11/2026): incluir primeiro contato humano pelo CRM sem
+  inbound anterior na etapa 1, com Cliente oficial/vínculo preexistentes,
+  destinatário validado e composição transacional do primeiro envio. Evoluir
+  somente a fronteira necessária dos contratos MSG/ORC e modo humano da linha
+  pessoal; não interpretar o envio humano como início de automação por UI.
 
 Aceite durável gera novo ADR ligado a esta RFC, requisitos e PR, atualizando
 somente as exceções necessárias em RULES, spec MVP, PRD e sínteses de arquitetura.
@@ -309,7 +449,9 @@ estão na spec e os gates locais/remotos no plano. A etapa 1 exige evidência de
 duas linhas, reconexão autônoma, mesmo cliente em ambas, concorrência de número,
 QR expirado, aparelho incorreto, saída nativa, eco duplicado, revogação durante
 envio, isolamento de Contatos/SSE/mídia e indisponibilidade do n8n/Evolution.
-WAP-17–19 exigem ainda cadastro manual sem conversa, criação/edição/confirmação
+WAP-17–24 exigem ainda cadastro manual sem conversa, vínculo do Cliente
+oficial sem duplicação, primeiro envio humano sem inbound e resposta posterior
+no mesmo Cliente/conversa, criação/edição/confirmação
 humana de Pedido e cobrança com contexto correto, envio do link pela linha de
 origem e pagamento conciliado uma vez. Repetir com duas linhas e mesmo cliente,
 tentativas alheias e WhatsApp desconectado; pagamento usa ambiente sintético

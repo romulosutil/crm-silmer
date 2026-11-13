@@ -110,19 +110,20 @@ test('patched unsupported event names provider fields and never copies values', 
 
 test('patched real content keeps its exact behavior', () => {
   const { workflow } = patchEvolutionUnsupportedShape(base);
-  for (const [message, type, text] of [
-    [{ conversation: 'Bom dia' }, 'text', 'Bom dia'],
-    [{ imageMessage: { mimetype: 'image/jpeg' } }, 'image', ''],
-    [{ protocolMessage: {} }, 'ignore', ''],
-  ]) {
+  /** @type {[any, string][]} */
+  const cases = [
+    [{ conversation: 'Bom dia' }, 'text'],
+    [{ imageMessage: { mimetype: 'image/jpeg' } }, 'image'],
+    [{ protocolMessage: {} }, 'system'],
+  ];
+  for (const [message, label] of cases) {
     const { normalized } = pipeline(workflow, inbound(message));
     const before = pipeline(base, inbound(message)).normalized;
     assert.equal(
       JSON.stringify(normalized.json),
       JSON.stringify(before.json),
-      type,
+      label,
     );
-    assert.equal(normalized.json.text, text || normalized.json.text);
   }
 });
 

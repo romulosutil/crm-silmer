@@ -347,7 +347,7 @@ dígitos, no máximo seis) saem do validador; nenhum texto, chave, mídia ou
 contato. O tipo canônico, `ai_readable` e o handoff não mudam.
 
 1. Exportar o workflow vivo, rodar o script (`node
-   ops/n8n/patch-evolution-unsupported-shape.mjs atual.json revisao.json`) e
+ops/n8n/patch-evolution-unsupported-shape.mjs atual.json revisao.json`) e
    aplicar só os dois nós, conferindo o diff contra o export.
 2. Publicar anotando o `versionId` anterior; o rollback é publicar esse id.
 3. Na próxima edição ou unsupported, ler o rótulo, corrigir com teste sobre o

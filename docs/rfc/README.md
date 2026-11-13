@@ -2,6 +2,11 @@
 
 ## Proposta de 12/11/2026
 
+- [068 — Recibo comercial do pedido](068-recibo-comercial-do-pedido.md),
+  em revisão, RCP-P01: planejamento e protótipo do resumo para o cliente,
+  com prévia e download. A disponibilidade provisória para pendentes é
+  proposta; sem alteração do runtime ou da ficha da fábrica.
+
 - [067 — WhatsApp por vendedor e Meus clientes](067-whatsapp-por-vendedor-e-meus-clientes.md),
   em revisão, WAP-T00: duas etapas exclusivas de WhatsApp, conexão pessoal por
   QR, carteira isolada e operação CRM completa com contatos, pedidos, cobranças

@@ -1,8 +1,7 @@
 # Protótipo do recibo do pedido — RCP-P01
 
-Abra `index.html` em um navegador. A primeira tela mostra o recibo; **Voltar ao
-pedido** apresenta o ponto de entrada no detalhe. **Recibo do pedido** e
-**Visualizar recibo** retornam à prévia e preservam a origem do foco.
+Abra `index.html` em um navegador. No detalhe, o único botão **Recibo do pedido**
+abre a prévia. **Voltar ao pedido** retorna ao detalhe e devolve o foco ao botão.
 
 O seletor **Cenário**, fora da interface do produto, oferece Confirmado,
 Pendente, Dados parciais e Falha ao gerar PDF. Os três primeiros baixam PDFs
@@ -22,8 +21,8 @@ seus bloqueios e o registro de primeira impressão permanecem inalterados.
 - Chromium: 320, 390, 736 e 1024 px, em claro e escuro, sem rolagem horizontal.
 - axe-core: sem violações WCAG A/AA nos oito pares de largura/tema e nos três
   cenários de documento. Isso não substitui homologação humana com leitor de tela.
-- Enter abre a prévia; voltar devolve foco à ação original, inclusive ao botão
-  da seção de documentos. Estados de carregamento, erro e repetição verificados.
+- Enter abre a prévia; voltar devolve foco ao botão do cabeçalho.
+  Estados de carregamento, erro e repetição verificados.
 - Downloads verificados como PDFs reais, com nome e bytes correspondentes ao
   cenário; trocar de cenário durante a preparação descarta o resultado anterior.
 - Sem erro JavaScript ou solicitação de rede externa durante o fluxo.
@@ -43,3 +42,10 @@ Correção vinculada a RCP-11: quantidade, descrição e valores agora definem
 explicitamente a cor escura sobre o papel branco. O recibo isola seu esquema
 claro das cores de tabelas do tema da conversa. Conferência com estilos globais
 de tabela/célula claros sobrepostos, em 320 e 1024 px, nos dois temas.
+
+## RCP-P03 — Um único acesso ao recibo
+
+Por revisão do solicitante, remover a seção “Documento para o cliente” e sua
+ação duplicada. RCP-01/02 passam a usar somente o botão do cabeçalho. A área
+de itens ocupa a largura disponível; abrir, voltar e devolver foco foram
+conferidos em celular e desktop.

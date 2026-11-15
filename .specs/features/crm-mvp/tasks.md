@@ -647,6 +647,27 @@ incluindo parcelamento pela InfinitePay no pagamento integral.
 Análise concluída e sucedida por COB-DEL-01 acima. Ativação real permanece
 no gate COB-OPS-01.
 
+## OPS-INBOX-SEND-12 — Timeout antes da reserva e investigação individual (15/11/2026)
+
+Requisitos: MSG-02/03, ORC-08 e PRV-01. Continuidade da investigação de
+11/11 às 16h11, sem reenvio. Evidência e limites em
+[Saúde e erros](../../../docs/runbooks/saude-erros.md#investigação-individual-sem-reenvio--15112026).
+
+- [x] Consultar comando, mensagem, fila, eventos e auditoria em transações
+      somente leitura; conferir retenção do n8n e registros do transporte.
+- [x] Cobrir cliente HTTP e worker com workflow sintético atrasado antes da
+      reserva: um POST, timeout incerto sem retry, sem recibo inventado ou PII;
+      ACK liberado após o cancelamento não altera o resultado registrado no store.
+- [x] Executar gate completo: 2.780 testes aprovados, 53 condicionais ignorados,
+      sem falhas; tipos, lint, formatação, validadores e build aprovados.
+- [ ] Comprovar resultado do comando histórico por recibo individual ou vínculo
+      inequívoco com execução encerrada antes do transporte; somente então
+      reconciliar e concluir a pendência. Evidência atual insuficiente.
+
+O teste automatiza a proteção contra conclusões e repetição indevidas; não
+reconstitui uma prova histórica que deixou de estar retida. Nenhuma mensagem,
+comando, job, reconciliação ou triagem de produção foi alterada nesta tarefa.
+
 ## OPS-INBOX-SEND-11 — Transformações nativas antes da reserva (12/11/2026)
 
 Requisitos: MSG-02/03, ORC-08 e PRV-01; continuidade da reserva e da idempotência

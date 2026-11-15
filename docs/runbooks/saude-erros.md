@@ -236,6 +236,53 @@ Não foi reenviado, arquivado ou reconciliado apenas para limpar alertas.
 O event bus preserva falha na reserva humana no mesmo intervalo; falta vínculo
 inequívoco da execução com o comando para declarar seu resultado.
 
+### Investigação individual sem reenvio — 15/11/2026
+
+OPS-INBOX-SEND-12 / MSG-02/03, ORC-08 e PRV-01. A nova consulta da operação
+de 11/11 às 16h11 identificou o comando individual no CRM, com uma tentativa
+de fila, `N8N_COMMAND_TIMEOUT`, comando/mensagem/job `outcome_unknown`, flags
+de retry desabilitadas e nenhum ID externo. Não há evento n8n, tentativa de
+entrega, execução vinculada na mensagem ou auditoria de conclusão para esse
+comando. Consultas limitaram-se a códigos, estados, datas e referências técnicas,
+em transações `READ ONLY` com prazo de quatro segundos.
+
+O banco do n8n não contém a execução 95228 nem seus dados. Entre os IDs 95220
+e 95240, a única execução retida é de outro workflow e não contém o comando.
+Os quatro arquivos atuais do event bus não contêm o comando nem a execução;
+a janela mais antiga disponível começa em 13/11 às 13h31 de Brasília. As
+cópias técnicas anteriores consultadas antecedem o incidente. A falha na reserva
+descrita na investigação de 12/11 permanece evidência temporal, sem vínculo
+individual recuperado. O conector de logs voltou a retornar HTTP 400.
+
+O banco do Evolution conserva registros no intervalo. A comparação de resumo
+SHA-256 com sal efêmero de texto/destino do envelope CRM contra os campos de
+texto e JID telefônico dos envios nos cinco minutos seguintes não encontrou
+correspondência entre os 11 candidatos. Conteúdo, telefone, sal e resumos não
+são publicados na evidência versionada. A consulta cobre esses campos e essa
+janela; ausência de correspondência não prova falha nem exclui outro formato,
+retenção incompleta ou efeito fora do intervalo. Nenhum transporte foi chamado.
+
+O teste `OPS-INBOX-SEND-12` em `test/n8n-command-worker.test.js` compõe o
+cliente HTTP e o worker com servidor loopback sintético que recebe o comando
+e aguarda antes dos cabeçalhos/reserva. Confere a fronteira do worker antes
+do request, um único POST com bytes e chave idempotente originais, timeout
+incerto sem retry, ausência de recibo inventado e minimização no store.
+Liberar um ACK válido depois do cancelamento não altera o resultado concluído.
+O endpoint sintético não executa reserva, workflow ou envio real.
+
+Gate local completo aprovado: 2.780 testes, 53 condicionais ignorados, sem
+falhas; formatação, tipos, lint, fronteiras, validadores e build aprovados.
+E2E/axe da central: 22 aprovados; auditoria de dependências sem vulnerabilidades.
+Node local 24.22.1/npm 11.19.1; o CI continua fixado nas versões do projeto.
+Sem `TEST_DATABASE_URL`, esse gate não comprova a suíte PostgreSQL.
+
+Resultado da investigação: ainda não há prova individual suficiente para
+reconciliar o comando como enviado ou como falha conhecida. Manter os grupos
+worker/n8n em análise e preservar estados, tentativas e histórico. Não usar o
+teste sintético, saúde verde ou ausência de registros para marcar a pendência
+resolvida. Uma conclusão futura exige recibo verificável ou prova da execução
+exata e encerrada antes do transporte, com auditoria e sem reenviar o original.
+
 ### Referências nginx — OPS-ERR-04/05
 
 A coleta anterior descartava IDs nginx de 32 hex ao exigir versão/variant

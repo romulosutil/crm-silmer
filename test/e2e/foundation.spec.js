@@ -1,5 +1,6 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 import { mockDashboardRead } from './support/painel-mock.js';
 
 test('renders the semantic foundation without critical accessibility violations', async ({
@@ -45,17 +46,63 @@ test('uses the light theme by default, even when the system is dark', async ({
   );
 });
 
-test('applies a saved dark theme before the application bundle loads', async ({
-  page,
-}) => {
-  await page.addInitScript(() => {
-    globalThis.localStorage.setItem('silmer-theme', 'dark');
+for (const scenario of [
+  { stored: 'dark', expected: 'dark', blocked: false },
+  { stored: null, expected: 'light', blocked: false },
+  { stored: 'system', expected: 'light', blocked: false },
+  { stored: 'dark', expected: 'light', blocked: true },
+]) {
+  test(`OPS-CSP-THEME-01: theme ${scenario.stored ?? 'unset'}, storage blocked=${scenario.blocked}, works under production CSP before the bundle`, async ({
+    page,
+  }) => {
+    const nginx = await readFile(
+      new URL('../../docker/nginx.conf', import.meta.url),
+      'utf8',
+    );
+    const policy = nginx.match(
+      /add_header Content-Security-Policy "([^"]+)" always/u,
+    )?.[1];
+    expect(policy).toBeTruthy();
+    const errors = /** @type {string[]} */ ([]);
+    page.on('pageerror', (error) => errors.push(error.message));
+    page.on('console', (message) => {
+      if (/content security policy|violates.*policy/iu.test(message.text()))
+        errors.push(message.text());
+    });
+    await page.route('**/assets/*.js', (route) => route.abort());
+    await page.route('**/', async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        response,
+        headers: {
+          ...response.headers(),
+          'content-security-policy': (policy ?? '')
+            .replaceAll('$print_font_sources', '')
+            .replaceAll('$print_style_sources', ''),
+        },
+      });
+    });
+    await page.addInitScript(({ stored, blocked }) => {
+      if (stored !== null)
+        globalThis.localStorage.setItem('silmer-theme', stored);
+      if (blocked) {
+        globalThis.Storage.prototype.getItem = () => {
+          throw new globalThis.DOMException(
+            'Storage unavailable',
+            'SecurityError',
+          );
+        };
+      }
+    }, scenario);
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-theme',
+      scenario.expected,
+    );
+    await expect(page.locator('#app')).toBeEmpty();
+    expect(errors).toEqual([]);
   });
-  await page.goto('/');
-
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
-});
+}
 
 test('ignores the retired system preference and defaults to light', async ({
   page,

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
 import test from 'node:test';
 
 import {
@@ -228,6 +229,113 @@ test('partial HTTP acknowledgement settles the command as unknown without resend
   assert.equal(store.calls.at(-1)[2].errorCode, 'N8N_COMMAND_TIMEOUT');
   assert.doesNotMatch(JSON.stringify(store.calls), /private-remote-data/);
 });
+
+test(
+  'OPS-INBOX-SEND-12: a workflow delayed before reservation stays unknown after HTTP cancellation and a late ACK',
+  { timeout: 5000 },
+  async (t) => {
+    const store = storeFixture();
+    const privateCanary = 'synthetic-private-message-and-remote-detail';
+    const payload = {
+      action: 'send_message',
+      command_id: COMMAND_ID,
+      message: { type: 'text', text: privateCanary },
+    };
+    const payloadHash = sha256Hex(canonicalJsonStringify(payload));
+    store.loadForDelivery = async (commandId, context) => {
+      store.calls.push(['load', commandId, context]);
+      return { commandId, payload, payloadHash };
+    };
+    /** @type {string[]} */
+    const boundaries = [];
+    /** @type {Array<{method: string|undefined, path: string|undefined, key: string|string[]|undefined, body: string}>} */
+    const requests = [];
+    let releaseWorkflow = () => {};
+    const workflowDelay = new Promise((resolve) => {
+      releaseWorkflow = () => resolve(undefined);
+    });
+    let finishWorkflow = () => {};
+    const workflowFinished = new Promise((resolve) => {
+      finishWorkflow = () => resolve(undefined);
+    });
+    const server = createServer(async (request, reply) => {
+      let body = '';
+      for await (const chunk of request) body += chunk.toString();
+      boundaries.push('http-request');
+      requests.push({
+        method: request.method,
+        path: request.url,
+        key: request.headers['idempotency-key'],
+        body,
+      });
+      // Model a workflow waiting on its runner before reserving: no headers,
+      // provider call or CRM callback is executed by this synthetic endpoint.
+      // Cancelling fetch must not be mistaken for cancelling remote work.
+      await workflowDelay;
+      reply.writeHead(202, { 'content-type': 'application/json' });
+      reply.end(
+        JSON.stringify({
+          accepted: true,
+          command_id: COMMAND_ID,
+          private_remote_detail: privateCanary,
+        }),
+      );
+      finishWorkflow();
+    });
+    t.after(() => {
+      releaseWorkflow();
+      server.closeAllConnections();
+      server.close();
+    });
+    await new Promise((resolve) =>
+      server.listen(0, '127.0.0.1', () => resolve(undefined)),
+    );
+    const address = server.address();
+    assert.ok(address && typeof address === 'object');
+    const handler = createN8nCommandJobHandler({
+      client: createN8nCommandDeliveryClient({
+        clientId: 'synthetic-local',
+        clientSecret: 'synthetic-secret',
+        endpoint: `http://127.0.0.1:${address.port}/webhook/silmer/panel-command`,
+        allowInsecureLocal: true,
+        timeoutMs: 250,
+      }),
+      commandStore: store,
+    });
+    const result = await handler(job(), {
+      async markEffectStarted() {
+        boundaries.push('worker-effect-boundary');
+        return true;
+      },
+    });
+    assert.deepEqual(result, {
+      errorCode: 'N8N_COMMAND_TIMEOUT',
+      outcome: 'outcome_unknown',
+      retryable: false,
+      retrySafe: false,
+    });
+    assert.deepEqual(boundaries, ['worker-effect-boundary', 'http-request']);
+    assert.deepEqual(requests, [
+      {
+        method: 'POST',
+        path: '/webhook/silmer/panel-command',
+        key: COMMAND_ID,
+        body: canonicalJsonStringify(payload),
+      },
+    ]);
+    assert.deepEqual(
+      store.calls.map((call) => call[0]),
+      ['load', 'processing', 'unknown'],
+    );
+    const settled = JSON.stringify({ result, calls: store.calls });
+    releaseWorkflow();
+    await workflowFinished;
+    assert.equal(JSON.stringify({ result, calls: store.calls }), settled);
+    assert.equal(requests.length, 1);
+    assert.equal(store.calls.at(-1)[2].providerExternalId, undefined);
+    assert.doesNotMatch(settled, /synthetic-private|synthetic-secret|Basic /u);
+  },
+);
 
 test('remote reservation proof permits replay with the same command', async () => {
   const store = storeFixture();

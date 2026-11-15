@@ -1,5 +1,23 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## OPS-API-IMAGE-T02 — ensaio isolado e preflight de manutenção (15/11/2026)
+
+Manutenção INT-3 / OPS-CHK-01, autorizada pelo mantenedor com execução apenas
+isolada, sem acesso ou alterações em produção. A entrega fica em PR sem merge,
+pois `master` aciona deploy automático (ADR 022).
+
+- [x] Implementar preflight somente leitura, com socket local e daemon
+      explícitos, referência/ID atual e de rollback e conferência Swarm/container.
+- [x] Cobrir negativas de inventário, daemon incorreto, tag ausente ou alterada,
+      rollback ausente, container divergente e falha/timeout de inspeção.
+- [x] Implementar ensaio de limpeza por lista de descarte, daemon efêmero,
+      serviços parados, restart/recriação sem pull e HTTP atual/rollback.
+- [x] Integrar ensaio real como passo obrigatório no CI Linux; evidência da
+      execução e gates fica nos checks do PR, sem integração na `master`.
+
+Procedimento e limites em
+[manutenção das imagens](../../../docs/runbooks/image-maintenance-check.md).
+
 ## OPS-CSP-THEME-01 / OPS-API-IMAGE-01 — incidente de 15/11/2026
 
 Manutenção INT-3 / OPS-CHK-01, autorizada pelo mantenedor. Sem alteração de

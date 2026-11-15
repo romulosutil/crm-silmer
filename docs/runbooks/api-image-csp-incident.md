@@ -49,6 +49,9 @@ e [configuração de limpeza diária do EasyPanel](https://easypanel.io/docs/api
 
 ## Prevenção enquanto a causa não for confirmada
 
+OPS-API-IMAGE-T02 entrega o [preflight somente leitura e ensaio isolado](image-maintenance-check.md).
+Sua execução no CI não acessa produção nem reativa a limpeza do EasyPanel.
+
 1. Manter a limpeza diária global desabilitada até revisar sua política.
    A alteração afeta o host compartilhado: acompanhar a ocupação no monitor
    existente e revisar antes de 80% de uso ou menos de 20 GB livres. Não criar

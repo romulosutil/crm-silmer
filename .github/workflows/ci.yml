@@ -103,6 +103,9 @@ jobs:
         run: npm run validate
       - name: Verify real edge media policies and upload limits
         run: node scripts/check-edge-media-proxy.mjs
+      - name: Verify image retention and restart in an isolated Docker daemon
+        timeout-minutes: 8
+        run: sudo "$(command -v node)" scripts/docker-image-maintenance-drill.mjs --isolated-local
       - name: Run E2E and accessibility gates
         run: npm run test:e2e
       - name: Scan production dependencies

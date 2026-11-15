@@ -1,5 +1,24 @@
 # CRM Silmer MVP — Plano de prontidão
 
+## OPS-CSP-THEME-01 / OPS-API-IMAGE-01 — incidente de 15/11/2026
+
+Manutenção INT-3 / OPS-CHK-01, autorizada pelo mantenedor. Sem alteração de
+arquitetura ou fluxo de deploy (ADR 022).
+
+- [x] Recuperar API por reconstrução da revisão aprovada; confirmar imagem,
+      container healthy, live/ready 200 e sessão sem autenticação 401.
+- [x] Externalizar bootstrap de tema mantendo CSP restritiva; validar sob a
+      política de produção com bundle bloqueado e storage indisponível.
+- [x] Investigar build, ações, configuração e recursos; desativar limpeza
+      diária como mitigação temporária, com acompanhamento de disco.
+- [x] Concluir gates locais: validate, 14 E2E da tela base e npm audit;
+      publicação segue PR com CI obrigatório e smoke CSP no alvo.
+- [ ] Determinar origem da exclusão com eventos/journal/cron do host; acesso
+      disponível não permite essa prova. Revisar retenção antes de reativar limpeza.
+
+Evidências, limites e prevenção no
+[runbook do incidente](../../../docs/runbooks/api-image-csp-incident.md).
+
 ## WAP-T00 — proposta de WhatsApp por vendedor (12/11/2026)
 
 [RFC 067](../../../docs/rfc/067-whatsapp-por-vendedor-e-meus-clientes.md),

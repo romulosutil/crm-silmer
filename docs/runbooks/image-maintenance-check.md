@@ -69,6 +69,11 @@ O schema exige exatamente os três papéis **API, worker e edge**, sem duplicar
 papel ou nome, com seus nomes Swarm e respectivas imagens. `kind: container`
 é destinado a workloads standalone com o label `io.crm.image-preflight.service`;
 não usar esse modo para representar um serviço Swarm do EasyPanel.
+Para Swarm, nomes, IDs completos e IDs curtos são resolvidos para `.ID` e
+`.Spec.Name` canônicos. O relatório usa o nome canônico e inclui `serviceId`;
+três aliases do mesmo serviço não podem preencher os três papéis. A busca de
+containers usa `com.docker.swarm.service.id`, não o seletor textual recebido.
+Resposta de identidade incompleta ou inválida bloqueia a manutenção.
 
 Na máquina que hospeda o daemon, com Node e Docker CLI disponíveis:
 
@@ -108,7 +113,7 @@ Em Swarm com múltiplos nós, a inspeção local não comprova imagens de outro 
 
 ```sh
 npm run test:maintenance:images
-# Em runner Linux descartável, com Docker/dockerd instalados:
+# Em runner Linux descartável, com Docker/dockerd/containerd/ctr instalados:
 sudo "$(command -v node)" scripts/docker-image-maintenance-drill.mjs --isolated-local
 ```
 
@@ -117,6 +122,26 @@ contextos remotos herdados. O CI o executa como passo obrigatório do gate já
 existente de checks. Ele cria um `dockerd` próprio em `/tmp/crm-image-drill-*`,
 com socket Unix, configuração, data-root, exec-root e pidfile exclusivos;
 sem bridge, regras iptables, portas publicadas ou montagem do socket do host.
+Um processo filho `containerd` é iniciado antes dele, com configuração, socket
+gRPC/ttrpc, root e state privados. CRI/NRI e endpoints TCP/debug/métricas são
+desabilitados. O Docker recebe `--containerd` explicitamente e namespaces
+exclusivos para containers e plugins, evitando a autodetecção do runtime do
+host. Isso corrige o P2 identificado na revisão do PR #378: roots exclusivos
+do Docker, sozinhos, não isolavam o containerd.
+
+Antes de criar imagens/containers ou executar prune, o ensaio verifica os
+argumentos reais dos dois filhos em `/proc/<pid>/cmdline`, seus estados e,
+quando expostos pelo cliente Docker, endereço/namespaces de `Info.Containerd`.
+Clientes antigos sem esse campo continuam sujeitos à prova por `/proc`.
+Cada fixture HTTP saudável deve também aparecer em `ctr containers list` no
+socket **e** namespace privados. O JSON completo de `docker info` nunca é
+emitido em logs. Um endpoint do host ou namespace `moby`/`plugins.moby` deve
+reprovar as regressões de posse.
+
+Containerd/runc podem criar sockets de shim em caminhos de runtime do sistema
+com nomes derivados de socket, namespace e ID. A garantia é de processos,
+endpoints, metadata e namespaces próprios, sem afirmar isolamento de VM ou
+que todo arquivo de runtime reside em `/tmp`.
 Não para nem reinicia o Docker existente. O uso de múltiplos daemons é uma
 facilidade experimental do Docker, limitada aqui ao runner descartável, com
 [configurações separadas conforme o fabricante](https://docs.docker.com/reference/cli/dockerd/#run-multiple-daemons).
@@ -133,7 +158,7 @@ O ensaio exige:
 2. Serviços parados e seus containers removidos, seguidos de limpeza real de imagens por label positivo exclusivo
    de descarte. Uma imagem descartável precisa desaparecer; as imagens atual,
    anterior e a base não descartável precisam permanecer.
-3. Reinício do daemon temporário, com o mesmo armazenamento e identidade,
+3. Reinício dos processos Docker e containerd temporários, com o mesmo armazenamento e identidade,
    seguido de preflight aprovado com serviços ainda sem containers.
 4. Recriação de cada serviço com `--pull=never`, HTTP correto e restart do
    container; criação separada da versão de rollback com HTTP correto.
@@ -142,8 +167,10 @@ O ensaio exige:
 6. Tag atual apontando para a imagem errada, referência de rollback ausente
    e, por fim, remoção integral da imagem de rollback sem containers:
    preflight precisa bloquear os três casos, antes de qualquer manutenção.
-7. Encerramento do daemon criado e remoção de seus recursos/diretório antes
-   de registrar sucesso; falha de cleanup também reprova a execução.
+7. Encerramento do Docker criado, ausência de tasks no namespace privado e
+   encerramento do containerd filho antes da remoção do diretório e registro
+   de sucesso. Cleanup incompleto reprova a execução e preserva o diretório
+   de diagnóstico; nenhum PID descoberto por nome é sinalizado.
 
 A limpeza usa `image prune --all --force` **somente nesse daemon privado**, com
 filtro positivo para o label único de descarte da execução. O código confere

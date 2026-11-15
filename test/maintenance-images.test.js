@@ -9,11 +9,182 @@ import {
   validateMaintenanceSocket,
 } from '../scripts/check-maintenance-images.mjs';
 import { assertDrillTarget } from '../scripts/docker-image-maintenance-drill.mjs';
+import {
+  assertPrivateProcess,
+  assertPrivateRuntimeInfo,
+  assertRuntimeAvailableForCleanup,
+  privateRuntimeSettings,
+} from '../scripts/isolated-docker-runtime.mjs';
 
 const currentId = `sha256:${'a'.repeat(64)}`;
 const rollbackId = `sha256:${'b'.repeat(64)}`;
 const daemonId = '01234567-89ab-cdef-0123-456789abcdef';
 const socket = 'unix:///tmp/synthetic-docker.sock';
+
+const privateRuntime = privateRuntimeSettings(
+  '/tmp/crm-image-drill-ABC123',
+  '01234567-89ab-cdef-0123-456789abcdef',
+);
+
+test('a containerd that dies after starting cannot authorize resource removal without task proof', () => {
+  assert.doesNotThrow(() => assertRuntimeAvailableForCleanup(false, undefined));
+  assert.doesNotThrow(() =>
+    assertRuntimeAvailableForCleanup(true, {
+      pid: 123,
+      exitCode: null,
+      signalCode: null,
+    }),
+  );
+  for (const child of [
+    undefined,
+    { pid: 123, exitCode: 0, signalCode: null },
+    { pid: 123, exitCode: 1, signalCode: null },
+    { pid: 123, exitCode: null, signalCode: 'SIGKILL' },
+  ]) {
+    assert.throws(
+      () => assertRuntimeAvailableForCleanup(true, child),
+      /PRIVATE_RUNTIME_CLEANUP_UNPROVEN/u,
+    );
+  }
+});
+
+test('P2 regression: Docker receives an explicit private containerd socket and two exclusive namespaces', () => {
+  assert.deepEqual(privateRuntime.dockerArgs, [
+    '--containerd',
+    '/tmp/crm-image-drill-ABC123/containerd.sock',
+    '--containerd-namespace',
+    'crm-image-drill-01234567-89ab-cdef-0123-456789abcdef',
+    '--containerd-plugins-namespace',
+    'crm-image-drill-01234567-89ab-cdef-0123-456789abcdef-plugins',
+  ]);
+  assert.deepEqual(privateRuntime.containerdArgs, [
+    '--config',
+    '/tmp/crm-image-drill-ABC123/containerd.toml',
+    '--root',
+    '/tmp/crm-image-drill-ABC123/containerd-root',
+    '--state',
+    '/tmp/crm-image-drill-ABC123/containerd-state',
+    '--address',
+    privateRuntime.address,
+  ]);
+  assert.match(privateRuntime.config, /imports = \[\]/u);
+  assert.match(privateRuntime.config, /io.containerd.nri.v1.nri/u);
+  assert.match(privateRuntime.config, /io.containerd.grpc.v1.cri/u);
+  assert.match(privateRuntime.config, /tcp_address = ""/u);
+});
+
+test('P2 regression: effective host containerd address or namespaces must fail ownership checks', () => {
+  const info = {
+    Containerd: {
+      Address: privateRuntime.address,
+      Namespaces: {
+        Containers: privateRuntime.namespace,
+        Plugins: privateRuntime.pluginsNamespace,
+      },
+    },
+  };
+  assert.doesNotThrow(() => assertPrivateRuntimeInfo(info, privateRuntime));
+  assert.throws(
+    () =>
+      assertPrivateRuntimeInfo(
+        {
+          Containerd: {
+            ...info.Containerd,
+            Address: '/run/containerd/containerd.sock',
+          },
+        },
+        privateRuntime,
+      ),
+    /CONTAINERD_ADDRESS_MISMATCH/u,
+  );
+  assert.throws(
+    () =>
+      assertPrivateRuntimeInfo(
+        {
+          Containerd: {
+            ...info.Containerd,
+            Namespaces: { ...info.Containerd.Namespaces, Containers: 'moby' },
+          },
+        },
+        privateRuntime,
+      ),
+    /CONTAINERD_NAMESPACE_MISMATCH/u,
+  );
+  assert.throws(
+    () =>
+      assertPrivateRuntimeInfo(
+        {
+          Containerd: {
+            ...info.Containerd,
+            Namespaces: {
+              ...info.Containerd.Namespaces,
+              Plugins: 'plugins.moby',
+            },
+          },
+        },
+        privateRuntime,
+      ),
+    /CONTAINERD_PLUGINS_NAMESPACE_MISMATCH/u,
+  );
+  for (const invalid of [null, '', [], false])
+    assert.throws(
+      () => assertPrivateRuntimeInfo(invalid, privateRuntime),
+      /DOCKER_INFO_INVALID/u,
+    );
+});
+
+test('actual child argv must match private arguments, including when old Docker omits runtime metadata', () => {
+  const cmdline = ['containerd', ...privateRuntime.containerdArgs, ''].join(
+    '\0',
+  );
+  assert.doesNotThrow(() =>
+    assertPrivateProcess(cmdline, privateRuntime.containerdArgs),
+  );
+  assert.doesNotThrow(() => assertPrivateRuntimeInfo({}, privateRuntime));
+  for (const args of [
+    privateRuntime.containerdArgs.slice(0, -2),
+    [
+      ...privateRuntime.containerdArgs.slice(0, -1),
+      '/run/containerd/containerd.sock',
+    ],
+    [
+      ...privateRuntime.containerdArgs,
+      '--config',
+      '/etc/containerd/config.toml',
+    ],
+  ]) {
+    assert.throws(
+      () =>
+        assertPrivateProcess(
+          ['containerd', ...args, ''].join('\0'),
+          privateRuntime.containerdArgs,
+        ),
+      /PRIVATE_PROCESS_ARGUMENTS_MISMATCH/u,
+    );
+  }
+  assert.throws(
+    () =>
+      assertPrivateProcess(
+        ['dockerd', '--data-root', '/tmp/private', ''].join('\0'),
+        privateRuntime.dockerArgs,
+      ),
+    /PRIVATE_PROCESS_ARGUMENTS_MISMATCH/u,
+  );
+});
+
+test('runtime configuration cannot name a host directory or an arbitrary namespace token', () => {
+  for (const directory of [
+    '/var/run',
+    '/tmp/crm-image-drill-ABC123/../host',
+    '/tmp/other',
+  ])
+    assert.throws(() =>
+      privateRuntimeSettings(directory, '01234567-89ab-cdef-0123-456789abcdef'),
+    );
+  assert.throws(() =>
+    privateRuntimeSettings('/tmp/crm-image-drill-ABC123', 'moby'),
+  );
+});
 
 function fixture() {
   /** @type {import('../scripts/check-maintenance-images.mjs').MaintenanceInventory} */
@@ -33,6 +204,17 @@ function fixture() {
     ['synthetic/api:rollback', rollbackId],
     [currentId, currentId],
   ]);
+  const identities = inventory.services.map((service, index) => ({
+    id: String.fromCharCode(97 + index).repeat(25),
+    name: service.name,
+  }));
+  const aliases = new Map(
+    identities.flatMap((identity) => [
+      [identity.name, identity],
+      [identity.id, identity],
+      [identity.id.slice(0, 12), identity],
+    ]),
+  );
   const state = {
     configured: 'synthetic/api:current',
     containers: 'abc123abc123',
@@ -50,13 +232,99 @@ function fixture() {
       if (!id) throw new Error('DOCKER_READ_FAILED');
       return id;
     }
-    if (args[0] === 'service') return state.configured;
-    if (args[0] === 'ps') return state.containers;
+    if (args[0] === 'service') {
+      const identity = aliases.get(args.at(-1) ?? '');
+      if (!identity) throw new Error('DOCKER_READ_FAILED');
+      return JSON.stringify({ ...identity, image: state.configured });
+    }
+    if (args[0] === 'ps') {
+      if (inventory.services.every((s) => s.kind === 'container'))
+        return state.containers;
+      return identities.some(
+        (identity) =>
+          args.includes(`label=com.docker.swarm.service.id=${identity.id}`) ||
+          args.includes(`label=com.docker.swarm.service.name=${identity.name}`),
+      )
+        ? state.containers
+        : '';
+    }
     if (args[0] === 'container') return state.runningImage;
     throw new Error('UNEXPECTED_COMMAND');
   };
-  return { inventory, images, state, calls, read };
+  return { inventory, images, state, calls, read, identities };
 }
+
+test('P2 regression: full and short Swarm IDs resolve to canonical identities and cannot hide image drift', () => {
+  const f = fixture();
+  f.inventory.services[0].name = f.identities[0].id;
+  f.inventory.services[1].name = f.identities[1].id.slice(0, 12);
+  const result = checkMaintenanceImages(f.inventory, f.read);
+  assert.deepEqual(
+    result.services.map((service) => service.name),
+    f.identities.map((service) => service.name),
+  );
+  assert.ok(
+    result.services.every((service) => service.runningContainers === 1),
+  );
+  assert.ok(
+    f.calls
+      .filter((args) => args[0] === 'ps')
+      .every((args) =>
+        args[2].startsWith('label=com.docker.swarm.service.id='),
+      ),
+  );
+  f.state.runningImage = rollbackId;
+  assert.throws(
+    () => checkMaintenanceImages(f.inventory, f.read),
+    /RUNNING_IMAGE_MISMATCH/u,
+  );
+});
+
+test('P2 regression: different aliases of one physical Swarm service cannot fill the three roles', () => {
+  const f = fixture();
+  const identity = f.identities[0];
+  const aliases = [identity.name, identity.id, identity.id.slice(0, 12)];
+  f.inventory.services.forEach((service, index) => {
+    service.name = aliases[index];
+  });
+  assert.throws(
+    () => checkMaintenanceImages(f.inventory, f.read),
+    /DUPLICATE_SERVICE_ID/u,
+  );
+});
+
+test('invalid or incomplete canonical service metadata blocks before container enumeration', () => {
+  for (const response of [
+    '',
+    'null',
+    '{}',
+    '{',
+    JSON.stringify({
+      id: 'short',
+      name: 'api',
+      image: 'synthetic/api:current',
+    }),
+    JSON.stringify({
+      id: 'a'.repeat(25),
+      name: 'bad\nname',
+      image: 'synthetic/api:current',
+    }),
+    JSON.stringify({ id: 'a'.repeat(25), name: 'api', image: [] }),
+  ]) {
+    const f = fixture();
+    assert.throws(
+      () =>
+        checkMaintenanceImages(f.inventory, (args) =>
+          args[0] === 'service' ? response : f.read(args),
+        ),
+      /SERVICE_METADATA_INVALID/u,
+    );
+    assert.equal(
+      f.calls.some((args) => args[0] === 'ps'),
+      false,
+    );
+  }
+});
 
 test('OPS-API-IMAGE-T02: approves matching current, rollback, Swarm reference and running image', () => {
   const f = fixture();

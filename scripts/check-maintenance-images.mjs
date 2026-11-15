@@ -137,17 +137,40 @@ export function checkMaintenanceImages(inventory, read) {
     )
       block('IMAGE_ID_MISMATCH');
   }
+  const serviceIds = new Set();
   const services = inventory.services.map((service) => {
     requireImage(service.current.reference, service.current.imageId);
     requireImage(service.rollback.reference, service.rollback.imageId);
+    let canonicalName = service.name;
+    let serviceId = null;
     if (service.kind === 'swarm') {
-      const configured = read([
+      const metadata = read([
         'service',
         'inspect',
         '--format',
-        '{{.Spec.TaskTemplate.ContainerSpec.Image}}',
+        '{"id":{{json .ID}},"name":{{json .Spec.Name}},"image":{{json .Spec.TaskTemplate.ContainerSpec.Image}}}',
         service.name,
       ]);
+      let resolved;
+      try {
+        resolved = JSON.parse(metadata);
+      } catch {
+        block('SERVICE_METADATA_INVALID');
+      }
+      if (
+        !record(resolved) ||
+        typeof resolved.id !== 'string' ||
+        !/^[a-z0-9]{25}$/u.test(resolved.id) ||
+        typeof resolved.name !== 'string' ||
+        !namePattern.test(resolved.name) ||
+        typeof resolved.image !== 'string'
+      )
+        block('SERVICE_METADATA_INVALID');
+      if (serviceIds.has(resolved.id)) block('DUPLICATE_SERVICE_ID');
+      serviceIds.add(resolved.id);
+      serviceId = resolved.id;
+      canonicalName = resolved.name;
+      const configured = resolved.image;
       if (
         configured !== service.current.reference &&
         !(
@@ -162,12 +185,12 @@ export function checkMaintenanceImages(inventory, read) {
     }
     const label =
       service.kind === 'swarm'
-        ? 'com.docker.swarm.service.name'
+        ? 'com.docker.swarm.service.id'
         : fixtureServiceLabel;
     const output = read([
       'ps',
       '--filter',
-      `label=${label}=${service.name}`,
+      `label=${label}=${serviceId ?? service.name}`,
       '--format',
       '{{.ID}}',
     ]);
@@ -185,7 +208,8 @@ export function checkMaintenanceImages(inventory, read) {
         block('RUNNING_IMAGE_MISMATCH');
     }
     return {
-      name: service.name,
+      name: canonicalName,
+      serviceId,
       currentId: service.current.imageId,
       rollbackId: service.rollback.imageId,
       runningContainers: containers.length,

@@ -14,6 +14,10 @@ pois `master` aciona deploy automático (ADR 022).
       serviços parados, restart/recriação sem pull e HTTP atual/rollback.
 - [x] Integrar ensaio real como passo obrigatório no CI Linux; evidência da
       execução e gates fica nos checks do PR, sem integração na `master`.
+- [x] OPS-API-IMAGE-T02-P2: iniciar/verificar containerd filho e namespaces
+      exclusivos, sem autodetecção do runtime do host; adicionar regressões de posse.
+- [x] Resolver e deduplicar identidades Swarm canônicas, enumerar por service.id
+      e cobrir IDs completos/curtos e aliases que antes geravam falso ready.
 
 Procedimento e limites em
 [manutenção das imagens](../../../docs/runbooks/image-maintenance-check.md).

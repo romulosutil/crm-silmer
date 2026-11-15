@@ -20,6 +20,12 @@ import {
   fixtureServiceLabel,
 } from './check-maintenance-images.mjs';
 import { pullPinnedImage } from './edge-media-image-pull.mjs';
+import {
+  assertPrivateProcess,
+  assertPrivateRuntimeInfo,
+  assertRuntimeAvailableForCleanup,
+  privateRuntimeSettings,
+} from './isolated-docker-runtime.mjs';
 
 /** @param {{platform:string, uid:number|undefined, env:NodeJS.ProcessEnv, args:string[]}} target */
 export function assertDrillTarget(target) {
@@ -47,11 +53,17 @@ export async function runImageMaintenanceDrill() {
   });
   const directory = await mkdtemp('/tmp/crm-image-drill-');
   const token = randomUUID();
+  const runtimeSettings = privateRuntimeSettings(directory, token);
   const host = `unix://${directory}/docker.sock`;
   const env = dockerEnvironment(process.env);
   const read = createMaintenanceReader(host);
   /** @type {import('node:child_process').ChildProcess | undefined} */
   let daemon;
+  /** @type {import('node:child_process').ChildProcess | undefined} */
+  let runtime;
+  let runtimeStarted = false;
+  /** @type {string[]} */
+  let daemonArgs = [];
   let daemonId = '';
   let phase = 'SETUP';
   let lastFailure = '';
@@ -87,7 +99,51 @@ export async function runImageMaintenanceDrill() {
     return result.stdout.trim();
   }
 
+  /** ctr always targets our child socket and namespace, including on failure.
+   * @param {string[]} args @param {boolean} [allowFailure]
+   */
+  function ctr(args, allowFailure = false) {
+    const result = spawnSync(
+      'ctr',
+      [
+        '--address',
+        runtimeSettings.address,
+        '--namespace',
+        runtimeSettings.namespace,
+        '--timeout',
+        '3s',
+        ...args,
+      ],
+      {
+        env,
+        encoding: 'utf8',
+        shell: false,
+        timeout: 5_000,
+        maxBuffer: 128 * 1024,
+      },
+    );
+    if (result.error || result.status !== 0) {
+      if (allowFailure) return null;
+      throw new Error('PRIVATE_CONTAINERD_QUERY_FAILED');
+    }
+    return result.stdout.trim();
+  }
+
+  /** @param {import('node:child_process').ChildProcess | undefined} child @param {string[]} args */
+  async function requirePrivateProcess(child, args) {
+    assert.ok(
+      child?.pid && child.exitCode === null && child.signalCode === null,
+      'PRIVATE_PROCESS_NOT_RUNNING',
+    );
+    assertPrivateProcess(
+      await readFile(`/proc/${child.pid}/cmdline`, 'utf8'),
+      args,
+    );
+  }
+
   async function requireOwnedDaemon() {
+    await requirePrivateProcess(runtime, runtimeSettings.containerdArgs);
+    await requirePrivateProcess(daemon, daemonArgs);
     assert.equal(
       await realpath(directory),
       directory,
@@ -110,36 +166,61 @@ export async function runImageMaintenanceDrill() {
       true,
       'DRILL_LABEL_CHANGED',
     );
+    assertPrivateRuntimeInfo(
+      JSON.parse(docker(['info', '--format', '{{json .}}']) ?? ''),
+      runtimeSettings,
+    );
+  }
+
+  async function startRuntime() {
+    runtime = spawn('containerd', runtimeSettings.containerdArgs, {
+      env,
+      stdio: ['ignore', log.fd, log.fd],
+    });
+    let failed = false;
+    runtime.on('error', () => {
+      failed = true;
+    });
+    const deadline = Date.now() + 30_000;
+    while (Date.now() < deadline) {
+      if (failed || runtime.exitCode !== null || interrupted)
+        throw new Error('PRIVATE_CONTAINERD_START_FAILED');
+      if (ctr(['version'], true) !== null) {
+        await requirePrivateProcess(runtime, runtimeSettings.containerdArgs);
+        runtimeStarted = true;
+        return;
+      }
+      await pause(250);
+    }
+    throw new Error('PRIVATE_CONTAINERD_START_TIMEOUT');
   }
 
   async function startDaemon() {
-    daemon = spawn(
-      'dockerd',
-      [
-        '--config-file',
-        `${directory}/daemon.json`,
-        '--host',
-        host,
-        '--data-root',
-        `${directory}/data`,
-        '--exec-root',
-        `${directory}/exec`,
-        '--pidfile',
-        `${directory}/daemon.pid`,
-        '--bridge=none',
-        '--iptables=false',
-        '--ip6tables=false',
-        '--ip-forward=false',
-        '--ip-masq=false',
-        '--storage-driver=vfs',
-        '--label',
-        `io.crm.image-drill=${token}`,
-      ],
-      {
-        env: { ...env, DOCKER_TMPDIR: `${directory}/tmp` },
-        stdio: ['ignore', log.fd, log.fd],
-      },
-    );
+    daemonArgs = [
+      '--config-file',
+      `${directory}/daemon.json`,
+      '--host',
+      host,
+      '--data-root',
+      `${directory}/data`,
+      '--exec-root',
+      `${directory}/exec`,
+      '--pidfile',
+      `${directory}/daemon.pid`,
+      '--bridge=none',
+      '--iptables=false',
+      '--ip6tables=false',
+      '--ip-forward=false',
+      '--ip-masq=false',
+      '--storage-driver=vfs',
+      '--label',
+      `io.crm.image-drill=${token}`,
+      ...runtimeSettings.dockerArgs,
+    ];
+    daemon = spawn('dockerd', daemonArgs, {
+      env: { ...env, DOCKER_TMPDIR: `${directory}/tmp` },
+      stdio: ['ignore', log.fd, log.fd],
+    });
     let failedToSpawn = false;
     daemon.on('error', () => {
       failedToSpawn = true;
@@ -159,26 +240,27 @@ export async function runImageMaintenanceDrill() {
     throw new Error('ISOLATED_DAEMON_START_TIMEOUT');
   }
 
-  async function stopDaemon() {
+  /** @param {import('node:child_process').ChildProcess | undefined} child */
+  async function stopChild(child) {
     if (
-      !daemon ||
-      !daemon.pid ||
-      daemon.exitCode !== null ||
-      daemon.signalCode !== null
+      !child ||
+      !child.pid ||
+      child.exitCode !== null ||
+      child.signalCode !== null
     )
       return;
-    daemon.kill('SIGTERM');
+    child.kill('SIGTERM');
     const deadline = Date.now() + 20_000;
     while (
-      daemon.exitCode === null &&
-      daemon.signalCode === null &&
+      child.exitCode === null &&
+      child.signalCode === null &&
       Date.now() < deadline
     )
       await pause(100);
-    if (daemon.exitCode === null && daemon.signalCode === null) {
-      daemon.kill('SIGKILL');
-      await new Promise((done) => daemon?.once('exit', done));
-      throw new Error('ISOLATED_DAEMON_FORCED_STOP');
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill('SIGKILL');
+      await new Promise((done) => child.once('exit', done));
+      throw new Error('PRIVATE_PROCESS_FORCED_STOP');
     }
   }
 
@@ -201,8 +283,24 @@ export async function runImageMaintenanceDrill() {
     const deadline = Date.now() + 15_000;
     const probe = `fetch('http://127.0.0.1:3000/health').then(async r=>{if(!r.ok||(await r.text())!==process.argv[1])process.exit(1)}).catch(()=>process.exit(1))`;
     while (Date.now() < deadline) {
-      if (docker(['exec', name, 'node', '-e', probe, revision], true) !== null)
+      if (
+        docker(['exec', name, 'node', '-e', probe, revision], true) !== null
+      ) {
+        const id = docker([
+          'container',
+          'inspect',
+          '--format',
+          '{{.Id}}',
+          name,
+        ]);
+        assert.ok(
+          ctr(['containers', 'list', '--quiet'])
+            ?.split(/\r?\n/u)
+            .includes(id ?? ''),
+          'FIXTURE_OUTSIDE_PRIVATE_CONTAINERD',
+        );
         return;
+      }
       await pause(150);
     }
     throw new Error('SYNTHETIC_HTTP_HEALTH_FAILED');
@@ -215,13 +313,16 @@ export async function runImageMaintenanceDrill() {
       `${directory}/daemon.json`,
       JSON.stringify({ features: { 'containerd-snapshotter': false } }),
     );
+    await writeFile(`${directory}/containerd.toml`, runtimeSettings.config);
+    phase = 'START_PRIVATE_CONTAINERD';
+    await startRuntime();
     phase = 'START_DAEMON';
     await startDaemon();
-    const runtime = await readFile(
+    const runtimeDockerfile = await readFile(
       new URL('../docker/runtime.Dockerfile', import.meta.url),
       'utf8',
     );
-    const pinnedBase = runtime.match(/^FROM (node:[^ ]+)/mu)?.[1];
+    const pinnedBase = runtimeDockerfile.match(/^FROM (node:[^ ]+)/mu)?.[1];
     assert.ok(pinnedBase, 'PINNED_NODE_BASE_REQUIRED');
     phase = 'PULL_PINNED_BASE';
     const base = pullPinnedImage(pinnedBase, (image) => {
@@ -349,7 +450,10 @@ export async function runImageMaintenanceDrill() {
       'STOPPED_IMAGES_MUST_SURVIVE',
     );
     phase = 'RESTART_PRIVATE_DAEMON';
-    await stopDaemon();
+    await stopChild(daemon);
+    assert.equal(ctr(['tasks', 'list', '--quiet']), '', 'PRIVATE_TASKS_REMAIN');
+    await stopChild(runtime);
+    await startRuntime();
     await startDaemon();
     checkMaintenanceImages(inventory, read);
     phase = 'RECREATE_WITHOUT_PULL';
@@ -426,8 +530,28 @@ export async function runImageMaintenanceDrill() {
   } finally {
     process.removeListener('SIGINT', interrupt);
     process.removeListener('SIGTERM', interrupt);
-    await stopDaemon();
+    let cleanupFailed = false;
+    try {
+      await stopChild(daemon);
+      assertRuntimeAvailableForCleanup(runtimeStarted, runtime);
+      if (runtimeStarted) {
+        await requirePrivateProcess(runtime, runtimeSettings.containerdArgs);
+        assert.equal(
+          ctr(['tasks', 'list', '--quiet']),
+          '',
+          'PRIVATE_TASKS_REMAIN',
+        );
+      }
+    } catch {
+      cleanupFailed = true;
+    }
+    try {
+      await stopChild(runtime);
+    } catch {
+      cleanupFailed = true;
+    }
     await log.close();
+    if (cleanupFailed) throw new Error('PRIVATE_RUNTIME_CLEANUP_FAILED');
     assert.equal(
       await realpath(directory),
       directory,
@@ -443,6 +567,8 @@ export async function runImageMaintenanceDrill() {
       services: 3,
       zeroContainerImagesPreserved: true,
       daemonRestarted: true,
+      privateContainerdVerified: true,
+      containerdRestarted: true,
       recreatedWithoutPull: true,
       rollbackHttpVerified: true,
       resourcesRemoved: true,

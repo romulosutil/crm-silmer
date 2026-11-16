@@ -1,8 +1,14 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
+import { createPairingPrivacyProbe } from '../ops/n8n/wap-pairing-privacy-probe.mjs';
+import {
+  containsPrivateValue,
+  privateRepresentations,
+} from '../ops/evolution/wap-spike-privacy.mjs';
 import { patchWahaInboundImages } from '../ops/n8n/patch-waha-inbound-images.mjs';
 import { createWahaWorkflow } from '../ops/n8n/workflows/create-waha-workflow.mjs';
 import {
@@ -23,6 +29,170 @@ const source = JSON.parse(
     'utf8',
   ),
 );
+
+test('WAP-E01/WAP-03/12: privacy probe is isolated, inactive, default off and allowlisted before HTTP', () => {
+  /** @param {any} options @param {any} body */
+  function guard(options, body) {
+    const probe = createPairingPrivacyProbe({
+      credentialId: 'synthetic-probe',
+      ...options,
+    });
+    assert.equal(probe.active, false);
+    assert.deepEqual(probe.pinData, {});
+    assert.deepEqual(probe.settings, {
+      executionOrder: 'v1',
+      saveDataSuccessExecution: 'none',
+      saveDataErrorExecution: 'none',
+      saveManualExecutions: false,
+      saveExecutionProgress: false,
+    });
+    const first = probe.nodes.find(
+      (/** @type {any} */ node) => node.name === 'Trigger',
+    );
+    assert.equal(first.parameters.authentication, 'headerAuth');
+    assert.equal(first.credentials.httpHeaderAuth.id, 'synthetic-probe');
+    assert.equal(probe.connections.Trigger.main[0][0].node, 'Guard');
+    const validate = probe.nodes.find(
+      (/** @type {any} */ node) => node.name === 'Guard',
+    );
+    const value = vm.runInNewContext(
+      `(function(){${validate.parameters.jsCode}})()`,
+      { $json: { body } },
+    );
+    for (const http of probe.nodes.filter(
+      (/** @type {any} */ node) => node.type === 'n8n-nodes-base.httpRequest',
+    )) {
+      assert.ok(
+        http.parameters.url.includes('http://wap-provider-fixture:8080/'),
+      );
+      assert.equal(http.retryOnFail, false);
+      assert.equal(
+        http.parameters.options.redirect.redirect.followRedirects,
+        false,
+      );
+      assert.equal(http.credentials.httpHeaderAuth.id, 'synthetic-probe');
+    }
+    return value;
+  }
+  const valid = { actor: 'synthetic-a', generation: 1, mode: 'qr' };
+  for (const options of [{}, { enabled: true }, { allowlist: ['synthetic-a'] }])
+    assert.throws(() => guard(options, valid), /WAP_PROBE_DENIED/u);
+  const enabled = { enabled: true, allowlist: ['synthetic-a'] };
+  for (const invalid of [
+    null,
+    { ...valid, actor: 'synthetic-b' },
+    { ...valid, generation: 0 },
+    { ...valid, generation: '1' },
+    { ...valid, mode: '../other' },
+  ])
+    assert.throws(() => guard(enabled, invalid), /WAP_PROBE_DENIED/u);
+  assert.equal(guard(enabled, valid).json.mode, 'qr');
+  assert.throws(
+    () => createPairingPrivacyProbe(),
+    /WAP_PROBE_CREDENTIAL_REQUIRED/u,
+  );
+  assert.throws(
+    () =>
+      createPairingPrivacyProbe({
+        credentialId: 'synthetic',
+        enabled: /** @type {any} */ ('true'),
+      }),
+    /WAP_PROBE_CONFIG_INVALID/u,
+  );
+  assert.throws(
+    () =>
+      createPairingPrivacyProbe({
+        credentialId: 'synthetic',
+        allowlist: ['real-user'],
+      }),
+    /WAP_PROBE_CONFIG_INVALID/u,
+  );
+});
+
+test('WAP-E01/WAP-10: current wrapper cannot authenticate a source generation; reconnect gate stays blocked', () => {
+  const { protectWebhookRequest } = createRequire(import.meta.url)(
+    '../ops/evolution/privacy.cjs',
+  );
+  const profile = {
+    webhookUrl: 'https://synthetic.invalid/webhook/wap',
+    webhookToken: 'synthetic-current-global-token',
+  };
+  const old = {
+    event: 'messages.upsert',
+    instance: 'synthetic-a',
+    generation: 1,
+    data: { key: { id: 'OLD_EVENT' } },
+  };
+  const dispatch = protectWebhookRequest(
+    {
+      url: profile.webhookUrl,
+      data: old,
+      headers: { 'X-Silmer-Evolution-Token': 'synthetic-old-generation-token' },
+    },
+    profile,
+  );
+  assert.equal(
+    dispatch.headers['X-Silmer-Evolution-Token'],
+    profile.webhookToken,
+  );
+  assert.equal(dispatch.data.generation, 1);
+  const other = protectWebhookRequest(
+    { url: profile.webhookUrl, data: { ...old, instance: 'synthetic-b' } },
+    profile,
+  );
+  assert.equal(
+    other.headers['X-Silmer-Evolution-Token'],
+    dispatch.headers['X-Silmer-Evolution-Token'],
+  );
+  // Evidence of a limitation, not an acceptance test for personal ingress.
+  assert.equal(
+    Object.hasOwn(dispatch.headers, 'X-Silmer-Source-Generation'),
+    false,
+  );
+  assert.throws(
+    () =>
+      protectWebhookRequest(
+        {
+          url: profile.webhookUrl,
+          data: {
+            event: 'qrcode.updated',
+            instance: 'synthetic-a',
+            data: { code: 'synthetic-private-challenge' },
+          },
+        },
+        profile,
+      ),
+    /EVOLUTION_WEBHOOK_DESTINATION_REJECTED/u,
+  );
+});
+
+test('WAP-E01/WAP-03: persistence scans find nested challenges, plaintext token, JSON and base64 bytes', () => {
+  const token = 'synthetic-token-private-for-scan-only';
+  const challenge = 'synthetic-qr-with-"quote"-and-\nnewline';
+  const representations = privateRepresentations(
+    { qrcode: [{ code: challenge }] },
+    token,
+  );
+  for (const bytes of [
+    Buffer.from(`stderr only: ${challenge}`),
+    Buffer.from(`header: ${token}`),
+    Buffer.from(JSON.stringify({ challenge })),
+    Buffer.from(Buffer.from(challenge).toString('base64')),
+  ])
+    assert.equal(containsPrivateValue(bytes, representations), true);
+  assert.equal(
+    containsPrivateValue(Buffer.from('WAP_FIXED_ERROR_CODE'), representations),
+    false,
+  );
+  assert.throws(
+    () => containsPrivateValue(Buffer.from(''), []),
+    /WAP_SCAN_CANARIES_REQUIRED/u,
+  );
+  assert.throws(
+    () => privateRepresentations({}, ''),
+    /WAP_SCAN_TOKEN_REQUIRED/u,
+  );
+});
 const config = {
   ownNumber: '5511000000000',
   session: 'silmer',

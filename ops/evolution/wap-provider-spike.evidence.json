@@ -1,0 +1,142 @@
+{
+  "scope": "WAP-E01/WAP-T01-01; synthetic, no pairing, no messages",
+  "n8nImage": "n8nio/n8n:2.38.7@sha256:a8c95f75c6fdf65f5f2b7a7b354744eaa1c62bb911b5c00af6499c3f38e4cd32",
+  "providerSource": "cd800f2976e1e5b682fbf86a01ee4d85ae61f370",
+  "checks": {
+    "providerUnauthenticated": "401",
+    "provider": {
+      "wap-synthetic-qr": {
+        "create": 201,
+        "initialState": "close",
+        "connect": 200,
+        "challengeQr": true,
+        "challengeCode": false,
+        "providerError": false,
+        "state": "connecting",
+        "logout": 200
+      },
+      "wap-synthetic-code": {
+        "create": 201,
+        "initialState": "close",
+        "connect": 200,
+        "challengeQr": true,
+        "challengeCode": true,
+        "providerError": false,
+        "state": "connecting",
+        "logout": 200
+      }
+    },
+    "providerLogs": "no actual QR/code or synthetic canary in stdout",
+    "n8nGuard": "unauthenticated, non-allowlisted and stale synthetic generation denied before fixture",
+    "qr": {
+      "databaseAndLogicalBackup": true,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "qrDatabaseLeak": {
+      "tables": ["execution_data"],
+      "credentialToken": true,
+      "challenge": false
+    },
+    "code": {
+      "databaseAndLogicalBackup": true,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "codeDatabaseLeak": {
+      "tables": ["execution_data"],
+      "credentialToken": true,
+      "challenge": false
+    },
+    "provider-qr": {
+      "databaseAndLogicalBackup": true,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "provider-qrDatabaseLeak": {
+      "tables": ["execution_data"],
+      "credentialToken": true,
+      "challenge": false
+    },
+    "provider-code": {
+      "databaseAndLogicalBackup": true,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "provider-codeDatabaseLeak": {
+      "tables": ["execution_data"],
+      "credentialToken": true,
+      "challenge": false
+    },
+    "errorAfterChallenge": {
+      "databaseAndLogicalBackup": true,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "errorAfterChallengeDatabaseLeak": {
+      "tables": ["execution_data"],
+      "credentialToken": true,
+      "challenge": false
+    },
+    "inProgress": {
+      "databaseAndLogicalBackup": true,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "inProgressDatabaseLeak": {
+      "tables": ["execution_data"],
+      "credentialToken": true,
+      "challenge": false
+    },
+    "manualDispatched": true,
+    "initialExecutionModes": [
+      "webhook:running",
+      "webhook:running",
+      "webhook:running",
+      "webhook:running",
+      "webhook:running",
+      "webhook:running",
+      "webhook:running",
+      "webhook:running",
+      "manual:running"
+    ],
+    "manualRuntimeSuccess": true,
+    "manual": {
+      "databaseAndLogicalBackup": true,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "manualDatabaseLeak": {
+      "tables": ["execution_data"],
+      "credentialToken": true,
+      "challenge": false
+    },
+    "pinDataAndErrorWorkflow": "empty, no error workflow",
+    "stoppedStateAndPhysicalDatabase": {
+      "stoppedStateLeak": false,
+      "physicalDatabaseLeak": true
+    }
+  },
+  "privacyFailures": [
+    "qr",
+    "code",
+    "provider-qr",
+    "provider-code",
+    "errorAfterChallenge",
+    "inProgress",
+    "manual",
+    "stoppedStateAndPhysicalDatabase"
+  ],
+  "gate": "blocked",
+  "blockers": [
+    "Source-time authenticated generation binding is absent in the pinned provider/wrapper",
+    "Same-phone pairing is not homologated; this experiment never pairs an account"
+  ],
+  "buildRecipe": "unchanged pinned recipe, embedded COPY sources materialized byte-for-byte for legacy Docker",
+  "providerImage": "sha256:15a21472d57a54710874a8da6521546b8bd50896792ef2b707ea101eaa4c91f7",
+  "failure": {
+    "stage": "n8n-stopped-snapshot",
+    "code": "WAP_PRIVACY_PERSISTENCE_DETECTED"
+  },
+  "cleanup": "all dedicated resources removed"
+}

@@ -55,6 +55,32 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 
 ## Mapa de rastreabilidade dos 32 itens internos
 
+### Evidência WAP-E01 / WAP-T01-01 — spike executado, aceite bloqueado
+
+Investigação em 16/11/2026, base `f7a06389`, Mel via SSH autorizado, recursos
+Docker dedicados e dados sintéticos. [Contrato, reprodução, limites e alternativas](../../../docs/runbooks/seller-whatsapp-provider.md).
+Código de prova em `ops/evolution/wap-provider-spike.mjs`; workflow somente de
+ensaio em `ops/n8n/wap-pairing-privacy-probe.mjs`. Nenhuma rota/flag/instância de
+ambiente real alterada, nenhuma conta pareada ou mensagem enviada.
+
+- Fonte/imagem fixadas inspecionadas; create/connect/status/logout e QR/código
+  observados em duas instâncias não pareadas, incluindo round-trip pelo n8n.
+- Scan detectou token técnico sintético em claro em `execution_data`/pg_dump,
+  apesar de save-success/error=none e save-manual/progress=false. É reprovação
+  do gate de privacidade, não evidência de ausência de segredo.
+- Origem por geração não é garantida pelo wrapper/token global nem pela
+  configuração mutável de webhook upstream. Evento antigo não pode ser
+  classificado com a geração atual. Retenção de múltiplas instâncias também
+  não está provada pelo expurgo atual de uma única instância.
+- Código retornado não homologa operação no mesmo celular; pareamento real
+  continua fora da autorização desta entrega.
+
+Os checkboxes **WAP-E01 e WAP-T01-01 continuam abertos**. Habilitação e avanço
+dependente bloqueados até solução revisada e nova prova dos critérios faltantes;
+o runbook separa limites materiais, alternativas e homologação. Não avançar E02
+nesta sessão. Resultados completos dos testes e gates constam do relatório
+do runbook e do PR da entrega.
+
 As referências T existentes continuam válidas. Cada item pertence a exatamente
 uma entrega E; seu checkbox só fecha quando o critério específico passar.
 Os modelos e unidades de publicação são os da tabela E, que substitui a divisão

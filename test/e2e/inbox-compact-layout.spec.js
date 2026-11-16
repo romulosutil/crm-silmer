@@ -745,6 +745,60 @@ test('INBOX-UX-04: archiving the last expanded conversation restores the empty l
   expect(mutations).toEqual([archivePath]);
 });
 
+test('PCX-11/T126: creation stays visible beside a confirmed order on phone and desktop', async ({
+  page,
+}, testInfo) => {
+  const state = await setupInbox(page, {
+    canonicalStatus: 'confirmado',
+    pending: false,
+  });
+  for (const width of [320, 1366]) {
+    await page.setViewportSize({ width, height: width === 320 ? 700 : 768 });
+    await page.goto('/inbox/conversation-compact');
+    const header = page.locator('.conv-head');
+    const create = header.getByRole('button', {
+      name: 'Criar pedido',
+      exact: true,
+    });
+    const order = header.getByRole('link', {
+      name: 'Abrir pedido 33-CRM, confirmado',
+      exact: true,
+    });
+    await expect(create).toBeInViewport({ ratio: 1 });
+    await expect(order).toBeInViewport({ ratio: 1 });
+    const createBox = await create.boundingBox();
+    const orderBox = await order.boundingBox();
+    if (!createBox || !orderBox)
+      throw new Error('Both actions must be visible');
+    expect(
+      createBox.x >= orderBox.x + orderBox.width ||
+        createBox.y >= orderBox.y + orderBox.height,
+    ).toBe(true);
+    await header.getByRole('button', { name: 'Mais ações' }).click();
+    await expect(
+      page
+        .getByRole('group', { name: 'Mais ações', exact: true })
+        .getByRole('button', { name: 'Criar pedido', exact: true }),
+    ).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await create.focus();
+    await page.keyboard.press('Enter');
+    const confirmation = page.getByRole('dialog', {
+      name: 'O cliente confirmou a compra?',
+      exact: true,
+    });
+    await expect(confirmation).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(confirmation).toBeHidden();
+    await expect(create).toBeFocused();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await page.screenshot({
+      path: testInfo.outputPath(`create-order-${width}.png`),
+    });
+  }
+  expect(state.orderMutations).toEqual([]);
+});
+
 test('INBOX-UX-04: at 320px the contact identity and order actions remain separate and usable', async ({
   page,
 }) => {

@@ -529,10 +529,10 @@ coluna rola por dentro.
   "Pedido NN-CRM" com o status em selo de texto (sucesso para Confirmado,
   atenção para os demais; hoje sem ícone) abre `/pedidos/:id?conversa=`
   e acompanha `inbox.order.changed` (PCX-10); sem pedido, nada aparece.
-  `Criar pedido` fica no cabeçalho só para o dono de conversa humana, sem
-  handoff pendente e sem pedido; os outros casos que a API aceita
-  (administrador, agente ainda atendendo, pedido já confirmado) vão para
-  `Mais` (PCX-11). Depois vêm `Mais` (Transferir atendimento,
+  `Criar pedido` fica visível no cabeçalho sempre que a criação é permitida
+  (dono ou Admin, sem pedido pendente e conversa aberta), inclusive com o
+  agente ou pedido já confirmado; não aparece em `Mais` (PCX-11/T126,
+  solicitação do cliente em 15/11/2026). Depois vêm `Mais` (Transferir atendimento,
   Arquivar/Desarquivar conversa e Encerrar conversa em todas as larguras,
   PCX-13) e o botão de ícone Detalhes do atendimento. `Mais` abre pelo
   teclado no primeiro item e Esc devolve o foco. "Transferir atendimento"

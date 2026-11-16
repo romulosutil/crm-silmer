@@ -1288,6 +1288,11 @@ LOJ-33, LOJ-34, REV-06, REV-10 e FIN-02.
    administrador, numa conversa sem pedido pendente (PCL-10, PCL-11). Outro
    vendedor SHALL NOT ver a ação, e a API continua autorizando: 403 para quem
    não pode e o pedido existente quando já há pendente.
+   Ajuste solicitado pelo cliente em 15/11/2026 (T126): em todo estado em que
+   a criação é permitida, a ação SHALL ficar visível no cabeçalho da conversa,
+   fora de "Mais ações", inclusive para administrador, durante atendimento
+   pelo agente e com pedido confirmado existente. Conversa encerrada SHALL
+   NOT oferecer criação. A confirmação humana e as permissões são preservadas.
 9. **PCX-12** O resumo do pedido (número, status, o que falta pela lista de
    PIT-06, itens com tipo e peças, total de peças, valor quando houver e
    "Abrir pedido") SHALL ficar em Detalhes › Pedido, só para leitura. Sem

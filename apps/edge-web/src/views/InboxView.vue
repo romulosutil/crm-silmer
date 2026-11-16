@@ -607,22 +607,11 @@ const canOfferOrder = computed(
   () => canCreateOrder.value && active.value?.order?.status !== 'pendente',
 );
 /**
- * PCX-11: "Criar pedido" sits in the header only for the seller who has the
- * conversation, once it is with a person and has no order. Whatever else the
- * API accepts (an administrator, the agent still answering, a confirmed order
- * already there) is offered from "Mais".
+ * PCX-11/T126: keep order creation visible for every authorized conversation,
+ * including administrators, assistant mode and an existing confirmed order.
  */
 const createOrderInHeader = computed(
-  () =>
-    canOfferOrder.value &&
-    !active.value?.order &&
-    !isTerminal.value &&
-    !pendingHandoff.value &&
-    active.value?.automationState === 'human' &&
-    owner.value?.id === currentUserId.value,
-);
-const createOrderInMore = computed(
-  () => canOfferOrder.value && !createOrderInHeader.value,
+  () => canOfferOrder.value && !isTerminal.value,
 );
 const showArchived = computed(() => consult.value === 'archived');
 /** RFC 052: the tabs answer "whose turn is it"; a consultation has none. */
@@ -731,7 +720,6 @@ const canArchiveActive = computed(
 /** "Mais" holds what the header does not show, and only when there is any. */
 const hasMoreActions = computed(
   () =>
-    createOrderInMore.value ||
     canClose.value ||
     canTransfer.value ||
     canArchiveActive.value ||
@@ -1259,8 +1247,6 @@ async function unarchiveConversation() {
  * conversation already holds. It rides the conversation version on screen,
  * so a create typed over a stale view loses to a 409 instead of racing the
  * winner. On success the header shows the order link and focus moves to it.
- *
- * @param {boolean} [fromMore] asked from "Mais", which takes focus back on failure
  */
 async function orderSuggestedCreated(order) {
   if (!order?.id) return;
@@ -1278,7 +1264,7 @@ async function revealOrderEvidence(messageId) {
   message.focus({ preventScroll: true });
 }
 
-async function createOrder(fromMore = false) {
+async function createOrder() {
   const conversation = active.value;
   if (
     !conversation ||
@@ -1289,7 +1275,7 @@ async function createOrder(fromMore = false) {
   )
     return;
   const dialog = orderConfirmationDialog.value;
-  const trigger = fromMore ? moreToggle.value : orderCreateTrigger.value;
+  const trigger = orderCreateTrigger.value;
   closeMore();
   if (
     !(dialog instanceof HTMLDialogElement) ||
@@ -1301,7 +1287,6 @@ async function createOrder(fromMore = false) {
     conversationId: conversation.id,
     expectedVersion: conversation.version,
     idempotencyKey: commandKey(),
-    fromMore,
   };
   openDialog(dialog, trigger);
 }
@@ -1360,8 +1345,6 @@ async function confirmManualOrder() {
   const link = /** @type {any} */ (orderLink.value)?.$el;
   if (created && link instanceof HTMLElement) {
     link.focus();
-  } else if (confirmation.fromMore) {
-    moreToggle.value?.focus();
   } else if (!globalThis.document.activeElement?.closest('.conv-actions')) {
     conversationHeading.value?.focus();
   }
@@ -3338,16 +3321,6 @@ onBeforeUnmount(() => {
                 >
                   <div ref="moreMenu" class="conv-more-items">
                     <p class="conv-more-label">Atendimento</p>
-                    <button
-                      v-if="createOrderInMore"
-                      type="button"
-                      :aria-disabled="
-                        orderCreating || busy ? 'true' : undefined
-                      "
-                      @click="createOrder(true)"
-                    >
-                      Criar pedido
-                    </button>
                     <button
                       v-if="canTransfer"
                       type="button"

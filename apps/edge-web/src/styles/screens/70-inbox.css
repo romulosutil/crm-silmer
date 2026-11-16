@@ -2159,16 +2159,16 @@
     justify-self: start;
   }
   .inbox-page .conv-identity {
-    grid-area: 3 / 2 / auto / -1;
+    grid-area: 4 / 2 / auto / -1;
   }
   .inbox-page .conv-actions > .primary {
-    grid-area: 4 / 1 / auto / -1;
+    grid-area: 5 / 1 / auto / -1;
     margin-block-start: var(--space-2);
   }
-  /* "Criar pedido" only shows while there is no order, so it takes the
-     place the order link would have. */
+  /* PCX-11/T126: creation stays visible even with a confirmed order link.
+     Empty grid rows collapse when either action is absent. */
   .inbox-page .conv-actions > button:not(.primary, .conv-context-toggle) {
-    grid-area: 2 / 2 / auto / -1;
+    grid-area: 3 / 2 / auto / -1;
     justify-self: start;
   }
   .inbox-page .inbox-tabs .inbox-tab,

@@ -41,6 +41,15 @@ arquitetura ou fluxo de deploy (ADR 022).
 Evidências, limites e prevenção no
 [runbook do incidente](../../../docs/runbooks/api-image-csp-incident.md).
 
+## WAP-T00e — execução enxuta da etapa 1 (16/11/2026)
+
+- [x] Consolidar o plano em [12 entregas/prompt](../seller-whatsapp/PROMPTS.md),
+      com os 32 itens T anteriores como checklist interno rastreável.
+- [x] Preservar aceites, gates e ADR 091; WAP-E07 verifica Pedido pela conversa
+      antes de primeiro envio e complementos da etapa 1.
+- [ ] Executar E01–E12. Esta revisão só reduz fragmentação e repetição; não
+      implementa, publica, pareia ou homologa runtime.
+
 ## WAP-T00d — SDD técnico da etapa 1 (16/11/2026)
 
 [WAP-01–12/16–33](../seller-whatsapp/spec.md),

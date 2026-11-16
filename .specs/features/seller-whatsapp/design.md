@@ -1,6 +1,9 @@
 # WhatsApp por vendedor — desenho técnico da etapa 1
 
-Data: 16/11/2026. Entrega documental **WAP-T00d**, WAP-01–12/16–33.
+Data: 16/11/2026. SDD **WAP-T00d**, execução enxuta **WAP-T00e**, WAP-01–12/16–33.
+Os [12 prompts WAP-E01–E12](PROMPTS.md) são as unidades de execução; os 32 itens T
+permanecem checklist interno. WAP-E07 verifica o gate prioritário WAP-T02a-05.
+Esta revisão organiza execução sem alterar contratos ou a ADR 091.
 Base de produto: [spec](spec.md), [RFC 067](../../../docs/rfc/067-whatsapp-por-vendedor-e-meus-clientes.md)
 e [ADR 090](../../../docs/adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md),
 [PR 382](https://github.com/romulosutil/crm-silmer/pull/382).

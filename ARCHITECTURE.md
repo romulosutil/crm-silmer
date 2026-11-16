@@ -21,7 +21,7 @@ O SDD WAP-T00d ([ADR 091](docs/adr/091-contratos-da-etapa1-whatsapp-pessoal.md))
 detalha [contratos, transações e implantação da etapa 1](.specs/features/seller-whatsapp/design.md).
 Pedido conserva conversa e ganha origem de Assunto, com compatibilidade de
 legado e criação/vínculo atômicos; leitura/ACL/SSE e geração cercam todas as
-fronteiras pessoais. [Prompts de 32 entregas](.specs/features/seller-whatsapp/PROMPTS.md)
+fronteiras pessoais. [Prompts de 12 entregas](.specs/features/seller-whatsapp/PROMPTS.md)
 priorizam WAP-T02a-05 antes de primeiro envio e acabamento. Documentação não
 implementa ou homologa runtime.
 

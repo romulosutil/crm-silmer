@@ -110,17 +110,69 @@ validate com 2.876 testes, 2.823 aprovados e 53 skips condicionais existentes,
 zero falhas e build aprovado; audit sem vulnerabilidades. A integração externa
 do PR 391 exigiu atualizar a base e repetir os gates completos no snapshot final
 sobre `c14df42c`, além da repetição anterior motivada pela correção pré-SQL.
-O PR de correção sucede a baseline do PR 391.
+O [PR 393](https://github.com/romulosutil/crm-silmer/pull/393) sucede a baseline do PR 391.
 
-**Gate E2E integrado pendente.** A rodada final de E2E/axe com quatro workers
+**Falha E2E anterior e correção da fixture (MED-12/30).** A primeira rodada de E2E/axe com quatro workers
 teve 1.060 aprovados, sete skips legados e uma falha, inclusive nos dois retries:
 `audio-recorder.spec.js:426`, captura no limite exato de 16 MiB, não observou o
 upload em cinco segundos (`uploads.length` permaneceu zero). O mesmo teste
 passou depois isoladamente, com um worker e zero retries, sem qualquer mudança
-de código, timeout ou assertion. A diferença de concorrência é uma hipótese,
-não uma causa comprovada; o resultado focal não torna o gate completo verde.
-Não houve alteração de áudio nesta entrega. Registrar o gate como pendente
-para revisão/CI antes de merge, sem ampliar WAP-E01 ou enfraquecer o teste.
+de código, timeout ou assertion.
+
+A investigação autorizada em seguida mediu o fetch de 16.777.216 bytes já
+iniciado enquanto o callback de page.route só recebia o request de 2,1 a 3,3
+segundos depois. A fonte instalada do Playwright ativa Fetch.enable para todos
+os requests e decodifica/concatena o postDataEntries do CDP antes de construir
+o Request interceptado. Isso acrescentava cópias do multipart ao caminho da
+assertion de cinco segundos. A medição identifica a fragilidade da fixture;
+não prova que toda a demora da rodada anterior veio exclusivamente desse trecho.
+
+Somente o cenário no limite agora usa o servidor Vite sintético já existente,
+em 127.0.0.1 e porta aleatória, sem page.route. O parser multipart nativo recebe
+o corpo completo por HTTP e mede o File real. O teste mantém cinco segundos,
+uma parada de tracks, upload único e nenhum envio automático; acrescenta
+assertions de 16 MiB exatos, MIME com codec, nome/campos e botão habilitado após
+202/ready. Nenhum código da aplicação, timeout, retry, tamanho ou assertion
+original foi reduzido. Não há novo serviço operacional ou efeito em produção.
+
+Ensaio focal corrigido: a suíte de áudio repetida quatro vezes com quatro
+workers e zero retries passou nos 92 cenários, incluindo teclado/foco/axe e
+captura/reprodução nativas Chromium/Firefox. Os quatro casos de 16 MiB duraram
+0,37–0,72 segundo. A repetição completa dos gates está registrada a seguir.
+
+Na primeira repetição completa após o patch, o áudio passou em 1,2 segundo;
+a rodada encontrou outro bloqueio na fixture de Olist (`olist-phase2.spec.js:429`):
+o seletor global da confirmação encontrava simultaneamente o status no painel
+e o anunciador acessível global, ambos previstos em OlistView/App. O teste foi
+delimitado à região nomeada “Conexão da empresa”, preservando texto exato,
+visibilidade, conferência humana e geração desativada. Quatro repetições focais,
+quatro workers e zero retries passaram. Nenhum comportamento de Olist mudou.
+
+**Gate completo corrigido aprovado no SSH Mel.** O snapshot contém exatamente
+os dois testes revisados, conferidos por SHA-256. Node 24.20.0/npm 11.19.0,
+imagem Playwright fixada pelo digest acima e PulseAudio sintético:
+
+- `npm run validate`: 2.876 testes, 2.823 aprovados, 53 skips condicionais
+  existentes, zero falhas e build aprovado.
+- `npm run test:e2e -- --workers=4 --retries=2`: 1.061 aprovados, sete skips
+  legados, zero falhas/retries, 9,7 minutos. Áudio de 16 MiB passou em 0,78
+  segundo; conferência Olist passou em 3,2 segundos nessa rodada completa.
+- `npm audit --audit-level=high`: zero vulnerabilidades.
+- Prettier/ESLint focais, referências e `git diff --check` aprovados.
+
+Os ensaios focais usaram `npm run test:e2e -- test/e2e/audio-recorder.spec.js
+--workers=4 --repeat-each=4 --retries=0` (92 aprovados) e
+`npm run test:e2e -- test/e2e/olist-phase2.spec.js --grep 'recovery requires
+explicit human attestation' --workers=4 --repeat-each=4 --retries=0` (quatro
+aprovados). Nenhum container, diretório temporário ou porta publicada permanece
+no Mel após o fechamento. Produção permanece desabilitada; os gates mobile e
+retenção operacional de WAP-E01 continuam abertos. Não houve avanço E02.
+
+O PR 393 foi integrado externamente durante esta investigação. A correção dos
+testes segue em PR de continuação sobre `5ff57934`; a árvore dessa base é
+idêntica à de `b9343395` usada nos gates (tree
+`8adf9d206b8061b7c77d7856bf2b0e777988ac7c`). A troca do SHA pelo merge não
+alterou código ou dependências e não exigiu repetir os gates já aprovados.
 
 ## Resultado inicial e bloqueios identificados antes dos patches
 

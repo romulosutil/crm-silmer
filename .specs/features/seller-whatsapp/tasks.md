@@ -61,9 +61,10 @@ Correção autorizada em 16/11/2026, [RFC 069](../../../docs/rfc/069-ingresso-ef
 / [ADR 092](../../../docs/adr/092-sanitizacao-pre-persistencia-e-geracao-na-origem.md):
 [evidência corrigida](../../../ops/evolution/wap-provider-spike.fixed.evidence.json)
 com technicalGate=passed, privacyFailures vazio e sem acerto físico PostgreSQL/WAL.
-O gate E2E integrado permanece pendente por uma falha de captura de áudio no
-limite de 16 MiB; o teste passou isolado, sem alteração de assertions. Detalhes
-e demais verificações no runbook vinculado abaixo.
+O gate E2E integrado foi aprovado após corrigir a fixture HTTP de áudio no
+limite de 16 MiB (MED-12/30) e delimitar um seletor de Olist ao painel correto:
+1.061 aprovados, sete skips legados, zero falhas/retries, sem enfraquecer
+assertions. Detalhes e demais verificações no runbook vinculado abaixo.
 
 - [x] Remover credenciais antes do output/primeiro SQL n8n e cercar manual,
       REST pinData/settings e metadados sintéticos antes de persistência.

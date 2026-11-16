@@ -3,9 +3,14 @@ import { AxeBuilder } from '@axe-core/playwright';
 import { createServer } from 'vite';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { Readable } from 'node:stream';
 
 /** @type {import('vite').ViteDevServer} */ let server;
 let origin = '';
+/** @type {Array<{size:number,mime:string,name:string,kind:FormDataEntryValue|null,origin:FormDataEntryValue|null,expectedVersion:FormDataEntryValue|null}>} */
+const httpUploads = [];
+/** @type {string[]} */
+const httpSends = [];
 test.beforeAll(async () => {
   server = await createServer({
     configFile: resolve('apps/edge-web/vite.config.js'),
@@ -15,6 +20,66 @@ test.beforeAll(async () => {
       {
         name: 'recorder-fixture',
         configureServer(s) {
+          // MED-12/30: receive the full-size multipart over real loopback HTTP.
+          // page.route sends the entire 16-MiB body through CDP before its
+          // callback, making the upload assertion measure interception copies.
+          s.middlewares.use(
+            '/api/v1/conversations/conversation-1/',
+            async (req, res, next) => {
+              res.setHeader('Content-Type', 'application/json');
+              if (req.method === 'POST' && req.url === '/media') {
+                try {
+                  const form = await new globalThis.Response(
+                    // Node and DOM declarations differ for BYOB readers; this
+                    // is the native WHATWG stream consumed by Node's Response.
+                    /** @type {ReadableStream<Uint8Array>} */ (
+                      /** @type {unknown} */ (Readable.toWeb(req))
+                    ),
+                    {
+                      headers: {
+                        'Content-Type': req.headers['content-type'] ?? '',
+                      },
+                    },
+                  ).formData();
+                  const file = form.get('file');
+                  if (!(file instanceof globalThis.File))
+                    throw new Error('Missing file');
+                  httpUploads.push({
+                    size: file.size,
+                    mime: file.type,
+                    name: file.name,
+                    kind: form.get('kind'),
+                    origin: form.get('origin'),
+                    expectedVersion: form.get('expectedVersion'),
+                  });
+                  res.statusCode = 202;
+                  res.end(
+                    JSON.stringify({
+                      mediaId: 'recording-1',
+                      state: 'processing',
+                    }),
+                  );
+                } catch {
+                  res.statusCode = 400;
+                  res.end(JSON.stringify({ code: 'INVALID_SYNTHETIC_UPLOAD' }));
+                }
+                return;
+              }
+              if (req.method === 'GET' && req.url === '/media/recording-1') {
+                res.end(
+                  JSON.stringify({ mediaId: 'recording-1', state: 'ready' }),
+                );
+                return;
+              }
+              if (req.method === 'POST' && req.url === '/messages') {
+                httpSends.push(req.method);
+                res.statusCode = 202;
+                res.end(JSON.stringify({ id: 'message-1' }));
+                return;
+              }
+              next();
+            },
+          );
           s.middlewares.use('/__recorder', async (req, res, next) => {
             if (req.url?.includes('html-proxy')) return next();
             res.setHeader('Content-Type', 'text/html');
@@ -135,24 +200,25 @@ async function setup(page, options = {}) {
   }, options);
   const uploads = /** @type {import('@playwright/test').Request[]} */ ([]),
     sends = /** @type {import('@playwright/test').Request[]} */ ([]);
-  await page.route('**/api/v1/conversations/**', (route) => {
-    const req = route.request();
-    if (req.method() === 'POST' && req.url().endsWith('/messages')) {
-      sends.push(req);
-      return route.fulfill({ status: 202, json: { id: 'message-1' } });
-    }
-    if (req.method() === 'POST') {
-      uploads.push(req);
+  if (!options.httpMedia)
+    await page.route('**/api/v1/conversations/**', (route) => {
+      const req = route.request();
+      if (req.method() === 'POST' && req.url().endsWith('/messages')) {
+        sends.push(req);
+        return route.fulfill({ status: 202, json: { id: 'message-1' } });
+      }
+      if (req.method() === 'POST') {
+        uploads.push(req);
+        return route.fulfill({
+          status: 202,
+          json: { mediaId: 'recording-1', state: 'processing' },
+        });
+      }
       return route.fulfill({
-        status: 202,
-        json: { mediaId: 'recording-1', state: 'processing' },
+        status: 200,
+        json: { mediaId: 'recording-1', state: 'ready' },
       });
-    }
-    return route.fulfill({
-      status: 200,
-      json: { mediaId: 'recording-1', state: 'ready' },
     });
-  });
   await page.goto(origin + '/__recorder?recorder');
   return { uploads, sends };
 }
@@ -426,7 +492,9 @@ test('T19/MED-06/10: pending send cannot be discarded or replaced by a new captu
 test('T19/T25/MED-12/30: exact 16-MiB capture stops tracks and validates without sending automatically', async ({
   page,
 }) => {
-  const { uploads, sends } = await setup(page, { empty: true });
+  httpUploads.length = 0;
+  httpSends.length = 0;
+  await setup(page, { empty: true, httpMedia: true });
   await record(page);
   await page.evaluate(() =>
     /** @type {any} */ (globalThis).__capture.recorder.chunk(16 * 1024 * 1024),
@@ -435,8 +503,21 @@ test('T19/T25/MED-12/30: exact 16-MiB capture stops tracks and validates without
   expect(
     await page.evaluate(() => /** @type {any} */ (globalThis).__capture.stops),
   ).toBe(1);
-  await expect.poll(() => uploads.length).toBe(1);
-  expect(sends).toHaveLength(0);
+  await expect.poll(() => httpUploads.length).toBe(1);
+  expect(httpUploads).toEqual([
+    {
+      size: 16 * 1024 * 1024,
+      mime: 'audio/ogg;codecs=opus',
+      name: 'gravacao.ogg',
+      kind: 'audio',
+      origin: 'recording',
+      expectedVersion: '4',
+    },
+  ]);
+  await expect(
+    page.getByRole('button', { name: 'Enviar anexo', exact: true }),
+  ).toBeEnabled();
+  expect(httpSends).toHaveLength(0);
 });
 
 for (const name of ['chromium', 'firefox'])

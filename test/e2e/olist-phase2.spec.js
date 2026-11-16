@@ -463,9 +463,11 @@ test('T15 recovery requires explicit human attestation and does not activate cre
   await finish.focus();
   await page.keyboard.press('Enter');
   await expect(
-    page.getByText('Conferência registrada. A geração continua desativada.', {
-      exact: true,
-    }),
+    page
+      .getByRole('region', { name: 'Conexão da empresa', exact: true })
+      .getByText('Conferência registrada. A geração continua desativada.', {
+        exact: true,
+      }),
   ).toBeVisible();
   await expect(
     page.getByText('Geração desativada.', { exact: true }),

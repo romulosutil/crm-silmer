@@ -7,10 +7,14 @@ import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createPairingPrivacyProbe } from '../n8n/wap-pairing-privacy-probe.mjs';
+import {
+  createPairingPrivacyProbe,
+  createGenerationIngressProbe,
+} from '../n8n/wap-pairing-privacy-probe.mjs';
 import {
   containsPrivateValue,
   privateRepresentations,
+  classifyPrivateTar,
 } from './wap-spike-privacy.mjs';
 
 const N8N =
@@ -52,7 +56,7 @@ async function command(args, input = '', timeout = 180000) {
 
 const fetchScript = `let input=''; for await (const c of process.stdin) input+=c;
 const p=JSON.parse(input);
-try { const r=await fetch(p.url,{method:p.method??'GET',headers:p.headers,body:p.body===undefined?undefined:JSON.stringify(p.body),redirect:'manual',signal:AbortSignal.timeout(65000)});
+try { const r=await fetch(p.url,{method:p.method??'GET',headers:p.headers,body:p.rawBody!==undefined?p.rawBody:p.body===undefined?undefined:JSON.stringify(p.body),redirect:'manual',signal:AbortSignal.timeout(65000)});
 process.stdout.write(JSON.stringify({status:r.status,cookie:r.headers.get('set-cookie'),cache:r.headers.get('cache-control'),body:await r.text()})); }
 catch { process.stdout.write(JSON.stringify({status:0,body:''})); }`;
 
@@ -65,21 +69,86 @@ export async function runProviderSpike() {
   const containers = [];
   const volumes = [];
   const token = randomBytes(32).toString('hex');
+  const providerApiKey = randomBytes(32).toString('hex');
+  const generationTransportToken = randomBytes(32).toString('hex');
+  const verifierPassword = randomBytes(32).toString('hex');
+  const verifierBasic =
+    'Basic ' +
+    Buffer.from(`synthetic-verifier:${verifierPassword}`).toString('base64');
+  const ownerPassword = `Wap-${randomBytes(16).toString('hex')}-9!`;
+  const generationBindings = [
+    {
+      instance: 'wap-synthetic-qr',
+      source: {
+        bindingId: 'synthetic-a-g1',
+        lineId: 'synthetic-line-a',
+        accountId: 'synthetic-account-a',
+        generation: 1,
+      },
+      token: randomBytes(32).toString('hex'),
+      active: true,
+    },
+    {
+      instance: 'wap-synthetic-qr',
+      source: {
+        bindingId: 'synthetic-a-g2',
+        lineId: 'synthetic-line-a',
+        accountId: 'synthetic-account-a',
+        generation: 2,
+      },
+      token: randomBytes(32).toString('hex'),
+      active: false,
+    },
+    {
+      instance: 'wap-synthetic-code',
+      source: {
+        bindingId: 'synthetic-b-g1',
+        lineId: 'synthetic-line-b',
+        accountId: 'synthetic-account-b',
+        generation: 1,
+      },
+      token: randomBytes(32).toString('hex'),
+      active: true,
+    },
+  ];
+  generationBindings.push({
+    instance: 'wap-synthetic-qr',
+    source: {
+      bindingId: 'synthetic-a-g3',
+      lineId: 'synthetic-line-a',
+      accountId: 'synthetic-account-a',
+      generation: 3,
+    },
+    token: randomBytes(32).toString('hex'),
+    active: false,
+  });
+  const secrets = [
+    token,
+    providerApiKey,
+    generationTransportToken,
+    verifierPassword,
+    verifierBasic,
+    ownerPassword,
+    ...generationBindings.map((binding) => binding.token),
+  ];
   const report = {
     scope: 'WAP-E01/WAP-T01-01; synthetic, no pairing, no messages',
     n8nImage: N8N,
     providerSource: 'cd800f2976e1e5b682fbf86a01ee4d85ae61f370',
     checks: {},
     privacyFailures: [],
+    technicalGate: 'pending',
     gate: 'blocked',
     blockers: [
-      'Source-time authenticated generation binding is absent in the pinned provider/wrapper',
       'Same-phone pairing is not homologated; this experiment never pairs an account',
+      'Multi-instance operational retention is not homologated by this proof',
     ],
   };
   let networkCreated = false;
   let imageCreated = false;
   const image = `${prefix}:probe`;
+  let n8nImageCreated = false;
+  const n8nImage = `${prefix}:n8n`;
   let stage = 'initialization';
   const step = (value) => {
     stage = value;
@@ -143,6 +212,8 @@ export async function runProviderSpike() {
       'create',
       '--label',
       `silmer.wap-spike=${suffix}`,
+      '--subnet',
+      `10.254.${Number.parseInt(suffix.slice(0, 2), 16)}.0/24`,
       net,
     ]);
     const databaseVolume = await volume(`${prefix}-database`);
@@ -193,21 +264,28 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
         resolve(root, 'ops/evolution/Dockerfile.inline'),
         'utf8',
       );
-      for (const [name, marker] of [
-        ['privacy', 'PRIVACY'],
-        ['retention', 'RETENTION'],
+      for (const [name, marker, target] of [
+        ['privacy.cjs', 'PRIVACY', 'silmer-privacy.cjs'],
+        ['retention.cjs', 'RETENTION', 'silmer-retention.cjs'],
+        [
+          'wap-generation-runtime.cjs',
+          'WAP_GENERATION_RUNTIME',
+          'silmer-wap-generation.cjs',
+        ],
+        [
+          'wap-generation-patch.mjs',
+          'WAP_GENERATION_PATCH',
+          'silmer-wap-generation-patch.mjs',
+        ],
       ]) {
         const source = await readFile(
-          resolve(root, `ops/evolution/${name}.cjs`),
+          resolve(root, `ops/evolution/${name}`),
           'utf8',
         );
-        const embedded = `COPY <<'SILMER_${marker}_EOF' /evolution/silmer-${name}.cjs\n${source}\nSILMER_${marker}_EOF`;
+        const embedded = `COPY <<'SILMER_${marker}_EOF' /evolution/${target}\n${source}\nSILMER_${marker}_EOF`;
         assert.ok(recipe.includes(embedded));
-        recipe = recipe.replace(
-          embedded,
-          `COPY ${name}.cjs /evolution/silmer-${name}.cjs`,
-        );
-        await writeFile(resolve(buildDirectory, `${name}.cjs`), source);
+        recipe = recipe.replace(embedded, `COPY ${name} /evolution/${target}`);
+        await writeFile(resolve(buildDirectory, name), source);
       }
       await writeFile(resolve(buildDirectory, 'Dockerfile'), recipe);
       imageCreated = true;
@@ -249,8 +327,8 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
         }),
     );
     Object.assign(env, {
-      AUTHENTICATION_API_KEY: token,
-      SILMER_EVOLUTION_WEBHOOK_TOKEN: randomBytes(32).toString('hex'),
+      AUTHENTICATION_API_KEY: providerApiKey,
+      SILMER_EVOLUTION_WEBHOOK_TOKEN: generationTransportToken,
       DATABASE_CONNECTION_URI: `postgresql://silmer_evolution:synthetic-wap-only@${db}:5432/silmer_evolution?schema=public`,
       SILMER_EVOLUTION_WEBHOOK_URL:
         'https://wap-provider-fixture.invalid/webhook/disabled',
@@ -264,6 +342,8 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
         '-e',
         `${key}=${value}`,
       ]),
+      '-v',
+      `${resolve(root, 'ops/evolution')}:/probe/ops/evolution:ro`,
       image,
     ]);
     const providerHttp = (path, method = 'GET', body, auth = true) =>
@@ -271,7 +351,7 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
         method,
         headers: {
           'Content-Type': 'application/json',
-          ...(auth ? { apikey: token } : {}),
+          ...(auth ? { apikey: providerApiKey } : {}),
         },
         body,
       });
@@ -338,6 +418,12 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
       '-e',
       `WAP_PROBE_TOKEN=${token}`,
       '-e',
+      `WAP_PROVIDER_API_KEY=${providerApiKey}`,
+      '-e',
+      `WAP_VERIFY_BASIC=${verifierBasic}`,
+      '-e',
+      `WAP_GENERATION_BINDINGS=${JSON.stringify(generationBindings)}`,
+      '-e',
       `WAP_PROVIDER_URL=http://${provider}:8080`,
       '-v',
       `${resolve(root, 'ops/evolution/wap-provider-fixture.mjs')}:/fixture.mjs:ro`,
@@ -346,7 +432,29 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
       '/fixture.mjs',
     ]);
     const n8nVolume = await volume(`${prefix}-n8n-state`);
-    await run(n8n, [
+    step('n8n-patch-build');
+    n8nImageCreated = true;
+    await command(
+      [
+        'build',
+        '--quiet',
+        '--label',
+        `silmer.wap-spike=${suffix}`,
+        '-t',
+        n8nImage,
+        '-f',
+        resolve(root, 'ops/n8n/wap-ingress-Dockerfile'),
+        resolve(root, 'ops/n8n'),
+      ],
+      '',
+      600000,
+    );
+    report.n8nPatchedImage = (
+      await command(['image', 'inspect', n8nImage, '--format', '{{.Id}}'])
+    )
+      .toString()
+      .trim();
+    const n8nBaseArgs = [
       '--memory=2g',
       '--cpus=1',
       '-v',
@@ -381,7 +489,20 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
       'EXECUTIONS_DATA_SAVE_ON_PROGRESS=false',
       '-e',
       'N8N_LOG_LEVEL=warn',
-      N8N,
+    ];
+    await run(n8n, [
+      '--network-alias',
+      'wap-n8n',
+      ...n8nBaseArgs,
+      '-e',
+      'SILMER_WAP_INGRESS_ENABLED=true',
+      '-e',
+      'SILMER_WAP_INGRESS_PATHS={"wap-e01-privacy":"challenge","wap-e01-generation":"event","wap-e01-unsafe":"challenge"}',
+      '-e',
+      'SILMER_WAP_INGRESS_VERIFY_URL=http://wap-provider-fixture:8080/ingress/verify',
+      '-e',
+      `SILMER_WAP_INGRESS_VERIFY_BASIC=${verifierBasic}`,
+      n8nImage,
     ]);
     await wait(
       async () => (await http(n8n, '/healthz/readiness')).status === 200,
@@ -411,7 +532,7 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
       email: 'wap-probe@example.invalid',
       firstName: 'Synthetic',
       lastName: 'Probe',
-      password: `Wap-${token.slice(0, 24)}-9!`,
+      password: ownerPassword,
     });
     step('n8n-credential');
     const credential = await api('/credentials', 'POST', {
@@ -429,6 +550,22 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
     await api(`/workflows/${workflow.id}/activate`, 'POST', {
       versionId: workflow.versionId,
     });
+    const eventCredential = await api('/credentials', 'POST', {
+      name: 'WAP synthetic generation transport',
+      type: 'httpHeaderAuth',
+      data: {
+        name: 'X-Silmer-Evolution-Token',
+        value: generationTransportToken,
+      },
+    });
+    const generationWorkflow = await api(
+      '/workflows',
+      'POST',
+      createGenerationIngressProbe({ credentialId: eventCredential.id }),
+    );
+    await api(`/workflows/${generationWorkflow.id}/activate`, 'POST', {
+      versionId: generationWorkflow.versionId,
+    });
     const fixtureHttp = (path) =>
       http(n8n, `http://wap-provider-fixture:8080${path}`, {
         headers: { 'X-Wap-Probe-Token': token },
@@ -437,13 +574,116 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
       JSON.parse((await fixtureHttp('/audit')).body);
     step('fixture-audit');
     let representations = [];
+    let challengeRepresentations = [];
+    let privateGroups = [];
+    const credentialRepresentations = () =>
+      [...secrets, cookie, cookie.slice(cookie.indexOf('=') + 1)]
+        .filter((value) => value.length >= 32)
+        .flatMap((value) => privateRepresentations({}, value));
     const refreshCanaries = async () => {
-      representations = privateRepresentations(
-        (await fixtureAudit()).canaries,
-        token,
+      const canaries = (await fixtureAudit()).canaries;
+      const leafGroups = (value, path = '') => {
+        if (typeof value === 'string' && value.length >= 8)
+          return [
+            {
+              label: `value:${path}`,
+              values: privateRepresentations({ value }, token).slice(0, -3),
+            },
+          ];
+        if (!value || typeof value !== 'object') return [];
+        return Object.entries(value).flatMap(([key, child]) =>
+          leafGroups(
+            child,
+            path +
+              (path ? '.' : '') +
+              (/^[A-Za-z0-9_\-]{1,40}$/.test(key) ? key : 'field'),
+          ),
+        );
+      };
+      challengeRepresentations = privateRepresentations(canaries, token).slice(
+        0,
+        -3,
       );
+      representations = [
+        ...challengeRepresentations,
+        ...credentialRepresentations(),
+      ];
+      privateGroups = [
+        ...leafGroups(canaries),
+        ...Object.entries(canaries).map(([mode, value]) => ({
+          label: `challenge:${mode}`,
+          values: privateRepresentations(value, token).slice(0, -3),
+        })),
+        ...secrets.map((value, index) => ({
+          label: [
+            'probeTransport',
+            'providerApiKey',
+            'generationTransport',
+            'verifierPassword',
+            'verifierBasic',
+            'ownerPassword',
+            ...generationBindings.map(
+              (binding) => `generation:${binding.source.bindingId}`,
+            ),
+          ][index],
+          values: privateRepresentations({}, value),
+        })),
+        ...[cookie, cookie.slice(cookie.indexOf('=') + 1)]
+          .filter((value) => value.length >= 32)
+          .map((value) => ({
+            label: 'ownerCookie',
+            values: privateRepresentations({}, value),
+          })),
+      ];
     };
     const scan = (bytes) => containsPrivateValue(bytes, representations);
+    await refreshCanaries();
+    const executionCount = async () =>
+      Number(
+        (
+          await command([
+            'exec',
+            db,
+            'psql',
+            '-U',
+            'silmer_evolution',
+            '-d',
+            'n8n_wap_synthetic',
+            '-Atc',
+            'SELECT count(*) FROM execution_entity',
+          ])
+        )
+          .toString()
+          .trim(),
+      );
+    const workflowCount = async () =>
+      Number(
+        (
+          await command([
+            'exec',
+            db,
+            'psql',
+            '-U',
+            'silmer_evolution',
+            '-d',
+            'n8n_wap_synthetic',
+            '-Atc',
+            'SELECT count(*) FROM workflow_entity',
+          ])
+        )
+          .toString()
+          .trim(),
+      );
+    const rawApi = (path, method, body) =>
+      http(n8n, `/rest${path}`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: cookie,
+          Origin: 'http://localhost:5678',
+        },
+        body,
+      });
     const audit = async (label) => {
       await refreshCanaries();
       const dump = await command([
@@ -487,11 +727,11 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
               ),
           ),
         ];
-        const tokenRepresentations = privateRepresentations({}, token);
+        const tokenRepresentations = credentialRepresentations();
         report.checks[`${label}DatabaseLeak`] = {
           tables,
           credentialToken: containsPrivateValue(dump, tokenRepresentations),
-          challenge: containsPrivateValue(dump, representations.slice(0, -3)),
+          challenge: containsPrivateValue(dump, challengeRepresentations),
         };
       }
       // Aggregate failing assertions to complete the matrix, then exit nonzero.
@@ -526,9 +766,81 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
     }
     report.checks.n8nGuard =
       'unauthenticated, non-allowlisted and stale synthetic generation denied before fixture';
+    const numericCount = await executionCount();
+    const numericCode = Number(
+      (await fixtureAudit()).canaries.incoming.pairingCode,
+    );
+    const numericGeneration = await post(
+      'qr',
+      true,
+      'synthetic-a',
+      numericCode,
+    );
+    assert.equal(numericGeneration.status, 403);
+    assert.equal(await executionCount(), numericCount);
+    report.checks.numericChallengeCannotEnterGenerationMetadata = true;
+    const malformedCount = await executionCount();
+    const malformed = await http(n8n, '/webhook/wap-e01-privacy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Wap-Probe-Token': token,
+      },
+      rawBody: '{"unexpected":"' + token + '"',
+    });
+    report.checks.malformedIngressStatus = malformed.status;
+    report.checks.malformedIngressFixedDenial =
+      malformed.body.includes('WAP_INGRESS_DENIED');
+    // n8n 2.38.7 rejects malformed JSON with 422 before invoking the Webhook.
+    assert.equal(malformed.status, 422);
+    assert.equal(scan(Buffer.from(malformed.body)), false);
+    assert.equal(await executionCount(), malformedCount);
+    report.checks.malformedIngressRejectedBeforeWrite = true;
+    step('unsafe-settings-guard');
+    const unsafeModel = structuredClone(model);
+    unsafeModel.name = 'WAP-E01 isolated unsafe settings';
+    unsafeModel.nodes.find((node) => node.name === 'Trigger').parameters.path =
+      'wap-e01-unsafe';
+    unsafeModel.settings.saveDataSuccessExecution = 'all';
+    const unsafeCountBefore = await executionCount();
+    const workflowCountBefore = await workflowCount();
+    const unsafeResponse = await rawApi('/workflows', 'POST', unsafeModel);
+    assert.equal(unsafeResponse.status, 400);
+    assert.ok(unsafeResponse.body.includes('WAP_WORKFLOW_WRITE_DENIED'));
+    assert.equal(await executionCount(), unsafeCountBefore);
+    assert.equal(await workflowCount(), workflowCountBefore);
+    report.checks.unsafeSettingsRejectedBeforeWrite = true;
+    const pinData = {
+      Trigger: [{ json: { code: (await fixtureAudit()).canaries.qr.code } }],
+    };
+    const pinCreate = await rawApi('/workflows', 'POST', {
+      ...model,
+      name: 'WAP-E01 isolated pinned challenge',
+      pinData,
+    });
+    assert.equal(pinCreate.status, 400);
+    assert.ok(pinCreate.body.includes('WAP_WORKFLOW_WRITE_DENIED'));
+    assert.equal(await workflowCount(), workflowCountBefore);
+    const pinUpdate = await rawApi(`/workflows/${workflow.id}`, 'PATCH', {
+      pinData,
+    });
+    assert.equal(pinUpdate.status, 400);
+    assert.ok(pinUpdate.body.includes('WAP_WORKFLOW_WRITE_DENIED'));
+    assert.deepEqual(
+      (await api(`/workflows/${workflow.id}`)).pinData ?? {},
+      {},
+    );
+    report.checks.pinDataWriteRejectedBeforePersistence = true;
+    await audit('pinDataDenied');
     step('n8n-success-error');
     for (const mode of ['qr', 'code', 'provider-qr', 'provider-code']) {
       const response = await post(mode);
+      report.checks.roundTrip ??= {};
+      report.checks.roundTrip[mode] = {
+        status: response.status,
+        noStore: response.cache === 'no-store',
+        fixtureCalls: (await fixtureAudit()).calls[mode] ?? 0,
+      };
       assert.equal(response.status, 200);
       assert.equal(response.cache, 'no-store');
       assert.deepEqual(
@@ -557,9 +869,11 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
       observed.logout = (
         await providerHttp(`/instance/logout/${name}`, 'DELETE')
       ).status;
+      // Each instance requests one modality; code mode need not also return QR.
       if (
-        !observed.challengeQr ||
-        (mode === 'provider-code' && !observed.challengeCode)
+        mode === 'provider-code'
+          ? !observed.challengeCode
+          : !observed.challengeQr
       )
         report.blockers.push(
           `Provider challenge unavailable in ${name}; no connect retry`,
@@ -573,6 +887,70 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
     assert.equal(failure.status, 500);
     assert.equal((await fixtureAudit()).calls.failure, 1);
     await audit('errorAfterChallenge');
+    step('generation-source-ingress');
+    const countBeforeGeneration = await executionCount();
+    const driverBytes = await command(
+      [
+        'exec',
+        '-i',
+        provider,
+        'node',
+        '/probe/ops/evolution/wap-generation-rehearsal.mjs',
+        '--isolated-synthetic',
+      ],
+      JSON.stringify({
+        bindings: generationBindings.slice(0, 3),
+        retryReplacementBinding: generationBindings[3],
+        transportToken: generationTransportToken,
+        fixtureToken: token,
+        fixtureUrl: 'http://wap-provider-fixture:8080',
+        n8nUrl: 'http://wap-n8n:5678/webhook/wap-e01-generation',
+      }),
+    );
+    await refreshCanaries();
+    assert.equal(scan(driverBytes), false);
+    const generationProof = JSON.parse(driverBytes.toString());
+    for (const check of [
+      'oldQueuedGenerationRejected',
+      'currentGenerationAccepted',
+      'replayPreservesSource',
+      'otherLineAccepted',
+      'crossLineTokenRejected',
+      'retryAfterRevocationRejected',
+      'replacementGenerationAccepted',
+      'lifecycleEventsRejectedWithoutUnhandledRejection',
+      'pairingCodeExcludedBeforeCredentialSerialization',
+    ])
+      assert.equal(generationProof[check], true);
+    assert.equal(await executionCount(), countBeforeGeneration + 4);
+    report.checks.generationSource = generationProof;
+    const a2 = generationBindings[3];
+    const generationCount = await executionCount();
+    for (const [source, instance, secret] of [
+      [{ ...a2.source, generation: 999 }, a2.instance, a2.token],
+      [a2.source, generationBindings[2].instance, a2.token],
+      [a2.source, a2.instance, providerApiKey],
+      [a2.source, a2.instance, null],
+    ]) {
+      const rejected = await http(n8n, '/webhook/wap-e01-generation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Silmer-Evolution-Token': generationTransportToken,
+          ...(secret ? { 'X-Silmer-Wap-Generation-Token': secret } : {}),
+        },
+        body: {
+          event: 'connection.update',
+          instance,
+          source,
+          data: { state: 'connecting' },
+        },
+      });
+      assert.equal(rejected.status, 403);
+    }
+    assert.equal(await executionCount(), generationCount);
+    report.checks.generationAdversarialBeforeWrite = true;
+    await audit('generationIngress');
     step('n8n-in-progress');
     // Attach rejection handling immediately so a Docker failure during cleanup
     // cannot terminate the process before the remaining owned resources are removed.
@@ -633,6 +1011,28 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
       return report.checks.manualRuntimeSuccess === true;
     }, 'WAP_MANUAL_NOT_SUCCEEDED');
     await audit('manual');
+    const partialCount = await executionCount();
+    const manualCalls = (await fixtureAudit()).calls.manual;
+    const partial = await http(n8n, `/rest/workflows/${manual.id}/run`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookie,
+        Origin: 'http://localhost:5678',
+      },
+      body: {
+        triggerToStartFrom: { name: 'Trigger' },
+        runData: {
+          Trigger: [{ data: { main: [[{ json: { private: token } }]] } }],
+        },
+      },
+    });
+    assert.equal(partial.status, 400);
+    assert.ok(partial.body.includes('WAP_MANUAL_REQUEST_DENIED'));
+    assert.equal(await executionCount(), partialCount);
+    assert.equal((await fixtureAudit()).calls.manual, manualCalls);
+    report.checks.manualPartialRejectedBeforeEffect = true;
+    await audit('manualPartialDenied');
     const exported = await api(`/workflows/${workflow.id}`);
     const exportedManual = await api(`/workflows/${manual.id}`);
     for (const saved of [exported, exportedManual]) {
@@ -646,6 +1046,41 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
     report.checks.pinDataAndErrorWorkflow = 'empty, no error workflow';
     step('n8n-stopped-snapshot');
     await command(['stop', n8n]);
+    step('n8n-default-off');
+    const n8nOff = `${prefix}-n8n-off`;
+    await run(n8nOff, [...n8nBaseArgs, n8nImage]);
+    await wait(
+      async () => (await http(n8nOff, '/healthz/readiness')).status === 200,
+      'WAP_N8N_OFF_NOT_READY',
+    );
+    await wait(async () => {
+      const denied = await http(n8nOff, '/webhook/wap-e01-privacy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Wap-Probe-Token': token,
+        },
+        body: { actor: 'synthetic-other', generation: 1, mode: 'qr' },
+      });
+      return denied.status === 403 && denied.body === 'WAP_INGRESS_DENIED';
+    }, 'WAP_N8N_OFF_ROUTE_NOT_READY');
+    const offCount = await executionCount();
+    const off = await http(n8nOff, '/webhook/wap-e01-privacy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Wap-Probe-Token': token,
+      },
+      body: { actor: 'synthetic-a', generation: 1, mode: 'qr' },
+    });
+    assert.equal(off.status, 403);
+    assert.equal(off.body, 'WAP_INGRESS_DENIED');
+    assert.equal(await executionCount(), offCount);
+    report.checks.defaultOffRejectsBeforePersistence = true;
+    const offLogsLeak = scan(await command(['logs', n8nOff]));
+    report.checks.defaultOffLogsLeak = offLogsLeak;
+    assert.equal(offLogsLeak, false);
+    await command(['stop', n8nOff]);
     const stateReader = `${prefix}-state-reader`;
     containers.push(stateReader);
     const snapshot = await command([
@@ -698,6 +1133,11 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
       stoppedStateLeak,
       physicalDatabaseLeak,
     };
+    if (physicalDatabaseLeak)
+      report.checks.physicalHitFiles = classifyPrivateTar(
+        physical,
+        privateGroups,
+      );
     try {
       assert.equal(stoppedStateLeak, false);
       assert.equal(physicalDatabaseLeak, false);
@@ -706,6 +1146,7 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
     }
     if (report.privacyFailures.length)
       throw new Error('WAP_PRIVACY_PERSISTENCE_DETECTED');
+    report.technicalGate = 'passed';
   } catch (error) {
     // Assertions can contain a secret in their diagnostic message. Do not serialize them.
     report.failure = {
@@ -717,6 +1158,7 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
             ? error.message
             : 'WAP_SPIKE_FAILED',
     };
+    report.technicalGate = 'failed';
   } finally {
     step('cleanup');
     const cleanupErrors = [];
@@ -781,6 +1223,14 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
         if (await owned('image', image)) await command(['image', 'rm', image]);
       } catch {
         cleanupErrors.push('image');
+      }
+    }
+    if (n8nImageCreated) {
+      try {
+        if (await owned('image', n8nImage))
+          await command(['image', 'rm', n8nImage]);
+      } catch {
+        cleanupErrors.push('n8n-image');
       }
     }
     report.cleanup = cleanupErrors.length

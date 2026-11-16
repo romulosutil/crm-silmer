@@ -57,6 +57,30 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 
 ### Evidência WAP-E01 / WAP-T01-01 — spike executado, aceite bloqueado
 
+Correção autorizada em 16/11/2026, [RFC 069](../../../docs/rfc/069-ingresso-efemero-e-geracao-autenticada-do-whatsapp.md)
+/ [ADR 092](../../../docs/adr/092-sanitizacao-pre-persistencia-e-geracao-na-origem.md):
+[evidência corrigida](../../../ops/evolution/wap-provider-spike.fixed.evidence.json)
+com technicalGate=passed, privacyFailures vazio e sem acerto físico PostgreSQL/WAL.
+O gate E2E integrado permanece pendente por uma falha de captura de áudio no
+limite de 16 MiB; o teste passou isolado, sem alteração de assertions. Detalhes
+e demais verificações no runbook vinculado abaixo.
+
+- [x] Remover credenciais antes do output/primeiro SQL n8n e cercar manual,
+      REST pinData/settings e metadados sintéticos antes de persistência.
+- [x] Capturar source/token no callback do socket antes da fila; provar
+      atraso A1, A2/replay, token cruzado e retry 503→revogação→403→A3 200.
+- [x] Omitir pairingCode da cópia Prisma antes de SQL, preservando protocolo,
+      objeto vivo e material criptográfico de sessão; scans físicos negativos.
+- [x] Provar default off em nova inicialização da imagem n8n e recursos
+      isolados removidos, sem flags/imagens reais modificadas.
+- [ ] Homologação do código no mesmo celular e retenção operacional de
+      múltiplas instâncias. Não são comprovadas por notificações sintéticas.
+
+Os checkboxes principais E01/T01-01 continuam abertos somente nos critérios
+remanescentes. API/controlador/verificador real são E02/E04 e não foram
+implementados nesta correção. A descrição a seguir preserva a evidência
+negativa inicial e suas limitações, superada pelos patches nos pontos acima.
+
 Investigação em 16/11/2026, base `f7a06389`, Mel via SSH autorizado, recursos
 Docker dedicados e dados sintéticos. [Contrato, reprodução, limites e alternativas](../../../docs/runbooks/seller-whatsapp-provider.md).
 Código de prova em `ops/evolution/wap-provider-spike.mjs`; workflow somente de

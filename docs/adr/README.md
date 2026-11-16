@@ -1,5 +1,12 @@
 # Architecture Decision Records
 
+## Correção técnica de 16/11/2026
+
+- [092 — Sanitização pré-persistência e geração na origem](092-sanitizacao-pre-persistencia-e-geracao-na-origem.md),
+  RFC 069 / WAP-E01: patches fixados, autenticação antes da primeira escrita,
+  origem imutável por socket e invalidação de geração no ingresso. Implementação
+  e prova isoladas; produção, mobile e retenção operacional permanecem gates.
+
 ## Decisão técnica de 16/11/2026
 
 - [091 — Contratos da etapa 1 do WhatsApp pessoal](091-contratos-da-etapa1-whatsapp-pessoal.md),

@@ -3,6 +3,14 @@ import { readFile, writeFile } from 'node:fs/promises';
 const root = new URL('./', import.meta.url);
 const privacy = await readFile(new URL('privacy.cjs', root), 'utf8');
 const retention = await readFile(new URL('retention.cjs', root), 'utf8');
+const generationRuntime = await readFile(
+  new URL('wap-generation-runtime.cjs', root),
+  'utf8',
+);
+const generationPatch = await readFile(
+  new URL('wap-generation-patch.mjs', root),
+  'utf8',
+);
 const dockerfile = `# syntax=docker/dockerfile:1.7
 # EVOL-01. Official Evolution v2.3.7 OCI index, verified 2026-10-29.
 FROM node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2 AS node_runtime
@@ -17,6 +25,13 @@ SILMER_PRIVACY_EOF
 COPY <<'SILMER_RETENTION_EOF' /evolution/silmer-retention.cjs
 ${retention}
 SILMER_RETENTION_EOF
+COPY <<'SILMER_WAP_GENERATION_RUNTIME_EOF' /evolution/silmer-wap-generation.cjs
+${generationRuntime}
+SILMER_WAP_GENERATION_RUNTIME_EOF
+COPY <<'SILMER_WAP_GENERATION_PATCH_EOF' /evolution/silmer-wap-generation-patch.mjs
+${generationPatch}
+SILMER_WAP_GENERATION_PATCH_EOF
+RUN node /evolution/silmer-wap-generation-patch.mjs /evolution/dist/main.js
 RUN mkdir -p /evolution/instances /evolution/store && chown -R node:node /evolution/instances /evolution/store /evolution/prisma /evolution/node_modules/.prisma
 USER node
 EXPOSE 8080

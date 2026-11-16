@@ -29,6 +29,25 @@ gerado por `node ops/evolution/render-dockerfile.mjs`; editar as fontes
 protocolo Baileys, executa como UID/GID `1000:1000`, não instala Chromium,
 não usa container privilegiado e não expõe domínio ou porta pública.
 
+WAP-E01 acrescenta o patch de fonte verificável de
+[geração/persistência](wap-generation-patch.mjs),
+[runtime](wap-generation-runtime.cjs), [RFC 069](../../docs/rfc/069-ingresso-efemero-e-geracao-autenticada-do-whatsapp.md)
+e [ADR 092](../../docs/adr/092-sanitizacao-pre-persistencia-e-geracao-na-origem.md).
+O build confere o SHA do bundle original antes de inserir a captura de origem
+por socket e a cópia de creds sem pairingCode antes de serializar para Prisma.
+O código humano temporário permanece no objeto vivo para o protocolo, mas não
+em novas escritas de Session/WAL. Chaves de sessão e buffers são preservados;
+não há expurgo de dados anteriores. A flag de geração é false e allowlist vazia
+por padrão; instância pessoal allowlisted sem binding falha fechada. Eventos
+fora do esquema/sem contexto não caem no transporte legado.
+
+As imagens corrigidas foram construídas somente no ensaio dedicado do Mel e
+removidas. Nenhum serviço ou flag real foi alterado. O hook de controle de
+binding e o verificador CRM reais permanecem E02/E04; esta prova usa somente
+connection.update sintético e não homologa pareamento/live ou retenção de todas
+as instâncias. Evidências e limites no
+[runbook específico](../../docs/runbooks/seller-whatsapp-provider.md).
+
 ## EasyPanel e persistência
 
 Serviços: `schedule/silmer-evolution`, porta interna `8080`, uma réplica, e

@@ -8,6 +8,7 @@ import { createPairingPrivacyProbe } from '../ops/n8n/wap-pairing-privacy-probe.
 import {
   containsPrivateValue,
   privateRepresentations,
+  classifyPrivateTar,
 } from '../ops/evolution/wap-spike-privacy.mjs';
 import { patchWahaInboundImages } from '../ops/n8n/patch-waha-inbound-images.mjs';
 import { createWahaWorkflow } from '../ops/n8n/workflows/create-waha-workflow.mjs';
@@ -109,7 +110,7 @@ test('WAP-E01/WAP-03/12: privacy probe is isolated, inactive, default off and al
   );
 });
 
-test('WAP-E01/WAP-10: current wrapper cannot authenticate a source generation; reconnect gate stays blocked', () => {
+test('WAP-E01/WAP-10: legacy wrapper authenticates transport only and preserves a distinct generation header', () => {
   const { protectWebhookRequest } = createRequire(import.meta.url)(
     '../ops/evolution/privacy.cjs',
   );
@@ -127,7 +128,10 @@ test('WAP-E01/WAP-10: current wrapper cannot authenticate a source generation; r
     {
       url: profile.webhookUrl,
       data: old,
-      headers: { 'X-Silmer-Evolution-Token': 'synthetic-old-generation-token' },
+      headers: {
+        'X-Silmer-Evolution-Token': 'synthetic-old-transport-token',
+        'X-Silmer-Wap-Generation-Token': 'synthetic-immutable-generation-token',
+      },
     },
     profile,
   );
@@ -136,6 +140,10 @@ test('WAP-E01/WAP-10: current wrapper cannot authenticate a source generation; r
     profile.webhookToken,
   );
   assert.equal(dispatch.data.generation, 1);
+  assert.equal(
+    dispatch.headers['X-Silmer-Wap-Generation-Token'],
+    'synthetic-immutable-generation-token',
+  );
   const other = protectWebhookRequest(
     { url: profile.webhookUrl, data: { ...old, instance: 'synthetic-b' } },
     profile,
@@ -144,7 +152,8 @@ test('WAP-E01/WAP-10: current wrapper cannot authenticate a source generation; r
     other.headers['X-Silmer-Evolution-Token'],
     dispatch.headers['X-Silmer-Evolution-Token'],
   );
-  // Evidence of a limitation, not an acceptance test for personal ingress.
+  // The general-line transport wrapper does not invent a source generation.
+  // Personal ingress additionally requires the socket-bound generation proof.
   assert.equal(
     Object.hasOwn(dispatch.headers, 'X-Silmer-Source-Generation'),
     false,
@@ -191,6 +200,36 @@ test('WAP-E01/WAP-03: persistence scans find nested challenges, plaintext token,
   assert.throws(
     () => privateRepresentations({}, ''),
     /WAP_SCAN_TOKEN_REQUIRED/u,
+  );
+});
+
+test('WAP-E01: physical archive diagnostics report only file and category, never secret bytes', () => {
+  const value = 'synthetic-physical-private-code';
+  const body = Buffer.from(`dead tuple: ${value}`);
+  const header = Buffer.alloc(512);
+  header.write('./pg_wal/000000010000000000000001');
+  header.write(
+    body.length.toString(8).padStart(11, '0') + '\0',
+    124,
+    12,
+    'ascii',
+  );
+  const archive = Buffer.concat([
+    header,
+    body,
+    Buffer.alloc(512 - body.length),
+    Buffer.alloc(512),
+  ]);
+  const report = classifyPrivateTar(archive, [
+    { label: 'pairingCode', values: [Buffer.from(value)] },
+  ]);
+  assert.deepEqual(report, [
+    { file: './pg_wal/000000010000000000000001', kinds: ['pairingCode'] },
+  ]);
+  assert.equal(JSON.stringify(report).includes(value), false);
+  assert.throws(
+    () => classifyPrivateTar(archive.subarray(0, 520), []),
+    /WAP_ARCHIVE_INVALID/u,
   );
 });
 const config = {

@@ -41,17 +41,21 @@ arquitetura ou fluxo de deploy (ADR 022).
 Evidências, limites e prevenção no
 [runbook do incidente](../../../docs/runbooks/api-image-csp-incident.md).
 
-## WAP-T00 — proposta de WhatsApp por vendedor (12/11/2026)
+## WAP-T00c — decisões de WhatsApp por vendedor (15/11/2026)
 
-[RFC 067](../../../docs/rfc/067-whatsapp-por-vendedor-e-meus-clientes.md),
-[requisitos propostos WAP-01–24](../seller-whatsapp/spec.md) e
-[plano em duas etapas](../seller-whatsapp/tasks.md): configuração pessoal por
-QR, Meus clientes com contatos, pedidos, cobranças e sincronização corrente;
-depois, carteira anterior e sucessão. WAP-T00a explicita a operação comercial
-completa desde a etapa 1. WAP-T00b explicita Cliente oficial, vínculo de carteira
-durável e primeiro envio humano sem inbound (13/11/2026). Escopo exclusivo de
-WhatsApp. Somente elaboração documental autorizada; D1–D5 e ADR ainda
-pendentes, sem runtime ou pareamento.
+[RFC 067](../../../docs/rfc/067-whatsapp-por-vendedor-e-meus-clientes.md) /
+[ADR 090](../../../docs/adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md),
+[WAP-01–33](../seller-whatsapp/spec.md) e [plano](../seller-whatsapp/tasks.md).
+
+- [x] Registrar D1–D5 e edição compartilhada aprovados: um único número por
+      vendedor, atendimento passivo/humano e primeiro envio individual opcional.
+- [x] Criar ADR, alinhar RFC/requisitos/tarefas e fontes canônicas; preservar
+      histórico WAP-T00/a/b das PRs 372/376 e decisões anteriores.
+- [x] Definir WAP-T02a como gate prioritário: criar Pedido diretamente da
+      conversa sem sugestão IA, primeiro envio, cadastro completo ou canal online.
+- [x] Verificar documentação, commit/push e PR no handoff da WAP-T00c.
+- [ ] Implementação/homologação nas tarefas WAP-T01–07/T02a; código/contratos e
+      gates operacionais ainda pendentes, sem pareamento ou efeito financeiro.
 
 ## CONV-ACL-T01 — Leitura por responsável (12/11/2026)
 

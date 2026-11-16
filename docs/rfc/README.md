@@ -1,19 +1,19 @@
 # Request for Comments
 
+## Decisão de 15/11/2026
+
+- [067 — WhatsApp por vendedor e Meus clientes](067-whatsapp-por-vendedor-e-meus-clientes.md),
+  D1–D5 e edição compartilhada aceitos na [ADR 090](../adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md).
+  Um número por vendedor, atendimento passivo/humano e Pedido pela conversa
+  como gate prioritário da etapa 1; primeiro envio opcional. WAP-01–33 e
+  WAP-T00c; implementação/homologação pendentes.
+
 ## Proposta de 12/11/2026
 
 - [068 — Recibo comercial do pedido](068-recibo-comercial-do-pedido.md),
   aprovada na ADR 089 após o protótipo RCP-P01–04: Recibo na lista e no detalhe,
   prévia e download, incluindo provisório em pendentes. Implementação
   RCP-T01–04 em `.specs/features/order-receipt/`.
-
-- [067 — WhatsApp por vendedor e Meus clientes](067-whatsapp-por-vendedor-e-meus-clientes.md),
-  em revisão, WAP-T00: duas etapas exclusivas de WhatsApp, conexão pessoal por
-  QR, carteira isolada e operação CRM completa com contatos, pedidos, cobranças
-  e sincronização corrente; depois, importação controlada e sucessão de linha.
-  Complementos WAP-T00a/b; revisão de 13/11 explicita Cliente oficial,
-  vínculos duráveis e primeiro envio humano sem inbound na etapa 1 (D5).
-  Requisitos WAP-01–24; ADR pendente, sem implementação ou ativação.
 
 ## Decisão de 12/11/2026
 

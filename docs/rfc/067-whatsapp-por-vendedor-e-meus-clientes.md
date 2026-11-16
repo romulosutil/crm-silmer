@@ -1,21 +1,26 @@
 # RFC 067 — WhatsApp por vendedor e Meus clientes
 
-Data: 12/11/2026. Status: **proposta em revisão**. Responsável: Tech Lead.
+Data inicial: 12/11/2026. Status: **D1–D5 e cadastro compartilhado aceitos em 15/11/2026**.
+Decisão: [ADR 090](../adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md).
+Responsável: Tech Lead.
 Solicitante e aprovador de produto: proprietário do CRM Silmer. Revisão técnica:
 Backend/Dados, Integrações, Frontend/A11y e QA/Privacidade/Operação conforme a
-fatia. Requisitos propostos [WAP-01–24](../../.specs/features/seller-whatsapp/spec.md);
-entrega documental WAP-T00 e [plano WAP-T01–07](../../.specs/features/seller-whatsapp/tasks.md).
+fatia. Requisitos aprovados [WAP-01–33](../../.specs/features/seller-whatsapp/spec.md);
+entrega de decisão WAP-T00c e [plano WAP-T01–07/T02a](../../.specs/features/seller-whatsapp/tasks.md).
 Sem issue específica; PR desta entrega vinculada no handoff.
 
 O proprietário pediu uma RFC e configuração pessoal para conectar os celulares
 de trabalho sem depender da equipe técnica a cada vendedor. As duas etapas
 abaixo tratam exclusivamente de WhatsApp. Instagram não integra esta proposta.
-A elaboração foi autorizada; recomendações de produto e exceções às regras
-vigentes ainda precisam de aceite e ADR correspondente. Não há implementação,
+A elaboração inicial foi autorizada em 12/11; D1–D5 e a política de edição
+compartilhada foram aprovadas em 15/11, com um único número por vendedor,
+atendimento predominantemente passivo e prioridade ao Pedido pela conversa.
+O desenho técnico restante detalha como implementar a decisão. Não há implementação,
 pareamento, mudança de workflow ou ativação de produção nesta entrega.
 Revisão de 13/11/2026: o proprietário esclareceu que o cliente deve ser a
 mesma entidade Cliente do CRM e pediu regras explícitas de cadastro, vínculos
-e primeira mensagem. WAP-T00b detalha essa proposta; D1–D5 seguem em revisão.
+e primeira mensagem. WAP-T00b detalhou a proposta, ainda em revisão naquela
+entrega; o aceite atual está em WAP-T00c e na ADR 090.
 
 ## Problema e resultado esperado
 
@@ -75,10 +80,10 @@ imagem implantada, a disponibilidade da conta nem importação integral da agend
 
 ## Duas etapas, ambas de telefones
 
-| Etapa                                    | Entrega                                                                                                                                                                       | Gate de conclusão                                                                                                                              |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 — Conexão pessoal e operação comercial | Configuração pessoal, QR/reconexão, carteira por linha e operação CRM completa: contatos, pedidos, cobranças e mensagens pelo CRM/aparelho, com isolamento e falhas visíveis. | Vendedor conecta sem suporte e completa contato → pedido → cobrança nas duas linhas do piloto, sem acesso cruzado ou envio pelo número errado. |
-| 2 — Carteira anterior e continuidade     | Descoberta/importação controlada de contatos e histórico disponível; troca de número e transferência administrativa da linha/carteira.                                        | Prévia, limites reais do provedor, deduplicação, retomada e revogação demonstrados sem disparar atendimento retroativo.                        |
+| Etapa                                    | Entrega                                                                                                                                                                         | Gate de conclusão                                                                                                                              |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 — Conexão pessoal e operação comercial | Configuração pessoal, QR/reconexão, carteira do vendedor e operação CRM completa: contatos, pedidos, cobranças e mensagens pelo CRM/aparelho, com isolamento e falhas visíveis. | Vendedor conecta sem suporte e completa contato → pedido → cobrança nas duas linhas do piloto, sem acesso cruzado ou envio pelo número errado. |
+| 2 — Carteira anterior e continuidade     | Descoberta/importação controlada de contatos e histórico disponível; troca de número e transferência administrativa da linha/carteira.                                          | Prévia, limites reais do provedor, deduplicação, retomada e revogação demonstrados sem disparar atendimento retroativo.                        |
 
 A etapa 1 não promete que todos os clientes antigos apareçam ao escanear o QR.
 Na etapa 2, contato sem conversa pode ser importado como cadastro, nunca como
@@ -102,12 +107,12 @@ autorizações de cadastro, edição comercial, confirmação ou cobrança.
 A exigência de emissão em Pedido confirmado, os limites de saldo/acordo e os
 demais gates de cobrança continuam no [contrato COB/BAPI](../../.specs/features/order-billing/spec.md).
 A abertura humana mantém [OA-01–08](../../.specs/features/order-assistance/spec.md);
-o modo humano proposto para a linha pessoal não remove essas ações. Reutilizar
+o modo humano aprovado para a linha pessoal não remove essas ações. Reutilizar
 as APIs e componentes existentes, sem cadastro, pedido ou cobrança paralelos
 por instância Evolution. Parear o celular não concede capacidade comercial
 extra nem habilita integrações ainda não liberadas no ambiente.
 
-Contato salvo manualmente fica vinculado à carteira do vendedor/linha com
+Contato salvo manualmente fica vinculado à carteira do vendedor com
 proveniência humana, inclusive antes da primeira inbound; o telefone informado
 não é prova de identidade do canal. Identidades posteriores seguem correlação
 verificável e escolha de duplicata já existentes. Um cadastro global anterior
@@ -160,12 +165,13 @@ Encerrar conversa, desconectar ou renovar QR não remove o Cliente da carteira.
 
 ### Iniciar uma mensagem sem inbound anterior — etapa 1
 
-**Sim: a proposta passa a incluir o vendedor iniciar a conversa do zero.**
+**O vendedor pode iniciar uma conversa individual do zero, opcionalmente.**
 Depois de cadastrar ou vincular o Cliente, a tela mostra **Sem conversa** e
 **Iniciar conversa**. A pessoa confere o telefone cadastrado, a própria linha
 remetente e escreve a primeira mensagem. Somente **Enviar primeira mensagem**
 executa o comando; salvar o Cliente, abrir sua tela ou clicar para compor não
-envia nem fabrica uma mensagem recebida. Essa extensão depende do aceite D5.
+envia nem fabrica uma mensagem recebida. Essa extensão foi aprovada em D5,
+como opção individual: o atendimento normal continua aguardando o cliente.
 
 O servidor revalida sessão, carteira, capacidade de envio, Cliente/telefone,
 linha/titular/geração e destinatário elegível no provedor. Uma consulta do
@@ -228,7 +234,8 @@ PostgreSQL (identidade por conta e correlação explícita);
 `apps/api/src/conversation-routes.js` e
 `modules/inbox-channels/src/application/inbox-service.js` (o envio atual exige
 uma conversa existente). Não existe hoje o comando de primeira conversa aqui
-proposto: ele exige implementação/validação próprias em WAP-T02/T04/T05.
+definido: ele exige implementação/validação próprias em WAP-T04/T05, após o
+gate prioritário de Pedido pela conversa em WAP-T02a.
 
 WAP-T01/T02 devem fechar contrato e migração do vínculo durável com constraints
 de unicidade por carteira/Cliente, estado/versão e proveniência, separado da
@@ -270,10 +277,11 @@ identidade de canal e primeiro envio só ficam disponíveis com validação atua
    carteira vazia nem promete mensagens atualizadas.
 
 O QR pede outra tela para exibição: o celular não escaneia o próprio visor.
-Para uso do CRM no mesmo aparelho, propor **Conectar com código**, suportado
+Para uso do CRM no mesmo aparelho, oferecer **Conectar com código**, suportado
 pelo upstream e sujeito a homologação na imagem/aplicativo reais. O gate da
-etapa 1 exige um caminho mobile viável ou limitação de duas telas explicitada
-e aceita pelo PO; não declarar autonomia mobile só por renderizar o QR.
+etapa 1 exige homologar a alternativa por código antes de declarar conexão
+autônoma no mesmo celular. Uma limitação precisa ser informada; operar por QR
+em outra tela não comprova esse requisito e não bloqueia cadastro/Pedido local.
 
 O modal tem título e descrição, foco inicial previsível, Escape/fechamento e
 retorno ao acionador. Estados são anunciados sem repetir o QR a leitores de
@@ -286,7 +294,8 @@ do WhatsApp como se fossem código de pareamento.
 Proposta: registro de linha no PostgreSQL do CRM com ID opaco, usuário titular,
 número esperado/confirmado protegido, referência privada da instância, estado,
 geração do vínculo, versão, corte de sincronização e trilha de operações.
-Uma linha pessoal ativa por vendedor e um titular ativo por número confirmado,
+Um único número de trabalho por vendedor, uma linha pessoal ativa e um titular
+ativo por número confirmado, sem seletor de múltiplos números pessoais,
 com constraints transacionais. Não usar telefone no nome público da instância,
 URL, chave de idempotência ou log; nunca confiar em número enviado pelo browser
 como prova do aparelho conectado.
@@ -296,13 +305,13 @@ comercial são conceitos separados. O histórico mantém a origem e os snapshots
 comerciais. Uma nova geração de vínculo não herda eventos, sessões ou reservas
 da anterior. A linha compartilhada já existente conserva seu comportamento.
 
-Para a linha pessoal, propõe-se atribuir a conversa ao titular ativo na mesma
+Para a linha pessoal, atribuir a conversa ao titular ativo na mesma
 transação da entrada, em modo humano, sem janela pública sem dono. Se o titular
 estiver inativo, a linha fica bloqueada para operação e o evento autenticado
 fica pendente para revisão administrativa, sem publicação a outros vendedores.
 Registro/roteamento pelo n8n continua automático; chamar IA ou responder com bot
 não decorre do pareamento. Esse modo humano inicial e a atribuição por linha
-são propostas de exceção restrita às regras atuais de jornada/handoff.
+são a exceção restrita aprovada na ADR 090; a jornada da linha geral permanece.
 
 Meus clientes lista os Clientes oficiais com vínculo comercial durável à
 carteira do vendedor, não apenas conversas atualmente abertas; inclui os
@@ -420,36 +429,103 @@ microserviço. Alternativas rejeitadas na proposta: painel Evolution direto;
 um workflow copiado por vendedor; filtrar só a UI; chavear cliente globalmente
 por telefone; importar agenda/histórico como inbound nova.
 
-Pontos de produto ainda em revisão, sem bloquear a entrega desta RFC:
+## D1–D5 — decisões aprovadas em 15/11/2026
 
-- D1: aceitar modo humano inicial e atribuição atômica ao titular nas linhas
-  pessoais, com exceção restrita às regras 1/19/20 e ADR 009, preservando a
-  jornada da linha geral. IA pessoal futura exigiria escolha própria.
-- D2: aceitar uma linha ativa por vendedor, restrição de transferência na
-  etapa 1 e sucessão administrativa na etapa 2.
-- D3: aceitar etapa 1 para mensagens novas, com etapa 2 de importação limitada;
-  confirmar recorte/período e retenção de dados importados antes de implementá-la.
-- D4: homologar código de pareamento para uso no mesmo celular; se indisponível,
-  decidir explicitamente sobre o requisito de duas telas antes do piloto.
-- D5 (revisão de 13/11/2026): incluir primeiro contato humano pelo CRM sem
-  inbound anterior na etapa 1, com Cliente oficial/vínculo preexistentes,
-  destinatário validado e composição transacional do primeiro envio. Evoluir
-  somente a fronteira necessária dos contratos MSG/ORC e modo humano da linha
-  pessoal; não interpretar o envio humano como início de automação por UI.
+Decisão durável na [ADR 090](../adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md).
+O proprietário confirmou que cada vendedor tem um número e normalmente aguarda
+ser procurado. O primeiro envio continua permitido, sem virar caminho obrigatório.
 
-Aceite durável gera novo ADR ligado a esta RFC, requisitos e PR, atualizando
-somente as exceções necessárias em RULES, spec MVP, PRD e sínteses de arquitetura.
-Não reescrever ADRs 009/050/088. Reutilizar ORC-01–05/07/08, INB-01, MSG-01–04,
-PRV-01–03 e CONV-ACL-01; os WAP novos continuam propostos até essa decisão.
+- **D1 — Atendimento humano:** entrada na linha pessoal atribuída atomicamente
+  ao titular ativo, sem fila pública sem dono nem bot automático. n8n continua
+  obrigatório para canal/eventos. Inativo exige revisão administrativa; linha
+  geral e handoff humano definitivo mantêm suas regras.
+- **D2 — Um número por vendedor:** uma linha pessoal ativa por titular e um
+  titular por número, sem alternância de vários números. Etapa 1 não transfere
+  genericamente conversa pessoal. Etapa 2 permite substituir o único número
+  mediante prova/revogação; sucessão entre funcionários exige Admin e auditoria,
+  preservando autoria comercial passada e remetentes históricos.
+- **D3 — Duas etapas:** etapa 1 entrega operação completa, principalmente receber
+  cliente e criar Pedido na conversa, cadastro, cobrança e mensagens; primeiro
+  envio é opcional. Etapa 2 seleciona clientes e importa até 30 dias de mensagens
+  disponíveis, com prévia e limites reais. Janela não é retenção nem garantia de
+  histórico integral; aplicar política vigente de dados/mídia sem disparo retroativo.
+- **D4 — QR e código:** QR com outra tela e código para o mesmo celular, ambos
+  internos ao CRM. Homologar código antes de declarar autonomia mobile; informar
+  limitações reais sem impedir operações locais ou substituí-lo silenciosamente
+  por teste só com QR. Nunca pedir senha ou código de verificação da conta.
+- **D5 — Primeiro envio humano:** permitido na etapa 1 por comando individual
+  explícito, com Cliente/destino/linha validados, intenção transacional e proteção
+  contra repetição. Não é prospecção automática nem condição para receber cliente,
+  criar Pedido ou usar outras funções. Não fabrica inbound ou liga o bot.
+
+### Prioridade da etapa 1 — Pedido a partir da conversa
+
+**O vendedor deve conseguir acionar Criar pedido na própria conversa humana
+com o cliente.** Reutilizar o fluxo atual, com confirmação humana, Pedido
+pendente numerado e vínculo correto de Cliente/conversa/Assunto/responsável.
+Não exigir sugestão da IA, bot, primeiro envio pelo vendedor, importação de
+histórico, cadastro completo ou WhatsApp online para essa mutação local. As
+regras de criação elegível, posse, confirmação e ficha continuam vigentes;
+cadastro completo bloqueia somente o Olist, conforme ADR 082.
+
+Fonte confirmada no código: `apps/edge-web/src/views/InboxView.vue` tem
+`canCreateOrder`, `createOrderInHeader` e `confirmManualOrder`;
+`apps/api/src/order-routes.js` expõe
+`POST /api/v1/conversations/:conversationId/orders`, que chama `createManual`.
+A nova carteira deve reutilizar essa capacidade, sem criar pedido solto como
+atalho. Isso demonstra base existente, não prova integração da carteira ainda
+não implementada. WAP-T02a é a fatia prioritária, após vínculo/ACL necessários.
+
+Critério obrigatório: cliente procura a linha do vendedor → conversa humana
+atribuída → Criar pedido → confirmar criação → abrir e preencher o Pedido
+vinculado. Deve funcionar sem sugestão/análise da IA e mesmo com queda posterior
+do WhatsApp. Se há pendente no alvo, abrir existente; novo alvo usa Assunto
+explícito. Duplo clique/replay não duplica Pedido/número; troca de contexto,
+alvo ambíguo ou perda de posse bloqueiam antes da criação. Testar duas carteiras
+com o mesmo Cliente. A etapa 1 não é aceita somente com pareamento e chat.
+
+### Edição do Cliente em duas carteiras — regras aprovadas
+
+Um único Contact, com cadastro comum e relações comerciais separadas:
+
+| Campo/ação                                                                     | Quem pode alterar e efeitos                                                                                                                                          |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nome de exibição, e-mail, endereço padrão e demais campos comuns não restritos | Ambos os vendedores ativos vinculados podem preencher/corrigir; mostrar aviso de cadastro compartilhado, sem revelar outra carteira privada.                         |
+| Primeiro preenchimento fiscal                                                  | Qualquer vendedor vinculado pode preencher campos vazios, com validadores atuais.                                                                                    |
+| CPF/CNPJ ou tipo de pessoa já preenchidos                                      | Só Admin ativo altera/remove, com motivo/conferência. Comparar por campo: reenviar valor igual não bloqueia edição permitida de endereço/e-mail no mesmo formulário. |
+| Telefone principal do Cliente compartilhado                                    | Só Admin ativo altera após conferência. Não reassociar identidade de canal ou mudar destino de conversa/cobrança pronta automaticamente.                             |
+| Notas de negociação e lembretes                                                | Ficam no atendimento/carteira autorizada; não são campos globais por padrão.                                                                                         |
+| Pedidos, preços, cobranças e recebimentos                                      | Conservam autorização comercial própria; vínculo ao mesmo Cliente não libera negócios alheios.                                                                       |
+| Vincular, transferir ou unir Clientes                                          | Comandos próprios autorizados; edição de campo não funde cadastros, transfere linha/responsabilidade ou muda crédito comercial.                                      |
+
+Revalidar vínculo, capacidade, compartilhamento e versão no servidor, na
+transação. Quem salva versão obsoleta recebe conflito e confere o que mudou,
+sem sobrescrita silenciosa ou perda do rascunho. Registrar autor, horário e
+campos alterados, com valores protegidos nos envelopes e ausentes de logs,
+eventos e auditoria em claro. Leitores autorizados recebem aviso mínimo de
+atualização, sem exposição de contexto privado.
+
+Pedidos confirmados mantêm seus snapshots; nome de pendentes acompanha o
+Contato conforme ADR 018. Não alterar retroativamente documentos/exportações,
+condições comerciais ou recebimentos. Mudança de telefone/dados relevantes
+exige nova conferência de envio preparado afetado e não redireciona efeito
+já reservado/iniciado.
+
+A ADR 090 registra as exceções restritas às regras 1/20 e à atribuição inicial
+da ADR 009 nas linhas pessoais. Preserva regra 19, ADRs 018/033/047/050/056/082/088,
+complementadas somente pela política de carteira/cadastro aqui aceita. Reutilizar
+ORC-01–05/07/08, INB-01, MSG-01–04, PRV-01–03 e CONV-ACL-01. Decisão registrada
+não substitui implementação, homologação, gates de privacidade ou produção.
 
 ## Gates, operação e resultado da entrega
 
-WAP-T00 entrega esta proposta, requisitos e tarefas. Os critérios negativos
+WAP-T00c registra o aceite, requisitos e tarefas na ADR 090, preservando o
+histórico WAP-T00/a/b. Implementação e ativação continuam pendentes. Os critérios negativos
 estão na spec e os gates locais/remotos no plano. A etapa 1 exige evidência de
 duas linhas, reconexão autônoma, mesmo cliente em ambas, concorrência de número,
 QR expirado, aparelho incorreto, saída nativa, eco duplicado, revogação durante
 envio, isolamento de Contatos/SSE/mídia e indisponibilidade do n8n/Evolution.
-WAP-17–24 exigem ainda cadastro manual sem conversa, vínculo do Cliente
+WAP-17–33 exigem ainda cadastro manual sem conversa, vínculo do Cliente
 oficial sem duplicação, primeiro envio humano sem inbound e resposta posterior
 no mesmo Cliente/conversa, criação/edição/confirmação
 humana de Pedido e cobrança com contexto correto, envio do link pela linha de

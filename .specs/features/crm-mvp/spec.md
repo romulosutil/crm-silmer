@@ -1,5 +1,23 @@
 # CRM Silmer MVP — Requisitos Rastreáveis
 
+## WhatsApp por vendedor — D1–D5 aceitos em 15/11/2026
+
+[ADR 090](../../../docs/adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md),
+[RFC 067](../../../docs/rfc/067-whatsapp-por-vendedor-e-meus-clientes.md) e
+[WAP-01–33](../seller-whatsapp/spec.md): um único número por vendedor, atendimento
+passivo/humano atribuído ao titular, carteira durável e operação CRM completa.
+Primeiro envio individual é opcional; n8n, isolamento e regras comerciais atuais
+continuam. Sem prospectar automaticamente ou exigir pareamento para cadastro local.
+
+WAP-31/33 tornam obrigatória na etapa 1 a criação humana de Pedido diretamente
+da conversa de Meus clientes, com alvo/Cliente/responsável corretos, versão e
+idempotência, sem sugestão IA, primeiro envio, cadastro completo ou canal online.
+WAP-25–30 regem edição compartilhada por campo, Admin nas alterações críticas,
+conflito/auditoria e snapshots, preservando privacidade de conversas/negócios.
+Complementar ORC/INB/MSG/PRV apenas nas exceções pessoais da ADR 090; linha geral
+preservada. Gate prioritário [WAP-T02a](../seller-whatsapp/tasks.md); implementação
+e homologação permanecem pendentes, apesar do aceite documental WAP-T00c.
+
 ## Recuperação de leads sem retorno (11/11/2026)
 
 [REC-01–12](../lead-recovery/spec.md),

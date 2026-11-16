@@ -430,3 +430,30 @@ for (const [owner, actor] of [
     assert.deepEqual(response.rawPayload, bytes);
   });
 }
+
+for (const mime of [
+  'application/vnd.corel-draw',
+  'application/x-vnd.corel.draw.document+zip',
+]) {
+  test(`INBOX-DOC-02 CDR privately downloads with canonical MIME ${mime}`, async (t) => {
+    const data = Buffer.from('synthetic-clean-corel');
+    const { get } = await harness(t, {
+      bytes: data,
+      row: {
+        media_type: 'document',
+        detected_mime_type: mime,
+        size_bytes: data.length,
+        content_sha256: createHash('sha256').update(data).digest('hex'),
+      },
+    });
+    const response = await get();
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.rawPayload, data);
+    assert.equal(response.headers['content-type'], mime);
+    assert.equal(
+      response.headers['content-disposition'],
+      'attachment; filename="documento.cdr"',
+    );
+    assert.equal(response.headers['x-content-type-options'], 'nosniff');
+  });
+}

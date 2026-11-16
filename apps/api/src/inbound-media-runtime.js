@@ -10,7 +10,11 @@ const MIME_TYPES = /** @type {Record<string, string[]>} */ ({
   image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
   audio: ['audio/mpeg', 'audio/ogg'],
   video: ['video/mp4'],
-  document: ['application/pdf'],
+  document: [
+    'application/pdf',
+    'application/vnd.corel-draw',
+    'application/x-vnd.corel.draw.document+zip',
+  ],
 });
 
 /**
@@ -47,7 +51,7 @@ export function createInboundMediaRuntime({
              AND message.direction='inbound' AND media.media_type=message.message_type
              AND (message.message_type IN ('image','audio','video')
                OR (message.message_type='document' AND media.detected_mime_type
-                 IN ('image/jpeg','image/png','image/webp','image/gif','application/pdf')))`,
+                 IN ('image/jpeg','image/png','image/webp','image/gif','application/pdf','application/vnd.corel-draw','application/x-vnd.corel.draw.document+zip')))`,
           [input.mediaId, input.conversationId, scope.readAll, scope.actorId],
         )
       ).rows[0];
@@ -119,7 +123,7 @@ export function createInboundMediaRuntime({
             'Content-Length': String(end - start + 1),
             ...(kind === 'document'
               ? {
-                  'Content-Disposition': 'attachment; filename="documento.pdf"',
+                  'Content-Disposition': `attachment; filename="documento.${row.detected_mime_type === 'application/pdf' ? 'pdf' : 'cdr'}"`,
                 }
               : {}),
             ...(partial

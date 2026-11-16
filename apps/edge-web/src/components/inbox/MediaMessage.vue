@@ -131,23 +131,26 @@ async function imageFile(signal) {
     'image/webp': 'webp',
     'image/gif': 'gif',
     'application/pdf': 'pdf',
+    'application/vnd.corel-draw': 'cdr',
+    'application/x-vnd.corel.draw.document+zip': 'cdr',
   };
   const mime = (response.headers.get('Content-Type') ?? '')
     .split(';')[0]
     .trim();
-  const isPdf = props.media.kind === 'document';
+  const isDocument = props.media.kind === 'document';
   if (
     !(mime in extensions) ||
-    (isPdf && mime !== 'application/pdf') ||
-    (!isPdf && mime === 'application/pdf')
+    (isDocument && !['pdf', 'cdr'].includes(extensions[mime])) ||
+    (!isDocument && ['pdf', 'cdr'].includes(extensions[mime])) ||
+    (isDocument && props.media.mimeType && mime !== props.media.mimeType)
   )
     throw new ApiError(415, { code: 'FILE_TYPE_NOT_ALLOWED' });
   const bytes = await response.blob();
-  if (!bytes.size || bytes.size > (isPdf ? 16 : 5) * 1024 * 1024)
+  if (!bytes.size || bytes.size > (isDocument ? 16 : 5) * 1024 * 1024)
     throw new Error('Invalid image size');
   return new globalThis.File(
     [bytes],
-    `${isPdf ? 'documento' : 'imagem'}-${props.media.mediaId}.${extensions[mime]}`,
+    `${isDocument ? 'documento' : 'imagem'}-${props.media.mediaId}.${extensions[mime]}`,
     { type: mime },
   );
 }
@@ -246,6 +249,14 @@ const contentUrl = computed(() => {
     ? url
     : null;
 });
+const documentFormat = computed(() =>
+  [
+    'application/vnd.corel-draw',
+    'application/x-vnd.corel.draw.document+zip',
+  ].includes(props.media.mimeType)
+    ? 'CDR'
+    : 'PDF',
+);
 const unavailable = computed(
   () => failed.value || !contentUrl.value || props.media.state !== 'attached',
 );
@@ -484,7 +495,7 @@ watch(
       </div>
     </div>
     <div v-else-if="media.kind === 'document'" ref="player">
-      <p>Documento PDF</p>
+      <p>Documento {{ documentFormat }}</p>
       <button
         type="button"
         :aria-disabled="downloading || undefined"
@@ -492,7 +503,11 @@ watch(
         @click="downloadImage"
       >
         <AppIcon name="download" />
-        {{ downloading ? 'Baixando PDF…' : 'Baixar PDF' }}
+        {{
+          downloading
+            ? `Baixando ${documentFormat}…`
+            : `Baixar ${documentFormat}`
+        }}
       </button>
       <p v-if="downloadError" role="alert">{{ downloadError }}</p>
     </div>

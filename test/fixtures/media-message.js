@@ -20,6 +20,12 @@ createApp({
       /** @type {{mediaId: string, kind: string, state: string, contentUrl: string | null}} */ ({
         mediaId: 'media-1',
         kind,
+        mimeType:
+          params.get('format') === 'cdr'
+            ? 'application/vnd.corel-draw'
+            : params.get('format') === 'cdrzip'
+              ? 'application/x-vnd.corel.draw.document+zip'
+              : undefined,
         state: params.get('state') || 'attached',
         contentUrl: params.has('unsafe')
           ? 'https://storage.invalid/private-object'

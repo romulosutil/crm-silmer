@@ -114,6 +114,20 @@ Plano e evidências em [order-timeline](../order-timeline/tasks.md), DTL-01–12
 Implementação autorizada pelo proprietário após protótipo DTL-P01–P06;
 controle de conclusão e gates no plano específico. Sem ativação de produção.
 
+## INBOX-DOC-02 — liberar documentos PDF e CDR recebidos (16/11/2026)
+
+INB-01, MSG-01–03 e PRV-03; solicitação explícita do proprietário.
+
+- [x] Estender o ramo Evolution para PDF e CDR, inclusive MIME genérico do gateway,
+      com base64/tamanho/assinatura conferidos e MIME definitivo pelo scanner.
+- [x] Preservar PDF e CorelDRAW RIFF/ZIP validados no volume transitório existente,
+      com download privado, hash, TTL, ACL e nome sintético.
+- [x] Exibir Documento CDR/Baixar CDR e preservar operação por teclado e erros.
+- [ ] Publicar API/interface por PR com CI e o delta revisado no workflow corrente.
+- [ ] Homologar recebimento real e verificar o documento histórico, se ainda disponível.
+
+Evidências e rollback: [runbook](../../../docs/runbooks/inbox-pdf.md).
+
 ## INBOX-PDF-01 — corrigir PDF recebido na Inbox (11/11/2026)
 
 INB-01, MSG-01–03 e PRV-03; correção do fluxo existente, sem nova arquitetura.

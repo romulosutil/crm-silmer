@@ -214,7 +214,14 @@ if (connectionString) {
         ['image/png', bytes],
         ['image/gif', SYNTHETIC_GIF],
         ...(type === 'document'
-          ? [['application/pdf', Buffer.from('%PDF-1.7\nsynthetic\n%%EOF')]]
+          ? [
+              ['application/pdf', Buffer.from('%PDF-1.7\nsynthetic\n%%EOF')],
+              ['application/vnd.corel-draw', Buffer.from('RIFF synthetic CDR')],
+              [
+                'application/x-vnd.corel.draw.document+zip',
+                Buffer.from('PK synthetic CDR'),
+              ],
+            ]
           : []),
       ]) {
         const uploaded = await image(String(sequence++), true, {
@@ -228,7 +235,7 @@ if (connectionString) {
         assert.equal(shown.messages[0].type, type);
         assert.equal(
           shown.messages[0].media.kind,
-          mime === 'application/pdf' ? 'document' : 'image',
+          String(mime).startsWith('application/') ? 'document' : 'image',
         );
         assert.equal(shown.messages[0].media.state, 'attached');
         assert.equal(shown.messages[0].media.mimeType, mime);

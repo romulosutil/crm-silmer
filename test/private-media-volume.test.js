@@ -436,3 +436,44 @@ test('IMG-04: revalidation waits on the same serial queue as new storage', async
     },
   );
 });
+
+for (const mime of [
+  'application/vnd.corel-draw',
+  'application/x-vnd.corel.draw.document+zip',
+]) {
+  for (const mode of ['clean', 'infected', 'stale', 'zip']) {
+    test(`INBOX-DOC-02 Corel storage ${mime} keeps scanner gate ${mode}`, async () => {
+      await withVolume(
+        {
+          scanner: {
+            async scan() {
+              return {
+                clean: mode !== 'infected',
+                detectedMimeType: mode === 'zip' ? 'application/zip' : mime,
+                signatureUpdatedAt:
+                  mode === 'stale'
+                    ? '2026-08-01T00:00:00Z'
+                    : '2026-09-02T11:00:00Z',
+              };
+            },
+          },
+        },
+        async ({ volume, repository }) => {
+          const stored = await volume.store({
+            mediaId: 'synthetic-cdr',
+            bytes: Buffer.from('synthetic-corel-bytes'),
+            declaredMimeType: mime,
+          });
+          const expected =
+            mode === 'clean'
+              ? 'available'
+              : mode === 'stale'
+                ? 'quarantined'
+                : 'rejected';
+          assert.equal(stored.availabilityStatus, expected);
+          assert.equal(repository.events.at(-1)[0], expected);
+        },
+      );
+    });
+  }
+}

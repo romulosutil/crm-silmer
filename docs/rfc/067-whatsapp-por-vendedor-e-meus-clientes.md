@@ -1,5 +1,11 @@
 # RFC 067 — WhatsApp por vendedor e Meus clientes
 
+Complemento técnico de 16/11/2026: [ADR 091](../adr/091-contratos-da-etapa1-whatsapp-pessoal.md)
+e [design da etapa 1](../../.specs/features/seller-whatsapp/design.md), WAP-T00d.
+As decisões de produto da ADR 090 permanecem. O SDD fecha contratos e
+[32 prompts de execução](../../.specs/features/seller-whatsapp/PROMPTS.md),
+com prioridade WAP-T02a e implementação/homologação ainda pendentes.
+
 Data inicial: 12/11/2026. Status: **D1–D5 e cadastro compartilhado aceitos em 15/11/2026**.
 Decisão: [ADR 090](../adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md).
 Responsável: Tech Lead.

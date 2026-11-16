@@ -17,6 +17,14 @@ Primeiro envio é opção individual; etapa 2 importa até 30 dias disponíveis 
 gerencia substituição/sucessão. Decisão aceita, implementação e gates pendentes
 em [WAP-T01–07/T02a](.specs/features/seller-whatsapp/tasks.md); WAP-T00c só documental.
 
+O SDD WAP-T00d ([ADR 091](docs/adr/091-contratos-da-etapa1-whatsapp-pessoal.md))
+detalha [contratos, transações e implantação da etapa 1](.specs/features/seller-whatsapp/design.md).
+Pedido conserva conversa e ganha origem de Assunto, com compatibilidade de
+legado e criação/vínculo atômicos; leitura/ACL/SSE e geração cercam todas as
+fronteiras pessoais. [Prompts de 32 entregas](.specs/features/seller-whatsapp/PROMPTS.md)
+priorizam WAP-T02a-05 antes de primeiro envio e acabamento. Documentação não
+implementa ou homologa runtime.
+
 ## Recibo comercial do pedido — 12/11/2026
 
 [ADR 089](docs/adr/089-recibo-comercial-na-lista-e-no-pedido.md) /

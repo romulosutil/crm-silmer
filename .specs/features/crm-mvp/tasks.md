@@ -41,6 +41,22 @@ arquitetura ou fluxo de deploy (ADR 022).
 Evidências, limites e prevenção no
 [runbook do incidente](../../../docs/runbooks/api-image-csp-incident.md).
 
+## WAP-T00d — SDD técnico da etapa 1 (16/11/2026)
+
+[WAP-01–12/16–33](../seller-whatsapp/spec.md),
+[design](../seller-whatsapp/design.md) e
+[ADR 091](../../../docs/adr/091-contratos-da-etapa1-whatsapp-pessoal.md).
+
+- [x] Fechar contratos técnicos e decompor 32 entregas em
+      [tarefas](../seller-whatsapp/tasks.md), cada uma com
+      [prompt completo e modelo](../seller-whatsapp/PROMPTS.md).
+- [x] Priorizar WAP-T02a-01–05: origem por Assunto, compatibilidade, comando
+      transacional, UI passiva e prova integrada sem IA ou canal online.
+- [x] Revisar Backend/QA e validar o pacote documental; evidências em
+      [validation-sdd.md](../seller-whatsapp/validation-sdd.md).
+- [ ] Executar implementação e gates. Esta entrega não publica workflow,
+      pareia conta ou autoriza efeitos reais; WAP-T06/T07 ficam na etapa 2.
+
 ## WAP-T00c — decisões de WhatsApp por vendedor (15/11/2026)
 
 [RFC 067](../../../docs/rfc/067-whatsapp-por-vendedor-e-meus-clientes.md) /

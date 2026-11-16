@@ -1,5 +1,12 @@
 # Request for Comments
 
+## Complemento técnico de 16/11/2026
+
+- [067 — WhatsApp por vendedor e Meus clientes](067-whatsapp-por-vendedor-e-meus-clientes.md):
+  [ADR 091](../adr/091-contratos-da-etapa1-whatsapp-pessoal.md) detalha a etapa 1
+  da ADR 090, com SDD, entregas atômicas e prompts/modelos. WAP-T00d documental;
+  runtime e gates reais pendentes.
+
 ## Decisão de 15/11/2026
 
 - [067 — WhatsApp por vendedor e Meus clientes](067-whatsapp-por-vendedor-e-meus-clientes.md),

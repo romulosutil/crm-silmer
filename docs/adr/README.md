@@ -1,5 +1,12 @@
 # Architecture Decision Records
 
+## Decisão técnica de 16/11/2026
+
+- [091 — Contratos da etapa 1 do WhatsApp pessoal](091-contratos-da-etapa1-whatsapp-pessoal.md),
+  RFC 067 / ADR 090 / WAP-T00d: carteira independente da linha, isolamento,
+  controle efêmero e Pedido com origem de Assunto. SDD e 32 prompts atômicos;
+  implementação e homologação pendentes.
+
 ## Decisão de 15/11/2026
 
 - [090 — WhatsApp pessoal, carteira e cadastro compartilhado](090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md),

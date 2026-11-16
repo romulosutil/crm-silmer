@@ -30,8 +30,17 @@ outbox e reconciliação; não pode atrasar a prova do caminho passivo prioritá
 QR e código dentro do CRM com segredo efêmero; homologar código para mesmo
 celular, sem confundir QR em outra tela com prova mobile. Importação selecionada
 de até 30 dias disponíveis na etapa 2, sujeita à retenção vigente por dado/mídia.
-Contratos HTTP novos, migrações, implementação e homologação ainda pendentes;
-WAP-T00c registra somente decisão, referências e tarefas.
+WAP-T00d fecha o [desenho técnico da etapa 1](.specs/features/seller-whatsapp/design.md)
+e a [ADR 091](docs/adr/091-contratos-da-etapa1-whatsapp-pessoal.md): vínculo durável
+separado da linha, ledger sem QR/código, ingresso autenticado por geração,
+escopo em leitura/escrita/SSE e origem de Assunto no Pedido preservando conversa.
+O contrato HTTP é aditivo; schema e leitores compatíveis precedem o escritor
+por alvo e a habilitação de múltiplos alvos. A carteira funciona offline;
+replay de desafio não regenera efeito incerto. São
+[32 tarefas atômicas com prompts/modelos](.specs/features/seller-whatsapp/PROMPTS.md),
+com WAP-T02a-05 como primeiro gate integrado. Migrações, contratos em código,
+workflows, implementação e homologação continuam pendentes. WAP-T00c/d são
+documentais e não autorizam pareamento, publicação ou efeito financeiro real.
 
 ## Recibo comercial — 12/11/2026
 

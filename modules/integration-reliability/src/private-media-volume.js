@@ -5,6 +5,8 @@ import { join, resolve } from 'node:path';
 const MAX_SCANNER_SIGNATURE_AGE_MS = 36 * 60 * 60 * 1000;
 const DEFAULT_ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
+  'application/vnd.corel-draw',
+  'application/x-vnd.corel.draw.document+zip',
   'audio/mpeg',
   'audio/ogg',
   'image/gif',

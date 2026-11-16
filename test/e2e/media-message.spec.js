@@ -10,6 +10,14 @@ let origin = '';
 const reads = [];
 /** @type {Record<string, {bytes: Buffer, mime: string}>} */
 const assets = {
+  cdr: {
+    bytes: Buffer.from('RIFF synthetic CDR'),
+    mime: 'application/vnd.corel-draw',
+  },
+  cdrzip: {
+    bytes: Buffer.from('PK synthetic CDR'),
+    mime: 'application/x-vnd.corel.draw.document+zip',
+  },
   document: {
     bytes: Buffer.from('%PDF-1.7\nsynthetic\n%%EOF'),
     mime: 'application/pdf',
@@ -154,6 +162,40 @@ for (const width of [390, 1366]) {
     await page.screenshot({ path: `test-results/inbox-pdf-${width}.png` });
   });
 }
+
+for (const format of ['cdr', 'cdrzip'])
+  for (const width of [390, 1366]) {
+    test(`INBOX-DOC-02 ${format} downloads by keyboard at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(
+        `${origin}/__media-message?kind=document&format=${format}`,
+      );
+      await expect(
+        page.getByText('Documento CDR', { exact: true }),
+      ).toBeVisible();
+      const button = page.getByRole('button', {
+        name: 'Baixar CDR',
+        exact: true,
+      });
+      await button.focus();
+      const pending = page.waitForEvent('download');
+      await page.keyboard.press('Enter');
+      const download = await pending;
+      expect(download.suggestedFilename()).toBe('documento-media-1.cdr');
+      expect(
+        await readFile(/** @type {string} */ (await download.path())),
+      ).toEqual(assets[format].bytes);
+      expect(reads[0].cookie).toContain('crm_session=synthetic-media-reader');
+      await expect(button).toBeEnabled();
+      await expect(button).toBeFocused();
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+      await page.screenshot({
+        path: `test-results/inbox-${format}-${width}.png`,
+      });
+    });
+  }
 
 for (const status of [403, 410, 503]) {
   test(`INBOX-PDF-01 PDF download ${status} announces failure and retries`, async ({

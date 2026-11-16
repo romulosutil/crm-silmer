@@ -64,3 +64,36 @@ anexos. Não remova dados nem altere scanner, ACL ou retenção para contornar f
 - Gate do projeto: `npm run validate`, E2E e auditoria de dependências.
 
 Testes locais não comprovam publicação nem recebimento real no canal ativo.
+
+## PDF e CDR — INBOX-DOC-02 (16/11/2026)
+
+Solicitação do proprietário: liberar PDF e CDR recebidos no WhatsApp. O gate de
+publicação de INBOX-PDF-01 continuava pendente; código preparado não prova que
+os bytes do documento relatado chegaram a ser persistidos.
+
+Use agora `node ops/n8n/patch-evolution-inbound-documents.mjs <atual.json> <revisao.json>`
+no export privado corrente. O patch inclui a correção PDF anterior se ausente e
+aceita documentos candidatos PDF/Corel, inclusive `application/octet-stream`
+quando o gateway não informa o formato. Confere bytes/base64 e assinatura PDF,
+RIFF/CDR ou ZIP; o ZIP é somente candidato. O scanner/libmagic precisa detectar
+`application/vnd.corel-draw` (RIFF) ou
+`application/x-vnd.corel.draw.document+zip` (Corel moderno); ZIP genérico, HTML,
+SVG e executáveis continuam recusados. Os nomes originais não determinam caminhos
+nem são expostos; CDR baixa como `documento.cdr`. Limite: 16 MiB por documento.
+
+As duas variantes seguem o scanner, SHA-256, retenção, ACL e download `attachment`
+existentes. O cartão oferece **Documento CDR / Baixar CDR**; PDF mantém o cartão
+anterior. Não há renderização do Corel ou envio do documento à IA. O pedido não
+muda. Instale a API/interface antes de publicar o delta do n8n; preserve a cópia
+privada anterior e confira apenas os nós listados pelo patch. Reaplicação é no-op.
+
+Verificar: testes `evolution-inbound-documents-patch`, `private-media-volume`,
+`inbound-media-content`, `inbound-media-postgres-live` e E2E `media-message`.
+O teste de PostgreSQL requer banco sintético dedicado. Homologação real e
+recuperação histórica continuam distintas dos testes locais.
+
+MIME do detector: [libmagic RIFF](https://github.com/file/file/blob/master/magic/Magdir/riff)
+e [libmagic ZIP/Corel](https://github.com/file/file/blob/master/magic/Magdir/archive).
+Rollback: restaurar o export protegido anterior e reverter o commit via PR,
+sem apagar anexos ou contornar scanner/ACL. Arquivos antigos sem bytes ainda
+podem exigir novo envio pelo cliente; não afirmar recuperação sem conferência.

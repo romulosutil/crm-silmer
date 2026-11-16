@@ -738,6 +738,8 @@ function normalizeMessageContent(message, type) {
       'image/webp',
       'image/gif',
       'application/pdf',
+      'application/vnd.corel-draw',
+      'application/x-vnd.corel.draw.document+zip',
     ].includes(documentMime)
       ? { mimeType: documentMime }
       : {}),

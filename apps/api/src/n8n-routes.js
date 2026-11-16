@@ -330,6 +330,8 @@ function attachmentLimitFor(mimeType) {
   if (mimeType.startsWith('image/')) return 5 * 1024 * 1024;
   if (
     mimeType === 'application/pdf' ||
+    mimeType === 'application/vnd.corel-draw' ||
+    mimeType === 'application/x-vnd.corel.draw.document+zip' ||
     mimeType.startsWith('audio/') ||
     mimeType.startsWith('video/')
   ) {

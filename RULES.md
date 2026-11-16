@@ -1,5 +1,33 @@
 # Regras do CRM Silmer
 
+## Linhas pessoais e cadastro compartilhado — decisão de 15/11/2026
+
+[ADR 090](docs/adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md) /
+[RFC 067](docs/rfc/067-whatsapp-por-vendedor-e-meus-clientes.md),
+[WAP-01–33](.specs/features/seller-whatsapp/spec.md): um número por vendedor,
+atendimento predominantemente passivo/humano e carteira durável do Contact
+oficial. Nas linhas pessoais, atribuir entrada ao titular ativo atomicamente,
+sem bot ou exposição como sem dono; exceção restrita às regras 1/20 e ADR 009,
+preservando n8n obrigatório, regra 19, linha geral e ADR 088.
+
+Criar Pedido diretamente da conversa é gate prioritário da etapa 1, com
+confirmação humana e vínculo correto. Não exigir sugestão IA, primeiro envio
+pelo vendedor, importação, cadastro completo ou WhatsApp online após receber.
+Preservar estados elegíveis, posse, versão/idempotência e pendente por alvo;
+criar não confirma/cobra/envia. Primeiro envio é individual opcional, nunca
+prospecção automática. D1–D5 aceitos: QR/código, importação selecionada de até
+30 dias disponíveis na etapa 2 e sucessão administrativa sem mover históricos.
+
+No Cliente compartilhado, vinculados ativos editam campos comuns e preenchem
+fiscais vazios; CPF/CNPJ/tipo preenchidos só Admin altera/remove com motivo e
+conferência, e telefone principal compartilhado só Admin altera após conferir.
+Comparar por campo; dados restritos inalterados não bloqueiam edição permitida.
+Versão/vínculo/capacidade revalidados, conflito sem sobrescrita, aviso e auditoria
+mínima. Notas/negócios privados não se abrem pelo vínculo; snapshots confirmados
+preservados e nome de pendentes segue ADR 018. Edição não reassocia identidade
+nem redireciona envio reservado. Decisão documental; implementação/ativação
+pendentes em WAP-T01–07/T02a, sem efeitos remotos nesta entrega.
+
 ## Recibo comercial — decisão de 12/11/2026
 
 [ADR 089](docs/adr/089-recibo-comercial-na-lista-e-no-pedido.md), RCP-01–12:

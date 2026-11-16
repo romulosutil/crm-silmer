@@ -1,5 +1,12 @@
 # Architecture Decision Records
 
+## Decisão de 15/11/2026
+
+- [090 — WhatsApp pessoal, carteira e cadastro compartilhado](090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md),
+  RFC 067 / WAP-01–33: D1–D5 aceitos, um número por vendedor, atendimento
+  passivo/humano, edição compartilhada por campo e gate prioritário de Pedido
+  diretamente da conversa. WAP-T00c documental; implementação pendente.
+
 ## Decisão de 12/11/2026
 
 - [089 — Recibo comercial na lista e no pedido](089-recibo-comercial-na-lista-e-no-pedido.md),

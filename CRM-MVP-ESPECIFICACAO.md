@@ -1,5 +1,31 @@
 # CRM Silmer — Especificação de Produto do MVP
 
+## Meus clientes e telefone de trabalho — aceite de 15/11/2026
+
+[ADR 090](docs/adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md) /
+[RFC 067](docs/rfc/067-whatsapp-por-vendedor-e-meus-clientes.md): cada vendedor
+tem um número de trabalho. Atendimento normal aguarda o cliente e nasce humano,
+com titular e privacidade definidos. Meus clientes é a operação comercial completa
+do CRM: salvar/vincular Contact oficial, conversar, criar Pedido, ficha e cobranças.
+Carteira e ações locais não dependem do pareamento. Primeiro envio humano é
+permitido individualmente, mas opcional; nenhuma prospecção automática.
+
+A prioridade da etapa 1 é **Criar pedido a partir da conversa**, com confirmação
+humana e pendente numerado no Cliente/conversa/Assunto/responsável corretos.
+Não depende de sugestão IA, primeiro envio do vendedor, importação, cadastro
+completo ou WhatsApp online. Manter demais regras de elegibilidade/posse e os
+comandos separados de confirmar, emitir cobrança e enviar. Não basta QR/chat
+funcionarem para aceitar essa etapa.
+
+D1–D5 e edição do cadastro compartilhado foram aceitos: campos comuns editáveis
+pelos vinculados, primeiro fiscal vazio permitido, alterações CPF/CNPJ/tipo
+preenchidos e telefone principal compartilhado restritas ao Admin conforme
+WAP-25–30; sem liberar negócios alheios ou reescrever snapshots. QR/código dentro
+do CRM; etapa 2 importa clientes selecionados e até 30 dias disponíveis conforme
+retenção vigente, além de troca/sucessão. Requisitos [WAP-01–33](.specs/features/seller-whatsapp/spec.md)
+e [tarefas](.specs/features/seller-whatsapp/tasks.md). Implementação/ativação
+pendentes; nenhuma mudança de runtime nesta decisão.
+
 ## Emenda Olist — centavos exatos (05/11/2026)
 
 [ADR 062](docs/adr/062-olist-exportacao-com-unitario-exato-em-centavos.md) e

@@ -1,5 +1,38 @@
 # TDD — CRM Silmer MVP
 
+## WAP — decisão de linhas pessoais e cadastro compartilhado (15/11/2026)
+
+[ADR 090](docs/adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md),
+[WAP-01–33](.specs/features/seller-whatsapp/spec.md): identidade Contact oficial,
+vínculo versionado carteira/Cliente independente de pareamento e linha com
+titular/geração exclusivos. Um número por vendedor; fluxo normal inbound humano,
+atribuído atomicamente. Sem exposição transitória como sem dono, bot pessoal,
+fallback de remetente ou nova infraestrutura; n8n continua obrigatório.
+
+Compor cadastro/vínculo, ACL e escrita por campo no servidor. Vinculados ativos
+alteram comuns/preenchem fiscais vazios; mudança/retirada CPF/CNPJ/tipo
+preenchidos requer Admin, motivo/conferência; telefone principal compartilhado
+só Admin após conferência. Revalidar capacidade/vínculo/compartilhamento/versão
+na transação; valores iguais de campos restritos não bloqueiam outros campos.
+Conflito revisável, aviso mínimo e auditoria de autor/horário/campos sem PII;
+campos privados e snapshots comerciais preservados. Mudança relevante invalida
+preparação afetada sem redirecionar identidade ou efeito reservado/iniciado.
+
+**WAP-T02a prioriza a composição com a API vigente de criar Pedido pela conversa**:
+`POST /api/v1/conversations/:conversationId/orders`, ação humana `order.create`,
+versão/idempotência e serviços de Pedido atuais. O alvo deve manter Cliente,
+conversa, Assunto e responsável, com retorno pendente numerado e link editável.
+Não exigir análise/sugestão IA, primeiro envio, cadastro completo ou canal online;
+preservar os outros gates de elegibilidade e não criar Pedido solto como fallback.
+Primeiro envio sem inbound é comando novo opcional, com reserva própria, intenção/
+outbox e reconciliação; não pode atrasar a prova do caminho passivo prioritário.
+
+QR e código dentro do CRM com segredo efêmero; homologar código para mesmo
+celular, sem confundir QR em outra tela com prova mobile. Importação selecionada
+de até 30 dias disponíveis na etapa 2, sujeita à retenção vigente por dado/mídia.
+Contratos HTTP novos, migrações, implementação e homologação ainda pendentes;
+WAP-T00c registra somente decisão, referências e tarefas.
+
 ## Recibo comercial — 12/11/2026
 
 [ADR 089](docs/adr/089-recibo-comercial-na-lista-e-no-pedido.md), RCP-01–12:

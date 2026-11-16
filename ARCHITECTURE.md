@@ -1,5 +1,22 @@
 # Arquitetura — baseline do CRM Silmer
 
+## WhatsApp pessoal, carteira e cadastro compartilhado — 15/11/2026
+
+[ADR 090](docs/adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md) /
+[RFC 067](docs/rfc/067-whatsapp-por-vendedor-e-meus-clientes.md): Contact oficial,
+vínculo de carteira durável e linha com geração separados; um número por vendedor,
+entrada passiva humana com atribuição atômica, sem IA pessoal automática. n8n,
+monólito, Vue, worker/PostgreSQL e Evolution privados existentes; sem infraestrutura
+nova. Preservar ACL comercial e isolamento de linha/conversa em todas as leituras.
+
+WAP-25–30: edição compartilhada por campo, Admin nas alterações críticas,
+versão/conflito, auditoria mínima e snapshots preservados. WAP-31–33: **Pedido
+pela conversa** é o gate prioritário, reutilizando API/módulos vigentes, sem
+IA/sugestão, primeiro envio, cadastro completo ou canal online como dependências.
+Primeiro envio é opção individual; etapa 2 importa até 30 dias disponíveis e
+gerencia substituição/sucessão. Decisão aceita, implementação e gates pendentes
+em [WAP-T01–07/T02a](.specs/features/seller-whatsapp/tasks.md); WAP-T00c só documental.
+
 ## Recibo comercial do pedido — 12/11/2026
 
 [ADR 089](docs/adr/089-recibo-comercial-na-lista-e-no-pedido.md) /

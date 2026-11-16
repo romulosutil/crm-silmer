@@ -7,7 +7,8 @@ Revisão de 13/11/2026: Cliente oficial, vínculo durável e primeiro envio huma
 explicitados em WAP-20–24. Aceite de 15/11 fecha D1–D5 e acrescenta
 WAP-25–33: cadastro compartilhado, atendimento passivo e Pedido pela conversa.
 
-SDD da etapa 1: [design](design.md), [tarefas atômicas](tasks.md) e
+SDD da etapa 1, com revisão de execução WAP-T00e em 12 entregas:
+[design](design.md), [tarefas/checklist](tasks.md) e
 [prompts/modelos](PROMPTS.md), WAP-T00d / ADR 091. Esses documentos detalham
 implementação e evidência sem alterar os critérios aprovados abaixo.
 

@@ -37,7 +37,7 @@ escopo em leitura/escrita/SSE e origem de Assunto no Pedido preservando conversa
 O contrato HTTP é aditivo; schema e leitores compatíveis precedem o escritor
 por alvo e a habilitação de múltiplos alvos. A carteira funciona offline;
 replay de desafio não regenera efeito incerto. São
-[32 tarefas atômicas com prompts/modelos](.specs/features/seller-whatsapp/PROMPTS.md),
+[12 entregas com prompts/modelos e checklist interno](.specs/features/seller-whatsapp/PROMPTS.md),
 com WAP-T02a-05 como primeiro gate integrado. Migrações, contratos em código,
 workflows, implementação e homologação continuam pendentes. WAP-T00c/d são
 documentais e não autorizam pareamento, publicação ou efeito financeiro real.

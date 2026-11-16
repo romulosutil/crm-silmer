@@ -65,3 +65,25 @@ Um commit e um push para `codex/sdd-whatsapp-etapa1`, PR dependente da PR 382;
 sem merge, publicação de workflow, pareamento, ativação ou efeito financeiro.
 SHA e link da PR ficam no handoff, sem fabricar evidência ou autorreferência
 de commit dentro do próprio commit.
+
+## WAP-T00e — revisão da unidade de execução
+
+A pedido do proprietário, em 16/11/2026, a execução foi consolidada em
+12 entregas E01–E12. Os 32 itens T da versão inicial continuam como checklist,
+com correspondência exata a uma entrega E. A checagem de 32 prompts acima é
+o registro da versão inicial; a versão vigente tem 12 caixas completas.
+E07 equivale ao gate WAP-T02a-05, após seis entregas anteriores; primeiro envio
+é E10. Dez prompts indicam Sol/Opus e dois Terra/Sonnet. Luna/Haiku é apoio
+opcional à consolidação documental em E11, sem outra unidade de execução.
+
+Foram preservados literalmente objetivos e aceites dos 32 itens nos novos
+prompts; a ordenação interna e os gates continuam, com validação completa uma
+vez por entrega integrada. A alteração não muda contrato arquitetural ou
+produto e não reescreve a ADR 091. Não houve implementação ou nova prova live.
+
+A validação desta revisão passou: nove documentos formatados, 467 referências
+locais existentes, 12 prompts, cada um dos 32 itens internos mapeado uma única
+vez, dependências sem ciclo e cobertura dos 30 requisitos. E07 tem exatamente
+E01–E06 como ancestrais. Objetivos e aceites dos itens originais foram mantidos.
+A publicação atualiza a mesma PR 390, dependente da PR 382, sem tocar no
+checkout principal ou recriar o worktree temporário já removido.

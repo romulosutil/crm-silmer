@@ -3,7 +3,7 @@
 Complemento técnico de 16/11/2026: [ADR 091](../adr/091-contratos-da-etapa1-whatsapp-pessoal.md)
 e [design da etapa 1](../../.specs/features/seller-whatsapp/design.md), WAP-T00d.
 As decisões de produto da ADR 090 permanecem. O SDD fecha contratos e
-[32 prompts de execução](../../.specs/features/seller-whatsapp/PROMPTS.md),
+[12 prompts de execução, revisão WAP-T00e](../../.specs/features/seller-whatsapp/PROMPTS.md),
 com prioridade WAP-T02a e implementação/homologação ainda pendentes.
 
 Data inicial: 12/11/2026. Status: **D1–D5 e cadastro compartilhado aceitos em 15/11/2026**.

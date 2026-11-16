@@ -1,101 +1,99 @@
-# WhatsApp por vendedor — entregas atômicas
+# WhatsApp por vendedor — plano de execução enxuto
 
-[Spec WAP-01–33](spec.md), [design da etapa 1](design.md),
-[prompts completos por tarefa](PROMPTS.md),
-[ADR 090](../../../docs/adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md) e
-[ADR 091](../../../docs/adr/091-contratos-da-etapa1-whatsapp-pessoal.md).
+Revisão **WAP-T00e**, 16/11/2026. [Spec](spec.md), [design](design.md),
+[prompts completos](PROMPTS.md), [ADR 090](../../../docs/adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md)
+e [ADR 091](../../../docs/adr/091-contratos-da-etapa1-whatsapp-pessoal.md).
 
-WAP-T00/a/b/c registram descoberta e decisões. **WAP-T00d** entrega o SDD
-em 16/11/2026, sem runtime. As antigas WAP-T01–05 e WAP-T02a passam a ser
-épicos: só encerram quando todas as respectivas subtarefas e gates passaram.
-WAP-T06/T07 ficam na etapa 2, sem implementação ou prompts executáveis agora.
-Nenhum checkbox de implementação abaixo foi concluído por esta documentação.
+A unidade de execução é **WAP-E01–E12**. Os 32 itens T do SDD inicial são
+checklist interno de rastreabilidade, agrupados abaixo; não requerem 32 chats,
+PRs ou ciclos completos de preparação e validação. O gate prioritário é
+**WAP-E07**, equivalente ao aceite WAP-T02a-05. Primeira saída continua depois.
+Nenhum item de runtime está concluído por esta revisão documental.
 
-## WAP-T00d — SDD técnico e prompts da etapa 1
+## WAP-T00e — reduzir o custo de execução do SDD
 
-- [x] Confirmar fontes e reutilizações; fechar dados, API, estados, privacidade,
-      ACL e contrato de origem por Assunto, com decisão técnica rastreável.
-- [x] Decompor etapa 1 em 32 entregas, cada uma com dependências, dono de
-      arquivos, aceite, verificações, modelo sugerido e um prompt completo.
-- [x] Priorizar gate WAP-T02a antes de primeira saída e acabamento da etapa 1.
-- [x] Revisar riscos Backend e QA, incorporar correções e validar documentos.
-      Evidências e publicação documental em [validation-sdd.md](validation-sdd.md).
+- [x] Consolidar os 32 itens em 12 entregas com fronteiras coerentes, dependências
+      explícitas, prompts completos e modelo escolhido por risco.
+- [x] Manter todos os aceites e testes; preservar o mapa T→E para retomada sem
+      retrabalho, incluindo o histórico WAP-T00d.
+- [x] Validar correspondência, cobertura, DAG, links e formatação; evidências em
+      [validation-sdd.md](validation-sdd.md).
 
-## Como executar sem perder atomicidade
+## Unidade de entrega e gates
 
-Uma tarefa = uma fronteira entregável + testes/contrato/runbook necessários +
-um commit + um push + um PR. Não juntar tarefas porque usam o mesmo modelo.
-Usar branch curta de origin/master após dependências integradas. PR 382 e este
-SDD devem estar na master antes da primeira implementação; enquanto abertos,
-não copiar decisões pela metade. Worktree extra somente temporário conforme
-AGENTS; não trocar branch com alterações de terceiros nem apagar trabalho
-alheio. Execução serial no checkout do Rômulo; esta tabela não autoriza sessões
-concorrentes de escrita. Review somente leitura não toma posse dos arquivos.
+Execute E01 → E12 serialmente, com dependências integradas. E05 pode ter seu
+schema e leitores preparados antes, mas só entrega o escritor após E04. Cada
+E é uma entrega/PR revisável: seus itens T são passos internos na ordem
+indicada, com commits atômicos quando houver fronteiras distintas. Sem branch
+ou PR extra por subitem mecânico. Reuse o contexto e não repita gates completos
+entre passos sem alteração/falha que justifique; rode-os uma vez na fronteira
+integrada antes de publicar. Não pule teste negativo, PostgreSQL real sintético
+ou a11y; redução de prompts não é dispensa de aceite.
 
-Cada tarefa que introduz endpoint/inbound/despacho já entrega guard fail-closed,
-default desligado e allowlist aplicável, com testes negativos. T05-01 consolida
-configuração e limites; não é a primeira trava. ACL/histórico persistem com flag off.
+Cada entrega que introduz efeito já traz guard fail-closed/default off; E11
+apenas consolida configuração/capacidade. ACL/histórico persistem com flag off.
+Os prompts leem instruções vigentes e preservam trabalho de outras sessões.
+Não ativar runtime parcialmente protegido; sem produção ou efeito real até o
+roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execução.
 
-Tarefas de runtime executam testes focalizados e os gates de CONTRIBUTING antes
-de publicar. Migrações e concorrência precisam de PostgreSQL sintético real;
-mock não fecha esses critérios. Suítes que dependem de ambiente e dão skip não
-contam como PASS. Documentação pura usa formatação/referências/diff, sem suítes
-de runtime. Gates reais precisam da autorização aplicável já existente ou,
-na sua ausência, preparação integral e pedido final com roteiro revisável.
+## Registro das 12 entregas
 
-## Ordem de execução
+| Estado / ID | Entrega                                                                          | Modelo       | Dependência     | Checklist interno                              |
+| ----------- | -------------------------------------------------------------------------------- | ------------ | --------------- | ---------------------------------------------- |
+| [ ] WAP-E01 | [Provar viabilidade do provedor e privacidade](PROMPTS.md#wap-e01)               | Sol/Opus     | Base documental | WAP-T01-01                                     |
+| [ ] WAP-E02 | [Entregar conexão pessoal no backend e n8n](PROMPTS.md#wap-e02)                  | Sol/Opus     | WAP-E01         | WAP-T01-02, WAP-T01-03, WAP-T01-04             |
+| [ ] WAP-E03 | [Entregar carteira e cadastro compartilhado no servidor](PROMPTS.md#wap-e03)     | Sol/Opus     | WAP-E02         | WAP-T02-01, WAP-T02-02, WAP-T02-03, WAP-T02-04 |
+| [ ] WAP-E04 | [Receber atendimento humano com isolamento ponta a ponta](PROMPTS.md#wap-e04)    | Sol/Opus     | WAP-E03         | WAP-T02-05, WAP-T02-06, WAP-T02-07             |
+| [ ] WAP-E05 | [Criar Pedido por Assunto com compatibilidade transacional](PROMPTS.md#wap-e05)  | Sol/Opus     | WAP-E04         | WAP-T02a-01, WAP-T02a-02, WAP-T02a-03          |
+| [ ] WAP-E06 | [Entregar a interface mínima de Pedido pela conversa](PROMPTS.md#wap-e06)        | Terra/Sonnet | WAP-E05         | WAP-T02a-04                                    |
+| [ ] WAP-E07 | [Aceitar o fluxo passivo integrado de Pedido](PROMPTS.md#wap-e07)                | Sol/Opus     | WAP-E06         | WAP-T02a-05                                    |
+| [ ] WAP-E08 | [Completar mensagens correntes e efeitos pela linha correta](PROMPTS.md#wap-e08) | Sol/Opus     | WAP-E07         | WAP-T02-08, WAP-T03-01, WAP-T03-02, WAP-T02-09 |
+| [ ] WAP-E09 | [Completar Meus clientes e Meu WhatsApp na interface](PROMPTS.md#wap-e09)        | Terra/Sonnet | WAP-E08         | WAP-T04-01, WAP-T04-02, WAP-T04-05             |
+| [ ] WAP-E10 | [Entregar primeiro envio humano individual](PROMPTS.md#wap-e10)                  | Sol/Opus     | WAP-E09         | WAP-T04-03, WAP-T04-04                         |
+| [ ] WAP-E11 | [Concluir verificação e prontidão operacional](PROMPTS.md#wap-e11)               | Sol/Opus     | WAP-E10         | WAP-T05-01, WAP-T05-02, WAP-T05-03, WAP-T05-04 |
+| [ ] WAP-E12 | [Homologar o piloto real da etapa 1](PROMPTS.md#wap-e12)                         | Sol/Opus     | WAP-E11         | WAP-T05-05, WAP-T05-06, WAP-T05-07             |
 
-1. Fundamentos: T01-01 → T01-02; T02-01 → T02-02; T02-03 → T02-04;
-   T01-03 → T01-04 → T02-05 → T02-06 → T02-07. Aplicar dependências da tabela,
-   inclusive as cruzadas; não habilitar feature parcialmente protegida.
-2. T02a-01 → T02a-02 pode ser preparado antes, sem escritor novo. Após
-   fundamentos, T02a-03 → T02a-04 → **T02a-05** entrega o primeiro gate integrado.
-3. Somente depois do gate: T02-08; T03-01 → T03-02; T04-01/T04-02;
-   T04-03 → T04-04; T02-09 → T04-05. A tabela detalha os cruzamentos.
-4. T05-01 → T05-02 → T05-03 → T05-04 prepara o release. T05-05 →
-   T05-06 → T05-07 executa os aceites reais apenas quando autorizados.
+## Mapa de rastreabilidade dos 32 itens internos
 
-Dependências são de conteúdo integrado, não só PR aberto ou checkbox marcado.
-Não há dependência de primeiro envio para T02a. T02a-05 não é piloto live e
-não encerra etapa 1. Os modelos são indicação de complexidade, não prova de
-qualidade ou custo; Sol/Opus revisa mudanças de contrato antes da execução.
+As referências T existentes continuam válidas. Cada item pertence a exatamente
+uma entrega E; seu checkbox só fecha quando o critério específico passar.
+Os modelos e unidades de publicação são os da tabela E, que substitui a divisão
+inicial de sessões/PRs por T.
 
-## Registro das tarefas da etapa 1
-
-| Estado / ID     | Entrega                                                                           | Modelo       | Depende de                                     | Requisitos                        |
-| --------------- | --------------------------------------------------------------------------------- | ------------ | ---------------------------------------------- | --------------------------------- |
-| [ ] WAP-T01-01  | [Provar controle, código mobile e privacidade do provedor](PROMPTS.md#wap-t01-01) | Sol/Opus     | —                                              | WAP-02/03/04/10/12                |
-| [ ] WAP-T01-02  | [Persistir linha pessoal e ledger de controle](PROMPTS.md#wap-t01-02)             | Terra/Sonnet | WAP-T01-01                                     | WAP-02/04/10/11/12                |
-| [ ] WAP-T02-01  | [Persistir vínculo durável de carteira](PROMPTS.md#wap-t02-01)                    | Terra/Sonnet | —                                              | WAP-06/08/18/20/21/24/29          |
-| [ ] WAP-T02-02  | [Aplicar escrita compartilhada por campo](PROMPTS.md#wap-t02-02)                  | Sol/Opus     | WAP-T02-01                                     | WAP-25/26/27/28/29/30             |
-| [ ] WAP-T02-03  | [Isolar leituras de Clientes e projeções comuns](PROMPTS.md#wap-t02-03)           | Sol/Opus     | WAP-T01-02, WAP-T02-01                         | WAP-07/08/20/21/24/28             |
-| [ ] WAP-T02-04  | [Compor cadastro e vínculo de Cliente](PROMPTS.md#wap-t02-04)                     | Sol/Opus     | WAP-T02-02, WAP-T02-03                         | WAP-18/20/21/24/29                |
-| [ ] WAP-T01-03  | [Expor comandos e estado de controle pessoal](PROMPTS.md#wap-t01-03)              | Sol/Opus     | WAP-T01-02                                     | WAP-01/02/03/04/10/11/12          |
-| [ ] WAP-T01-04  | [Conectar controle n8n e desafio efêmero](PROMPTS.md#wap-t01-04)                  | Sol/Opus     | WAP-T01-01, WAP-T01-03                         | WAP-02/03/04/10/11/12             |
-| [ ] WAP-T02-05  | [Receber na linha pessoal com atribuição humana atômica](PROMPTS.md#wap-t02-05)   | Sol/Opus     | WAP-T01-04, WAP-T02-04                         | WAP-04/05/06/08/10/20/21/32       |
-| [ ] WAP-T02-06  | [Proteger conversa e leituras auxiliares da linha](PROMPTS.md#wap-t02-06)         | Sol/Opus     | WAP-T02-05, WAP-T02-03                         | WAP-07/08/17/28                   |
-| [ ] WAP-T02-07  | [Cercar eventos, replay e revogação de acesso](PROMPTS.md#wap-t02-07)             | Sol/Opus     | WAP-T02-06, WAP-T02-02                         | WAP-07/11/28/29                   |
-| [ ] WAP-T02a-01 | [Adicionar origem de Assunto ao Pedido](PROMPTS.md#wap-t02a-01)                   | Terra/Sonnet | —                                              | WAP-17/31/33                      |
-| [ ] WAP-T02a-02 | [Resolver Pedido por alvo sem escolha arbitrária](PROMPTS.md#wap-t02a-02)         | Sol/Opus     | WAP-T02a-01                                    | WAP-17/30/31/33                   |
-| [ ] WAP-T02a-03 | [Criar ou reutilizar Pedido no alvo transacional](PROMPTS.md#wap-t02a-03)         | Sol/Opus     | WAP-T02a-02, WAP-T02-06                        | WAP-17/31/33; OA-05/07            |
-| [ ] WAP-T02a-04 | [Entregar fluxo passivo de Pedido em Meus clientes](PROMPTS.md#wap-t02a-04)       | Terra/Sonnet | WAP-T02a-03, WAP-T02-07                        | WAP-01/17/31/32/33                |
-| [ ] WAP-T02a-05 | [Verificar gate prioritário ponta a ponta](PROMPTS.md#wap-t02a-05)                | Sol/Opus     | WAP-T02a-04                                    | WAP-17/19/31/32/33                |
-| [ ] WAP-T02-08  | [Revalidar linha na reserva e no despacho humano](PROMPTS.md#wap-t02-08)          | Sol/Opus     | WAP-T02a-05                                    | WAP-06/10/11/12/19                |
-| [ ] WAP-T03-01  | [Normalizar fato externo enviado pelo aparelho](PROMPTS.md#wap-t03-01)            | Terra/Sonnet | WAP-T02a-05, WAP-T01-01                        | WAP-09/10/12                      |
-| [ ] WAP-T03-02  | [Persistir saída externa e reconciliar eco](PROMPTS.md#wap-t03-02)                | Sol/Opus     | WAP-T03-01, WAP-T02-08                         | WAP-06/09/10/11                   |
-| [ ] WAP-T04-01  | [Completar cadastro e vínculo na carteira](PROMPTS.md#wap-t04-01)                 | Terra/Sonnet | WAP-T02a-05, WAP-T02-04                        | WAP-01/17/18/20/21/24/25/26/27/29 |
-| [ ] WAP-T04-02  | [Entregar Meu WhatsApp e onboarding dispensável](PROMPTS.md#wap-t04-02)           | Terra/Sonnet | WAP-T02a-05, WAP-T01-04                        | WAP-01/02/03/04/11/12             |
-| [ ] WAP-T04-03  | [Compor primeiro envio individual no servidor](PROMPTS.md#wap-t04-03)             | Sol/Opus     | WAP-T02a-05, WAP-T03-02, WAP-T02-04            | WAP-22/23/24/32                   |
-| [ ] WAP-T04-04  | [Expor compositor do primeiro envio opcional](PROMPTS.md#wap-t04-04)              | Terra/Sonnet | WAP-T04-03, WAP-T04-01                         | WAP-22/23/24/32                   |
-| [ ] WAP-T02-09  | [Preservar cobrança e preparo pela linha correta](PROMPTS.md#wap-t02-09)          | Sol/Opus     | WAP-T02-08, WAP-T02-02                         | WAP-17/19/27/28/30                |
-| [ ] WAP-T04-05  | [Conservar contexto das ações comerciais na carteira](PROMPTS.md#wap-t04-05)      | Terra/Sonnet | WAP-T04-01, WAP-T02-09                         | WAP-17/19/25/28/30                |
-| [ ] WAP-T05-01  | [Consolidar flags, allowlist e limites sem ativação](PROMPTS.md#wap-t05-01)       | Terra/Sonnet | WAP-T04-02, WAP-T04-04, WAP-T04-05, WAP-T03-02 | WAP-12/16                         |
-| [ ] WAP-T05-02  | [Auditar regressão funcional, a11y e privacidade](PROMPTS.md#wap-t05-02)          | Sol/Opus     | WAP-T05-01                                     | WAP-01–12/17–33                   |
-| [ ] WAP-T05-03  | [Ensaiar rollback e recovery sem reativar efeitos](PROMPTS.md#wap-t05-03)         | Sol/Opus     | WAP-T05-02                                     | WAP-10/11/12/16/29/33             |
-| [ ] WAP-T05-04  | [Consolidar roteiro operacional e evidências](PROMPTS.md#wap-t05-04)              | Luna/Haiku   | WAP-T05-03                                     | WAP-12/16; WAP-T05                |
-| [ ] WAP-T05-05  | [Homologar fluxo passivo real de Pedido](PROMPTS.md#wap-t05-05)                   | Sol/Opus     | WAP-T05-04                                     | WAP-04/05/07/17/31/32/33          |
-| [ ] WAP-T05-06  | [Homologar pareamento mobile e sincronização reais](PROMPTS.md#wap-t05-06)        | Sol/Opus     | WAP-T05-05                                     | WAP-01/02/03/04/09/10/11/12       |
-| [ ] WAP-T05-07  | [Homologar ações comerciais e primeiro envio do piloto](PROMPTS.md#wap-t05-07)    | Sol/Opus     | WAP-T05-06                                     | WAP-17–30/32                      |
+| Estado / item   | Critério preservado                                      | Entrega executora             | Requisitos                        |
+| --------------- | -------------------------------------------------------- | ----------------------------- | --------------------------------- |
+| [ ] WAP-T01-01  | Provar controle, código mobile e privacidade do provedor | [WAP-E01](PROMPTS.md#wap-e01) | WAP-02/03/04/10/12                |
+| [ ] WAP-T01-02  | Persistir linha pessoal e ledger de controle             | [WAP-E02](PROMPTS.md#wap-e02) | WAP-02/04/10/11/12                |
+| [ ] WAP-T02-01  | Persistir vínculo durável de carteira                    | [WAP-E03](PROMPTS.md#wap-e03) | WAP-06/08/18/20/21/24/29          |
+| [ ] WAP-T02-02  | Aplicar escrita compartilhada por campo                  | [WAP-E03](PROMPTS.md#wap-e03) | WAP-25/26/27/28/29/30             |
+| [ ] WAP-T02-03  | Isolar leituras de Clientes e projeções comuns           | [WAP-E03](PROMPTS.md#wap-e03) | WAP-07/08/20/21/24/28             |
+| [ ] WAP-T02-04  | Compor cadastro e vínculo de Cliente                     | [WAP-E03](PROMPTS.md#wap-e03) | WAP-18/20/21/24/29                |
+| [ ] WAP-T01-03  | Expor comandos e estado de controle pessoal              | [WAP-E02](PROMPTS.md#wap-e02) | WAP-01/02/03/04/10/11/12          |
+| [ ] WAP-T01-04  | Conectar controle n8n e desafio efêmero                  | [WAP-E02](PROMPTS.md#wap-e02) | WAP-02/03/04/10/11/12             |
+| [ ] WAP-T02-05  | Receber na linha pessoal com atribuição humana atômica   | [WAP-E04](PROMPTS.md#wap-e04) | WAP-04/05/06/08/10/20/21/32       |
+| [ ] WAP-T02-06  | Proteger conversa e leituras auxiliares da linha         | [WAP-E04](PROMPTS.md#wap-e04) | WAP-07/08/17/28                   |
+| [ ] WAP-T02-07  | Cercar eventos, replay e revogação de acesso             | [WAP-E04](PROMPTS.md#wap-e04) | WAP-07/11/28/29                   |
+| [ ] WAP-T02a-01 | Adicionar origem de Assunto ao Pedido                    | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/31/33                      |
+| [ ] WAP-T02a-02 | Resolver Pedido por alvo sem escolha arbitrária          | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/30/31/33                   |
+| [ ] WAP-T02a-03 | Criar ou reutilizar Pedido no alvo transacional          | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/31/33; OA-05/07            |
+| [ ] WAP-T02a-04 | Entregar fluxo passivo de Pedido em Meus clientes        | [WAP-E06](PROMPTS.md#wap-e06) | WAP-01/17/31/32/33                |
+| [ ] WAP-T02a-05 | Verificar gate prioritário ponta a ponta                 | [WAP-E07](PROMPTS.md#wap-e07) | WAP-17/19/31/32/33                |
+| [ ] WAP-T02-08  | Revalidar linha na reserva e no despacho humano          | [WAP-E08](PROMPTS.md#wap-e08) | WAP-06/10/11/12/19                |
+| [ ] WAP-T03-01  | Normalizar fato externo enviado pelo aparelho            | [WAP-E08](PROMPTS.md#wap-e08) | WAP-09/10/12                      |
+| [ ] WAP-T03-02  | Persistir saída externa e reconciliar eco                | [WAP-E08](PROMPTS.md#wap-e08) | WAP-06/09/10/11                   |
+| [ ] WAP-T04-01  | Completar cadastro e vínculo na carteira                 | [WAP-E09](PROMPTS.md#wap-e09) | WAP-01/17/18/20/21/24/25/26/27/29 |
+| [ ] WAP-T04-02  | Entregar Meu WhatsApp e onboarding dispensável           | [WAP-E09](PROMPTS.md#wap-e09) | WAP-01/02/03/04/11/12             |
+| [ ] WAP-T04-03  | Compor primeiro envio individual no servidor             | [WAP-E10](PROMPTS.md#wap-e10) | WAP-22/23/24/32                   |
+| [ ] WAP-T04-04  | Expor compositor do primeiro envio opcional              | [WAP-E10](PROMPTS.md#wap-e10) | WAP-22/23/24/32                   |
+| [ ] WAP-T02-09  | Preservar cobrança e preparo pela linha correta          | [WAP-E08](PROMPTS.md#wap-e08) | WAP-17/19/27/28/30                |
+| [ ] WAP-T04-05  | Conservar contexto das ações comerciais na carteira      | [WAP-E09](PROMPTS.md#wap-e09) | WAP-17/19/25/28/30                |
+| [ ] WAP-T05-01  | Consolidar flags, allowlist e limites sem ativação       | [WAP-E11](PROMPTS.md#wap-e11) | WAP-12/16                         |
+| [ ] WAP-T05-02  | Auditar regressão funcional, a11y e privacidade          | [WAP-E11](PROMPTS.md#wap-e11) | WAP-01–12/17–33                   |
+| [ ] WAP-T05-03  | Ensaiar rollback e recovery sem reativar efeitos         | [WAP-E11](PROMPTS.md#wap-e11) | WAP-10/11/12/16/29/33             |
+| [ ] WAP-T05-04  | Consolidar roteiro operacional e evidências              | [WAP-E11](PROMPTS.md#wap-e11) | WAP-12/16; WAP-T05                |
+| [ ] WAP-T05-05  | Homologar fluxo passivo real de Pedido                   | [WAP-E12](PROMPTS.md#wap-e12) | WAP-04/05/07/17/31/32/33          |
+| [ ] WAP-T05-06  | Homologar pareamento mobile e sincronização reais        | [WAP-E12](PROMPTS.md#wap-e12) | WAP-01/02/03/04/09/10/11/12       |
+| [ ] WAP-T05-07  | Homologar ações comerciais e primeiro envio do piloto    | [WAP-E12](PROMPTS.md#wap-e12) | WAP-17–30/32                      |
 
 ## Cobertura por requisito
 
@@ -137,7 +135,7 @@ literais continuam na spec. Não reinterpretar um requisito pelo resumo do promp
 
 WAP-13/14/15 são exclusivos da etapa 2. WAP-16 vale desde o rollback da etapa 1.
 
-## Regra de conclusão dos épicos
+## Conclusão dos épicos por checklist interno
 
 - WAP-T01: T01-01–04, provas de controle e privacidade sem habilitação implícita.
 - WAP-T02: T02-01–09, sem exposição parcial de carteira ou despacho inseguro.
@@ -147,6 +145,12 @@ WAP-13/14/15 são exclusivos da etapa 2. WAP-16 vale desde o rollback da etapa 1
 - WAP-T05: T05-01–07; piloto e aceite real são separados da evidência sintética.
 
 Não marcar épico só porque migração, QR, chat ou teste isolado passou.
+
+## Histórico WAP-T00d — SDD inicial
+
+WAP-T00d entregou originalmente 32 prompts em 16/11/2026. A revisão WAP-T00e
+reduz a execução a 12 entregas sem alterar ADR 091 ou critérios de produto.
+O gate prioritário passa a ser acompanhado como E07, mantendo o ID T02a-05.
 
 ## WAP-T00 — RFC, requisitos e plano
 

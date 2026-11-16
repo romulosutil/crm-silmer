@@ -668,6 +668,23 @@ O teste automatiza a proteção contra conclusões e repetição indevidas; não
 reconstitui uma prova histórica que deixou de estar retida. Nenhuma mensagem,
 comando, job, reconciliação ou triagem de produção foi alterada nesta tarefa.
 
+## OPS-INBOX-SEND-12V — Reverificação da captura e da implantação (15/11/2026)
+
+Requisitos: MSG-02/03, ORC-08, OPS-ERR-03/06/10/11 e PRV-01.
+Evidência em [Saúde e erros](../../../docs/runbooks/saude-erros.md#reverificação-do-envio-incerto-e-da-publicação--15112026).
+
+- [x] Confirmar no CRM o comando histórico ainda incerto, sem retry, e a
+      ocorrência n8n ainda Em análise; triagem worker não conclui a fonte.
+- [x] Conferir em leitura somente a revisão da API e o workflow n8n publicado:
+      Set 3.4 nos dois nós, hashes esperados e rascunho igual ao publicado.
+- [x] Reexecutar 38 testes focados e 22 E2E/axe da central, sem falhas ou skips.
+- [x] Reexecutar `npm run validate`: 2.780 aprovados, 53 condicionais ignorados,
+      sem falhas; auditoria de dependências sem vulnerabilidades.
+
+Revisão concluída sem mudança de runtime ou dados de produção. O resultado
+histórico permanece aberto em OPS-INBOX-SEND-12; ausência da execução retida
+e correção publicada posteriormente não constituem prova de entrega/falha.
+
 ## OPS-INBOX-SEND-11 — Transformações nativas antes da reserva (12/11/2026)
 
 Requisitos: MSG-02/03, ORC-08 e PRV-01; continuidade da reserva e da idempotência
@@ -677,8 +694,11 @@ de OPS-INBOX-SEND-09/10. Operação: `docs/runbooks/saude-erros.md`.
       usando Set 3.4 e preservando envelopes, fences, credenciais e conexões.
 - [x] Cobrir equivalência, entradas inválidas, atomicidade, drift e reexecução
       do preparador com testes sintéticos, sem chamadas externas.
-- [ ] Publicar e conferir o delta no workflow ativo, com backup privado e
-      avaliação isolada no runtime instalado, sem reenviar mensagens.
+- [x] Confirmar a publicação do delta no workflow ativo: versão publicada e
+      hashes dos dois Set nodes verificados em OPS-INBOX-SEND-12V.
+- [ ] Reunir a evidência de backup privado, preservação dos demais workflows
+      e avaliação isolada no runtime instalado da publicação; a reverificação
+      dos hashes não reconstrói esses gates.
 - [ ] Encerrar envio incerto somente com prova conclusiva vinculada ao comando;
       ausência de evento ou coincidência temporal não basta.
 

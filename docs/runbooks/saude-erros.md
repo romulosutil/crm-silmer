@@ -283,6 +283,50 @@ teste sintético, saúde verde ou ausência de registros para marcar a pendênci
 resolvida. Uma conclusão futura exige recibo verificável ou prova da execução
 exata e encerrada antes do transporte, com auditoria e sem reenviar o original.
 
+### Reverificação do envio incerto e da publicação — 15/11/2026
+
+OPS-INBOX-SEND-12V / MSG-02/03, ORC-08, OPS-ERR-03/06/10/11 e PRV-01.
+A consulta atual, em transação `READ ONLY` com limite de quatro segundos,
+confirmou que o comando de 11/11 às 16h11 permanece `outcome_unknown`, com
+`N8N_COMMAND_TIMEOUT`, `retryable=false` e `retry_safe=false`. A central ainda
+mostra uma fonte ativa em Automação n8n, Em análise. O grupo de Processamento
+aparece Resolvido, mas conserva uma pendência ativa: triagem não comprova
+reconciliação. A API executa a revisão `ee026468`.
+
+A mitigação OPS-INBOX-SEND-11 **já está publicada**, apesar do checklist
+anterior ainda pendente. A leitura do banco n8n confirmou workflow principal
+`k7tI6T4RhQPyJkn9` ativo, com 144 nós, e versão publicada
+`52b39398-f0b0-4458-8899-22598b95f371`. A revisão foi criada em
+13/11/2026 às 18h02 de Brasília; os arrays de nós publicados e do rascunho
+são iguais. Os dois nós são `n8n-nodes-base.set`, versão 3.4, modo `raw`.
+Os hashes SHA-256 de `jsonOutput` coincidem com os esperados pelo helper:
+
+| Nó                                     | SHA-256                                                            |
+| -------------------------------------- | ------------------------------------------------------------------ |
+| Normalizar comando do painel (MVP)     | `a332ad78e96830a8429ffcbc7c371109698ae316bfc9e8ed2526a35746e57e73` |
+| Preparar reserva de envio humano (MVP) | `ca2aacc563ab25fd150432c297cc13cdc963ff9d961a2d52a787341ad804150e` |
+
+Essa verificação confirma a implantação dos dois nós, sem reconstruir a
+evidência de backup, preservação dos demais workflows ou avaliação isolada no
+runtime exigida para a publicação. Não houve edição, publicação, execução de
+workflow ou transporte nesta revisão. A execução 95228 continua ausente do
+banco n8n; a publicação posterior não prova o resultado do comando histórico.
+
+Regressão reexecutada: 38 testes de cliente HTTP, worker, stores, API/UI da
+central e patch; 22 E2E da central, incluindo teclado e axe, todos aprovados,
+sem skips nessas seleções. Os testes HTTP loopback foram executados fora da
+restrição de rede do sandbox. O build do E2E passou; esta seleção não executa
+o gate PostgreSQL nem comprova uma entrega real. Não foi encontrada lacuna
+funcional nova que justificasse alterar o transporte. O fechamento histórico
+continua dependendo da prova individual indicada acima, sem retry ou baixa
+administrativa para ocultar a pendência.
+
+O gate completo `npm run validate` também passou nesta revisão: 2.780 testes
+aprovados, 53 condicionais ignorados e nenhuma falha; formatação, tipos, lint,
+fronteiras, validadores e build aprovados. `npm audit --audit-level=high`
+retornou zero vulnerabilidades. Sem banco de testes configurado, os testes
+PostgreSQL condicionais continuam fora dessa evidência local.
+
 ### Referências nginx — OPS-ERR-04/05
 
 A coleta anterior descartava IDs nginx de 32 hex ao exigir versão/variant

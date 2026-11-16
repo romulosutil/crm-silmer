@@ -2044,6 +2044,16 @@ revisão.
   › Pedido, atualização ao vivo.
 - **Gate:** build, lint e E2E da Caixa de Entrada.
 
+#### Ajuste T126 — ação visível na Caixa de Entrada (15/11/2026)
+
+- **Requisito:** PCX-11; solicitação do cliente via proprietário.
+- Remover "Criar pedido" de "Mais ações" e exibi-lo no cabeçalho em todos os
+  estados já autorizados, preservando confirmação humana, ACL e bloqueios
+  por pedido pendente ou conversa encerrada.
+- Separar o link do pedido confirmado e a criação no celular, sem sobreposição.
+- **Verificação:** E2E da Caixa com administrador/agente, dono, outro vendedor,
+  pedido pendente e confirmado; teclado, foco, axe e layout a 320 e 1366 px.
+
 ### T127: "Assumir atendimento" no lugar do campo de mensagem
 
 - **Requisitos:** PCX-13; emenda PCX-05.

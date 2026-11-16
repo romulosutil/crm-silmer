@@ -2408,9 +2408,8 @@ test('PCX-11: offers "Criar pedido" in the header only to the owner and creates 
     0,
   );
 
-  // An administrator may create it while the agent still answers: from
-  // "Mais", never beside the primary action, which sits in the composer
-  // (PCX-13).
+  // PCX-11/T126: administrators also see creation directly in the header
+  // while the agent answers. Taking over remains the only primary.
   await mockCrm(page, { assistant: true, order: null });
   await page.reload();
   await expect(heading).toBeVisible();
@@ -2422,13 +2421,13 @@ test('PCX-11: offers "Criar pedido" in the header only to the owner and creates 
   ).toBeVisible();
   await expect(
     actions.locator(':scope > button', { hasText: 'Criar pedido' }),
-  ).toHaveCount(0);
+  ).toBeVisible();
   await actions.getByRole('button', { name: 'Mais ações' }).click();
   await expect(
     page
       .getByRole('group', { name: 'Mais ações', exact: true })
       .getByRole('button', { name: 'Criar pedido' }),
-  ).toBeVisible();
+  ).toHaveCount(0);
 
   // PCX-11: the seller who has the conversation creates it from the header,
   // pre-filled from the conversation; the link takes the button's place and
@@ -2930,15 +2929,16 @@ test('on a phone the address decides between the list and the conversation', asy
   expect((await more.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   await more.click();
   const sheet = page.getByRole('group', { name: 'Mais ações', exact: true });
-  // PCX-11: waiting for a seller, an administrator creates the order from
-  // here; "Encerrar conversa" closes the list (PCX-13).
+  // PCX-11/T126: creation stays in the header, including before claim.
+  await expect(
+    page.locator('.conv-head').getByRole('button', { name: 'Criar pedido' }),
+  ).toBeInViewport({ ratio: 1 });
   await expect(sheet.getByRole('button')).toHaveText([
-    'Criar pedido',
     'Arquivar conversa',
     'Encerrar conversa',
   ]);
   await expect(
-    sheet.getByRole('button', { name: 'Criar pedido' }),
+    sheet.getByRole('button', { name: 'Arquivar conversa' }),
   ).toBeFocused();
   for (const box of await sheet
     .getByRole('button')

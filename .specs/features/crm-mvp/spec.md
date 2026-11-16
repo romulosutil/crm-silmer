@@ -6,8 +6,10 @@
 [RFC 067](../../../docs/rfc/067-whatsapp-por-vendedor-e-meus-clientes.md) e
 [WAP-01–33](../seller-whatsapp/spec.md): um único número por vendedor, atendimento
 passivo/humano atribuído ao titular, carteira durável e operação CRM completa.
-Primeiro envio individual é opcional; n8n, isolamento e regras comerciais atuais
-continuam. Sem prospectar automaticamente ou exigir pareamento para cadastro local.
+Primeiro envio individual é opcional.
+
+O n8n continua obrigatório, com isolamento e regras comerciais atuais preservados.
+Sem prospectar automaticamente ou exigir pareamento para cadastro local.
 
 WAP-31/33 tornam obrigatória na etapa 1 a criação humana de Pedido diretamente
 da conversa de Meus clientes, com alvo/Cliente/responsável corretos, versão e

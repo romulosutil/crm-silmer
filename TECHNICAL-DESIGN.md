@@ -1,5 +1,19 @@
 # TDD — CRM Silmer MVP
 
+## WAP-E01 — ingresso e geração (16/11/2026)
+
+[RFC 069](docs/rfc/069-ingresso-efemero-e-geracao-autenticada-do-whatsapp.md) /
+[ADR 092](docs/adr/092-sanitizacao-pre-persistencia-e-geracao-na-origem.md):
+as imagens fixadas recebem patches com verificação de SHA/âncoras. No n8n,
+autenticação nativa precede projeção mínima e primeira persistência; guards
+também cobrem início manual/partial/retry e settings de desafio. Na Evolution,
+contexto imutável do socket acompanha a fila/await/retries e fornece source e
+token da geração, sem lookup da geração atual. Verificação privada no ingresso
+confere source e instância e recusa binding revogado antes de criar execução.
+O ensaio usa somente fixture sintética; API/verificador e controle reais são
+E02/E04. Default off/allowlist, sem deploy ou nova infraestrutura. Detalhes,
+reprodução, limites e evidência no [runbook](docs/runbooks/seller-whatsapp-provider.md).
+
 ## WAP — decisão de linhas pessoais e cadastro compartilhado (15/11/2026)
 
 [ADR 090](docs/adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md),

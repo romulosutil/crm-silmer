@@ -113,3 +113,25 @@ return { json: { mode: body.mode } };`,
     },
   };
 }
+
+/** A shared synthetic event workflow; authentication and immutable-source
+ * verification happen in the patched ingress before the first execution write.
+ * @param {{ credentialId: string }} options */
+export function createGenerationIngressProbe({ credentialId }) {
+  const workflow = createPairingPrivacyProbe({ credentialId });
+  workflow.name = 'WAP-E01 isolated generation source';
+  const trigger = workflow.nodes.find(
+    (/** @type {any} */ node) => node.name === 'Trigger',
+  );
+  trigger.parameters.path = 'wap-e01-generation';
+  trigger.webhookId = 'wap-e01-generation-isolated';
+  const respond = workflow.nodes.find(
+    (/** @type {any} */ node) => node.name === 'Respond',
+  );
+  respond.parameters.responseBody = '={{ $json.body }}';
+  workflow.nodes = [trigger, respond];
+  workflow.connections = {
+    Trigger: { main: [[{ node: 'Respond', type: 'main', index: 0 }]] },
+  };
+  return workflow;
+}

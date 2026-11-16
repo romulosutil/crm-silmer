@@ -1,5 +1,16 @@
 # Arquitetura — baseline do CRM Silmer
 
+## Ingresso efêmero e geração do WhatsApp pessoal — 16/11/2026
+
+[RFC 069](docs/rfc/069-ingresso-efemero-e-geracao-autenticada-do-whatsapp.md) /
+[ADR 092](docs/adr/092-sanitizacao-pre-persistencia-e-geracao-na-origem.md), WAP-E01:
+patches verificáveis nas imagens fixadas removem credenciais antes do input
+inicial persistido pelo n8n e capturam a origem imutável no callback do socket
+Evolution, antes da fila. Token da geração é validado sem reclassificar evento
+antigo. Default off e allowlists; ensaio sintético, sem habilitar produção.
+Verificador real, controle e ingresso de produto continuam E02/E04. Preservar
+n8n obrigatório, contratos Basic, linha geral e ACL comercial independente.
+
 ## WhatsApp pessoal, carteira e cadastro compartilhado — 15/11/2026
 
 [ADR 090](docs/adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md) /

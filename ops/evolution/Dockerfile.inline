@@ -275,6 +275,339 @@ if (require.main === module) {
 }
 
 SILMER_RETENTION_EOF
+COPY <<'SILMER_WAP_GENERATION_RUNTIME_EOF' /evolution/silmer-wap-generation.cjs
+'use strict';
+
+// WAP-E01: source identity is attached once to the socket, before async queueing.
+// No endpoint, disk store, workflow staticData or lookup of the current generation.
+const { AsyncLocalStorage } = require('node:async_hooks');
+const { createHash } = require('node:crypto');
+
+const GENERATION_HEADER = 'X-Silmer-Wap-Generation-Token';
+const ID = /^[A-Za-z0-9_-]{1,64}$/;
+const SOURCE_KEYS = ['accountId', 'bindingId', 'generation', 'lineId'];
+
+function reject(code) {
+  throw new Error(code);
+}
+
+function immutableSource(value) {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    Object.keys(value).sort().join(',') !== SOURCE_KEYS.join(',') ||
+    !['bindingId', 'lineId', 'accountId'].every(
+      (key) => typeof value[key] === 'string' && ID.test(value[key]),
+    ) ||
+    !Number.isSafeInteger(value.generation) ||
+    value.generation < 1
+  )
+    reject('WAP_GENERATION_SOURCE_INVALID');
+  return Object.freeze({
+    bindingId: value.bindingId,
+    lineId: value.lineId,
+    accountId: value.accountId,
+    generation: value.generation,
+  });
+}
+
+// Snapshot only: Baileys still needs the live code to finish the handshake.
+// Session keys (including advSecretKey and Buffer/Uint8Array keys) are preserved.
+function persistableCredentials(credentials) {
+  if (
+    !credentials ||
+    typeof credentials !== 'object' ||
+    Array.isArray(credentials)
+  )
+    reject('WAP_CREDENTIALS_SNAPSHOT_INVALID');
+  const snapshot = { ...credentials };
+  delete snapshot.pairingCode;
+  return snapshot;
+}
+
+function createGenerationRuntime(options = {}) {
+  const enabled = options.enabled ?? false;
+  const instances = options.instances ?? [];
+  if (
+    typeof enabled !== 'boolean' ||
+    !Array.isArray(instances) ||
+    instances.some(
+      (instance) => typeof instance !== 'string' || !ID.test(instance),
+    ) ||
+    new Set(instances).size !== instances.length ||
+    (enabled && !instances.length)
+  )
+    reject('WAP_GENERATION_CONFIG_INVALID');
+  const allowlist = new Set(instances);
+  const local = new AsyncLocalStorage();
+  const pending = new Map();
+  const sockets = new WeakMap();
+  const secrets = new WeakMap();
+  const latest = new Map();
+  const usedBindings = new Set();
+  const usedTokenHashes = new Set();
+  const selected = (instance) => allowlist.has(instance);
+  const requireSelected = (instance) => {
+    if (!enabled) reject('WAP_GENERATION_DISABLED');
+    if (!selected(instance)) reject('WAP_GENERATION_INSTANCE_DENIED');
+  };
+  const requireContext = (context) => {
+    if (!context || !secrets.has(context))
+      reject('WAP_GENERATION_CONTEXT_INVALID');
+  };
+
+  return Object.freeze({
+    // Trusted in-process control hook. E01 exercises it only from the rehearsal.
+    // No HTTP route, mutation from provider payload, or implicit reconnect binding.
+    bindNextSocket(instance, source, token) {
+      requireSelected(instance);
+      const snapshot = immutableSource(source);
+      if (typeof token !== 'string' || !/^[A-Za-z0-9_-]{32,128}$/.test(token))
+        reject('WAP_GENERATION_TOKEN_INVALID');
+      if (pending.has(instance)) reject('WAP_GENERATION_BINDING_PENDING');
+      const previous = latest.get(instance);
+      if (
+        previous &&
+        (snapshot.lineId !== previous.lineId ||
+          snapshot.accountId !== previous.accountId ||
+          snapshot.generation <= previous.generation)
+      )
+        reject('WAP_GENERATION_BINDING_STALE');
+      const tokenHash = createHash('sha256').update(token).digest('hex');
+      if (
+        usedBindings.has(snapshot.bindingId) ||
+        usedTokenHashes.has(tokenHash)
+      )
+        reject('WAP_GENERATION_BINDING_REUSED');
+      const context = Object.freeze({ instance, source: snapshot });
+      secrets.set(context, token);
+      pending.set(instance, context);
+      latest.set(instance, snapshot);
+      usedBindings.add(snapshot.bindingId);
+      usedTokenHashes.add(tokenHash);
+    },
+    captureSocket(instance, socket) {
+      const existing =
+        socket && typeof socket === 'object' ? sockets.get(socket) : null;
+      if (existing && existing.instance !== instance)
+        reject('WAP_GENERATION_SOCKET_MISMATCH');
+      if (!selected(instance)) return null;
+      requireSelected(instance);
+      if (!socket || typeof socket !== 'object')
+        reject('WAP_GENERATION_SOCKET_REQUIRED');
+      if (existing) {
+        return existing;
+      }
+      const context = pending.get(instance);
+      if (!context) reject('WAP_GENERATION_BINDING_REQUIRED');
+      pending.delete(instance);
+      sockets.set(socket, context);
+      return context;
+    },
+    wrap(context, callback) {
+      if (context === null) return callback;
+      requireContext(context);
+      if (typeof callback !== 'function')
+        reject('WAP_GENERATION_CALLBACK_REQUIRED');
+      return function sourceBoundCallback(...args) {
+        return local.run(context, () => callback.apply(this, args));
+      };
+    },
+    current(instance, event) {
+      const context = local.getStore();
+      if (!selected(instance)) {
+        if (context) reject('WAP_GENERATION_INSTANCE_MISMATCH');
+        return null;
+      }
+      requireSelected(instance);
+      requireContext(context);
+      if (context.instance !== instance)
+        reject('WAP_GENERATION_INSTANCE_MISMATCH');
+      // Personal message schemas/activation belong to E04. Default deny here.
+      if (event !== 'connection.update') reject('WAP_GENERATION_EVENT_DENIED');
+      return context;
+    },
+    headers(context, original) {
+      if (context === null) return original;
+      requireContext(context);
+      const result = { ...original };
+      for (const key of Object.keys(result))
+        if (key.toLowerCase() === GENERATION_HEADER.toLowerCase())
+          delete result[key];
+      result[GENERATION_HEADER] = secrets.get(context);
+      return result;
+    },
+    envelope(context, original) {
+      if (context === null) return original;
+      requireContext(context);
+      if (
+        original?.instance !== context.instance ||
+        original?.event !== 'connection.update' ||
+        !['connecting', 'close', 'open'].includes(original?.data?.state)
+      )
+        reject('WAP_GENERATION_ENVELOPE_DENIED');
+      return {
+        event: original.event,
+        instance: context.instance,
+        source: context.source,
+        data: { state: original.data.state },
+      };
+    },
+  });
+}
+
+function fromEnvironment(env) {
+  if (
+    env.SILMER_WAP_GENERATION_ENABLED !== undefined &&
+    !['true', 'false'].includes(env.SILMER_WAP_GENERATION_ENABLED)
+  )
+    reject('WAP_GENERATION_CONFIG_INVALID');
+  const raw = env.SILMER_WAP_GENERATION_INSTANCES ?? '';
+  return createGenerationRuntime({
+    enabled: env.SILMER_WAP_GENERATION_ENABLED === 'true',
+    instances: raw === '' ? [] : raw.split(','),
+  });
+}
+
+module.exports = {
+  ...fromEnvironment(process.env),
+  createGenerationRuntime,
+  immutableSource,
+  persistableCredentials,
+  fromEnvironment,
+  GENERATION_HEADER,
+};
+
+SILMER_WAP_GENERATION_RUNTIME_EOF
+COPY <<'SILMER_WAP_GENERATION_PATCH_EOF' /evolution/silmer-wap-generation-patch.mjs
+import { createHash } from 'node:crypto';
+import { readFile, writeFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
+
+export const EVOLUTION_BUNDLE_SHA256 =
+  '71b49ea87b8d0d7b413b77d067e33a8720c2e95e136f632210c1424862ef6b44';
+export const WAP_GENERATION_RUNTIME_PATH =
+  '/evolution/silmer-wap-generation.cjs';
+const METHOD_START =
+  'async emit({instanceName:e,origin:t,event:o,data:i,serverUrl:n,dateTime:r,sender:a,apiKey:c,local:l,integration:u,extra:m}){';
+const BODY =
+  'C={...m??{},event:o,instance:e,data:i,destination:d?.url||`${h.GLOBAL.URL}/${w}`,date_time:r,sender:a,server_url:n,apikey:c};';
+// Complete Prisma writeData function extracted from the pinned bundle. Other
+// file/Redis adapters are intentionally outside this fixed PostgreSQL profile.
+export const PRISMA_CREDENTIAL_WRITER =
+  'async function o(c,l){let u=JSON.stringify(c,st.BufferJSON.replacer),m=E.get("CACHE");if(l!="creds"){if(m.REDIS.ENABLED)return await s.hSet(p,l,c);await vt.default.writeFile(t(l),u);return}await cu(p,u)}';
+
+/** @returns {string} */
+export function patchedPrismaCredentialWriter() {
+  return PRISMA_CREDENTIAL_WRITER.replace(
+    'JSON.stringify(c,st.BufferJSON.replacer)',
+    `JSON.stringify(l==="creds"?require(${JSON.stringify(WAP_GENERATION_RUNTIME_PATH)}).persistableCredentials(c):c,st.BufferJSON.replacer)`,
+  );
+}
+
+/** @param {string} bundle @returns {string} */
+export function patchEvolutionGeneration(bundle) {
+  if (
+    createHash('sha256').update(bundle).digest('hex') !==
+    EVOLUTION_BUNDLE_SHA256
+  )
+    throw new Error('WAP_EVOLUTION_BUNDLE_MISMATCH');
+  const runtime = `require(${JSON.stringify(WAP_GENERATION_RUNTIME_PATH)})`;
+  const replacements = [
+    [PRISMA_CREDENTIAL_WRITER, patchedPrismaCredentialWriter()],
+    [
+      'eventHandler(){this.client.ev.process(async e=>{',
+      `eventHandler(){const silmerWapRuntime=${runtime},silmerWapSource=silmerWapRuntime.captureSocket(this.instanceName,this.client);const silmerWapProcess=cb=>this.client.ev.process(silmerWapRuntime.wrap(silmerWapSource,cb));silmerWapProcess(async e=>{`,
+    ],
+    [
+      `${METHOD_START}if(u&&!u.includes("webhook"))return;`,
+      `${METHOD_START}const silmerWapRuntime=${runtime};let silmerWapSource;try{silmerWapSource=silmerWapRuntime.current(e,o)}catch{this.logger.warn("WAP_GENERATION_EVENT_REJECTED");return;}if(u&&!u.includes("webhook"))return;`,
+    ],
+    [
+      'g=d?.events,f={...d?.headers||{}};',
+      'g=d?.events,f=silmerWapRuntime.headers(silmerWapSource,{...d?.headers||{}});',
+    ],
+    [
+      BODY,
+      `C;try{C=silmerWapRuntime.envelope(silmerWapSource,${BODY.slice(2, -1)});}catch{this.logger.warn("WAP_GENERATION_EVENT_REJECTED");return;}`,
+    ],
+  ];
+  let patched = bundle;
+  for (const [before, after] of replacements) {
+    if (patched.split(before).length !== 2)
+      throw new Error('WAP_EVOLUTION_ANCHOR_MISMATCH');
+    patched = patched.replace(before, after);
+  }
+  return patched;
+}
+
+/** Extract complete real methods from the exact patched bundle for synthetic event
+ * rehearsal. No server startup or WhatsApp protocol is evaluated.
+ * @param {string} patched @returns {Record<string,string>}
+ */
+export function extractGenerationMethods(patched) {
+  /** @type {Record<string,string>} */
+  const snippets = {};
+  for (const [name, start, end] of [
+    [
+      'eventHandler',
+      'eventHandler(){const silmerWapRuntime=',
+      'historySyncNotification(e){',
+    ],
+    [
+      'connectionUpdate',
+      'async connectionUpdate({qr:e,connection:t,lastDisconnect:o}){',
+      'async getMessage(e,t=!1){',
+    ],
+    [
+      'sendDataWebhook',
+      'async sendDataWebhook(s,e,t=!0,o,i){',
+      'formatMXOrARNumber(s){',
+    ],
+    [
+      'emit',
+      `${METHOD_START}const silmerWapRuntime=`,
+      'async retryWebhookRequest(e,t,o,i,n,r,a){',
+    ],
+    [
+      'retryWebhookRequest',
+      'async retryWebhookRequest(e,t,o,i,n,r,a){',
+      'generateJwtToken(e){',
+    ],
+  ]) {
+    const begin = patched.indexOf(start);
+    const finish = patched.indexOf(end, begin);
+    if (begin < 0 || finish <= begin || patched.indexOf(start, begin + 1) >= 0)
+      throw new Error('WAP_EVOLUTION_EXTRACTION_MISMATCH');
+    snippets[name] = patched.slice(begin, finish);
+  }
+  return snippets;
+}
+
+/** @param {string} patched @returns {string} */
+export function extractPrismaCredentialWriter(patched) {
+  const method = patchedPrismaCredentialWriter();
+  if (patched.split(method).length !== 2)
+    throw new Error('WAP_EVOLUTION_CREDENTIAL_WRITER_MISMATCH');
+  return method;
+}
+
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  const filename = process.argv[2];
+  if (!filename) throw new Error('WAP_EVOLUTION_BUNDLE_PATH_REQUIRED');
+  const patched = patchEvolutionGeneration(await readFile(filename, 'utf8'));
+  extractGenerationMethods(patched);
+  extractPrismaCredentialWriter(patched);
+  await writeFile(filename, patched);
+  process.stdout.write('WAP_EVOLUTION_GENERATION_PATCHED\n');
+}
+
+SILMER_WAP_GENERATION_PATCH_EOF
+RUN node /evolution/silmer-wap-generation-patch.mjs /evolution/dist/main.js
 RUN mkdir -p /evolution/instances /evolution/store && chown -R node:node /evolution/instances /evolution/store /evolution/prisma /evolution/node_modules/.prisma
 USER node
 EXPOSE 8080

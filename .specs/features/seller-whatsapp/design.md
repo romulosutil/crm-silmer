@@ -113,6 +113,16 @@ relevante invalida preparo afetado; nunca redireciona reserva iniciada.
 
 ## 5. HTTP humano e controle n8n
 
+Complemento de WAP-E01: [RFC 069](../../../docs/rfc/069-ingresso-efemero-e-geracao-autenticada-do-whatsapp.md)
+e [ADR 092](../../../docs/adr/092-sanitizacao-pre-persistencia-e-geracao-na-origem.md)
+definem patches estreitos de pré-persistência n8n e captura de geração no
+callback do socket Evolution. Auth nativa ocorre antes da projeção do input;
+manual/partial/retry e settings inseguros são cercados antes da primeira escrita.
+Source e token por geração são imutáveis antes da fila; verificador no ingresso
+compara source/instância e autorização vigente sem reclassificar evento antigo.
+A prova desta fatia usa fixture privada sintética; não entrega API de binding
+ou controle E02/E04. Imagens e flags reais permanecem inalteradas.
+
 Rotas novas são aditivas sob `/api/v1`; registrar OpenAPI no formato vigente.
 Toda mutação exige sessão humana atual, CSRF, origem, capacidade, versão e
 `Idempotency-Key`; revalidar antes de devolver replay. Derivar seller/conta no

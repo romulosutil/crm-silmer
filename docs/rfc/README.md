@@ -1,5 +1,12 @@
 # Request for Comments
 
+## Correção técnica de 16/11/2026
+
+- [069 — Ingresso efêmero e geração autenticada do WhatsApp](069-ingresso-efemero-e-geracao-autenticada-do-whatsapp.md),
+  decidida na [ADR 092](../adr/092-sanitizacao-pre-persistencia-e-geracao-na-origem.md):
+  patches pré-persistência n8n e contexto imutável por socket Evolution;
+  WAP-E01, ensaio isolado sem habilitação operacional.
+
 ## Complemento técnico de 16/11/2026
 
 - [067 — WhatsApp por vendedor e Meus clientes](067-whatsapp-por-vendedor-e-meus-clientes.md):

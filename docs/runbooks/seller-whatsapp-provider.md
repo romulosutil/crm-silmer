@@ -5,9 +5,124 @@ Requisitos WAP-02/03/04/10/12; [spec](../../.specs/features/seller-whatsapp/spec
 [SDD, seções 5–6](../../.specs/features/seller-whatsapp/design.md),
 [ADR 090](../adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md) e
 [ADR 091](../adr/091-contratos-da-etapa1-whatsapp-pessoal.md).
-Base `f7a06389`, posterior à integração da PR 382 e do SDD; preserva `d7537b3c`.
+Base inicial `f7a06389`, posterior à integração da PR 382 e do SDD; preserva
+`d7537b3c`. Correção publicada sobre `c14df42c`, após a integração externa do
+PR 391 durante a execução.
 
-## Resultado e bloqueios de habilitação
+## Correção técnica — RFC 069 / ADR 092
+
+O proprietário autorizou a correção dos dois bloqueios centrais em 16/11/2026.
+[RFC 069](../rfc/069-ingresso-efemero-e-geracao-autenticada-do-whatsapp.md) e
+[ADR 092](../adr/092-sanitizacao-pre-persistencia-e-geracao-na-origem.md) registram
+a decisão. A [nova evidência](../../ops/evolution/wap-provider-spike.fixed.evidence.json)
+tem `technicalGate=passed`, `privacyFailures=[]` e todos os scans negativos,
+incluindo os arquivos físicos PostgreSQL/WAL. SHA-256:
+`e7fc2b30989d45e2b4df7bc89c834b069c99f51f44d7eb1437a0cedd4c5a39d6`.
+O relatório negativo original abaixo permanece imutável e não é o resultado
+da imagem corrigida. O comando de reprodução atual constrói as imagens corrigidas;
+a baseline negativa corresponde ao commit `a1e8b761`.
+
+**Habilitação operacional continua bloqueada.** Mobile no mesmo celular e
+retenção operacional de múltiplas instâncias não são homologados por este
+ensaio. WAP-E01/T01-01 permanecem abertos nesses critérios, sem avanço E02.
+
+### Patches entregues
+
+- n8n 2.38.7: [Dockerfile](../../ops/n8n/wap-ingress-Dockerfile),
+  [patcher](../../ops/n8n/wap-ingress-patch.mjs) e
+  [guardas](../../ops/n8n/wap-ingress-runtime.cjs). Hashes de Webhook.node.js,
+  active-executions.js e workflows.controller.js são verificados antes de
+  modificar qualquer fonte. Auth nativa precede a projeção do input inicial.
+  Headers/query/params são removidos, incluindo aliases; o getter query do
+  Express é tratado no request, sem alterar o prototype. REST create/update
+  recusam pinData/settings inseguros antes de SQL; manual parcial/retry/resume
+  não contornam a primeira escrita. Perfil E01 admite somente enums sintéticos,
+  generation=1 para desafios e nenhum ID de operação/desafio arbitrário.
+- Evolution 2.3.7: [patcher](../../ops/evolution/wap-generation-patch.mjs) e
+  [runtime](../../ops/evolution/wap-generation-runtime.cjs) capturam contexto
+  imutável por socket antes da fila, propagado por AsyncLocalStorage. Source e
+  token da geração não são reconstruídos no despacho. Eventos pessoais fora
+  do esquema/sem contexto são recusados sem rejeição assíncrona solta e só com
+  código fixo. O snapshot Prisma remove pairingCode **antes da serialização e
+  SQL**, preservando o objeto vivo e as chaves de sessão, inclusive advSecretKey.
+  Isso é necessário porque Baileys publica o código em creds.update; logout
+  posterior não evita retenção física. Não se alteram Redis/file adapters nem
+  dados existentes. A projeção de persistência vale também com geração off.
+
+As imagens só foram construídas localmente no Mel e removidas depois:
+
+- Evolution corrigida: `sha256:90664dde6f89be5009f4fd1d0ba2c5aaafd5ad5c875058ddc3072be8f8bf960a`.
+- n8n corrigido: `sha256:1b10735a274cf87d3a74cb9a5a7743e7a5271b2c3a3c5168b5c14c5084d09717`.
+
+### Resultado da prova corrigida
+
+| Critério            | Evidência                                                                                                                                                                                                                                                |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| QR/código via n8n   | Quatro round-trips 200/no-store: dois canários e as modalidades reais QR/código de duas instâncias sintéticas. Nenhuma conta pareada. Cada instância precisa devolver a modalidade solicitada, não ambas simultaneamente.                                |
+| Não persistência    | Todos os scans negativos para credenciais distintas, owner password/cookie e desafios: sucesso, erro, manual real, progresso, pinData recusado, dump lógico, volume, logs stdout/stderr e arquivos físicos PostgreSQL/WAL após parada limpa.             |
+| Pin/manual          | REST create/update com canário em pinData retorna 400 antes de qualquer escrita; export continua vazio. Manual parcial com token em runData retorna 400 antes de execução/efeito; manual completo legítimo confirmado pelo evento de sucesso do runtime. |
+| Origem/reconnect    | Callback real enfileirado em A1 antes do reconnect foi emitido com source A1 e recusado 403; A2 e replay conservam source A2 e retornam 200; outra linha B1 isolada.                                                                                     |
+| Retry em voo        | Verificador retorna 503 e revoga A2; o retry HTTP real conserva A2 e recebe 403, mesmo após instalar socket A3. Callback A3 recebe 200. Não é apenas replay de callback.                                                                                 |
+| Negativos           | Token cruzado, conta/instância/geração divergentes e token ausente recusados antes de execução. Código numérico não pode entrar como generation. JSON malformado recebe 422 nativo antes do Webhook. Settings inseguros recusados antes de SQL.          |
+| Default off         | Nova inicialização da imagem sem flags, usando o banco/credencial de teste, devolve 403 fixo para comando válido e não acrescenta execution_entity. Logs continuam sem segredo.                                                                          |
+| Lifecycle e cleanup | Eventos sem contexto/fora do esquema não despacham nem geram rejeição solta. Todas as instâncias de containers, volumes, rede e tags da rodada foram removidas por ownership.                                                                            |
+
+O ingresso autentica `{source, instance}` por token da geração e Basic técnico
+distinto no verificador sintético. Somente a autorização atual é consultada
+para revogar; nunca se atribui a geração atual ao evento antigo. Falha temporária
+do verificador é 503 fixo; credencial/revogação/divergência é 403 fixo, sem logs
+de payload. O contrato real do verificador permanece em E02/E04 pela API CRM,
+sem acesso direto n8n→SQL e sem mudar Basic v1.
+
+A prova de origem usa os métodos reais extraídos do bundle patchado, incluindo
+callback, fila, connectionUpdate, sendDataWebhook, emit e retryWebhookRequest,
+com Axios/n8n/verificador reais. A notificação e o socket são sintéticos; isso
+não homologa um socket WhatsApp pareado. O escritor de creds também é exercitado
+com BufferJSON real e sink em memória, além do scan físico do PostgreSQL real.
+Nenhum dump/log/QR/código bruto foi publicado. Diagnósticos físicos expõem
+somente arquivo e categoria se houver acerto, nunca os bytes encontrados.
+
+### Configuração e próximos gates
+
+Todos os novos guards são default off. A instalação do binding é um hook
+interno, usado apenas no processo do rehearsal; a API Evolution do ensaio
+continua com geração off até existir o controle E02. Mensagens pessoais ainda
+são negadas: o esquema desta prova admite somente connection.update. Não
+selecionar estas imagens em ambiente real como consequência de aprovar o PR.
+
+| Configuração                    | Default / uso na prova                                                         |
+| ------------------------------- | ------------------------------------------------------------------------------ |
+| SILMER_WAP_GENERATION_ENABLED   | ausente/false; true só no processo de rehearsal                                |
+| SILMER_WAP_GENERATION_INSTANCES | vazio; duas instâncias sintéticas explicitamente permitidas no rehearsal       |
+| SILMER_WAP_INGRESS_ENABLED      | ausente/false; true só no n8n descartável da prova                             |
+| SILMER_WAP_INGRESS_PATHS        | allowlist explícita de paths reservados e modalidades; ausência recusa         |
+| SILMER_WAP_INGRESS_VERIFY_URL   | limitado ao fixture privado do ensaio; sem URL CRM real implementada           |
+| SILMER_WAP_INGRESS_VERIFY_BASIC | credencial técnica sintética distinta; nunca em workflow JSON, execução ou log |
+
+Rollback mantém caminhos pessoais desligados e seleciona somente imagem
+compatível com os guards; não remove campos/comércio nem reconstitui desafios.
+O patch previne novas escritas de pairingCode, mas não limpa bancos/backups
+históricos. A política vigente de sessão/retenção permanece; não apagar dados
+existentes para conseguir um scan verde.
+
+Verificações finais da correção: 52 testes focalizados aprovados, zero skips;
+validate com 2.876 testes, 2.823 aprovados e 53 skips condicionais existentes,
+zero falhas e build aprovado; audit sem vulnerabilidades. A integração externa
+do PR 391 exigiu atualizar a base e repetir os gates completos no snapshot final
+sobre `c14df42c`, além da repetição anterior motivada pela correção pré-SQL.
+O PR de correção sucede a baseline do PR 391.
+
+**Gate E2E integrado pendente.** A rodada final de E2E/axe com quatro workers
+teve 1.060 aprovados, sete skips legados e uma falha, inclusive nos dois retries:
+`audio-recorder.spec.js:426`, captura no limite exato de 16 MiB, não observou o
+upload em cinco segundos (`uploads.length` permaneceu zero). O mesmo teste
+passou depois isoladamente, com um worker e zero retries, sem qualquer mudança
+de código, timeout ou assertion. A diferença de concorrência é uma hipótese,
+não uma causa comprovada; o resultado focal não torna o gate completo verde.
+Não houve alteração de áudio nesta entrega. Registrar o gate como pendente
+para revisão/CI antes de merge, sem ampliar WAP-E01 ou enfraquecer o teste.
+
+## Resultado inicial e bloqueios identificados antes dos patches
 
 **Gate bloqueado.** O spike é uma investigação reproduzível, não um adapter
 operacional nem homologação do provedor. WAP-E01 e WAP-T01-01 permanecem abertos.
@@ -116,9 +231,11 @@ O runner remove apenas nomes registrados na rodada, com verificação de label;
 não executa prune ou limpeza global. Falha de limpeza é reportada. Recursos
 anteriores, dados de aplicações e checkout remoto ficam intactos.
 
-## Alternativas revisáveis e próximos critérios
+## Alternativas inicialmente revisáveis e próximos critérios
 
-Estas alternativas são propostas para revisão, não decisões implementadas:
+As alternativas abaixo foram registradas na prova inicial. A RFC 069/ADR 092
+posterior selecionou e implementou os patches descritos acima somente para
+prova isolada; a integração operacional real segue pendente:
 
 1. **Origem:** capturar binding imutável linha/conta/geração no socket ou antes
    da fila e autenticá-lo até cada tentativa HTTP. O binding não pode ser
@@ -146,7 +263,7 @@ Rollback desta entrega: remover os utilitários de prova; nenhum schema/dado
 comercial requer down. Manter controle/inbound/envio pessoal desligados.
 Não apagar ledger/ACL/histórico, restaurar desafio ou repetir efeito incerto.
 
-## Evidência da rodada final
+## Evidência da rodada inicial (a1e8b761)
 
 O [relatório sanitizado](../../ops/evolution/wap-provider-spike.evidence.json)
 registra a rodada completa. SHA-256 do arquivo formatado:

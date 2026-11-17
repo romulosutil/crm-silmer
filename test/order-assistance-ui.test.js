@@ -1,11 +1,33 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { request } from '../apps/edge-web/src/lib/api-client.js';
 import {
   orderAssistanceEvidence,
   orderAssistanceMetrics,
   orderAssistanceReason,
   orderAssistanceStatus,
 } from '../apps/edge-web/src/lib/order-assistance.js';
+
+test('WAP-33: a resposta conserva o status que distingue criação de reutilização', async () => {
+  const original = globalThis.fetch;
+  try {
+    for (const status of [200, 201]) {
+      globalThis.fetch = async () =>
+        new globalThis.Response(
+          JSON.stringify({ order: { id: 'synthetic' } }),
+          {
+            status,
+            headers: { 'content-type': 'application/json' },
+          },
+        );
+      const response = await request('/synthetic');
+      assert.equal(response.status, status);
+      assert.equal(response.data.order.id, 'synthetic');
+    }
+  } finally {
+    globalThis.fetch = original;
+  }
+});
 
 test('OA-10: evidence choices contain only customer messages of the supplied conversation', () => {
   const result = orderAssistanceEvidence([

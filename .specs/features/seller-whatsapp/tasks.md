@@ -45,7 +45,7 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 | [x] WAP-E03 | [Entregar carteira e cadastro compartilhado no servidor](PROMPTS.md#wap-e03)     | Sol/Opus     | WAP-E02         | WAP-T02-01, WAP-T02-02, WAP-T02-03, WAP-T02-04 |
 | [x] WAP-E04 | [Receber atendimento humano com isolamento ponta a ponta](PROMPTS.md#wap-e04)    | Sol/Opus     | WAP-E03         | WAP-T02-05, WAP-T02-06, WAP-T02-07             |
 | [x] WAP-E05 | [Criar Pedido por Assunto com compatibilidade transacional](PROMPTS.md#wap-e05)  | Sol/Opus     | WAP-E04         | WAP-T02a-01, WAP-T02a-02, WAP-T02a-03          |
-| [ ] WAP-E06 | [Entregar a interface mínima de Pedido pela conversa](PROMPTS.md#wap-e06)        | Terra/Sonnet | WAP-E05         | WAP-T02a-04                                    |
+| [x] WAP-E06 | [Entregar a interface mínima de Pedido pela conversa](PROMPTS.md#wap-e06)        | Terra/Sonnet | WAP-E05         | WAP-T02a-04                                    |
 | [ ] WAP-E07 | [Aceitar o fluxo passivo integrado de Pedido](PROMPTS.md#wap-e07)                | Sol/Opus     | WAP-E06         | WAP-T02a-05                                    |
 | [ ] WAP-E08 | [Completar mensagens correntes e efeitos pela linha correta](PROMPTS.md#wap-e08) | Sol/Opus     | WAP-E07         | WAP-T02-08, WAP-T03-01, WAP-T03-02, WAP-T02-09 |
 | [ ] WAP-E09 | [Completar Meus clientes e Meu WhatsApp na interface](PROMPTS.md#wap-e09)        | Terra/Sonnet | WAP-E08         | WAP-T04-01, WAP-T04-02, WAP-T04-05             |
@@ -54,6 +54,29 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 | [ ] WAP-E12 | [Homologar o piloto real da etapa 1](PROMPTS.md#wap-e12)                         | Sol/Opus     | WAP-E11         | WAP-T05-05, WAP-T05-06, WAP-T05-07             |
 
 ## Mapa de rastreabilidade dos 32 itens internos
+
+### Evidência WAP-E06 / WAP-T02a-04 — interface mínima
+
+WAP-01/17/31/32/33, ADRs 090/091, sobre E05 `37d4d006` no branch
+`codex/wap-e05`. Meus clientes lê a carteira existente e abre conversa
+autorizada; confirmação captura Contact, conversa, Assunto e versões, preserva
+rascunho e cancela em mudança de contexto/acesso. Resposta 201/200 anuncia
+criação/reutilização e abre a ficha. O botão do cabeçalho de `d7537b3c`
+permanece. [Contrato e rollback](../../../docs/runbooks/seller-whatsapp-orders.md).
+
+- `node --test test/order-assistance-ui.test.js`: 4/4; E2E focal de carteira,
+  alvo, pendente, resposta atrasada e alteração de usuário: 5/5, com teclado,
+  foco, axe e viewport 390/1366. Regressão focal do cabeçalho: aprovada;
+  `order-assistance.spec.js`: 14/14 na rodada focal.
+- `npm run validate`: 2.866 aprovados, zero falhas, 61 skips condicionais
+  live sem URL; build, lint, tipos e validações passaram. PostgreSQL sintético
+  real e sem skips do E05 está registrado abaixo; esta fatia não altera SQL.
+- `npm run test:e2e -- --workers=4`: 1.070 aprovados e sete skips existentes;
+  `npm audit --audit-level=high`: zero vulnerabilidades; `git diff --check`.
+
+Não houve pareamento, flag real, envio, IA ou efeito financeiro. A prova UI
+usa projeções sintéticas; WAP-E07/T02a-05 permanece o gate integrado e não há
+homologação de provedor ou produção.
 
 ### Evidência WAP-E05 / WAP-T02a-01–03 — Pedido por Assunto
 
@@ -110,8 +133,9 @@ exclusivo em loopback, encerrado ao terminar as provas (sem Docker neste host):
 CI PostgreSQL inclui a nova suíte explicitamente; a expansão 0080 também faz
 parte da expectativa do upgrade existente. Sem UI de E06, flag/ambiente real,
 pareamento, publicação de workflow, envio, IA ou cobrança. Após múltiplos alvos,
-rollback somente para SHA compatível com criação desligada. WAP-T02a-04/05 e
-E06/E07 continuam pendentes; não há homologação do provedor ou produção.
+rollback somente para SHA compatível com criação desligada. À época, UI e gate
+integrado eram pendentes; a evidência E06 acima não conclui E07 nem homologa
+provedor ou produção.
 
 ### Evidência WAP-E04 / WAP-T02-05–07 — atendimento humano isolado
 
@@ -401,7 +425,7 @@ inicial de sessões/PRs por T.
 | [x] WAP-T02a-01 | Adicionar origem de Assunto ao Pedido                    | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/31/33                      |
 | [x] WAP-T02a-02 | Resolver Pedido por alvo sem escolha arbitrária          | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/30/31/33                   |
 | [x] WAP-T02a-03 | Criar ou reutilizar Pedido no alvo transacional          | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/31/33; OA-05/07            |
-| [ ] WAP-T02a-04 | Entregar fluxo passivo de Pedido em Meus clientes        | [WAP-E06](PROMPTS.md#wap-e06) | WAP-01/17/31/32/33                |
+| [x] WAP-T02a-04 | Entregar fluxo passivo de Pedido em Meus clientes        | [WAP-E06](PROMPTS.md#wap-e06) | WAP-01/17/31/32/33                |
 | [ ] WAP-T02a-05 | Verificar gate prioritário ponta a ponta                 | [WAP-E07](PROMPTS.md#wap-e07) | WAP-17/19/31/32/33                |
 | [ ] WAP-T02-08  | Revalidar linha na reserva e no despacho humano          | [WAP-E08](PROMPTS.md#wap-e08) | WAP-06/10/11/12/19                |
 | [ ] WAP-T03-01  | Normalizar fato externo enviado pelo aparelho            | [WAP-E08](PROMPTS.md#wap-e08) | WAP-09/10/12                      |

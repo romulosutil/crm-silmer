@@ -20,8 +20,12 @@ import {
 
 const LIVE_REFRESH_DELAY_MS = 250;
 
-const props = defineProps({ selectedId: { type: String, default: '' } });
+const props = defineProps({
+  selectedId: { type: String, default: '' },
+  mine: { type: Boolean, default: false },
+});
 const liveEvent = inject('liveEvent', ref(null));
+const sessionUser = inject('sessionUser', ref({}));
 const router = useRouter();
 const heading = ref(null);
 const searchInput = ref(null);
@@ -57,7 +61,9 @@ const selected = computed(() => detail.value?.contact ?? null);
 
 function openContact(contact, event) {
   if (event.target?.closest?.('a, button, input, select, textarea')) return;
-  void router.push(`/clientes/${contact.id}`);
+  void router.push(
+    `${props.mine ? '/meus-clientes' : '/clientes'}/${encodeURIComponent(contact.id)}`,
+  );
 }
 
 /** @param {unknown} cause */
@@ -87,8 +93,12 @@ async function loadContacts(silent = false) {
   try {
     const needle = query.value.trim();
     const response = await request(
-      needle ? '/api/v1/contacts/search' : '/api/v1/contacts?limit=100',
-      needle
+      props.mine
+        ? `/api/v1/me/clients?limit=100${needle ? `&q=${encodeURIComponent(needle)}` : ''}`
+        : needle
+          ? '/api/v1/contacts/search'
+          : '/api/v1/contacts?limit=100',
+      !props.mine && needle
         ? {
             body: { limit: 100, q: needle },
             method: 'POST',
@@ -128,10 +138,12 @@ async function loadMoreContacts() {
   appendController = controller;
   try {
     const response = await request(
-      needle
-        ? '/api/v1/contacts/search'
-        : `/api/v1/contacts?limit=100&cursor=${encodeURIComponent(cursor)}`,
-      needle
+      props.mine
+        ? `/api/v1/me/clients?limit=100&cursor=${encodeURIComponent(cursor)}${needle ? `&q=${encodeURIComponent(needle)}` : ''}`
+        : needle
+          ? '/api/v1/contacts/search'
+          : `/api/v1/contacts?limit=100&cursor=${encodeURIComponent(cursor)}`,
+      !props.mine && needle
         ? {
             body: { cursor, limit: 100, q: needle },
             method: 'POST',
@@ -446,17 +458,29 @@ onBeforeUnmount(() => {
   <div class="page">
     <header class="page-heading">
       <div>
-        <h1 ref="heading" tabindex="-1">Clientes</h1>
+        <h1 ref="heading" tabindex="-1">
+          {{ mine ? 'Meus clientes' : 'Clientes' }}
+        </h1>
         <p>
           Clientes, canais de contato e histórico de atendimento, atualizados
           automaticamente.
         </p>
       </div>
+      <RouterLink
+        v-if="mine || sessionUser?.functionName === 'Vendedor'"
+        :to="mine ? '/clientes' : '/meus-clientes'"
+      >
+        {{ mine ? 'Ver todos os clientes' : 'Meus clientes' }}
+      </RouterLink>
     </header>
 
     <div class="filter-bar">
       <div class="search-control">
-        <label for="client-search">Buscar cliente por nome ou telefone</label>
+        <label for="client-search">{{
+          mine
+            ? 'Buscar cliente por nome'
+            : 'Buscar cliente por nome ou telefone'
+        }}</label>
         <div class="search-field">
           <input
             id="client-search"
@@ -534,7 +558,10 @@ onBeforeUnmount(() => {
                 @click="openContact(contact, $event)"
               >
                 <td>
-                  <RouterLink class="row-link" :to="`/clientes/${contact.id}`">
+                  <RouterLink
+                    class="row-link"
+                    :to="`${mine ? '/meus-clientes' : '/clientes'}/${encodeURIComponent(contact.id)}`"
+                  >
                     {{ contact.label }}
                   </RouterLink>
                   <span

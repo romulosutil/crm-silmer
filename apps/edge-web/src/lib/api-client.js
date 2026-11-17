@@ -86,7 +86,12 @@ export async function request(url, options = {}) {
       serverTime,
     );
   }
-  return { data, etag: response.headers.get('etag'), serverTime };
+  return {
+    data,
+    etag: response.headers.get('etag'),
+    serverTime,
+    status: response.status,
+  };
 }
 
 export function commandKey() {

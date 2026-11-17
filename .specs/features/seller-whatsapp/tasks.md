@@ -46,7 +46,7 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 | [x] WAP-E04 | [Receber atendimento humano com isolamento ponta a ponta](PROMPTS.md#wap-e04)    | Sol/Opus     | WAP-E03         | WAP-T02-05, WAP-T02-06, WAP-T02-07             |
 | [x] WAP-E05 | [Criar Pedido por Assunto com compatibilidade transacional](PROMPTS.md#wap-e05)  | Sol/Opus     | WAP-E04         | WAP-T02a-01, WAP-T02a-02, WAP-T02a-03          |
 | [x] WAP-E06 | [Entregar a interface mínima de Pedido pela conversa](PROMPTS.md#wap-e06)        | Terra/Sonnet | WAP-E05         | WAP-T02a-04                                    |
-| [ ] WAP-E07 | [Aceitar o fluxo passivo integrado de Pedido](PROMPTS.md#wap-e07)                | Sol/Opus     | WAP-E06         | WAP-T02a-05                                    |
+| [x] WAP-E07 | [Aceitar o fluxo passivo integrado de Pedido](PROMPTS.md#wap-e07)                | Sol/Opus     | WAP-E06         | WAP-T02a-05                                    |
 | [ ] WAP-E08 | [Completar mensagens correntes e efeitos pela linha correta](PROMPTS.md#wap-e08) | Sol/Opus     | WAP-E07         | WAP-T02-08, WAP-T03-01, WAP-T03-02, WAP-T02-09 |
 | [ ] WAP-E09 | [Completar Meus clientes e Meu WhatsApp na interface](PROMPTS.md#wap-e09)        | Terra/Sonnet | WAP-E08         | WAP-T04-01, WAP-T04-02, WAP-T04-05             |
 | [ ] WAP-E10 | [Entregar primeiro envio humano individual](PROMPTS.md#wap-e10)                  | Sol/Opus     | WAP-E09         | WAP-T04-03, WAP-T04-04                         |
@@ -54,6 +54,22 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 | [ ] WAP-E12 | [Homologar o piloto real da etapa 1](PROMPTS.md#wap-e12)                         | Sol/Opus     | WAP-E11         | WAP-T05-05, WAP-T05-06, WAP-T05-07             |
 
 ## Mapa de rastreabilidade dos 32 itens internos
+
+### Evidência WAP-E07 / WAP-T02a-05 — aceite do fluxo passivo
+
+Aceite sintético em 17/11/2026 no branch cumulativo `codex/wap-e05`, sobre
+E06 `ee89502d`. O Chromium usou a API e o PostgreSQL 17.11 reais em
+loopback. Dois vendedores com o mesmo Contact criaram Pedidos em conversas
+e Assuntos próprios, inclusive após a queda da linha. O ensaio verificou
+numeração, edição, reuso, duplo clique, concorrência e recusas por ACL,
+encerramento e inativação. Corrigido o redirecionamento indevido do foco
+durante a ressincronização SSE de Meus clientes.
+
+Ensaio integrado aprovado, com mais 109 verificações PostgreSQL aprovadas
+e zero skips live. Comandos, achados, limites e rollback constam no
+[registro de aceite](validation-pedido.md) e no
+[runbook](../../../docs/runbooks/seller-whatsapp-orders.md#ensaio-integrado-wap-e07).
+Pareamento, transporte e produção seguem nos gates operacionais.
 
 ### Evidência WAP-E06 / WAP-T02a-04 — interface mínima
 
@@ -426,7 +442,7 @@ inicial de sessões/PRs por T.
 | [x] WAP-T02a-02 | Resolver Pedido por alvo sem escolha arbitrária          | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/30/31/33                   |
 | [x] WAP-T02a-03 | Criar ou reutilizar Pedido no alvo transacional          | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/31/33; OA-05/07            |
 | [x] WAP-T02a-04 | Entregar fluxo passivo de Pedido em Meus clientes        | [WAP-E06](PROMPTS.md#wap-e06) | WAP-01/17/31/32/33                |
-| [ ] WAP-T02a-05 | Verificar gate prioritário ponta a ponta                 | [WAP-E07](PROMPTS.md#wap-e07) | WAP-17/19/31/32/33                |
+| [x] WAP-T02a-05 | Verificar gate prioritário ponta a ponta                 | [WAP-E07](PROMPTS.md#wap-e07) | WAP-17/19/31/32/33                |
 | [ ] WAP-T02-08  | Revalidar linha na reserva e no despacho humano          | [WAP-E08](PROMPTS.md#wap-e08) | WAP-06/10/11/12/19                |
 | [ ] WAP-T03-01  | Normalizar fato externo enviado pelo aparelho            | [WAP-E08](PROMPTS.md#wap-e08) | WAP-09/10/12                      |
 | [ ] WAP-T03-02  | Persistir saída externa e reconciliar eco                | [WAP-E08](PROMPTS.md#wap-e08) | WAP-06/09/10/11                   |

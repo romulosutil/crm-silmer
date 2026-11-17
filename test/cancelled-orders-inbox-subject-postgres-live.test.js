@@ -396,7 +396,7 @@ if (!connectionString) {
           createdAt: NOW,
         });
         await cancel(cancelledManual);
-        const picker = await subjects.list(target.id);
+        const picker = await subjects.list(target.id, '', SELLER);
         assert.deepEqual(
           picker.orders.map((/** @type {any} */ row) => row.id),
           [liveManual, cancelledManual],
@@ -412,7 +412,7 @@ if (!connectionString) {
         assert.equal(second.subject.orderStatus, 'cancelado');
         assert.equal(second.subject.kind, 'pedido');
         assert.equal(second.subject.orderId, cancelledManual);
-        const listed = await subjects.list(target.id);
+        const listed = await subjects.list(target.id, '', SELLER);
         assert.deepEqual(
           listed.subjects.map((/** @type {any} */ row) => [
             row.orderId,

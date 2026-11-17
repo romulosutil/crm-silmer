@@ -1,3 +1,4 @@
+import { readVisibleConversationIds } from './fixtures/order-contexts.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createApi } from '../apps/api/src/app.js';
@@ -78,6 +79,7 @@ async function harness() {
         assignedUserId: state.assignment,
         version: 1,
       }),
+      readVisibleConversationIds,
       readAssignments: async (ids) =>
         new Map(ids.map((id) => [id, state.assignment])),
       readLatestMessageStates: async () => new Map(),

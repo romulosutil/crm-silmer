@@ -125,6 +125,17 @@ async function mockConcurrentContact(page) {
         json: { conversation: conversation(), messages: [] },
       });
     }
+    if (path === '/api/v1/inbox/conversations/conversation-1/subjects') {
+      return route.fulfill({
+        json: {
+          subjects: [],
+          orders: [],
+          links: [],
+          needsSubjectMessageIds: [],
+          ordersHasMore: false,
+        },
+      });
+    }
     if (path === '/api/v1/users/assignable') {
       return route.fulfill({ json: { users: [] } });
     }

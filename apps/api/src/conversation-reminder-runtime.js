@@ -1,5 +1,8 @@
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
-import { appendConversationStreamEvent } from '@crm-silmer/inbox-channels';
+import {
+  appendConversationStreamEvent,
+  lockConversationAccess,
+} from '@crm-silmer/inbox-channels';
 import {
   fingerprintCommand,
   PostgresIdempotencyRecordStore,
@@ -105,6 +108,13 @@ export function createConversationReminderRuntime(database, options) {
       const key = reminderIdempotencyKey(input.idempotencyKey);
       const now = clock();
       return database.transaction(async (/** @type {any} */ client) => {
+        await lockConversationAccess(client, conversationId, input.actor.id, {
+          allowGeneralReminder: true,
+        }).catch((error) => {
+          if (Number(error?.statusCode) === 403)
+            throw new ConversationReminderError(403, 'FORBIDDEN');
+          throw error;
+        });
         const actor = await lockDashboardReader(
           client,
           input.actor,

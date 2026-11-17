@@ -7,6 +7,7 @@ import { createApi } from '../apps/api/src/app.js';
 import { createDashboardMetricsRuntime } from '../apps/api/src/dashboard-metrics-runtime.js';
 import { createDashboardRuntime } from '../apps/api/src/dashboard-runtime.js';
 import { createLeadOutcomeRuntime } from '../apps/api/src/lead-outcome-runtime.js';
+import { createConversationShippingRuntime } from '../apps/api/src/conversation-shipping-runtime.js';
 import {
   createContactIdentityService,
   PostgresContactIdentityRepository,
@@ -854,5 +855,167 @@ test(
       }
       assert.deepEqual(await actionKinds(seller, racing), ['reply']);
     }
+
+    await t.test(
+      'WAP-T02-06: revoked personal links block private outcome/replay and quote commands without revoking commercial estimates',
+      async () => {
+        const personal = await conversation(seller.id);
+        await human(personal, seller.id);
+        const body = {
+          outcome: 'lost',
+          reasonCode: 'outro',
+          note: NOTE,
+          expectedConversationVersion: await conversationVersion(personal),
+          expectedOutcomeVersion: 0,
+        };
+        const commandKey = `personal-${runId}`;
+        await record(seller, personal, body, commandKey);
+        const quotedConversation = await conversation(seller.id);
+        await order(quotedConversation, false);
+        const row = (
+          await pool.query(
+            'SELECT id,contact_id,version FROM crm.orders WHERE conversation_id=$1',
+            [quotedConversation],
+          )
+        ).rows[0];
+        const subjectId = `personal-subject-${randomUUID()}`;
+        await pool.query(
+          `INSERT INTO crm.conversation_subjects(id,conversation_id,contact_id,order_id,kind,position,created_by,created_by_kind,created_at,updated_at)
+         VALUES($1,$2,$3,$4,'pedido',1,$5,'human',$6,$6)`,
+          [
+            subjectId,
+            quotedConversation,
+            row.contact_id,
+            row.id,
+            seller.id,
+            clock,
+          ],
+        );
+        const accountId = randomUUID(),
+          lineId = randomUUID();
+        await database.transaction(async (/** @type {any} */ client) => {
+          await client.query(
+            `INSERT INTO crm.seller_whatsapp_lines(id,seller_id,account_id,instance_name,number_digest,number_envelope,state,generation,version,created_at,updated_at)
+           VALUES($1,$2,$3,$4,$5,$6::jsonb,'disconnected',1,1,$7,$7)`,
+            [
+              lineId,
+              seller.id,
+              accountId,
+              `wap_${randomUUID().replaceAll('-', '')}`,
+              'a'.repeat(64),
+              JSON.stringify({ algorithm: 'AES-256-GCM', version: 1 }),
+              clock,
+            ],
+          );
+          await client.query(
+            "INSERT INTO crm.whatsapp_number_reservations(number_digest,kind,line_id,created_at) VALUES($1,'personal',$2,$3)",
+            ['a'.repeat(64), lineId, clock],
+          );
+          for (const conversationId of [personal, quotedConversation]) {
+            await client.query(
+              'UPDATE crm.conversations SET provider_account_id=$2 WHERE id=$1',
+              [conversationId, accountId],
+            );
+            await client.query(
+              'UPDATE crm.contact_identities SET provider_account_id=$2 WHERE id=(SELECT contact_identity_id FROM crm.conversations WHERE id=$1)',
+              [conversationId, accountId],
+            );
+            await client.query(
+              `INSERT INTO crm.seller_client_links(id,seller_id,contact_id,provenance,source_id,status,version,created_by,updated_by,created_at,updated_at)
+             SELECT $1,$2,identity.current_contact_id,'personal_inbound',$3,'active',1,$2,$2,$4,$4
+             FROM crm.conversations conversation JOIN crm.contact_identities identity ON identity.id=conversation.contact_identity_id WHERE conversation.id=$5`,
+              [randomUUID(), seller.id, lineId, clock, conversationId],
+            );
+          }
+        });
+        assert.equal(
+          (await leads.detail({ actor: seller, conversationId: personal }))
+            .note,
+          NOTE,
+        );
+        let calculations = 0;
+        const shipping = createConversationShippingRuntime(database, {
+          key: Buffer.alloc(32, 130),
+          clock: () => clock,
+          requireConfigured() {},
+          contextKey: 'synthetic',
+          calculate: async () => {
+            calculations++;
+            return {
+              services: [{ id: 1, name: 'Sintético', priceCents: 2250 }],
+            };
+          },
+        });
+        const quoteInput = {
+          actor: seller,
+          conversationId: quotedConversation,
+          correlationId: `quote-${runId}`,
+          idempotencyKey: `quote-${runId}`,
+          body: {
+            subjectId,
+            orderId: row.id,
+            orderVersion: Number(row.version),
+            fromPostalCode: '01001000',
+            toPostalCode: '20040020',
+            weightGrams: 1000,
+            widthCm: 20,
+            heightCm: 15,
+            lengthCm: 10,
+            insuranceValueCents: 10000,
+          },
+        };
+        const { quote } = await shipping.quote(quoteInput);
+        const selection = {
+          ...quoteInput,
+          quoteId: quote.id,
+          idempotencyKey: `select-${runId}`,
+          body: {
+            subjectId,
+            orderId: row.id,
+            orderVersion: Number(row.version),
+            serviceId: 1,
+          },
+        };
+        await shipping.select(selection);
+        await pool.query(
+          "UPDATE crm.seller_client_links SET status='revoked',revoked_at=$2,version=version+1 WHERE seller_id=$1",
+          [seller.id, clock],
+        );
+        await assert.rejects(
+          leads.detail({ actor: seller, conversationId: personal }),
+          { code: 'FORBIDDEN' },
+        );
+        await assert.rejects(record(seller, personal, body, commandKey), {
+          code: 'FORBIDDEN',
+        });
+        await assert.rejects(shipping.quote(quoteInput), { code: 'FORBIDDEN' });
+        await assert.rejects(shipping.select(selection), { code: 'FORBIDDEN' });
+        assert.equal(calculations, 1);
+        assert.equal(
+          (await leads.detail({ actor: admin, conversationId: personal })).note,
+          NOTE,
+        );
+        const commercial = (
+          await shipping.read({ actor: seller, orderId: row.id })
+        ).quote;
+        assert.equal(commercial.conversationId, null);
+        assert.equal(commercial.subjectId, null);
+        assert.deepEqual(commercial.services, quote.services);
+        await pool.query(
+          'UPDATE crm.conversations SET assigned_user_id=NULL WHERE id=$1',
+          [quotedConversation],
+        );
+        assert.equal(
+          (await shipping.read({ actor: other, orderId: row.id })).quote
+            .conversationId,
+          null,
+        );
+        assert.equal(
+          (await shipping.read({ actor: admin, orderId: row.id })).quote
+            .conversationId,
+          quotedConversation,
+        );
+      },
+    );
   },
 );

@@ -1,3 +1,4 @@
+import { readVisibleConversationIds } from './fixtures/order-contexts.js';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import test from 'node:test';
@@ -91,6 +92,7 @@ else
           }),
         conversations: {
           readAssignment: async () => null,
+          readVisibleConversationIds,
           readAssignments: async () => new Map(),
           readLatestMessageStates: async () => new Map(),
           readOrderContexts: async () => new Map(),

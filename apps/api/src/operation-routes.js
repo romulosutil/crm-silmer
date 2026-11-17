@@ -92,6 +92,9 @@ export function registerOperationRoutes(api, operations, contextFor) {
         return reply.code(400).send({ error: { code: 'INVALID_CURSOR' } });
       }
       const aheadReset = await dispatcher.reconcileAhead(afterCursor);
+      let accessScope = operations.readAccessScope
+        ? await operations.readAccessScope(access.actor)
+        : null;
       reply.hijack();
       reply.raw.writeHead(200, {
         'cache-control': 'private, no-cache',
@@ -166,6 +169,8 @@ export function registerOperationRoutes(api, operations, contextFor) {
             const visible = operations.eventForReader
               ? await operations.eventForReader(event, currentActor)
               : { ...event, type: 'stream.reset', payload: {} };
+            if (closed) return;
+            if (!(await stillAuthorized())) return expire();
             reply.raw.write(
               `id: ${event.cursor}\nevent: ${visible.type}\ndata: ${JSON.stringify(visible.payload)}\n\n`,
             );
@@ -179,7 +184,16 @@ export function registerOperationRoutes(api, operations, contextFor) {
         writes = writes
           .then(async () => {
             if (closed) return;
-            if (!(await stillAuthorized())) return expire();
+            const currentActor = await stillAuthorized();
+            if (!currentActor) return expire();
+            if (operations.readAccessScope) {
+              const nextScope = await operations.readAccessScope(currentActor);
+              if (closed) return;
+              if (nextScope !== accessScope) {
+                accessScope = nextScope;
+                reply.raw.write('event: stream.reset\ndata: {}\n\n');
+              }
+            }
             if (!closed) reply.raw.write(': heartbeat\n\n');
           })
           .catch(expire);

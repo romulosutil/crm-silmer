@@ -82,6 +82,7 @@ export function registerN8nRoutes(api, integration, contextFor) {
           'provider',
           'schema_version',
           'site_contact',
+          'source',
         ]);
         requireSchemaVersion(body.schema_version);
         const technical = await authorizeRequest(
@@ -174,6 +175,7 @@ export function registerN8nRoutes(api, integration, contextFor) {
           'subject_id',
           'target_contract',
           'transcript',
+          'source',
           // AGENTE-OBS-01: optional turn telemetry (codes and counts only).
           'turn',
         ]);

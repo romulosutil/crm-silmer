@@ -1,4 +1,7 @@
-import { decryptSiteContactClaim } from '@crm-silmer/contacts';
+import {
+  contactConversationVisible,
+  decryptSiteContactClaim,
+} from '@crm-silmer/contacts';
 import { decryptContactIdentityEnvelope } from '@crm-silmer/contacts/identity-envelope';
 import {
   INBOX_BUCKETS,
@@ -10,6 +13,8 @@ import { decryptInboxMessageEnvelope } from './postgres-inbox-repository.js';
 // PNL-06: sellers with the same count read in alphabetical order, the same
 // on every server whatever the database collation.
 const SELLER_NAME_ORDER = new Intl.Collator('pt-BR', { sensitivity: 'base' });
+const PERSONAL_LINE_PROJECTION = `EXISTS (SELECT 1 FROM crm.seller_whatsapp_lines personal_line
+  WHERE personal_line.account_id::text=conversation.provider_account_id) AS personal_line`;
 
 const DOCUMENT_IMAGE_MIME_TYPES = new Set([
   'image/jpeg',
@@ -282,6 +287,7 @@ const LAST_MESSAGE_JOIN = `LEFT JOIN LATERAL (
 /** @param {boolean} byUrgency */
 function listProjection(byUrgency) {
   return `conversation.id, conversation.state,
+                  ${PERSONAL_LINE_PROJECTION},
                   conversation.automation_state, conversation.automation_epoch,
                   conversation.assigned_user_id, conversation.version,
                   conversation.opened_at, conversation.last_message_at,
@@ -562,12 +568,13 @@ export class PostgresInboxReadRepository {
    */
   async list(input, reader = {}) {
     return this.#snapshot(async (database) => {
+      reader = (await this.#currentReader(database, reader)) ?? {};
       const values = [];
       const predicates = [];
       if (reader.visibilityActorId) {
         values.push(reader.visibilityActorId);
         predicates.push(
-          `(conversation.assigned_user_id IS NULL OR conversation.assigned_user_id=$${values.length})`,
+          contactConversationVisible('conversation', `$${values.length}`),
         );
       }
       predicates.push(
@@ -729,12 +736,14 @@ export class PostgresInboxReadRepository {
   async get(conversationId, reader = {}) {
     const turn = turnContext(reader, undefined);
     return this.#snapshot(async (database) => {
+      reader = (await this.#currentReader(database, reader)) ?? {};
       const [conversation, messages, suggestion, turnRows] =
         await runSequential([
           () =>
             database
               .query(
                 `SELECT conversation.id, conversation.state,
+                    ${PERSONAL_LINE_PROJECTION},
                     conversation.automation_state, conversation.automation_epoch,
                     conversation.assigned_user_id, conversation.version,
                     conversation.opened_at, conversation.last_message_at,
@@ -775,7 +784,7 @@ export class PostgresInboxReadRepository {
              ${REVIEW_ORDER_JOIN}
              ${WAITING_JOIN}
              WHERE conversation.id=$1
-               AND ($2::text IS NULL OR conversation.assigned_user_id IS NULL OR conversation.assigned_user_id=$2)`,
+               AND ($2::text IS NULL OR ${contactConversationVisible('conversation', '$2')})`,
                 [conversationId, reader.visibilityActorId ?? null],
               )
               .then((/** @type {any} */ result) => {
@@ -873,6 +882,9 @@ export class PostgresInboxReadRepository {
       throw new TypeError('unansweredMinutes must be a positive integer');
     }
     return this.#snapshot(async (database) => {
+      const currentReader = await this.#currentReader(database, { actorId });
+      readAll = !currentReader.visibilityActorId;
+      if (!readAll) unansweredMinutes = null;
       const [queue, myOrders, sends, unanswered] = await Promise.all([
         database.query(
           `SELECT
@@ -908,7 +920,7 @@ export class PostgresInboxReadRepository {
            WHERE conversation.archived_at IS NULL
              AND conversation.state NOT IN
                ('convertida_em_lead','sem_lead','encerrada')
-             AND ($4::boolean OR conversation.assigned_user_id IS NULL OR conversation.assigned_user_id=$1)`,
+             AND ($4::boolean OR ${contactConversationVisible('conversation', '$1')})`,
           [actorId, at, stalledBefore, readAll],
         ),
         database.query(
@@ -939,7 +951,7 @@ export class PostgresInboxReadRepository {
              AND message.occurred_at <= $2::timestamptz
              AND ($3::boolean OR EXISTS (SELECT 1 FROM crm.conversations visible
                WHERE visible.id=message.conversation_id
-                 AND (visible.assigned_user_id IS NULL OR visible.assigned_user_id=$4)))`,
+                 AND ${contactConversationVisible('visible', '$4')}))`,
           [dayAgo, at, readAll, actorId],
         ),
         unansweredMinutes === null
@@ -1238,7 +1250,7 @@ export class PostgresInboxReadRepository {
    * turn, for the seller who takes the conversation over. Codes and counts
    * only; 404 when the conversation does not exist.
    *
-   * @param {string} conversationId @param {{visibilityActorId?: string}} [reader]
+   * @param {string} conversationId @param {{actorId?: string|null, visibilityActorId?: string}} [reader]
    */
   async assistantContext(conversationId, reader = {}) {
     return this.#snapshot(async (database) => {
@@ -1280,13 +1292,14 @@ export class PostgresInboxReadRepository {
   }
 
   /** CONV-ACL-01: use the same snapshot for auxiliary reads.
-   * @param {string} conversationId @param {{visibilityActorId?: string}} [reader]
+   * @param {string} conversationId @param {{actorId?: string|null, visibilityActorId?: string}} [reader]
    * @param {any} [database]
    */
   async assertReadable(conversationId, reader = {}, database = this.database) {
+    reader = (await this.#currentReader(database, reader)) ?? {};
     const result = await database.query(
-      `SELECT id FROM crm.conversations WHERE id=$1
-         AND ($2::text IS NULL OR assigned_user_id IS NULL OR assigned_user_id=$2)`,
+      `SELECT conversation.id FROM crm.conversations conversation WHERE conversation.id=$1
+         AND ($2::text IS NULL OR ${contactConversationVisible('conversation', '$2')})`,
       [conversationId, reader.visibilityActorId ?? null],
     );
     if (!result.rows[0]) throw notFound('CONVERSATION_NOT_FOUND');
@@ -1395,6 +1408,7 @@ export class PostgresInboxReadRepository {
     const turn = turnContext(reader, input.actorId);
     if (!turn) throw new TypeError('now and stallMinutes are required');
     return this.#snapshot(async (database) => {
+      reader = (await this.#currentReader(database, reader)) ?? {};
       const values = /** @type {unknown[]} */ ([]);
       const predicates = [
         'conversation.archived_at IS NULL',
@@ -1404,7 +1418,7 @@ export class PostgresInboxReadRepository {
       if (reader.visibilityActorId) {
         values.push(reader.visibilityActorId);
         predicates.push(
-          `(conversation.assigned_user_id IS NULL OR conversation.assigned_user_id=$${values.length})`,
+          contactConversationVisible('conversation', `$${values.length}`),
         );
       }
       if (input.assignedUserId !== undefined) {
@@ -1470,6 +1484,31 @@ export class PostgresInboxReadRepository {
     return byId;
   }
 
+  /** Same snapshot as counts, IDs and message hydration. Internal readers
+   * without actorId retain their trusted port contract.
+   * @param {any} database @param {any} reader
+   * @returns {Promise<{actorId?:string|null,visibilityActorId?:string,now?:Date,stallMinutes?:number}>} */
+  async #currentReader(database, reader) {
+    if (!reader.actorId) return reader;
+    const user = (
+      await database.query(
+        `SELECT actor.id,actor.disabled_at,role.function_name,
+       EXISTS(SELECT 1 FROM crm.user_capabilities WHERE user_id=actor.id AND capability='COMMERCIAL_ADMIN') is_admin
+       FROM crm.users actor LEFT JOIN crm.user_functions role ON role.user_id=actor.id WHERE actor.id=$1`,
+        [reader.actorId],
+      )
+    ).rows[0];
+    if (!user || user.disabled_at || user.function_name !== 'Vendedor')
+      throw Object.assign(new Error('FORBIDDEN'), {
+        code: 'FORBIDDEN',
+        statusCode: 403,
+      });
+    return {
+      ...reader,
+      visibilityActorId: user.is_admin ? undefined : reader.actorId,
+    };
+  }
+
   /** @template T @param {(database: any) => Promise<T>} work */
   async #snapshot(work) {
     if (typeof this.database.transaction !== 'function') {
@@ -1521,6 +1560,7 @@ function mapConversationSummary(row, repository, turnAsOf = null) {
       )
     : null;
   return Object.freeze({
+    personalLine: row.personal_line === true,
     assignedUser: row.assigned_user_id
       ? {
           functionName: row.function_name,

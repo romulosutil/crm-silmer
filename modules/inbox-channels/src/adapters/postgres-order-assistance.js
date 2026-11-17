@@ -1,4 +1,5 @@
 import { canReadConversation } from '@crm-silmer/identity-access';
+import { lockConversationAccess } from './conversation-access.js';
 
 import { createHash, randomUUID } from 'node:crypto';
 import {
@@ -9,6 +10,18 @@ import {
   decryptAssistance,
   encryptAssistance,
 } from '../application/order-assistance-envelope.js';
+
+/** Preserve the public assistance error contract while sharing the live guard.
+ * @param {any} tx @param {string} conversationId @param {string} actorId */
+async function assistanceAccess(tx, conversationId, actorId) {
+  try {
+    return await lockConversationAccess(tx, conversationId, actorId);
+  } catch (error) {
+    if (/** @type {any} */ (error)?.statusCode === 403)
+      throw new OrderAssistanceError(403, 'FORBIDDEN');
+    throw error;
+  }
+}
 
 /** OA-T01: all observations and decisions serialize on the conversation row. */
 export class PostgresOrderAssistanceRepository {
@@ -166,6 +179,18 @@ export class PostgresOrderAssistanceRepository {
     if (input.actor?.kind !== 'human')
       throw new OrderAssistanceError(403, 'FORBIDDEN');
     return this.database.transaction(async (/** @type {any} */ tx) => {
+      const access = await assistanceAccess(
+        tx,
+        input.conversationId,
+        input.actor.id,
+      );
+      input = {
+        ...input,
+        actor: {
+          ...input.actor,
+          capabilities: access.actor.isAdmin ? ['COMMERCIAL_ADMIN'] : [],
+        },
+      };
       const conversation = await this.conversation(tx, input.conversationId);
       if (!canReadConversation(input.actor, conversation.assigned_user_id))
         throw new OrderAssistanceError(403, 'FORBIDDEN');
@@ -250,6 +275,20 @@ export class PostgresOrderAssistanceRepository {
   /** @param {any} input */
   async decide(input) {
     return this.database.transaction(async (/** @type {any} */ tx) => {
+      if (input.actor?.kind !== 'human')
+        throw new OrderAssistanceError(403, 'FORBIDDEN');
+      const access = await assistanceAccess(
+        tx,
+        input.conversationId,
+        input.actor.id,
+      );
+      input = {
+        ...input,
+        actor: {
+          ...input.actor,
+          capabilities: access.actor.isAdmin ? ['COMMERCIAL_ADMIN'] : [],
+        },
+      };
       const conversation = await this.conversation(tx, input.conversationId);
       requireAssistanceOwner(input.actor, conversation);
       const fingerprint = createHash('sha256')

@@ -186,6 +186,9 @@ export function createN8nIntegrationService({
               occurredAt,
               provider,
               providerAccountId,
+              ...(input?.source === undefined
+                ? {}
+                : { source: normalizePersonalSource(input.source) }),
             }),
             externalConversationId,
             externalEventId: identifier(input?.event_id, 'event_id', 512),
@@ -197,6 +200,7 @@ export function createN8nIntegrationService({
             occurredAt,
             phoneStatus: channel === 'site_chat' ? 'pending' : 'confirmed',
             siteContact,
+            source: normalizePersonalSource(input?.source),
             provider,
             providerAccountId,
             technical,
@@ -284,6 +288,7 @@ export function createN8nIntegrationService({
         eventFingerprint: fingerprint(stripTechnical(input)),
         eventId: identifier(input?.event_id, 'event_id', 512),
         eventType,
+        source: normalizePersonalSource(input?.source),
         externalMessageId: optionalString(input?.external_message_id, 512),
         failure: normalizeFailure(input?.failure, eventType),
         handoff: input?.handoff ? plainObject(input.handoff) : null,
@@ -313,6 +318,35 @@ export function createN8nIntegrationService({
         repository.recordEvent(normalized, runtime),
       );
     },
+  });
+}
+
+/** The n8n pre-persistence verifier supplies immutable, non-secret origin.
+ * @param {any} value */
+function normalizePersonalSource(value) {
+  if (value === undefined) return null;
+  const uuid =
+    /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/iu;
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    Object.keys(value).some(
+      (key) =>
+        !['bindingId', 'lineId', 'accountId', 'generation'].includes(key),
+    ) ||
+    !['bindingId', 'lineId', 'accountId'].every(
+      (key) => typeof value[key] === 'string' && uuid.test(value[key]),
+    ) ||
+    !Number.isSafeInteger(value.generation) ||
+    value.generation < 1
+  )
+    throw new N8nValidationError('Invalid WhatsApp source');
+  return Object.freeze({
+    bindingId: value.bindingId,
+    lineId: value.lineId,
+    accountId: value.accountId,
+    generation: value.generation,
   });
 }
 

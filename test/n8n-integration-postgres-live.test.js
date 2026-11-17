@@ -2229,6 +2229,10 @@ if (connectionString) {
                  'Vendedora Sintética')`,
         [seller.id],
       );
+      await pool.query(
+        "INSERT INTO crm.user_functions(user_id,function_name) VALUES($1,'Vendedor')",
+        [seller.id],
+      );
       const a = await inbound('5527900000301', 1);
       const b = await inbound('5527900000302', 1);
       const c = await inbound('5527900000303', 1);
@@ -2442,7 +2446,8 @@ if (connectionString) {
       const e1Message = await messageAt(e.conversation_id, 1);
       const e2Message = await messageAt(e.conversation_id, 2);
       assert.deepEqual(
-        (await subjectService.list(e.conversation_id)).needsSubjectMessageIds,
+        (await subjectService.list(e.conversation_id, '', seller))
+          .needsSubjectMessageIds,
         [e1Message, e2Message].sort(),
       );
 
@@ -2483,7 +2488,7 @@ if (connectionString) {
         resolved.rows.map((/** @type {any} */ row) => row.resolved_by),
         [seller.id, seller.id],
       );
-      const afterTag = await subjectService.list(e.conversation_id);
+      const afterTag = await subjectService.list(e.conversation_id, '', seller);
       assert.deepEqual(afterTag.needsSubjectMessageIds, []);
       assert.deepEqual(afterTag.links, [
         {

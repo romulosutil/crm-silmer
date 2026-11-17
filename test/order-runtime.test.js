@@ -1,3 +1,4 @@
+import { readVisibleConversationIds } from './fixtures/order-contexts.js';
 import { persistFixturePricing } from './fixtures/size-pricing.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -54,6 +55,7 @@ function harness(options = {}) {
           ? { assignedUserId: assignments[conversationId], version: 7 }
           : null;
       },
+      readVisibleConversationIds,
       readAssignments: async (/** @type {string[]} */ ids) =>
         new Map(ids.map((id) => [id, assignments[id] ?? null])),
       readLatestMessageStates: async () => new Map(),

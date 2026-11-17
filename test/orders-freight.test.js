@@ -1,3 +1,4 @@
+import { readVisibleConversationIds } from './fixtures/order-contexts.js';
 import assert from 'node:assert/strict';
 import { createCipheriv, randomBytes } from 'node:crypto';
 import test from 'node:test';
@@ -73,6 +74,7 @@ function harness(options = {}) {
         id in assignments
           ? { assignedUserId: assignments[id], version: 4 }
           : null,
+      readVisibleConversationIds,
       readAssignments: async (/** @type {string[]} */ list) =>
         new Map(list.map((id) => [id, assignments[id] ?? null])),
       readContactNames: async (/** @type {string[]} */ list) =>

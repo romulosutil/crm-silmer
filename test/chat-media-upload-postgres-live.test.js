@@ -66,6 +66,9 @@ if (connectionString) {
         [id, `${id}@example.test`, '$argon2id$synthetic'],
       );
     await pool.query(
+      `INSERT INTO crm.user_functions(user_id,function_name) VALUES('upload-seller','Vendedor'),('upload-other','Vendedor')`,
+    );
+    await pool.query(
       `INSERT INTO crm.contacts(id,created_at,updated_at) VALUES('upload-contact',now(),now())`,
     );
     await pool.query(
@@ -869,9 +872,17 @@ if (connectionString) {
       [admission.conversationId],
     );
     await assert.rejects(read(admission.actor), { statusCode: 404 });
+    await assert.rejects(repository.admit(admission), { statusCode: 403 });
     assert.equal(
       (await read({ ...admission.actor, id: 'upload-other' })).id,
       admission.id,
+    );
+    await assert.rejects(
+      read({ ...admission.actor, capabilities: ['COMMERCIAL_ADMIN'] }),
+      { statusCode: 404 },
+    );
+    await pool.query(
+      `INSERT INTO crm.user_capabilities(user_id,capability) VALUES('upload-seller','COMMERCIAL_ADMIN')`,
     );
     assert.equal(
       (await read({ ...admission.actor, capabilities: ['COMMERCIAL_ADMIN'] }))

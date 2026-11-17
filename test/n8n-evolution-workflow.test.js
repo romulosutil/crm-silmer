@@ -19,6 +19,8 @@ import {
   getEvolutionMessageId,
   restoreEvolutionTransportSource,
   validateEvolutionEvent,
+  validatePersonalEvolutionEvent,
+  convertPersonalEvolutionEvent,
 } from '../ops/n8n/workflows/create-evolution-workflow.mjs';
 
 const source = JSON.parse(
@@ -264,6 +266,109 @@ function persistedImageWorkflow() {
 }
 
 const workflow = createEvolutionWorkflow(source, config);
+test('WAP-E04: one allowlisted personal workflow preserves origin and has no automatic journey or command ingress', () => {
+  const origin = {
+    bindingId: '00000001-0000-4000-8000-000000000001',
+    lineId: '00000001-0000-4000-8000-000000000002',
+    accountId: '00000001-0000-4000-8000-000000000003',
+    generation: 1,
+  };
+  const candidate = createEvolutionWorkflow(source, {
+    ...config,
+    personalInbound: true,
+    personalLineIds: [origin.lineId],
+    webhookPath: 'silmer/seller-whatsapp/messages',
+  });
+  const personalConfig = {
+    ...config,
+    personalInbound: true,
+    personalLineIds: [origin.lineId],
+  };
+  const raw = event({ instance: 'wap_personal_synthetic', source: origin });
+  assert.throws(
+    () => validatePersonalEvolutionEvent(raw, config),
+    /EVOLUTION_SOURCE_MISMATCH/u,
+  );
+  assert.throws(
+    () =>
+      validatePersonalEvolutionEvent(raw, {
+        ...personalConfig,
+        personalLineIds: [],
+      }),
+    /EVOLUTION_SOURCE_MISMATCH/u,
+  );
+  const validated = validatePersonalEvolutionEvent(raw, personalConfig);
+  assert.deepEqual(validated.source, origin);
+  const converted = convertPersonalEvolutionEvent(
+    validated,
+    null,
+    personalConfig,
+  );
+  assert.deepEqual(converted.source, origin);
+  const node = (/** @type {string} */ name) =>
+    candidate.nodes.find((/** @type {any} */ n) => n.name === name);
+  const normalized = vm.runInNewContext(
+    `(function(){${node('Normalizar evento WhatsApp (MVP)').parameters.jsCode}})()`,
+    {
+      $json: converted,
+      $input: { item: {} },
+      $execution: { id: 'synthetic' },
+      structuredClone,
+    },
+  );
+  const prepared = vm.runInNewContext(
+    `(function(){${node('Preparar inbound CRM (MVP)').parameters.jsCode}})()`,
+    {
+      $json: normalized.json,
+      $: () => ({ item: { json: normalized.json } }),
+      $execution: { id: 'synthetic' },
+    },
+  );
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(prepared.json.payload.source)),
+    origin,
+  );
+  assert.equal(prepared.json.payload.provider, 'evolution');
+  assert.equal(
+    prepared.json.payload.metadata.provider_account_id,
+    origin.accountId,
+  );
+  assert.equal(prepared.json.payload.message.external_id, 'SYNTHETIC_INBOUND');
+  assert.equal(
+    prepared.json.idempotency_key,
+    origin.accountId + ':SYNTHETIC_INBOUND',
+  );
+  assert.equal(
+    candidate.nodes.filter(
+      (/** @type {any} */ n) => n.type === 'n8n-nodes-base.webhook',
+    ).length,
+    1,
+  );
+  for (const rule of node('Rotear conversa registrada (MVP)').parameters.rules
+    .values)
+    for (const condition of rule.conditions.conditions)
+      assert.equal(condition.leftValue, "={{ 'no_action' }}");
+  assert.equal(candidate.active, false);
+  assert.equal(candidate.settings.saveDataSuccessExecution, 'none');
+  assert.equal(candidate.settings.saveDataErrorExecution, 'none');
+  assert.equal(
+    JSON.stringify(
+      candidate.connections['CRM - Registrar inbound (MVP)'],
+    ).includes('Acompanhar intenção de compra? (OA)'),
+    false,
+  );
+  for (const header of node('CRM - Registrar inbound (MVP)').parameters
+    .headerParameters.parameters) {
+    if (header.name.toLowerCase() === 'x-silmer-workflow-key')
+      assert.equal(header.value, 'seller-whatsapp-inbound');
+    if (header.name.toLowerCase() === 'x-silmer-workflow-version')
+      assert.equal(header.value, '1.0');
+  }
+  assert.throws(
+    () => createEvolutionWorkflow(source, { ...config, personalInbound: true }),
+    /EVOLUTION_PERSONAL_ALLOWLIST_REQUIRED/u,
+  );
+});
 const nodes = new Map(
   workflow.nodes.map((/** @type {any} */ node) => [node.name, node]),
 );

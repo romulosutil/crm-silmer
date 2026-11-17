@@ -293,6 +293,61 @@ export function convertEvolutionEvent(validated, mapping, config) {
   };
 }
 
+/** Personal ingress is a separate default-off adapter over the unchanged general
+ * validator. The n8n pre-persistence verifier authenticated this source.
+ * @param {any} root @param {any} config @param {Function} [general] @returns {any} */
+export function validatePersonalEvolutionEvent(
+  root,
+  config,
+  general = validateEvolutionEvent,
+) {
+  const event = root?.body && typeof root.body === 'object' ? root.body : root;
+  const source = event?.source;
+  if (
+    config.personalInbound !== true ||
+    !source ||
+    !config.personalLineIds?.includes(source.lineId) ||
+    !/^[A-Za-z0-9_-]{1,64}$/.test(event.instance ?? '') ||
+    !['bindingId', 'lineId', 'accountId'].every((key) =>
+      /^[a-f0-9-]{36}$/i.test(source[key] ?? ''),
+    ) ||
+    !Number.isSafeInteger(source.generation) ||
+    source.generation < 1
+  )
+    throw new Error('EVOLUTION_SOURCE_MISMATCH');
+  const ownNumber = String(event.sender ?? '').split('@')[0];
+  const validated = general(root, {
+    ...config,
+    session: event.instance,
+    ownNumber,
+  });
+  return validated
+    ? {
+        ...validated,
+        source: { ...source },
+        instance: event.instance,
+        ownNumber,
+      }
+    : null;
+}
+
+/** @param {any} validated @param {any} mapping @param {any} config @param {Function} [general] @returns {any} */
+export function convertPersonalEvolutionEvent(
+  validated,
+  mapping,
+  config,
+  general = convertEvolutionEvent,
+) {
+  if (!validated.source) throw new Error('EVOLUTION_SOURCE_MISMATCH');
+  return {
+    ...general(validated, mapping, {
+      ...config,
+      ownNumber: validated.ownNumber,
+    }),
+    source: { ...validated.source },
+  };
+}
+
 /** HTTP success without a valid outbound provider key has unknown outcome.
  * @param {any} response @returns {string}
  */
@@ -483,7 +538,7 @@ export function restoreEvolutionTransportSource(current, baseline) {
 
 /** Produce a separate inactive candidate; the supplied Meta export is immutable.
  * @param {any} source
- * @param {{ownNumber:string,baseUrl?:string,session?:string,apiCredentialId?:string,apiCredentialName?:string,webhookCredentialId?:string,webhookCredentialName?:string,webhookPath?:string,workflowVersion?:string,workflowId?:string,workflowName?:string,transportBaseline?:any}} options
+ * @param {{ownNumber:string,baseUrl?:string,session?:string,apiCredentialId?:string,apiCredentialName?:string,webhookCredentialId?:string,webhookCredentialName?:string,webhookPath?:string,workflowVersion?:string,workflowId?:string,workflowName?:string,transportBaseline?:any,personalInbound?:boolean,personalLineIds?:string[]}} options
  */
 export function createEvolutionWorkflow(source, options) {
   if (
@@ -501,11 +556,26 @@ export function createEvolutionWorkflow(source, options) {
     )
   )
     throw new Error('EVOLUTION_WORKFLOW_ALREADY_ADAPTED');
-  const config = {
+  const config = /** @type {any} */ ({
     ownNumber: options?.ownNumber,
     baseUrl: options?.baseUrl ?? 'http://schedule_silmer-evolution:8080',
     session: options?.session ?? 'silmer',
-  };
+    ...(options?.personalInbound === true
+      ? {
+          personalInbound: true,
+          personalLineIds: options.personalLineIds ?? [],
+        }
+      : {}),
+  });
+  if (
+    config.personalInbound &&
+    (!config.personalLineIds.length ||
+      config.personalLineIds.some(
+        (/** @type {string} */ id) => !/^[a-f0-9-]{36}$/i.test(id),
+      ) ||
+      !options.webhookPath?.startsWith('silmer/seller-whatsapp/'))
+  )
+    throw new Error('EVOLUTION_PERSONAL_ALLOWLIST_REQUIRED');
   const workflow = createWppconnectWorkflow(source, {
     ...options,
     ...config,
@@ -582,8 +652,9 @@ export function createEvolutionWorkflow(source, options) {
     return node;
   };
   const configured = JSON.stringify(config);
-  find(VALIDATE).parameters.jsCode =
-    `const validate = ${validateEvolutionEvent.toString()};\nreturn $input.all().map((item,index)=>{const checked=validate(item.json,${configured});return checked?{json:checked,pairedItem:{item:index}}:null;}).filter(Boolean);`;
+  find(VALIDATE).parameters.jsCode = config.personalInbound
+    ? `const general = ${validateEvolutionEvent.toString()};const validate = ${validatePersonalEvolutionEvent.toString()};return $input.all().map((item,index)=>{const checked=validate(item.json,${configured},general);return checked?{json:checked,pairedItem:{item:index}}:null;}).filter(Boolean);`
+    : `const validate = ${validateEvolutionEvent.toString()};\nreturn $input.all().map((item,index)=>{const checked=validate(item.json,${configured});return checked?{json:checked,pairedItem:{item:index}}:null;}).filter(Boolean);`;
   const lookup = find(LOOKUP);
   lookup.parameters = {
     ...lookup.parameters,
@@ -596,8 +667,54 @@ export function createEvolutionWorkflow(source, options) {
     // braces would truncate the expression before offset/page.
     jsonBody: EVOLUTION_IDENTITY_LOOKUP_BODY,
   };
-  find(CONVERT).parameters.jsCode =
-    `const convert=${convertEvolutionEvent.toString()};\nconst input=$('${VALIDATE}').item.json;return {json:convert(input,input.needs_lid?$json:null,${configured})};`;
+  find(CONVERT).parameters.jsCode = config.personalInbound
+    ? `const general=${convertEvolutionEvent.toString()};const convert=${convertPersonalEvolutionEvent.toString()};const input=$('${VALIDATE}').item.json;return {json:convert(input,input.needs_lid?$json:null,${configured},general)};`
+    : `const convert=${convertEvolutionEvent.toString()};\nconst input=$('${VALIDATE}').item.json;return {json:convert(input,input.needs_lid?$json:null,${configured})};`;
+  if (config.personalInbound) {
+    // One shared personal-ingress workflow; account/instance come only from the
+    // generation authenticated by the patched pre-persistence n8n boundary.
+    workflow.name = 'Silmer seller WhatsApp inbound';
+    workflow.settings = {
+      ...workflow.settings,
+      saveDataSuccessExecution: 'none',
+      saveDataErrorExecution: 'none',
+      saveManualExecutions: false,
+      saveExecutionProgress: false,
+    };
+    delete workflow.settings.errorWorkflow;
+    workflow.pinData = {};
+    for (const node of workflow.nodes)
+      for (const header of node.parameters?.headerParameters?.parameters ??
+        []) {
+        if (String(header.name).toLowerCase() === 'x-silmer-workflow-key')
+          header.value = 'seller-whatsapp-inbound';
+        if (String(header.name).toLowerCase() === 'x-silmer-workflow-version')
+          header.value = '1.0';
+      }
+    workflow.nodes = workflow.nodes.filter(
+      (/** @type {any} */ node) =>
+        node.type !== 'n8n-nodes-base.webhook' ||
+        node.parameters?.path === options.webhookPath,
+    );
+    lookup.parameters.url = `={{ ${JSON.stringify(config.baseUrl + '/chat/findMessages/')} + $('${VALIDATE}').item.json.instance }}`;
+    const normalizer = find(NORMALIZE);
+    normalizer.parameters.jsCode = `const projected=(()=>{${normalizer.parameters.jsCode}})();projected.json.source={...$json.source};return projected;`;
+    for (const name of [
+      'Preparar inbound CRM (MVP)',
+      'Preparar status de entrega (MVP)',
+    ]) {
+      const node = find(name);
+      node.parameters.jsCode = `const projected=(()=>{${node.parameters.jsCode}})();if(!projected.json)return projected;const source=$('${NORMALIZE}').item.json.source;if(!source)throw new Error('EVOLUTION_SOURCE_MISMATCH');projected.json.payload.source=source;projected.json.idempotency_key=source.accountId+':'+projected.json.idempotency_key;projected.json.payload.event_id=source.accountId+':'+projected.json.payload.event_id;${name === 'Preparar inbound CRM (MVP)' ? "projected.json.payload.provider='evolution';projected.json.payload.metadata={provider_account_id:source.accountId};" : ''}return projected;`;
+    }
+    const router = find('Rotear conversa registrada (MVP)');
+    for (const rule of router.parameters.rules.values)
+      for (const condition of rule.conditions.conditions)
+        condition.leftValue = "={{ 'no_action' }}";
+    for (const edges of workflow.connections[INBOUND]?.main ?? [])
+      for (let index = edges.length - 1; index >= 0; index--)
+        if (edges[index].node === 'Acompanhar intenção de compra? (OA)')
+          edges.splice(index, 1);
+  }
   const apiCredential = lookup.credentials;
   const expression = (/** @type {string} */ value) =>
     value.replace(/^=?\{\{\s*/, '').replace(/\s*\}\}$/, '');
@@ -638,6 +755,8 @@ export function createEvolutionWorkflow(source, options) {
       response: { response: { responseFormat: 'json' } },
     },
   };
+  if (config.personalInbound)
+    query.parameters.url = `={{ ${JSON.stringify(config.baseUrl + '/chat/getBase64FromMediaMessage/')} + $('${VALIDATE}').item.json.instance }}`;
   query.credentials = apiCredential;
   find('WhatsApp - Baixar mídia (MVP)').parameters.jsCode =
     `const decode=${decodeEvolutionMedia.toString()};return decode($json,$('${NORMALIZE}').item.json);`;

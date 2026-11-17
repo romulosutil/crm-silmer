@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "channel": "whatsapp",
+  "provider": "evolution",
+  "source": {
+    "bindingId": "00000001-0000-4000-8000-000000000001",
+    "lineId": "00000001-0000-4000-8000-000000000002",
+    "accountId": "00000001-0000-4000-8000-000000000003",
+    "generation": 1
+  },
+  "metadata": { "provider_account_id": "00000001-0000-4000-8000-000000000003" },
+  "contact": { "external_id": "contact-whatsapp-personal-synthetic" },
+  "event_id": "personal-synthetic-message",
+  "occurred_at": "2026-11-17T12:00:00.000Z",
+  "message": {
+    "external_id": "personal-synthetic-message",
+    "type": "text",
+    "text": "Mensagem sintética"
+  }
+}

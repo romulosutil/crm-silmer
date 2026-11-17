@@ -1,4 +1,5 @@
 import { canReadConversation } from '@crm-silmer/identity-access';
+import { lockConversationAccess } from '@crm-silmer/inbox-channels';
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import { PostgresOperationalUserPort } from '@crm-silmer/identity-access';
 import {
@@ -95,6 +96,17 @@ async function lockReadableClaimConversation(transaction, input) {
     )
   ).rows[0];
   if (!locator) throw conflict('Handoff was not found');
+
+  const scope = await lockConversationAccess(
+    transaction,
+    locator.conversation_id,
+    input.actor.id,
+  ).catch((error) => {
+    if (Number(error?.statusCode) === 403) throw forbidden();
+    throw error;
+  });
+  if (scope.personalSellerId && scope.personalSellerId !== input.actor.id)
+    throw forbidden();
 
   const conversation = (
     await transaction.query(

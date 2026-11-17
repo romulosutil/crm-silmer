@@ -47,6 +47,8 @@ const nameInput = ref(null);
 const renameTrigger = ref(null);
 let listController;
 let detailController;
+let appendController;
+let commandController;
 let refreshTimer = 0;
 let searchTimer = 0;
 
@@ -73,6 +75,9 @@ function describeError(cause) {
 /** @param {boolean} [silent] */
 async function loadContacts(silent = false) {
   listController?.abort();
+  appendController?.abort();
+  appendController = undefined;
+  loadingMore.value = false;
   const currentController = new AbortController();
   listController = currentController;
   if (!silent) {
@@ -91,6 +96,7 @@ async function loadContacts(silent = false) {
           }
         : { signal: currentController.signal },
     );
+    if (listController !== currentController) return;
     contacts.value = response.data.items;
     totalCount.value = response.data.totalCount;
     nextCursor.value = response.data.nextCursor;
@@ -100,7 +106,7 @@ async function loadContacts(silent = false) {
     if (id) await loadContact(id, silent);
     else detail.value = null;
   } catch (cause) {
-    if (cause?.name !== 'AbortError') {
+    if (listController === currentController && cause?.name !== 'AbortError') {
       error.value = hasLoadedContacts.value
         ? 'Não foi possível atualizar os clientes. Os dados exibidos podem estar desatualizados.'
         : 'Não foi possível carregar os clientes.';
@@ -118,20 +124,30 @@ async function loadMoreContacts() {
   loadingMore.value = true;
   const needle = query.value.trim();
   const cursor = nextCursor.value;
+  const controller = new AbortController();
+  appendController = controller;
   try {
     const response = await request(
       needle
         ? '/api/v1/contacts/search'
         : `/api/v1/contacts?limit=100&cursor=${encodeURIComponent(cursor)}`,
-      needle ? { body: { cursor, limit: 100, q: needle }, method: 'POST' } : {},
+      needle
+        ? {
+            body: { cursor, limit: 100, q: needle },
+            method: 'POST',
+            signal: controller.signal,
+          }
+        : { signal: controller.signal },
     );
-    if (query.value.trim() !== needle) return;
+    if (appendController !== controller || query.value.trim() !== needle)
+      return;
     contacts.value = [...contacts.value, ...response.data.items];
     nextCursor.value = response.data.nextCursor;
-  } catch {
-    error.value = 'Não foi possível carregar mais clientes.';
+  } catch (cause) {
+    if (appendController === controller && cause?.name !== 'AbortError')
+      error.value = 'Não foi possível carregar mais clientes.';
   } finally {
-    loadingMore.value = false;
+    if (appendController === controller) loadingMore.value = false;
   }
 }
 
@@ -152,10 +168,19 @@ async function loadContact(id, silent = false) {
         signal: currentController.signal,
       },
     );
+    if (detailController !== currentController) return;
     detail.value = response.data;
     error.value = '';
   } catch (cause) {
-    if (cause?.name !== 'AbortError') {
+    if (
+      detailController === currentController &&
+      cause?.name !== 'AbortError'
+    ) {
+      if ([403, 404].includes(Number(cause?.status))) {
+        clearPrivateContact();
+        error.value = 'Este cliente não está disponível para seu acesso.';
+        return;
+      }
       error.value =
         silent && detail.value
           ? 'Não foi possível atualizar este cliente. Os dados exibidos podem estar desatualizados.'
@@ -194,17 +219,22 @@ async function openRename() {
 }
 
 async function refreshConflictName() {
-  const contactId = renameBase.value?.contactId;
+  const base = renameBase.value;
+  const contactId = base?.contactId;
   if (!contactId) return;
   try {
     const response = await request(
       `/api/v1/contacts/${encodeURIComponent(contactId)}`,
     );
-    if (renameBase.value?.contactId !== contactId) return;
-    detail.value = response.data;
+    if (renameBase.value !== base) return;
+    detail.value = { ...detail.value, contact: response.data.contact };
     renameCurrentKnown.value = true;
-  } catch {
-    renameCurrentKnown.value = false;
+  } catch (cause) {
+    if (renameBase.value !== base) return;
+    if ([403, 404].includes(Number(cause?.status))) {
+      clearPrivateContact();
+      error.value = 'Este cliente não está disponível para seu acesso.';
+    } else renameCurrentKnown.value = false;
   }
 }
 
@@ -230,6 +260,8 @@ async function saveName() {
   )
     return;
   busy.value = true;
+  const controller = new AbortController();
+  commandController = controller;
   error.value = '';
   actionMessage.value = '';
   try {
@@ -242,8 +274,10 @@ async function saveName() {
           reason: 'Nome do contato ajustado na ficha do cliente',
         },
         method: 'POST',
+        signal: controller.signal,
       },
     );
+    if (renameBase.value !== base || commandController !== controller) return;
     actionMessage.value = 'Nome do contato atualizado.';
     renaming.value = false;
     renameBase.value = null;
@@ -251,7 +285,10 @@ async function saveName() {
     await nextTick();
     renameTrigger.value?.focus();
   } catch (cause) {
-    if (Number(cause?.status) === 409) {
+    if (renameBase.value !== base || commandController !== controller) return;
+    if ([403, 404].includes(Number(cause?.status))) {
+      contactUnavailable();
+    } else if (Number(cause?.status) === 409) {
       renameConflict.value = true;
       await refreshConflictName();
       await nextTick();
@@ -260,7 +297,7 @@ async function saveName() {
       error.value = describeError(cause);
     }
   } finally {
-    busy.value = false;
+    if (commandController === controller) busy.value = false;
   }
 }
 
@@ -273,6 +310,7 @@ async function saveName() {
  */
 function onRegistrationSaved(patch, partial = false) {
   const current = detail.value?.contact;
+  if (current?.id !== patch.id) return;
   if (current?.id === patch.id) {
     const changes = Object.fromEntries(
       Object.entries(patch).filter(([, value]) => value !== undefined),
@@ -293,7 +331,7 @@ function onRegistrationSaved(patch, partial = false) {
 /** @param {Record<string, any>} data */
 function onRegistrationLoaded(data) {
   if (data?.contact?.id && data.contact.id === selected.value?.id)
-    detail.value = data;
+    detail.value = { ...detail.value, contact: data.contact };
 }
 
 /** Collapses bursts of live events into one silent refresh. */
@@ -303,6 +341,64 @@ function scheduleLiveRefresh() {
     refreshTimer = 0;
     void loadContacts(true);
   }, LIVE_REFRESH_DELAY_MS);
+}
+
+/** WAP-T02-07: revoke every cached projection before any asynchronous reread. */
+function clearPrivateContact() {
+  for (const controller of [
+    listController,
+    detailController,
+    appendController,
+    commandController,
+  ])
+    controller?.abort();
+  listController = undefined;
+  detailController = undefined;
+  appendController = undefined;
+  commandController = undefined;
+  contacts.value = [];
+  detail.value = null;
+  totalCount.value = 0;
+  nextCursor.value = null;
+  loading.value = false;
+  loadingMore.value = false;
+  detailLoading.value = false;
+  refreshing.value = false;
+  busy.value = false;
+  renaming.value = false;
+  draftName.value = '';
+  renameBase.value = null;
+  renameConflict.value = false;
+  renameCurrentKnown.value = false;
+  actionMessage.value = '';
+  error.value = '';
+  void nextTick(() => searchInput.value?.focus({ preventScroll: true }));
+}
+
+function contactUnavailable() {
+  clearPrivateContact();
+  error.value = 'Este cliente não está disponível para seu acesso.';
+}
+
+/** A common registration may stay readable after its private channel was revoked.
+ * @param {Record<string, any>} event */
+function invalidateContactRelations(event) {
+  const contactId = event.contactId;
+  if (contactId && contactId !== selected.value?.id) return;
+  listController?.abort();
+  listController = undefined;
+  appendController?.abort();
+  appendController = undefined;
+  detailController?.abort();
+  detailController = undefined;
+  loadingMore.value = false;
+  if (detail.value)
+    detail.value = { ...detail.value, conversations: [], identities: [] };
+  contacts.value = contacts.value.map((contact) =>
+    !contactId || contact.id === contactId
+      ? { ...contact, identities: [] }
+      : contact,
+  );
 }
 
 watch(
@@ -320,9 +416,17 @@ onMounted(() => {
   heading.value?.focus();
   void loadContacts();
 });
-watch(liveEvent, (event) => {
-  if (event) scheduleLiveRefresh();
-});
+watch(
+  liveEvent,
+  (event) => {
+    if (!event) return;
+    if (event.reset) clearPrivateContact();
+    else if (event.type === 'inbox.contact.changed')
+      invalidateContactRelations(event);
+    scheduleLiveRefresh();
+  },
+  { flush: 'sync' },
+);
 watch(query, () => {
   listController?.abort();
   if (searchTimer) globalThis.clearTimeout(searchTimer);
@@ -332,8 +436,7 @@ watch(query, () => {
   }, 300);
 });
 onBeforeUnmount(() => {
-  listController?.abort();
-  detailController?.abort();
+  clearPrivateContact();
   if (searchTimer) globalThis.clearTimeout(searchTimer);
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
 });
@@ -567,6 +670,7 @@ onBeforeUnmount(() => {
             :contact="selected"
             @saved="onRegistrationSaved"
             @loaded="onRegistrationLoaded"
+            @unavailable="contactUnavailable"
           />
 
           <div class="panel-head subsection-heading">

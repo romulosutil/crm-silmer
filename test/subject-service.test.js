@@ -12,13 +12,50 @@ const command = {
   orderId: 'order-from-another-contact',
 };
 
+/** Current human/capability and stable-line locks are independent of each
+ * subject fixture's rows. Personal scope semantics are exercised in real PG.
+ * @param {string} sql @param {any[]} [values] */
+function authority(sql, values = []) {
+  if (
+    sql.includes(
+      'SELECT conversation.provider_account_id, identity.current_contact_id',
+    )
+  )
+    return {
+      rows: [
+        { provider_account_id: 'general', current_contact_id: 'contact-1' },
+      ],
+    };
+  if (
+    sql.includes(
+      'SELECT identity.current_contact_id FROM crm.contact_identities',
+    )
+  )
+    return { rows: [{ current_contact_id: 'contact-1' }] };
+  if (sql.includes('FROM crm.users'))
+    return { rows: [{ id: values[0], disabled_at: null }] };
+  if (sql.includes('FROM crm.user_functions'))
+    return { rows: [{ function_name: 'Vendedor' }] };
+  if (
+    sql.includes('FROM crm.user_capabilities') ||
+    sql.startsWith('SELECT seller_id FROM crm.seller_whatsapp_lines')
+  )
+    return { rows: [] };
+  if (sql.includes('SELECT id FROM crm.contacts'))
+    return { rows: [{ id: 'contact-1' }] };
+  return null;
+}
+
 function serviceWith(/** @type {{closed?: boolean}} */ options = {}) {
   /** @type {string[]} */
   const queries = [];
   const database = {
     /** @param {string} sql */
     async query(sql) {
+      const auth = authority(sql);
+      if (auth) return auth;
       queries.push(sql);
+      if (sql.includes('FROM crm.orders')) return { rows: [] };
       if (sql.includes('FROM crm.subject_commands')) return { rows: [] };
       if (sql.includes('FROM crm.conversations')) {
         return {
@@ -82,6 +119,8 @@ function listService(options) {
   const database = {
     /** @param {string} sql */
     async query(sql) {
+      const auth = authority(sql);
+      if (auth) return auth;
       if (sql.includes('FROM crm.conversations')) {
         return {
           rows: [
@@ -140,7 +179,7 @@ test('CP-12/CP-16: links say who assigned them and only open unlinked reviews as
   const two = await listService({
     subjects: 2,
     reviews: ['message-3'],
-  }).list('conversation-1');
+  }).list('conversation-1', '', seller);
   assert.deepEqual(two.links, [
     { messageId: 'message-1', subjectId: 'subject-1', assignedByKind: 'agent' },
     { messageId: 'message-2', subjectId: 'subject-2', assignedByKind: 'human' },
@@ -149,9 +188,15 @@ test('CP-12/CP-16: links say who assigned them and only open unlinked reviews as
   // UXA-14: one order plus "I also want another" still asks the seller.
   const one = await listService({ subjects: 1, reviews: ['message-3'] }).list(
     'conversation-1',
+    '',
+    seller,
   );
   assert.deepEqual(one.needsSubjectMessageIds, ['message-3']);
-  const none = await listService({ subjects: 3 }).list('conversation-1');
+  const none = await listService({ subjects: 3 }).list(
+    'conversation-1',
+    '',
+    seller,
+  );
   assert.deepEqual(none.needsSubjectMessageIds, []);
 });
 
@@ -162,6 +207,8 @@ function tagService(options) {
   const database = {
     /** @param {string} sql @param {unknown[]} values */
     async query(sql, values = []) {
+      const auth = authority(sql, values);
+      if (auth) return auth;
       queries.push({ sql, values });
       if (sql.includes('FROM crm.subject_commands')) return { rows: [] };
       if (sql.includes('pg_advisory_xact_lock')) return { rows: [] };
@@ -262,6 +309,8 @@ function createService(options = {}) {
   const database = {
     /** @param {string} sql @param {any[]} [params] */
     async query(sql, params = []) {
+      const auth = authority(sql, params);
+      if (auth) return auth;
       queries.push({ sql, params });
       if (sql.includes('FROM crm.subject_commands')) {
         return { rows: options.stored ? [options.stored] : [] };

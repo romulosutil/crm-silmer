@@ -1,6 +1,9 @@
 import { createHmac, randomUUID } from 'node:crypto';
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
-import { appendConversationStreamEvent } from '@crm-silmer/inbox-channels';
+import {
+  appendConversationStreamEvent,
+  lockConversationAccess,
+} from '@crm-silmer/inbox-channels';
 import {
   fingerprintCommand,
   PostgresIdempotencyRecordStore,
@@ -195,6 +198,22 @@ export function createLeadOutcomeRuntime(database, options) {
       : createHmac('sha256', idempotencyKey)
           .update(`lead-outcome-note:${note}`, 'utf8')
           .digest('hex');
+  /** Preserve the existing indistinguishable missing/forbidden response for sellers.
+   * @param {any} client @param {string} conversationId @param {any} actor */
+  async function privateContext(client, conversationId, actor) {
+    try {
+      await lockConversationAccess(client, conversationId, actor?.id);
+    } catch (error) {
+      if (Number(/** @type {any} */ (error)?.statusCode) === 403)
+        throw new LeadOutcomeError(403, 'FORBIDDEN');
+      if (/** @type {any} */ (error)?.code === 'CONVERSATION_NOT_FOUND') {
+        const reader = await lockDashboardReader(client, actor);
+        if (reader.scope !== 'team')
+          throw new LeadOutcomeError(403, 'FORBIDDEN');
+      }
+      throw error;
+    }
+  }
   return Object.freeze({
     /** @param {any} input */
     authorizeRead: (input) => options.access.authorizeRead(input),
@@ -212,6 +231,7 @@ export function createLeadOutcomeRuntime(database, options) {
       const key = leadIdempotencyKey(input.idempotencyKey);
       const now = clock();
       return database.transaction(async (/** @type {any} */ client) => {
+        await privateContext(client, conversationId, input.actor);
         const actor = await lockDashboardReader(
           client,
           input.actor,
@@ -379,6 +399,7 @@ export function createLeadOutcomeRuntime(database, options) {
         'INVALID_REQUEST',
       );
       return database.transaction(async (/** @type {any} */ client) => {
+        await privateContext(client, conversationId, input.actor);
         const reader = await lockDashboardReader(client, input.actor);
         const conversation = (
           await client.query(

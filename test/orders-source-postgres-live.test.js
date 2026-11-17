@@ -1,3 +1,4 @@
+import { readVisibleConversationIds } from './fixtures/order-contexts.js';
 import { createStoreOrderService } from '../modules/orders/src/application/store-order-service.js';
 import { createOrderService } from '../modules/orders/src/application/order-service.js';
 import {
@@ -71,6 +72,7 @@ else
         }),
         conversations: {
           readAssignment: async () => null,
+          readVisibleConversationIds,
           readAssignments: async () => new Map(),
           readLatestMessageStates: async () => new Map(),
           readOrderContexts: async () => new Map(),

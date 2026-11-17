@@ -360,6 +360,7 @@ if (connectionString) {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
       await migrate(pool, { migrations: await loadMigrations() });
+      await seedAttendant(pool);
       const { contacts, inbox } = servicesFor(pool);
       const left = await contacts.resolveInboundIdentity(identityInput(runId));
       const right = await contacts.resolveInboundIdentity(
@@ -594,7 +595,7 @@ if (connectionString) {
       });
       assert.equal(separated.subject.isCurrent, false);
       assert.equal(separated.subject.selectedSource, null);
-      const afterSeparate = await subjects.list(owned.id);
+      const afterSeparate = await subjects.list(owned.id, '', ATTENDANT);
       assert.equal(afterSeparate.currentSubjectId, first.subject.id);
       assert.deepEqual(
         afterSeparate.subjects
@@ -628,9 +629,10 @@ if (connectionString) {
          VALUES ($1, $2, 1, 'subject_ambiguous', now())`,
         [received.message.id, owned.id],
       );
-      assert.deepEqual((await subjects.list(owned.id)).needsSubjectMessageIds, [
-        received.message.id,
-      ]);
+      assert.deepEqual(
+        (await subjects.list(owned.id, '', ATTENDANT)).needsSubjectMessageIds,
+        [received.message.id],
+      );
       const tagged = await subjects.tagMessage({
         actor: ATTENDANT,
         conversationId: owned.id,
@@ -640,7 +642,7 @@ if (connectionString) {
         subjectIds: [first.subject.id, general.subject.id],
       });
       assert.equal(tagged.subjectIds.length, 2);
-      const read = await subjects.list(owned.id);
+      const read = await subjects.list(owned.id, '', ATTENDANT);
       assert.equal(read.subjects.length, 4);
       assert.equal(read.orders.length, 2);
       assert.equal(read.links.length, 2);
@@ -691,7 +693,7 @@ if (connectionString) {
       );
       assert.equal(correction.rows[0].payload.reviewResolved, false);
       assert.deepEqual(
-        (await subjects.list(owned.id)).links.map(
+        (await subjects.list(owned.id, '', ATTENDANT)).links.map(
           (/** @type {{subjectId: string}} */ link) => link.subjectId,
         ),
         [second.subject.id],
@@ -744,7 +746,7 @@ if (connectionString) {
         reason: 'Correlação sintética verificada',
         targetContactId: unrelated.contact.id,
       });
-      const afterCorrelation = await subjects.list(nextOwner.id);
+      const afterCorrelation = await subjects.list(nextOwner.id, '', ATTENDANT);
       assert.equal(
         afterCorrelation.orders.some(
           (/** @type {{id: string}} */ order) =>

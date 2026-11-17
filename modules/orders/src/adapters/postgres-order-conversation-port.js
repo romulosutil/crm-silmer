@@ -105,6 +105,23 @@ export class PostgresOrderConversationPort {
     );
   }
 
+  /** Private chat visibility is independent of commercial ownership.
+   * @param {string[]} conversationIds @param {{id:string}} actor
+   * @returns {Promise<Set<string>>} */
+  async readVisibleConversationIds(conversationIds, actor) {
+    if (!conversationIds.length) return new Set();
+    const result = await this.#database.query(
+      `SELECT conversation.id FROM crm.conversations conversation
+       WHERE conversation.id=ANY($1::text[])
+         AND EXISTS (SELECT 1 FROM crm.users reader JOIN crm.user_functions role ON role.user_id=reader.id
+           WHERE reader.id=$2 AND reader.disabled_at IS NULL AND role.function_name='Vendedor')
+         AND (EXISTS (SELECT 1 FROM crm.user_capabilities WHERE user_id=$2 AND capability='COMMERCIAL_ADMIN')
+           OR ${contactConversationVisible('conversation', '$2')})`,
+      [conversationIds, actor.id],
+    );
+    return new Set(result.rows.map((row) => row.id));
+  }
+
   /**
    * Painel ("Meus pedidos"): the conversations with an order that are
    * assigned to this user now.

@@ -1,5 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {
+  contactConversationVisible,
+  requireSellerClientActor,
+} from '@crm-silmer/contacts';
+import {
   canReadConversation,
   conversationReadScope,
 } from '@crm-silmer/identity-access';
@@ -74,6 +78,37 @@ export class PostgresChatMediaUploadRepository {
   }
   /** @param {any} client @param {any} input */
   async #conversation(client, input, checkState = true) {
+    const actor = await requireSellerClientActor(client, input.actor.id);
+    const source = (
+      await client.query(
+        `SELECT conversation.provider_account_id, identity.current_contact_id
+         FROM crm.conversations conversation JOIN crm.contact_identities identity
+           ON identity.id=conversation.contact_identity_id WHERE conversation.id=$1`,
+        [input.conversationId],
+      )
+    ).rows[0];
+    if (!source) throw error(404);
+    await client.query(
+      'SELECT id FROM crm.seller_whatsapp_lines WHERE account_id::text=$1 FOR SHARE',
+      [source.provider_account_id],
+    );
+    await client.query('SELECT id FROM crm.contacts WHERE id=$1 FOR UPDATE', [
+      source.current_contact_id,
+    ]);
+    const identity = await client.query(
+      `SELECT identity.current_contact_id FROM crm.contact_identities identity
+       JOIN crm.conversations conversation ON conversation.contact_identity_id=identity.id
+       WHERE conversation.id=$1 FOR SHARE OF identity`,
+      [input.conversationId],
+    );
+    if (identity.rows[0]?.current_contact_id !== source.current_contact_id)
+      throw error(409);
+    const visible = await client.query(
+      `SELECT conversation.id FROM crm.conversations conversation WHERE conversation.id=$1
+         AND ($3::boolean OR ${contactConversationVisible('conversation', '$2')})`,
+      [input.conversationId, actor.id, actor.isAdmin],
+    );
+    if (!visible.rows[0]) throw error(403);
     const row = (
       await client.query(
         'SELECT id,version,terminal_at,assigned_user_id FROM crm.conversations WHERE id=$1 FOR UPDATE',
@@ -90,7 +125,7 @@ export class PostgresChatMediaUploadRepository {
     if (
       row.assigned_user_id &&
       row.assigned_user_id !== input.actor.id &&
-      !input.actor.capabilities?.includes('COMMERCIAL_ADMIN')
+      !actor.isAdmin
     )
       throw error(403);
   }
@@ -214,8 +249,12 @@ export class PostgresChatMediaUploadRepository {
         `SELECT media.* FROM crm.chat_media media
          JOIN crm.conversations conversation ON conversation.id=media.conversation_id
          WHERE media.id=$1 AND media.conversation_id=$2
-           AND ($3::boolean OR conversation.assigned_user_id IS NULL
-             OR conversation.assigned_user_id=$4)`,
+           AND EXISTS (SELECT 1 FROM crm.users reader
+             JOIN crm.user_functions role ON role.user_id=reader.id
+             WHERE reader.id=$4 AND reader.disabled_at IS NULL AND role.function_name='Vendedor')
+           AND (($3::boolean AND EXISTS (SELECT 1 FROM crm.user_capabilities
+             WHERE user_id=$4 AND capability='COMMERCIAL_ADMIN'))
+             OR ${contactConversationVisible('conversation', '$4')})`,
         [input.mediaId, input.conversationId, scope.readAll, scope.actorId],
       )
     ).rows[0];
@@ -260,12 +299,12 @@ export class PostgresChatMediaUploadRepository {
           [input.actor.id, input.conversationId, input.idempotencyKey],
         )
       ).rows[0];
+      await this.#conversation(client, input, !existing);
       if (existing) {
         if (existing.request_fingerprint !== input.fingerprint)
           throw error(409);
         return { mediaId: existing.id, duplicate: true };
       }
-      await this.#conversation(client, input);
       await client.query(
         'SELECT bucket_alias FROM crm.chat_media_quotas WHERE bucket_alias=$1 FOR UPDATE',
         [admission.bucket_alias],

@@ -13,7 +13,12 @@ export function contactConversationVisible(conversation, actor) {
     AND NOT EXISTS (SELECT 1 FROM crm.seller_whatsapp_lines personal_line
       WHERE personal_line.account_id::text=${conversation}.provider_account_id
         AND (personal_line.seller_id<>${actor}
-          OR ${conversation}.assigned_user_id IS DISTINCT FROM ${actor})))`;
+          OR ${conversation}.assigned_user_id IS DISTINCT FROM ${actor}
+          OR NOT EXISTS (SELECT 1 FROM crm.contact_identities personal_identity
+            JOIN crm.seller_client_links personal_link
+              ON personal_link.contact_id=personal_identity.current_contact_id
+              AND personal_link.seller_id=${actor} AND personal_link.status='active'
+            WHERE personal_identity.id=${conversation}.contact_identity_id))))`;
 }
 
 /** @param {string} contact @param {string} actor @param {boolean} [walletOnly] */

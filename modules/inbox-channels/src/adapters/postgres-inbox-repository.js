@@ -6,13 +6,18 @@ import {
   randomUUID,
 } from 'node:crypto';
 
-import { InboxConflictError, InboxForbiddenError } from '../domain/errors.js';
+import {
+  InboxConflictError,
+  InboxError,
+  InboxForbiddenError,
+} from '../domain/errors.js';
 import {
   assertConversationMutation,
   assertProductionHumanSend,
   freezeInboxRecord,
   isTerminalInboxState,
 } from '../domain/inbox.js';
+import { lockConversationAccess } from './conversation-access.js';
 
 const ADMIN_CAPABILITY = 'COMMERCIAL_ADMIN';
 
@@ -282,6 +287,26 @@ export class PostgresInboxRepository {
       canonicalCommandValue(JSON.parse(JSON.stringify(semanticInput))),
     );
     return this.#database.transaction(async (transaction) => {
+      const access = await lockConversationAccess(
+        transaction,
+        input.conversationId,
+        input.actor.id,
+      );
+      // Generic ownership commands never implement personal-line succession.
+      // Even an administrator must use the separately approved future command.
+      if (
+        access.personalSellerId &&
+        (kind === 'transfer' ||
+          (kind === 'takeover' && access.personalSellerId !== input.actor.id))
+      )
+        throw new InboxForbiddenError();
+      input = {
+        ...input,
+        actor: {
+          ...input.actor,
+          capabilities: access.actor.isAdmin ? [ADMIN_CAPABILITY] : [],
+        },
+      };
       await advisoryLock(
         transaction,
         `command:${kind}:${input.idempotencyKey}`,
@@ -313,6 +338,15 @@ export class PostgresInboxRepository {
         assertConversationOwnership(kind, current, input.actor);
         return this.#hydrateCommand(transaction, replay.rows[0].result);
       }
+
+      // WAP-E04 receives private human conversations only. Personal transport
+      // reservation/dispatch is a separate E08 capability and stays closed.
+      if (kind === 'send' && access.personalSellerId)
+        throw new InboxError(
+          'Personal WhatsApp sending is unavailable',
+          'WHATSAPP_SEND_UNAVAILABLE',
+          503,
+        );
 
       if (
         kind === 'send' &&

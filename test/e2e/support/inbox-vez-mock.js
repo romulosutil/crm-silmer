@@ -179,6 +179,22 @@ export async function installMocks(page, log = {}, options = {}) {
     if (path === '/api/v1/users/assignable')
       return json({ users: [ME, OTHER] });
     if (path === '/api/v1/orders/summary') return json({ storeNewCount: 0 });
+    // The contact drawer is an authorized auxiliary read of the same thread.
+    // Unspecified 404 fixtures would now correctly invalidate that thread.
+    const contactPath = /^\/api\/v1\/contacts\/([^/]+)$/u.exec(path);
+    if (contactPath && method === 'GET') {
+      const conversation = items.find(
+        (candidate) => candidate.contact.id === contactPath[1],
+      );
+      if (!conversation || !isReadable(conversation))
+        return problem(json, 404, 'CONTACT_NOT_FOUND');
+      return json({
+        contact: conversation.contact,
+        identities: [],
+        conversations: [],
+        deals: [],
+      });
+    }
 
     // Items grouped by the bucket this actor sees (D2), at this instant.
     const asOf = clockNow();

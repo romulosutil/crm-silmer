@@ -254,6 +254,120 @@ function verificationResponse(value, status = 200) {
   };
 }
 
+test('WAP-E04: personal message projection precedes persistence and removes generation credentials and media secrets', async () => {
+  const origin = {
+    bindingId: randomUUID(),
+    lineId: randomUUID(),
+    accountId: randomUUID(),
+    generation: 1,
+  };
+  const path = 'silmer/seller-whatsapp/messages';
+  const instance = 'wap_synthetic_personal';
+  const config = {
+    ...env,
+    SILMER_WAP_INGRESS_PATHS: JSON.stringify({ [path]: 'event' }),
+    SILMER_WAP_INGRESS_INSTANCES: instance,
+  };
+  const raw = {
+    event: 'messages.upsert',
+    instance,
+    source: origin,
+    sender: '5511990000081@s.whatsapp.net',
+    date_time: '2026-11-17T12:00:00.000Z',
+    data: {
+      key: {
+        id: 'SYNTHETIC_IMAGE',
+        fromMe: false,
+        remoteJid: '5511990000082@s.whatsapp.net',
+      },
+      messageTimestamp: 1794916800,
+      pushName: 'Synthetic',
+      message: {
+        imageMessage: {
+          mimetype: 'image/png',
+          caption: 'Sintética',
+          mediaKey: 'synthetic-secret-media',
+          url: 'https://private.invalid/secret',
+          jpegThumbnail: 'private-base64',
+        },
+      },
+    },
+  };
+  const ctx = context({
+    parameters: { path },
+    req: { body: structuredClone(raw) },
+  });
+  const headers = ctx.req.headers;
+  assert.equal(
+    await protectIngress(
+      ctx,
+      config,
+      async (/** @type {string} */ url, /** @type {any} */ request) => {
+        assert.equal(request.headers['x-silmer-wap-generation-token'], token);
+        assert.deepEqual(JSON.parse(request.body), {
+          source: origin,
+          instance,
+          sender: raw.sender,
+        });
+        return verificationResponse({ source: origin, instance });
+      },
+    ),
+    false,
+  );
+  assert.deepEqual(headers, {});
+  assert.deepEqual(ctx.req.body.data.message, {
+    imageMessage: { mimetype: 'image/png', caption: 'Sintética' },
+  });
+  assert.deepEqual(ctx.req.body.source, origin);
+  for (const secret of [
+    token,
+    transportToken,
+    'synthetic-secret-media',
+    'private-base64',
+    'https://private.invalid/secret',
+  ])
+    assert.equal(JSON.stringify(ctx.req).includes(secret), false);
+  for (const malformed of [
+    { ...raw, event: 'qrcode.updated' },
+    { ...raw, instance: 'not_allowlisted' },
+    { ...raw, source: { ...origin, generation: 0 } },
+    { ...raw, sender: 'wrong-number' },
+    {
+      ...raw,
+      data: {
+        ...raw.data,
+        message: { imageMessage: { mimetype: 'image/png' } },
+        messageTimestamp: { low: 1 },
+      },
+    },
+  ]) {
+    const denied = context({
+      parameters: { path },
+      req: { body: structuredClone(malformed) },
+    });
+    assert.equal(
+      await protectIngress(denied, config, async () =>
+        verificationResponse({ source: origin, instance }),
+      ),
+      true,
+    );
+    assert.equal(denied.response.status, 403);
+  }
+  for (const status of [403, 503]) {
+    const denied = context({
+      parameters: { path },
+      req: { body: structuredClone(raw) },
+    });
+    assert.equal(
+      await protectIngress(denied, config, async () =>
+        verificationResponse({}, status),
+      ),
+      true,
+    );
+    assert.equal(denied.response.status, status);
+  }
+});
+
 test('WAP-E01: authenticated challenge output removes credentials and all cached request aliases before persistence', async () => {
   const ctx = context();
   const headerAlias = ctx.req.headers;

@@ -161,6 +161,15 @@ if (connectionString) {
 
       // Pedidos MVP (T20): who must act, why the agent stopped, the order.
       const sellerId = `seller-inbox-${runId}`;
+      const otherReaderId = `reader-other-${runId}`;
+      await pool.query(
+        "INSERT INTO crm.users(id,email,password_hash,name) VALUES($1,$2,'$argon2id$synthetic','Outro leitor sintético')",
+        [otherReaderId, `${otherReaderId}@example.test`],
+      );
+      await pool.query(
+        "INSERT INTO crm.user_functions(user_id,function_name) VALUES($1,'Vendedor')",
+        [otherReaderId],
+      );
       await pool.query(
         `INSERT INTO crm.users (id, email, password_hash, name)
          VALUES ($1, $2, '$argon2id$synthetic', 'Vendedora Inbox')`,
@@ -555,7 +564,7 @@ if (connectionString) {
       await assert.rejects(
         reads.listInbox(
           { workQueue: 'attention', cursor: attention.nextCursor },
-          { actorId: 'another-seller' },
+          { actorId: otherReaderId },
         ),
         { code: 'INVALID_CURSOR' },
       );
@@ -596,7 +605,7 @@ if (connectionString) {
         (
           await reads.listInbox(
             { workQueue: 'closing' },
-            { actorId: 'another-seller' },
+            { actorId: otherReaderId },
           )
         ).totalCount,
         0,
@@ -1118,7 +1127,7 @@ if (connectionString) {
         "INSERT INTO crm.user_capabilities(user_id,capability) VALUES($1,'COMMERCIAL_ADMIN')",
         [adminId],
       );
-      const access = { actorId: sellerId, capabilities: ['COMMERCIAL_ADMIN'] };
+      const access = { actorId: adminId, capabilities: ['COMMERCIAL_ADMIN'] };
       const contactAdminAccess = {
         actorId: adminId,
         capabilities: ['COMMERCIAL_ADMIN'],
@@ -1262,7 +1271,12 @@ if (connectionString) {
         { bucket: 'lost' },
       ]) {
         const administrative = await reads.listInbox(
-          { ...query, limit: 100 },
+          // "Mine" is relative to each actor. The separate Admin must query
+          // this seller explicitly to form the same unrestricted baseline.
+          {
+            ...(query.owner === 'mine' ? { assignedUserId: sellerId } : query),
+            limit: 100,
+          },
           access,
         );
         const visible = await reads.listInbox(

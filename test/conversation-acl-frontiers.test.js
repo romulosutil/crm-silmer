@@ -14,12 +14,46 @@ const seller = {
 };
 const admin = { ...seller, id: 'admin', capabilities: ['COMMERCIAL_ADMIN'] };
 
-/** @param {string|null|undefined} owner */
-function readDatabase(owner) {
+/** Model the current database actor, independently of the request projection.
+ * @param {string} sql @param {any} actor */
+function actorRows(sql, actor) {
+  if (sql.includes('FROM crm.users'))
+    return { rows: [{ id: actor.id, disabled_at: actor.disabledAt ?? null }] };
+  if (sql.includes('FROM crm.user_functions'))
+    return { rows: [{ function_name: actor.functionName }] };
+  if (sql.includes('FROM crm.user_capabilities'))
+    return {
+      rows: actor.capabilities.includes('COMMERCIAL_ADMIN') ? [{}] : [],
+    };
+  return null;
+}
+
+/** @param {string|null|undefined} owner @param {any} [actor] */
+function readDatabase(owner, actor = seller) {
   /** @type {string[]} */ const calls = [];
   const database = {
     async query(/** @type {string} */ sql) {
       calls.push(sql);
+      const user = actorRows(sql, actor);
+      if (user) return user;
+      if (sql.includes('SELECT identity.current_contact_id'))
+        return { rows: [{ current_contact_id: 'contact' }] };
+      if (
+        /FROM crm.conversation_subjects|FROM crm.orders|FROM crm.order_assistance/u.test(
+          sql,
+        )
+      )
+        return { rows: [] };
+      if (sql.startsWith('SELECT conversation.id FROM crm.conversations'))
+        return {
+          rows:
+            owner !== undefined &&
+            (owner === null ||
+              owner === actor.id ||
+              actor.capabilities.includes('COMMERCIAL_ADMIN'))
+              ? [{ id: 'conversation' }]
+              : [],
+        };
       if (sql.includes('FROM crm.conversations')) {
         return {
           rows:
@@ -27,6 +61,9 @@ function readDatabase(owner) {
               ? []
               : [
                   {
+                    id: 'conversation',
+                    current_contact_id: 'contact',
+                    provider_account_id: 'general',
                     assigned_user_id: owner,
                     contact_id: 'contact',
                     contact_identity_id: 'identity',
@@ -51,15 +88,15 @@ for (const [actor, owner] of /** @type {Array<[any,string|null]>} */ ([
   [admin, 'other-seller'],
 ])) {
   test(`CONV-ACL-01: subjects and purchase suggestions remain readable for ${actor.id} with owner ${owner}`, async () => {
-    const subjects = readDatabase(owner);
+    const subjects = readDatabase(owner, actor);
     const result = await createSubjectApiRuntime(subjects.database, {}).list(
       'conversation',
       '',
       actor,
     );
     assert.deepEqual(result.subjects, []);
-    assert.match(subjects.calls[0], /FOR SHARE/u);
-    const assistance = readDatabase(owner);
+    assert.match(subjects.calls[0], /FROM crm.users.*FOR UPDATE/u);
+    const assistance = readDatabase(owner, actor);
     const repository = new PostgresOrderAssistanceRepository({
       database: assistance.database,
       envelopeKey: Buffer.alloc(32, 1),
@@ -79,17 +116,22 @@ for (const actor of [
   { ...seller, disabledAt: '2026-11-01T00:00:00Z' },
 ]) {
   test(`CONV-ACL-01: denied ${actor.functionName} cannot read subject evidence or purchase suggestions`, async () => {
-    const subjects = readDatabase('other-seller');
+    const subjects = readDatabase('other-seller', actor);
     await assert.rejects(
       createSubjectApiRuntime(subjects.database, {}).list(
         'conversation',
         '',
         actor,
       ),
-      { statusCode: 403, code: 'FORBIDDEN' },
+      { statusCode: 403 },
     );
-    assert.equal(subjects.calls.length, 1);
-    const assistance = readDatabase('other-seller');
+    assert.equal(
+      subjects.calls.some((sql) =>
+        /FROM crm.conversation_subjects|FROM crm.orders/u.test(sql),
+      ),
+      false,
+    );
+    const assistance = readDatabase('other-seller', actor);
     const repository = new PostgresOrderAssistanceRepository({
       database: assistance.database,
       envelopeKey: Buffer.alloc(32, 1),
@@ -97,9 +139,12 @@ for (const actor of [
     });
     await assert.rejects(
       repository.list({ conversationId: 'conversation', actor }),
-      { statusCode: 403, code: 'FORBIDDEN' },
+      { statusCode: 403 },
     );
-    assert.equal(assistance.calls.length, 1);
+    assert.equal(
+      assistance.calls.some((sql) => /FROM crm.order_assistance/u.test(sql)),
+      false,
+    );
   });
 }
 
@@ -109,7 +154,12 @@ test('CONV-ACL-01: missing subject conversation returns no evidence', async () =
     createSubjectApiRuntime(database, {}).list('missing', '', seller),
     { statusCode: 404, code: 'CONVERSATION_NOT_FOUND' },
   );
-  assert.equal(calls.length, 1);
+  assert.equal(
+    calls.some((sql) =>
+      /FROM crm.conversation_subjects|FROM crm.orders/u.test(sql),
+    ),
+    false,
+  );
 });
 
 test('CONV-ACL-01: a stale unclaimed handoff cannot steal another seller conversation', async () => {
@@ -117,6 +167,16 @@ test('CONV-ACL-01: a stale unclaimed handoff cannot steal another seller convers
   const database = {
     async query(/** @type {string} */ sql) {
       calls.push(sql);
+      const user = actorRows(sql, seller);
+      if (user) return user;
+      if (sql.includes('SELECT identity.current_contact_id'))
+        return { rows: [{ current_contact_id: 'contact' }] };
+      if (
+        sql.includes('FROM crm.seller_whatsapp_lines') ||
+        sql.includes('SELECT id FROM crm.contacts')
+      )
+        return { rows: [] };
+      if (sql.includes('$3::boolean')) return { rows: [] };
       if (sql.includes('INSERT INTO crm.idempotency_records'))
         return { rows: [{ inserted: true }] };
       if (sql.includes('SELECT conversation_id FROM crm.handoffs'))
@@ -126,6 +186,8 @@ test('CONV-ACL-01: a stale unclaimed handoff cannot steal another seller convers
           rows: [
             {
               id: 'conversation',
+              current_contact_id: 'contact',
+              provider_account_id: 'general',
               assigned_user_id: 'other-seller',
               automation_state: 'human',
               terminal_at: null,
@@ -184,6 +246,11 @@ for (const kind of ['send', 'takeover', 'transfer']) {
     const database = {
       async query(/** @type {string} */ sql) {
         calls.push(sql);
+        const user = actorRows(sql, seller);
+        if (user) return user;
+        if (sql.includes('SELECT identity.current_contact_id'))
+          return { rows: [{ current_contact_id: 'contact' }] };
+        if (sql.includes('$3::boolean')) return { rows: [] };
         if (sql.includes('FROM crm.inbox_commands'))
           return {
             rows: [
@@ -194,7 +261,15 @@ for (const kind of ['send', 'takeover', 'transfer']) {
             ],
           };
         if (sql.includes('FROM crm.conversations'))
-          return { rows: [{ assigned_user_id: 'new-owner' }] };
+          return {
+            rows: [
+              {
+                assigned_user_id: 'new-owner',
+                current_contact_id: 'contact',
+                provider_account_id: 'general',
+              },
+            ],
+          };
         if (sql.includes('FROM crm.messages'))
           throw new Error('Receipt exposed message content');
         return { rows: [] };
@@ -216,6 +291,6 @@ for (const kind of ['send', 'takeover', 'transfer']) {
       calls.some((sql) => sql.includes('FROM crm.messages')),
       false,
     );
-    assert.match(calls.at(-1) ?? '', /FOR SHARE/u);
+    assert.match(calls.at(-1) ?? '', /seller_client_links/u);
   });
 }

@@ -171,6 +171,12 @@ if (connectionString) {
     await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
     await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
     await migrate(pool, { migrations: await loadMigrations() });
+    await pool.query(
+      `INSERT INTO crm.users(id,email,password_hash,name) VALUES('reader-synthetic','reader-synthetic@example.test','$argon2id$synthetic','Synthetic reader')`,
+    );
+    await pool.query(
+      `INSERT INTO crm.user_functions(user_id,function_name) VALUES('reader-synthetic','Vendedor')`,
+    );
     const first = await image('101');
     const replay = await integration.storeAttachment(first.input);
     assert.equal(replay.duplicate, true);

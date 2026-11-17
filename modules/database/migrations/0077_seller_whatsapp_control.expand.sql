@@ -250,6 +250,7 @@ BEGIN
       ADD CONSTRAINT outbox_jobs_type_check CHECK ((%s) OR job_type IN ('whatsapp.control.deliver','whatsapp.control.reconcile')),
       ADD CONSTRAINT outbox_jobs_target_check CHECK ((whatsapp_operation_id IS NULL AND whatsapp_action IS NULL AND (%s))
         OR (job_type IN ('whatsapp.control.deliver','whatsapp.control.reconcile') AND whatsapp_operation_id IS NOT NULL
+          AND whatsapp_action IS NOT NULL
           AND channel_event_id IS NULL AND transient_media_id IS NULL AND message_id IS NULL AND n8n_command_id IS NULL
           AND chat_media_id IS NULL AND olist_export_id IS NULL AND deletion_reason IS NULL AND queue='whatsapp_control'
           AND ((job_type='whatsapp.control.deliver' AND whatsapp_action IN ('connect','disconnect') AND effect_policy='manual' AND max_attempts=1)

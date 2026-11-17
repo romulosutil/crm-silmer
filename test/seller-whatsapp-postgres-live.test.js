@@ -1089,6 +1089,22 @@ if (!url) {
               [current.line.id],
             ),
           );
+          // PostgreSQL CHECK accepts NULL, so the target guard must explicitly
+          // require an action for both personal-control job types.
+          for (const [jobType, policy, attempts] of [
+            ['whatsapp.control.deliver', 'manual', 1],
+            ['whatsapp.control.reconcile', 'queryable', 8],
+          ])
+            await assert.rejects(
+              pool.query(
+                `INSERT INTO crm.outbox_jobs
+                  (id,job_type,idempotency_key,queue,effect_policy,max_attempts,
+                   whatsapp_operation_id,whatsapp_action,available_at,created_at,updated_at)
+                 VALUES($1,$2,$1,'whatsapp_control',$3,$4,$5,NULL,now(),now(),now())`,
+                [randomUUID(), jobType, policy, attempts, current.operation.id],
+              ),
+              { code: '23514', constraint: 'outbox_jobs_target_check' },
+            );
           const pending = await challenge(current);
           await repository.reserveChallenge(pending);
           now = new Date(now.getTime() + 31_000);

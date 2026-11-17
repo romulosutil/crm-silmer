@@ -121,6 +121,15 @@ financeiro. Prova local não homologa provedor/produção. Rollback desliga a no
 fronteira e conserva expansão/vínculos/isolamento/histórico/motivos; exige SHA
 compatível com a política pessoal. E04 e demais entregas não foram iniciadas.
 
+Complemento de CI do [PR 396](https://github.com/romulosutil/crm-silmer/pull/396),
+17/11/2026: a execução `44063976315` aprovou estática/E2E e os testes novos
+de carteira, mas reprovou `order-billing-upgrade-postgres-live` porque a lista
+exata de migrações esperadas ainda terminava em 0077. Falha reproduzida em
+PostgreSQL local real; acrescentada somente 0078 à expectativa, mantendo as
+assertions de histórico, jobs Olist/cobrança, constraints e reaplicação vazia.
+Esse teste e `seller-client-links-postgres-live` passaram **9/9, zero skips**.
+A nova execução do CI acompanha o commit corretivo no mesmo PR.
+
 ### Evidência WAP-E02 / WAP-T01-02/03/04 — backend e controle desligados
 
 Entrega implementada em 16/11/2026 sobre `origin/master` `7d032732`, com o gate

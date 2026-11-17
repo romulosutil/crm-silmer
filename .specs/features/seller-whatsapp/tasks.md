@@ -42,7 +42,7 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 | ----------- | -------------------------------------------------------------------------------- | ------------ | --------------- | ---------------------------------------------- |
 | [ ] WAP-E01 | [Provar viabilidade do provedor e privacidade](PROMPTS.md#wap-e01)               | Sol/Opus     | Base documental | WAP-T01-01                                     |
 | [x] WAP-E02 | [Entregar conexão pessoal no backend e n8n](PROMPTS.md#wap-e02)                  | Sol/Opus     | WAP-E01         | WAP-T01-02, WAP-T01-03, WAP-T01-04             |
-| [ ] WAP-E03 | [Entregar carteira e cadastro compartilhado no servidor](PROMPTS.md#wap-e03)     | Sol/Opus     | WAP-E02         | WAP-T02-01, WAP-T02-02, WAP-T02-03, WAP-T02-04 |
+| [x] WAP-E03 | [Entregar carteira e cadastro compartilhado no servidor](PROMPTS.md#wap-e03)     | Sol/Opus     | WAP-E02         | WAP-T02-01, WAP-T02-02, WAP-T02-03, WAP-T02-04 |
 | [ ] WAP-E04 | [Receber atendimento humano com isolamento ponta a ponta](PROMPTS.md#wap-e04)    | Sol/Opus     | WAP-E03         | WAP-T02-05, WAP-T02-06, WAP-T02-07             |
 | [ ] WAP-E05 | [Criar Pedido por Assunto com compatibilidade transacional](PROMPTS.md#wap-e05)  | Sol/Opus     | WAP-E04         | WAP-T02a-01, WAP-T02a-02, WAP-T02a-03          |
 | [ ] WAP-E06 | [Entregar a interface mínima de Pedido pela conversa](PROMPTS.md#wap-e06)        | Terra/Sonnet | WAP-E05         | WAP-T02a-04                                    |
@@ -54,6 +54,72 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 | [ ] WAP-E12 | [Homologar o piloto real da etapa 1](PROMPTS.md#wap-e12)                         | Sol/Opus     | WAP-E11         | WAP-T05-05, WAP-T05-06, WAP-T05-07             |
 
 ## Mapa de rastreabilidade dos 32 itens internos
+
+### Evidência WAP-E03 / WAP-T02-01–04 — carteira e cadastro no servidor
+
+Entrega em 17/11/2026 sobre `origin/master` `72b04055`, com WAP-E02
+integrado. WAP-06/07/08/18/20/21/24–30; ADRs 090/091.
+[Contrato e rollout/rollback](../../../docs/runbooks/seller-clients.md),
+[OpenAPI](../../../docs/api/openapi.v1.yaml). SHA/PR no handoff da entrega.
+
+- Expansão 0078: par vendedor/Contact único e independente da linha, proveniência
+  imutável, revogação/reativação versionada, histórico e versão de escopo.
+  `wallet_created` preserva o universo legado sem publicar cadastros pessoais
+  após revogação ou movimento da última identidade. Nenhum backfill inferido.
+- GET/POST `/me/clients` e POST `/me/clients/:contactId/link`: default off,
+  allowlist própria, sessão/origem/CSRF/idempotência atuais. Contact+vínculo
+  atômicos; seleção mantém o ID; replay reautoriza. Sem criar identidade,
+  conversa, Pedido, envio ou concessão comercial. Colisão privada é genérica.
+- Escritores oficiais de nome/detalhes/registro e merge/unmerge revalidam
+  autoridade/acesso/CAS dentro da transação. Locks: usuário → advisory de
+  telefone, se aplicável → Contacts ordenados → identidade/vínculo → ledger.
+  Provas concorrentes cobrem segundo vínculo, edição, revogação, replay e
+  leitura Olist, sem deadlock. Comuns/fiscal vazio permitidos; CPF/CNPJ/tipo
+  preenchidos e telefone compartilhado usam Admin/conferência/motivo cifrado.
+  Reenviar restrito igual não bloqueia comum; fallback privado não vira principal.
+- Escopo antes de busca/cursor/count, em Clientes geral, carteira, detalhes,
+  identidades e eventos de Contact. Cursores vinculam leitor/modo/versão;
+  histórico, phone lookup e completude não revelam outra linha. Snapshots
+  confirmados ficam byte a byte intactos; nome pendente segue o Contact e
+  versões invalidam preparações sem redirecionar reservas iniciadas.
+- Reconciliação interna default dry-run, contagens sem PII, somente atribuição
+  comercial comprovada e allowlist; revalida prova ao aplicar e não ressuscita
+  revogados. CLI local comprovou `{"dryRun":true,"candidates":0,"linked":0}`;
+  aplicação/repetição/corrida de prova foram verificadas em dados sintéticos.
+
+Verificação em Node 24.20.0/npm 11.19.0 e PostgreSQL 18.6 portátil dedicado
+em loopback (Docker/WSL indisponíveis no host):
+
+- `npm ci`, `npm run test:database` (15 aprovados), comandos focais da
+  solicitação consolidados com testes novos e de contrato/eventos.
+- 35 testes PostgreSQL novos nas três suítes `seller-client-links`,
+  `seller-clients` e `seller-client-identity`; rodada serial com migrações,
+  cadastro/leituras/Inbox/Pedidos/Olist e regressão E02: **162 aprovados, zero
+  skips**. Duas fixtures legadas foram adequadas a campos de evento e Admin
+  real; apenas essas duas suítes foram repetidas e passaram 2/2.
+- `npm run validate`: **2.853 aprovados, 58 skips condicionais, zero falhas**;
+  build aprovado. As três suítes PG novas foram executadas separadamente sem
+  skips. `npm audit --audit-level=high` e `npm audit --omit=dev --audit-level=high`:
+  **zero vulnerabilidades**.
+- `npm run test:e2e -- --workers=2`: 1.055 aprovados/sete skips legados e seis
+  falhas com página 404 durante o rebuild concorrente do `validate`. Sem mudar
+  assertions/UI, `--last-failed --workers=2` passou **6/6** após cessar o rebuild:
+  cobertura final de **1.061 cenários aprovados**. Sem build concorrente nos
+  próximos gates. Criar pedido de `d7537b3c` foi preservado e seu cenário passou.
+- `git diff --check`, formatação e checks focais finais aprovados. Nenhuma
+  alteração de frontend; componentes, teclado/foco/mobile/axe do CRM foram
+  exercitados pelo E2E vigente. Recursos PostgreSQL temporários encerrados.
+
+Fora da fronteira inicial somente o necessário para a mesma entrega: contratos
+OpenAPI/runbook/tarefas, CLI de rollout e job PostgreSQL existente do CI; busca
+lateral de Pedido e seleção de telefone Olist recebem o filtro de identidade
+pessoal para impedir que a ACL comercial exponha canal alheio. Fixtures
+legadas refletem a nova autoridade/metadados sem enfraquecer assertions.
+
+Sem publicação de workflow, pareamento, flag real, mensagem a cliente ou efeito
+financeiro. Prova local não homologa provedor/produção. Rollback desliga a nova
+fronteira e conserva expansão/vínculos/isolamento/histórico/motivos; exige SHA
+compatível com a política pessoal. E04 e demais entregas não foram iniciadas.
 
 ### Evidência WAP-E02 / WAP-T01-02/03/04 — backend e controle desligados
 
@@ -158,10 +224,10 @@ inicial de sessões/PRs por T.
 | --------------- | -------------------------------------------------------- | ----------------------------- | --------------------------------- |
 | [ ] WAP-T01-01  | Provar controle, código mobile e privacidade do provedor | [WAP-E01](PROMPTS.md#wap-e01) | WAP-02/03/04/10/12                |
 | [x] WAP-T01-02  | Persistir linha pessoal e ledger de controle             | [WAP-E02](PROMPTS.md#wap-e02) | WAP-02/04/10/11/12                |
-| [ ] WAP-T02-01  | Persistir vínculo durável de carteira                    | [WAP-E03](PROMPTS.md#wap-e03) | WAP-06/08/18/20/21/24/29          |
-| [ ] WAP-T02-02  | Aplicar escrita compartilhada por campo                  | [WAP-E03](PROMPTS.md#wap-e03) | WAP-25/26/27/28/29/30             |
-| [ ] WAP-T02-03  | Isolar leituras de Clientes e projeções comuns           | [WAP-E03](PROMPTS.md#wap-e03) | WAP-07/08/20/21/24/28             |
-| [ ] WAP-T02-04  | Compor cadastro e vínculo de Cliente                     | [WAP-E03](PROMPTS.md#wap-e03) | WAP-18/20/21/24/29                |
+| [x] WAP-T02-01  | Persistir vínculo durável de carteira                    | [WAP-E03](PROMPTS.md#wap-e03) | WAP-06/08/18/20/21/24/29          |
+| [x] WAP-T02-02  | Aplicar escrita compartilhada por campo                  | [WAP-E03](PROMPTS.md#wap-e03) | WAP-25/26/27/28/29/30             |
+| [x] WAP-T02-03  | Isolar leituras de Clientes e projeções comuns           | [WAP-E03](PROMPTS.md#wap-e03) | WAP-07/08/20/21/24/28             |
+| [x] WAP-T02-04  | Compor cadastro e vínculo de Cliente                     | [WAP-E03](PROMPTS.md#wap-e03) | WAP-18/20/21/24/29                |
 | [x] WAP-T01-03  | Expor comandos e estado de controle pessoal              | [WAP-E02](PROMPTS.md#wap-e02) | WAP-01/02/03/04/10/11/12          |
 | [x] WAP-T01-04  | Conectar controle n8n e desafio efêmero                  | [WAP-E02](PROMPTS.md#wap-e02) | WAP-02/03/04/10/11/12             |
 | [ ] WAP-T02-05  | Receber na linha pessoal com atribuição humana atômica   | [WAP-E04](PROMPTS.md#wap-e04) | WAP-04/05/06/08/10/20/21/32       |

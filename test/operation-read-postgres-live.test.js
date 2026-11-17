@@ -1105,7 +1105,24 @@ if (connectionString) {
         [archivedFailure, NOW],
       );
       const urgencyInput = { sort: 'urgency', limit: 100 };
+      const adminId = `read-admin-${runId}`;
+      await pool.query(
+        `INSERT INTO crm.users(id,email,password_hash,name) VALUES($1,$2,'$argon2id$synthetic','Admin sintetico')`,
+        [adminId, `${adminId}@example.test`],
+      );
+      await pool.query(
+        "INSERT INTO crm.user_functions(user_id,function_name) VALUES($1,'Vendedor')",
+        [adminId],
+      );
+      await pool.query(
+        "INSERT INTO crm.user_capabilities(user_id,capability) VALUES($1,'COMMERCIAL_ADMIN')",
+        [adminId],
+      );
       const access = { actorId: sellerId, capabilities: ['COMMERCIAL_ADMIN'] };
+      const contactAdminAccess = {
+        actorId: adminId,
+        capabilities: ['COMMERCIAL_ADMIN'],
+      };
       const ranked = await reads.listInbox(urgencyInput, access);
       const expectedRanked = [
         delivery,
@@ -1350,7 +1367,7 @@ if (connectionString) {
       );
       const administrativeContacts = await reads.listContacts(
         { limit: 100 },
-        access,
+        contactAdminAccess,
       );
       assert.notEqual(
         administrativeContacts.items.find(

@@ -8,6 +8,7 @@ import {
   decryptContactDetails,
   decryptContactRegistration,
   normalizeContactPhone,
+  personalIdentityVisible,
 } from '@crm-silmer/contacts';
 import {
   lockOlistActor,
@@ -129,8 +130,14 @@ export function createOlistPreview(database, options) {
           );
           buyerIdentities = (
             await tx.query(
-              "SELECT id,channel,identity_kind,phone_status,external_identity_lookup_hash,identity_envelope FROM crm.contact_identities WHERE current_contact_id=$1 AND channel='whatsapp' AND identity_kind='phone' AND phone_status='confirmed' ORDER BY created_at,id LIMIT 101 FOR SHARE",
-              [contact.id],
+              `SELECT id,channel,identity_kind,phone_status,external_identity_lookup_hash,identity_envelope FROM crm.contact_identities WHERE current_contact_id=$1 AND channel='whatsapp' AND identity_kind='phone' AND phone_status='confirmed'
+                AND ($2::text IS NULL OR ${personalIdentityVisible('crm.contact_identities', '$2')}) ORDER BY created_at,id LIMIT 101 FOR SHARE`,
+              [
+                contact.id,
+                actor.capabilities.includes('COMMERCIAL_ADMIN')
+                  ? null
+                  : actor.id,
+              ],
             )
           ).rows;
           if (buyerIdentities.length > 100)

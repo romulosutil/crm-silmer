@@ -15,6 +15,16 @@ import {
   contactPhoneHash,
   decryptContactIdentityEnvelope,
   decryptContactDetails,
+  decryptContactRegistration,
+  requireSellerClientActor,
+  lockSellerClientContact,
+  setSellerClientLink,
+  planSellerClientReconciliation,
+  authorizeContactWrite,
+  contactIsShared,
+  personalIdentityVisible,
+  contactConversationVisible,
+  encryptContactReview,
   encryptContactDetails,
   encryptContactRegistration,
   normalizeContactEmail,
@@ -272,7 +282,7 @@ export function createOperationReadService({
     },
     /** @param {any} input @param {{actorId?: string, capabilities?: readonly string[]}} [access] */
     async listContacts(input = {}, access = {}) {
-      rejectUnknownKeys(input, ['cursor', 'limit', 'q']);
+      rejectUnknownKeys(input, ['cursor', 'limit', 'q', 'walletOnly']);
       const q = input.q === undefined ? '' : String(input.q).trim();
       if (
         q.length > 120 ||
@@ -282,18 +292,34 @@ export function createOperationReadService({
       }
       const limit = readLimit(input.limit);
       const filters = q ? { q } : {};
+      const reader = {
+        ...readerFor(access),
+        ...(input.walletOnly
+          ? { walletSellerId: requireId(access.actorId, 'ACTOR_ID') }
+          : {}),
+      };
+      const scopeVersion = contactRepository.scopeVersion
+        ? await contactRepository.scopeVersion(reader)
+        : '0';
+      const fingerprint = filterFingerprint({
+        ...filters,
+        actorId: access.actorId ?? null,
+        readAll: !reader.visibilityActorId,
+        walletOnly: Boolean(input.walletOnly),
+        scopeVersion,
+      });
       const after = readCursor(input.cursor, {
         cursorKey,
-        fingerprint: filterFingerprint(filters),
+        fingerprint,
         scope: 'contacts',
       });
       const result = await contactRepository.list(
         { after, limit, ...filters },
-        readerFor(access),
+        reader,
       );
       return pageResponse(result, {
         cursorKey,
-        fingerprint: filterFingerprint(filters),
+        fingerprint,
         scope: 'contacts',
       });
     },
@@ -493,8 +519,16 @@ export function createOperationReadService({
         return event;
       const reset = { cursor: event.cursor, type: 'stream.reset', payload: {} };
       const conversationId = event.payload?.conversationId;
-      if (!actor?.id || !conversationId) return reset;
+      const contactId = event.payload?.contactId;
+      if (!actor?.id || (!conversationId && !contactId)) return reset;
       try {
+        if (contactId) {
+          await contactRepository.get(
+            contactId,
+            readerFor({ actorId: actor.id, capabilities: actor.capabilities }),
+          );
+          return event;
+        }
         await inboxRepository.assertReadable(
           conversationId,
           readerFor({ actorId: actor.id, capabilities: actor.capabilities }),
@@ -522,7 +556,7 @@ export function createOperationReadService({
         `SELECT stream_cursor, aggregate_type, aggregate_id, payload
          FROM crm.domain_events
          WHERE stream_cursor > $1
-           AND aggregate_type IN ('contact', 'conversation', 'order', 'user')
+           AND aggregate_type IN ('contact', 'seller_client_link', 'conversation', 'order', 'user')
          ORDER BY stream_cursor LIMIT 101`,
         [after],
       );
@@ -534,7 +568,7 @@ export function createOperationReadService({
           `SELECT max(stream_cursor) cursor
            FROM crm.domain_events
            WHERE stream_cursor > $1
-             AND aggregate_type IN ('contact', 'conversation', 'order', 'user')`,
+             AND aggregate_type IN ('contact', 'seller_client_link', 'conversation', 'order', 'user')`,
           [after],
         );
         return Object.freeze({
@@ -625,6 +659,7 @@ export function createOperationReadRuntime(database, options = {}) {
   const stallMinutes = readAssistantStallMinutes(
     environment.ASSISTANT_STALL_MINUTES,
   );
+  const clientsConfig = sellerClientsConfiguration(environment);
   const service = createOperationReadService({
     countStalled: (now) =>
       countStalledConversations(database, now, stallMinutes),
@@ -675,12 +710,13 @@ export function createOperationReadRuntime(database, options = {}) {
    * CP-26 also needs celular and e-mail, resolved as the Contact read does:
    * e-mail only from the details envelope; celular from it, from a confirmed
    * WhatsApp identity or from a site declaration.
-   * @param {any} transaction @param {string} contactId @param {unknown} detailsEnvelope
+   * @param {any} transaction @param {string} contactId @param {unknown} detailsEnvelope @param {{id:string,isAdmin:boolean}} actor
    */
   async function hasRegistrationContactData(
     transaction,
     contactId,
     detailsEnvelope,
+    actor,
   ) {
     const details = decryptContactDetails(detailsEnvelope, contactKey);
     if (!details.email) return false;
@@ -690,6 +726,7 @@ export function createOperationReadRuntime(database, options = {}) {
          SELECT 1 FROM crm.contact_identities
          WHERE current_contact_id = $1 AND channel = 'whatsapp'
            AND identity_kind = 'phone' AND phone_status = 'confirmed'
+           AND ($2::text IS NULL OR ${personalIdentityVisible('crm.contact_identities', '$2')})
          UNION ALL
          SELECT 1 FROM crm.site_contact_claims claim
          JOIN crm.conversations conversation
@@ -697,17 +734,171 @@ export function createOperationReadRuntime(database, options = {}) {
          JOIN crm.contact_identities identity
            ON identity.id = conversation.contact_identity_id
          WHERE identity.current_contact_id = $1
+           AND ($2::text IS NULL OR ${contactConversationVisible('conversation', '$2')})
        ) AS found`,
-      [contactId],
+      [contactId, actor.isAdmin ? null : actor.id],
     );
     return phone.rows[0]?.found === true;
   }
 
+  /** @param {any} input */
+  function portfolioGuard(input) {
+    if (!clientsConfig.enabled)
+      throw new OperationReadError(503, 'SELLER_CLIENTS_DISABLED');
+    const actorId = input?.actorId ?? input?.actor?.id;
+    if (!clientsConfig.sellerIds.includes(actorId))
+      throw new OperationReadError(403, 'FORBIDDEN');
+  }
+  /** Lock user first, Contact next, then apply current visibility on every replay.
+   * @param {any} transaction @param {any} input */
+  async function writableContact(transaction, input) {
+    const actor = await requireSellerClientActor(transaction, input.actor.id);
+    const current = await lockSellerClientContact(transaction, input.contactId);
+    await authorizeContactWrite(transaction, actor, input.contactId);
+    return { actor, current };
+  }
+  /** @param {any} transaction @param {any} input @param {number} version @param {string|undefined} reason */
+  async function saveReview(transaction, input, version, reason) {
+    if (!reason) return;
+    await transaction.query(
+      `INSERT INTO crm.contact_change_reviews
+      (contact_id,contact_version,actor_id,reason_envelope,created_at)
+      VALUES($1,$2,$3,$4::jsonb,now())`,
+      [
+        input.contactId,
+        version,
+        input.actor.id,
+        JSON.stringify(
+          encryptContactReview(reason, input.contactId, version, contactKey),
+        ),
+      ],
+    );
+  }
+
   return Object.freeze({
     ...service,
+    /** Internal rollout only: counts, no PII and no phone/creator inference.
+     * @param {{actor:{id:string},apply?:boolean,correlationId:string}} input */
+    async reconcileSellerClients(input) {
+      portfolioGuard(input);
+      const plan = await database.transaction(async (/** @type {any} */ tx) => {
+        const actor = await requireSellerClientActor(tx, input.actor.id);
+        if (!actor.isAdmin) throw new OperationReadError(403, 'FORBIDDEN');
+        return planSellerClientReconciliation(tx, clientsConfig.sellerIds);
+      });
+      if (!input.apply)
+        return { dryRun: true, candidates: plan.count, linked: 0 };
+      let linked = 0;
+      for (const candidate of plan.candidates) {
+        await database.transaction(async (/** @type {any} */ tx) => {
+          let actor;
+          for (const id of [
+            ...new Set([input.actor.id, candidate.sellerId]),
+          ].sort()) {
+            const current = await requireSellerClientActor(tx, id);
+            if (id === input.actor.id) actor = current;
+          }
+          if (!actor?.isAdmin) throw new OperationReadError(403, 'FORBIDDEN');
+          await lockSellerClientContact(tx, candidate.contactId);
+          const result = await setSellerClientLink(
+            tx,
+            {
+              actor,
+              sellerId: candidate.sellerId,
+              contactId: candidate.contactId,
+              provenance: 'commercial_order',
+              sourceId: candidate.sourceId,
+              correlationId: input.correlationId,
+            },
+            auditPort,
+          );
+          if (result.changed) linked++;
+        });
+      }
+      return { dryRun: false, candidates: plan.count, linked };
+    },
+    /** @param {any} input @param {any} access */
+    async listMyClients(input, access) {
+      portfolioGuard(access);
+      // Current account authority is checked even without a configured line.
+      await database.transaction(async (/** @type {any} */ tx) =>
+        requireSellerClientActor(tx, access.actorId),
+      );
+      return service.listContacts({ ...input, walletOnly: true }, access);
+    },
+    /** @param {any} input */
+    async createMyClient(input) {
+      portfolioGuard(input);
+      return this.createContact({ ...input, portfolio: true });
+    },
+    /** @param {any} input */
+    async linkMyClient(input) {
+      portfolioGuard(input);
+      const contactId = requireId(input.contactId, 'CONTACT_ID');
+      const expectedVersion = Number(input.expectedVersion);
+      if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1)
+        throw new OperationReadError(400, 'INVALID_REQUEST');
+      const key = requireId(input.idempotencyKey, 'IDEMPOTENCY_KEY');
+      /** @type {any} */
+      let authority;
+      const result = await contactDetailsIdempotency.execute(
+        {
+          scope: 'contact.portfolio.link',
+          key,
+          fingerprint: createHmac('sha256', contactLookupKey)
+            .update(
+              JSON.stringify({
+                actorId: input.actor.id,
+                contactId,
+                expectedVersion,
+                expectedLinkVersion: input.expectedLinkVersion,
+              }),
+            )
+            .digest('hex'),
+          actor: input.actor.id,
+          action: 'contact.portfolio.link',
+          target: { type: 'contact', id: contactId },
+          version: expectedVersion,
+          reason: 'EXPLICIT_CLIENT_LINK',
+          correlationId: input.correlationId,
+        },
+        async (/** @type {any} */ tx) => {
+          if (Number(authority.current.version) !== expectedVersion)
+            throw new OperationReadError(409, 'CONTACT_CONFLICT');
+          const link = await setSellerClientLink(
+            tx,
+            {
+              actor: authority.actor,
+              contactId,
+              provenance: 'explicit_link',
+              expectedVersion: input.expectedLinkVersion,
+              correlationId: input.correlationId,
+            },
+            auditPort,
+          );
+          return { contactId, link };
+        },
+        async (/** @type {any} */ tx) => {
+          authority = await writableContact(tx, { ...input, contactId });
+          // Revoked membership is never restored by an old receipt.
+          const existing = (
+            await tx.query(
+              'SELECT status,version FROM crm.seller_client_links WHERE seller_id=$1 AND contact_id=$2',
+              [input.actor.id, contactId],
+            )
+          ).rows[0];
+          if (
+            existing?.status === 'revoked' &&
+            Number(existing.version) !== Number(input.expectedLinkVersion)
+          )
+            throw new OperationReadError(409, 'CLIENT_LINK_VERSION_CONFLICT');
+        },
+      );
+      return result;
+    },
 
     /** A manual contact has no unverified channel identity (CP-01).
-     * @param {{actor: {id: string}, correlationId: string, displayName: unknown, email?: unknown, phone: unknown, idempotencyKey: string}} input
+     * @param {{actor: {id: string}, correlationId: string, displayName: unknown, email?: unknown, phone: unknown, idempotencyKey: string, portfolio?:boolean}} input
      */
     async createContact(input) {
       const displayName = readDisplayName(input.displayName);
@@ -722,6 +913,11 @@ export function createOperationReadRuntime(database, options = {}) {
       const key = requireId(input.idempotencyKey, 'IDEMPOTENCY_KEY');
       if (!input.actor?.id) throw new OperationReadError(403, 'FORBIDDEN');
       return database.transaction(async (/** @type {any} */ transaction) => {
+        const actor = await requireSellerClientActor(
+          transaction,
+          input.actor.id,
+        );
+        if (input.portfolio) portfolioGuard(input);
         const occurredAt = new Date().toISOString();
         const contactId = randomUUID();
         await transaction.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
@@ -730,7 +926,7 @@ export function createOperationReadRuntime(database, options = {}) {
         const replay = (
           await transaction.query(
             `SELECT id, display_name, version, manually_created_by,
-                    contact_phone_hash, contact_details_envelope
+                    contact_phone_hash, contact_details_envelope, wallet_created
              FROM crm.contacts WHERE manual_create_key = $1`,
             [key],
           )
@@ -756,10 +952,10 @@ export function createOperationReadRuntime(database, options = {}) {
               `INSERT INTO crm.contacts
              (id, provisional, version, created_at, updated_at,
               display_name, display_name_source, manual_create_key,
-              manually_created_by, contact_phone_hash, contact_details_envelope)
-           VALUES ($1, false, 1, $2, $2, $3, 'manual', $4, $5, $6, $7::jsonb)
+              manually_created_by, contact_phone_hash, contact_details_envelope, wallet_created)
+           VALUES ($1, false, 1, $2, $2, $3, 'manual', $4, $5, $6, $7::jsonb, $8)
            ON CONFLICT DO NOTHING
-           RETURNING id, display_name, version, manually_created_by, contact_phone_hash, contact_details_envelope`,
+           RETURNING id, display_name, version, manually_created_by, contact_phone_hash, contact_details_envelope, wallet_created`,
               [
                 contactId,
                 occurredAt,
@@ -770,6 +966,7 @@ export function createOperationReadRuntime(database, options = {}) {
                 JSON.stringify(
                   encryptContactDetails({ email, phone }, contactKey),
                 ),
+                input.portfolio === true,
               ],
             );
         const created = Boolean(inserted.rows[0]);
@@ -779,7 +976,7 @@ export function createOperationReadRuntime(database, options = {}) {
           (
             await transaction.query(
               `SELECT id, display_name, version, manually_created_by,
-                      contact_phone_hash, contact_details_envelope
+                      contact_phone_hash, contact_details_envelope, wallet_created
              FROM crm.contacts WHERE manual_create_key = $1`,
               [key],
             )
@@ -793,9 +990,35 @@ export function createOperationReadRuntime(database, options = {}) {
           row.manually_created_by !== input.actor.id ||
           row.contact_phone_hash !== phoneHash ||
           storedDetails?.email !== email ||
-          storedDetails?.phone !== phone
+          storedDetails?.phone !== phone ||
+          Boolean(row.wallet_created) !== Boolean(input.portfolio)
         ) {
           throw new OperationReadError(409, 'CONTACT_CONFLICT');
+        }
+        if (!created) {
+          await lockSellerClientContact(transaction, row.id);
+          await authorizeContactWrite(transaction, actor, row.id);
+        }
+        let link;
+        if (input.portfolio) {
+          const existing = (
+            await transaction.query(
+              'SELECT status,version FROM crm.seller_client_links WHERE seller_id=$1 AND contact_id=$2',
+              [actor.id, row.id],
+            )
+          ).rows[0];
+          if (!created && existing?.status !== 'active')
+            throw new OperationReadError(404, 'CONTACT_NOT_FOUND');
+          link = await setSellerClientLink(
+            transaction,
+            {
+              actor,
+              contactId: row.id,
+              provenance: 'manual_create',
+              correlationId: input.correlationId,
+            },
+            auditPort,
+          );
         }
         if (created) {
           await transaction.query(
@@ -831,6 +1054,7 @@ export function createOperationReadRuntime(database, options = {}) {
         }
         return {
           created,
+          ...(link ? { link } : {}),
           contact: {
             displayName: row.display_name,
             id: row.id,
@@ -844,7 +1068,7 @@ export function createOperationReadRuntime(database, options = {}) {
     },
 
     /** Completes a legacy contact before a new manual order without changing channel identity. */
-    /** @param {{actor: {id: string}, contactId: unknown, correlationId: string, email?: unknown, expectedVersion: unknown, idempotencyKey: unknown, phone: unknown}} input */
+    /** @param {{actor: {id: string}, contactId: unknown, correlationId: string, email?: unknown, expectedVersion: unknown, idempotencyKey: unknown, phone: unknown, review?:any}} input */
     async setContactDetails(input) {
       const contactId = requireId(input.contactId, 'CONTACT_ID');
       const phone = normalizeContactPhone(input.phone);
@@ -859,6 +1083,8 @@ export function createOperationReadRuntime(database, options = {}) {
       if (!input.actor?.id) throw new OperationReadError(403, 'FORBIDDEN');
       const phoneHash = contactPhoneHash(phone, contactLookupKey);
       const key = requireId(input.idempotencyKey, 'IDEMPOTENCY_KEY');
+      /** @type {any} */
+      let authority;
       try {
         return await contactDetailsIdempotency.execute(
           {
@@ -872,6 +1098,7 @@ export function createOperationReadRuntime(database, options = {}) {
                   email,
                   expectedVersion,
                   phoneHash,
+                  review: input.review,
                 }),
               )
               .digest('hex'),
@@ -883,21 +1110,32 @@ export function createOperationReadRuntime(database, options = {}) {
             correlationId: input.correlationId,
           },
           async (/** @type {any} */ transaction) => {
-            await transaction.query(
-              'SELECT pg_advisory_xact_lock(hashtext($1))',
-              [phoneHash],
+            const { current, actor } = authority;
+            const shared = await contactIsShared(transaction, contactId);
+            const previous = decryptContactDetails(
+              current.contact_details_envelope,
+              contactKey,
             );
-            const current = (
-              await transaction.query(
-                `SELECT id, display_name, manual_create_key, contact_phone_hash,
-                    contact_details_envelope, contact_details_key,
-                    contact_details_actor_id, version
-             FROM crm.contacts WHERE id = $1 FOR UPDATE`,
-                [contactId],
-              )
-            ).rows[0];
-            if (!current)
-              throw new OperationReadError(404, 'CONTACT_NOT_FOUND');
+            /** @type {string|null} */
+            let storedPhone = phone;
+            if (shared && !previous.phone && input.review === undefined) {
+              const visible = await new PostgresContactReadRepository({
+                database: { query: transaction.query.bind(transaction) },
+                envelopeKey: contactKey,
+                lookupKey: contactLookupKey,
+              }).get(contactId, { actorId: actor.id });
+              // Re-sending an unchanged private fallback must not promote it to
+              // the common registration or block a permitted e-mail correction.
+              if (visible.contact.phone === phone) storedPhone = null;
+            }
+            const phoneChanged = previous.phone !== storedPhone;
+            const storedPhoneHash = storedPhone ? phoneHash : null;
+            const changedFields = [
+              ...(phoneChanged ? ['phone'] : []),
+              ...(previous.email !== email ? ['email'] : []),
+            ];
+            if (shared && phoneChanged)
+              requireContactReview(actor, input.review);
             if (current.contact_details_key === key) {
               const saved = decryptContactDetails(
                 current.contact_details_envelope,
@@ -923,7 +1161,8 @@ export function createOperationReadRuntime(database, options = {}) {
             if (
               Number(current.version) !== expectedVersion ||
               (current.contact_phone_hash &&
-                current.contact_phone_hash !== phoneHash)
+                current.contact_phone_hash !== phoneHash &&
+                !actor.isAdmin)
             ) {
               throw new OperationReadError(409, 'CONTACT_CONFLICT');
             }
@@ -969,7 +1208,13 @@ export function createOperationReadRuntime(database, options = {}) {
               const confirmedPhone = normalizeContactPhone(
                 saved.externalIdentityId,
               );
-              if (confirmedPhone && confirmedPhone !== phone) {
+              if (
+                phoneChanged &&
+                !previous.phone &&
+                confirmedPhone &&
+                confirmedPhone !== phone &&
+                !actor.isAdmin
+              ) {
                 throw new OperationReadError(409, 'CONTACT_CONFLICT');
               }
             }
@@ -983,9 +1228,12 @@ export function createOperationReadRuntime(database, options = {}) {
              WHERE id = $1 RETURNING id, display_name, version`,
                 [
                   contactId,
-                  phoneHash,
+                  storedPhoneHash,
                   JSON.stringify(
-                    encryptContactDetails({ email, phone }, contactKey),
+                    encryptContactDetails(
+                      { email, phone: storedPhone },
+                      contactKey,
+                    ),
                   ),
                   key,
                   input.actor.id,
@@ -994,10 +1242,21 @@ export function createOperationReadRuntime(database, options = {}) {
               )
             ).rows[0];
             await transaction.query(
-              `INSERT INTO crm.contact_phone_lookup (contact_id, phone_hash, source)
-               VALUES ($1, $2, 'manual') ON CONFLICT DO NOTHING`,
-              [contactId, phoneHash],
+              "DELETE FROM crm.contact_phone_lookup WHERE contact_id=$1 AND source='manual'",
+              [contactId],
             );
+            await saveReview(
+              transaction,
+              input,
+              Number(row.version),
+              input.review?.reason,
+            );
+            if (storedPhoneHash)
+              await transaction.query(
+                `INSERT INTO crm.contact_phone_lookup (contact_id, phone_hash, source)
+               VALUES ($1, $2, 'manual') ON CONFLICT DO NOTHING`,
+                [contactId, phoneHash],
+              );
             await auditPort.append(
               {
                 action: 'contact.details.completed',
@@ -1019,7 +1278,7 @@ export function createOperationReadRuntime(database, options = {}) {
                 `event-${randomUUID()}`,
                 contactId,
                 Number(row.version),
-                JSON.stringify({ contactId }),
+                JSON.stringify({ contactId, fields: changedFields }),
                 input.correlationId,
                 occurredAt,
               ],
@@ -1032,6 +1291,15 @@ export function createOperationReadRuntime(database, options = {}) {
               email,
               version: Number(row.version),
             };
+          },
+          async (/** @type {any} */ tx) => {
+            const actor = await requireSellerClientActor(tx, input.actor.id);
+            await tx.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+              phoneHash,
+            ]);
+            const current = await lockSellerClientContact(tx, contactId);
+            await authorizeContactWrite(tx, actor, contactId);
+            authority = { actor, current };
           },
         );
       } catch (cause) {
@@ -1046,7 +1314,7 @@ export function createOperationReadRuntime(database, options = {}) {
      * values live only in their envelope; the immutable idempotency record
      * keeps just id, version and status, and audit, event, logs and errors
      * carry identifiers and codes.
-     * @param {{actor: {id: string}, contactId: unknown, correlationId: string, expectedVersion: unknown, idempotencyKey: unknown, registration: unknown}} input
+     * @param {{actor: {id: string}, contactId: unknown, correlationId: string, expectedVersion: unknown, idempotencyKey: unknown, registration: unknown, review?:any}} input
      */
     async setContactRegistration(input) {
       const contactId = requireId(input.contactId, 'CONTACT_ID');
@@ -1072,7 +1340,10 @@ export function createOperationReadRuntime(database, options = {}) {
       }
       if (!input.actor?.id) throw new OperationReadError(403, 'FORBIDDEN');
       const key = requireId(input.idempotencyKey, 'IDEMPOTENCY_KEY');
+      /** @type {Readonly<Record<string,string|null>>} */
       const registration = normalized.value;
+      /** @type {any} */
+      let authority;
       const stored = await contactDetailsIdempotency.execute(
         {
           scope: 'contact.registration.update',
@@ -1085,6 +1356,7 @@ export function createOperationReadRuntime(database, options = {}) {
                 contactId,
                 expectedVersion,
                 registration,
+                review: input.review,
               }),
             )
             .digest('hex'),
@@ -1096,14 +1368,22 @@ export function createOperationReadRuntime(database, options = {}) {
           correlationId: input.correlationId,
         },
         async (/** @type {any} */ transaction) => {
-          const current = (
-            await transaction.query(
-              `SELECT id, version, contact_details_envelope
-               FROM crm.contacts WHERE id = $1 FOR UPDATE`,
-              [contactId],
+          const { current, actor } = authority;
+          /** @type {Readonly<Record<string,string|null>>|null} */
+          const previous = decryptContactRegistration(
+            current.registration_envelope,
+            contactKey,
+          );
+          const changedFields = CONTACT_REGISTRATION_FIELDS.filter(
+            (field) => (previous?.[field] ?? null) !== registration[field],
+          );
+          if (
+            ['personType', 'document'].some(
+              (field) =>
+                previous?.[field] && previous[field] !== registration[field],
             )
-          ).rows[0];
-          if (!current) throw new OperationReadError(404, 'CONTACT_NOT_FOUND');
+          )
+            requireContactReview(actor, input.review);
           if (Number(current.version) !== expectedVersion) {
             throw new OperationReadError(409, 'CONTACT_CONFLICT');
           }
@@ -1118,7 +1398,7 @@ export function createOperationReadRuntime(database, options = {}) {
               [
                 contactId,
                 JSON.stringify(
-                  encryptContactRegistration(registration, contactKey),
+                  encryptContactRegistration(normalized.value, contactKey),
                 ),
                 normalized.fieldsComplete,
                 occurredAt,
@@ -1126,6 +1406,7 @@ export function createOperationReadRuntime(database, options = {}) {
             )
           ).rows[0];
           const version = Number(row.version);
+          await saveReview(transaction, input, version, input.review?.reason);
           await auditPort.append(
             {
               action: 'contact.registration.updated',
@@ -1147,7 +1428,7 @@ export function createOperationReadRuntime(database, options = {}) {
               `event-${randomUUID()}`,
               contactId,
               version,
-              JSON.stringify({ contactId }),
+              JSON.stringify({ contactId, fields: changedFields }),
               input.correlationId,
               occurredAt,
             ],
@@ -1158,12 +1439,16 @@ export function createOperationReadRuntime(database, options = {}) {
               transaction,
               contactId,
               current.contact_details_envelope,
+              actor,
             ));
           return {
             id: contactId,
             registrationStatus: complete ? 'complete' : 'incomplete',
             version,
           };
+        },
+        async (/** @type {any} */ tx) => {
+          authority = await writableContact(tx, { ...input, contactId });
         },
       );
       // Same key => same fingerprint => same normalized registration, so the
@@ -1225,10 +1510,11 @@ export function createOperationReadRuntime(database, options = {}) {
         throw new OperationReadError(400, 'INVALID_REQUEST');
       }
       return database.transaction(async (/** @type {any} */ transaction) => {
-        const current = await transaction.query(
-          'SELECT id, version FROM crm.contacts WHERE id = $1 FOR UPDATE',
-          [contactId],
-        );
+        const { current: rowBefore } = await writableContact(transaction, {
+          ...input,
+          contactId,
+        });
+        const current = { rows: [rowBefore] };
         if (!current.rows[0]) {
           throw new OperationReadError(404, 'CONTACT_NOT_FOUND');
         }
@@ -1244,13 +1530,14 @@ export function createOperationReadRuntime(database, options = {}) {
           [contactId, displayName, occurredAt],
         );
         const row = updated.rows[0];
+        await saveReview(transaction, input, Number(row.version), input.reason);
         await auditPort.append(
           {
             action: 'contact.renamed',
             actor: input.actor.id,
             correlationId: input.correlationId,
             occurredAt,
-            reason: input.reason,
+            reason: 'CONTACT_NAME_CHANGE',
             target: { id: contactId, type: 'contact' },
             version: Number(row.version),
           },
@@ -1266,7 +1553,7 @@ export function createOperationReadRuntime(database, options = {}) {
             `event-${randomUUID()}`,
             contactId,
             Number(row.version),
-            JSON.stringify({ contactId }),
+            JSON.stringify({ contactId, fields: ['displayName'] }),
             input.correlationId,
             occurredAt,
           ],
@@ -1348,9 +1635,17 @@ export function createOperationReadRuntime(database, options = {}) {
  * @param {{aggregate_type: string, aggregate_id: string, payload: any}} row
  */
 function liveEventFor(row) {
-  if (row.aggregate_type === 'contact') {
+  if (
+    row.aggregate_type === 'contact' ||
+    row.aggregate_type === 'seller_client_link'
+  ) {
     return {
-      payload: { contactId: row.aggregate_id },
+      payload: {
+        contactId:
+          row.aggregate_type === 'seller_client_link'
+            ? row.payload.contactId
+            : row.aggregate_id,
+      },
       type: 'inbox.contact.changed',
     };
   }
@@ -1566,4 +1861,36 @@ function readKey(value, name) {
   const key = Buffer.from(value, 'base64url');
   if (key.length !== 32) throw new Error(`${name} must decode to 32 bytes`);
   return key;
+}
+
+/** @param {{isAdmin:boolean}} actor @param {any} review */
+function requireContactReview(actor, review) {
+  if (!actor.isAdmin)
+    throw new OperationReadError(403, 'CONTACT_FIELD_RESTRICTED');
+  if (
+    !review ||
+    review.confirmed !== true ||
+    typeof review.reason !== 'string' ||
+    !review.reason.trim() ||
+    review.reason.length > 500 ||
+    /[\u0000-\u001f]/u.test(review.reason)
+  )
+    throw new OperationReadError(400, 'CONTACT_REVIEW_REQUIRED');
+}
+/** @param {Record<string,string|undefined>} environment */
+function sellerClientsConfiguration(environment) {
+  const flag = environment.SELLER_CLIENTS_ENABLED;
+  if (flag !== undefined && !['true', 'false'].includes(flag))
+    throw new Error('SELLER_CLIENTS_ENABLED must be true or false');
+  const sellerIds = JSON.parse(environment.SELLER_CLIENTS_SELLER_IDS ?? '[]');
+  if (
+    !Array.isArray(sellerIds) ||
+    sellerIds.some(
+      (id) => typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/u.test(id),
+    ) ||
+    new Set(sellerIds).size !== sellerIds.length ||
+    (flag === 'true' && !sellerIds.length)
+  )
+    throw new Error('SELLER_CLIENTS_SELLER_IDS requires explicit seller IDs');
+  return { enabled: flag === 'true', sellerIds };
 }

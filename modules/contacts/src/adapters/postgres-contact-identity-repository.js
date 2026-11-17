@@ -3,7 +3,18 @@ import {
   createDecipheriv,
   createHmac,
   randomBytes,
+  randomUUID,
 } from 'node:crypto';
+import {
+  authorizeContactWrite,
+  personalIdentityVisible,
+} from './contact-access.js';
+import { requireSellerClientActor } from './postgres-seller-client-links.js';
+import { encryptContactReview } from '../domain/contact-review.js';
+import {
+  contactPhoneHash,
+  normalizeContactPhone,
+} from '../domain/contact-details.js';
 
 import {
   ContactIdentityConflictError,
@@ -50,8 +61,22 @@ export class PostgresContactIdentityRepository {
   /** @param {{contactId: string, identity: Record<string, any>, identityId: string, now: string}} input */
   async resolveInboundIdentity(input) {
     const lookupHash = this.#lookupHash(input.identity);
+    const phone =
+      input.identity.channel === 'whatsapp' &&
+      input.identity.identityKind === 'phone' &&
+      input.identity.phoneStatus === 'confirmed'
+        ? normalizeContactPhone(input.identity.externalIdentityId)
+        : null;
+    const phoneHash = phone ? contactPhoneHash(phone, this.#lookupKey) : null;
     return this.#database.transaction(async (/** @type {any} */ client) => {
       await transactionBounds(client);
+      // The manual creator uses this same phone fence before discovery.
+      // Index only a newly created identity: replay must not acquire a Contact
+      // FK lock after its existing identity lock.
+      if (phoneHash)
+        await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+          phoneHash,
+        ]);
       await advisoryLock(client, `identity:${lookupHash}`);
       const existing = await selectIdentityByScope(
         client,
@@ -63,9 +88,10 @@ export class PostgresContactIdentityRepository {
 
       await client.query(
         `INSERT INTO crm.contacts
-           (id, provisional, version, created_at, updated_at)
-         VALUES ($1, true, 1, $2, $2)`,
-        [input.contactId, input.now],
+           (id, provisional, version, created_at, updated_at, wallet_created)
+         VALUES ($1, true, 1, $2, $2,
+           EXISTS (SELECT 1 FROM crm.seller_whatsapp_lines WHERE account_id::text=$3))`,
+        [input.contactId, input.now, input.identity.providerAccountId],
       );
       const envelope = encryptIdentity(
         {
@@ -95,6 +121,12 @@ export class PostgresContactIdentityRepository {
           input.now,
         ],
       );
+      if (phoneHash)
+        await client.query(
+          `INSERT INTO crm.contact_phone_lookup(contact_id,identity_id,phone_hash,source)
+         VALUES($1,$2,$3,'whatsapp') ON CONFLICT DO NOTHING`,
+          [input.contactId, input.identityId, phoneHash],
+        );
       const inserted = await selectIdentityById(
         client,
         input.identityId,
@@ -111,6 +143,10 @@ export class PostgresContactIdentityRepository {
       return await this.#database.transaction(
         async (/** @type {any} */ client) => {
           await transactionBounds(client);
+          const actor = await requireSellerClientActor(
+            client,
+            command.actor.id,
+          );
           await advisoryLock(
             client,
             `identity-merge:${command.idempotencyKey}`,
@@ -122,39 +158,41 @@ export class PostgresContactIdentityRepository {
           if (replay) {
             if (replay.channel === 'site_chat')
               throw new ContactIdentityForbiddenError();
+            const current = await reauthorizeReplay(client, actor, replay);
             if (replay.merge_fingerprint !== command.fingerprint) {
               throw new ContactIdentityConflictError();
             }
-            return this.#mapLinked(replay);
+            return this.#mapLinked(current);
           }
 
-          const identity = await selectIdentityById(
+          const discovered = await selectIdentityById(
             client,
             command.identityId,
-            true,
+            false,
           );
-          if (!identity) throw new ContactIdentityNotFoundError();
-          if (identity.channel === 'site_chat')
+          if (!discovered) throw new ContactIdentityNotFoundError();
+          if (discovered.channel === 'site_chat')
             throw new ContactIdentityForbiddenError();
-          if (
-            Number(identity.identity_version) !== command.expectedVersion ||
-            identity.current_contact_id === command.targetContactId
-          ) {
-            throw new ContactIdentityConflictError();
-          }
+          const { contacts, identity } = await authorizeIdentityContacts(
+            client,
+            actor,
+            discovered,
+            [discovered.current_contact_id, command.targetContactId],
+          );
           const active = await client.query(
             `SELECT id FROM crm.identity_links
            WHERE contact_identity_id = $1 AND status = 'active'
            FOR UPDATE`,
             [command.identityId],
           );
+          if (
+            Number(identity.identity_version) !== command.expectedVersion ||
+            identity.current_contact_id === command.targetContactId
+          ) {
+            throw new ContactIdentityConflictError();
+          }
           if (active.rows.length !== 0)
             throw new ContactIdentityConflictError();
-          const contacts = await lockContacts(client, [
-            identity.current_contact_id,
-            command.targetContactId,
-          ]);
-          if (contacts.length !== 2) throw new ContactIdentityNotFoundError();
 
           await client.query(
             `UPDATE crm.contacts
@@ -164,6 +202,13 @@ export class PostgresContactIdentityRepository {
               [identity.current_contact_id, command.targetContactId],
               command.now,
             ],
+          );
+          await recordIdentityChange(
+            client,
+            command,
+            contacts,
+            identity.current_contact_id,
+            this.#envelopeKey,
           );
           const updatedIdentity = await client.query(
             `UPDATE crm.contact_identities
@@ -185,7 +230,7 @@ export class PostgresContactIdentityRepository {
               identity.current_contact_id,
               command.targetContactId,
               command.actor.id,
-              command.reason,
+              'CONTACT_IDENTITY_MERGE',
               command.correlationId,
               command.idempotencyKey,
               command.fingerprint,
@@ -212,6 +257,10 @@ export class PostgresContactIdentityRepository {
       return await this.#database.transaction(
         async (/** @type {any} */ client) => {
           await transactionBounds(client);
+          const actor = await requireSellerClientActor(
+            client,
+            command.actor.id,
+          );
           await advisoryLock(
             client,
             `identity-unmerge:${command.idempotencyKey}`,
@@ -221,20 +270,25 @@ export class PostgresContactIdentityRepository {
             command.idempotencyKey,
           );
           if (replay) {
+            const current = await reauthorizeReplay(client, actor, replay);
             if (replay.revert_fingerprint !== command.fingerprint) {
               throw new ContactIdentityConflictError();
             }
-            return this.#mapLinked(replay);
+            return this.#mapLinked(current);
           }
 
+          const discovered = await selectLinkById(client, command.linkId);
+          if (!discovered) throw new ContactIdentityNotFoundError();
+          const { contacts, identity } = await authorizeIdentityContacts(
+            client,
+            actor,
+            discovered,
+            [discovered.source_contact_id, discovered.target_contact_id],
+          );
+          // Discovery is untrusted until reread under sorted Contact locks,
+          // followed by identity and link, as in the Olist reader.
           const link = await selectLinkById(client, command.linkId, true);
           if (!link) throw new ContactIdentityNotFoundError();
-          const identity = await selectIdentityById(
-            client,
-            link.contact_identity_id,
-            true,
-          );
-          if (!identity) throw new ContactIdentityNotFoundError();
           if (
             link.status !== 'active' ||
             identity.current_contact_id !== link.target_contact_id ||
@@ -242,17 +296,19 @@ export class PostgresContactIdentityRepository {
           ) {
             throw new ContactIdentityConflictError();
           }
-          const contacts = await lockContacts(client, [
-            link.source_contact_id,
-            link.target_contact_id,
-          ]);
-          if (contacts.length !== 2) throw new ContactIdentityNotFoundError();
 
           await client.query(
             `UPDATE crm.contacts
            SET version = version + 1, updated_at = $2
            WHERE id = ANY($1::text[])`,
             [[link.source_contact_id, link.target_contact_id], command.now],
+          );
+          await recordIdentityChange(
+            client,
+            command,
+            contacts,
+            identity.current_contact_id,
+            this.#envelopeKey,
           );
           const updatedIdentity = await client.query(
             `UPDATE crm.contact_identities
@@ -271,7 +327,7 @@ export class PostgresContactIdentityRepository {
             [
               command.linkId,
               command.actor.id,
-              command.reason,
+              'CONTACT_IDENTITY_UNMERGE',
               command.correlationId,
               command.idempotencyKey,
               command.fingerprint,
@@ -416,10 +472,107 @@ function identitySelect() {
 /** @param {any} client @param {string[]} ids */
 async function lockContacts(client, ids) {
   const result = await client.query(
-    `SELECT id FROM crm.contacts WHERE id = ANY($1::text[]) ORDER BY id FOR UPDATE`,
+    `SELECT id,version FROM crm.contacts WHERE id = ANY($1::text[]) ORDER BY id FOR UPDATE`,
     [ids],
   );
   return result.rows;
+}
+
+/** WAP-07/24/29: the identity scope and all affected Contact grants are current,
+ * including when an old idempotent command is replayed. Lock sorted Contacts
+ * before identity to match Olist; discovery is revalidated after acquiring it.
+ * @param {any} client @param {{id:string,isAdmin:boolean}} actor
+ * @param {any} identity @param {string[]} contactIds */
+async function authorizeIdentityContacts(client, actor, identity, contactIds) {
+  if (identity.channel === 'site_chat')
+    throw new ContactIdentityForbiddenError();
+  if (!actor.isAdmin) {
+    const permitted = await client.query(
+      `SELECT identity.id FROM crm.contact_identities identity WHERE identity.id=$1
+       AND ${personalIdentityVisible('identity', '$2')}`,
+      [identity.identity_id, actor.id],
+    );
+    if (!permitted.rows.length) throw new ContactIdentityNotFoundError();
+  }
+  const ids = [...new Set([...contactIds, identity.current_contact_id])].sort();
+  const contacts = await lockContacts(client, ids);
+  if (contacts.length !== ids.length) throw new ContactIdentityNotFoundError();
+  for (const contactId of ids) {
+    try {
+      await authorizeContactWrite(client, actor, contactId);
+    } catch (error) {
+      if (/** @type {any} */ (error)?.statusCode === 404)
+        throw new ContactIdentityNotFoundError();
+      throw error;
+    }
+  }
+  const current = await selectIdentityById(client, identity.identity_id, true);
+  if (!current) throw new ContactIdentityNotFoundError();
+  if (
+    current.current_contact_id !== identity.current_contact_id ||
+    Number(current.identity_version) !== Number(identity.identity_version) ||
+    current.provider_account_id !== identity.provider_account_id
+  )
+    throw new ContactIdentityConflictError();
+  return { contacts, identity: current };
+}
+
+/** @param {any} client @param {{id:string,isAdmin:boolean}} actor @param {any} replay */
+async function reauthorizeReplay(client, actor, replay) {
+  await authorizeIdentityContacts(client, actor, replay, [
+    replay.source_contact_id,
+    replay.target_contact_id,
+  ]);
+  const current = await selectLinkById(client, replay.link_id);
+  if (!current) throw new ContactIdentityNotFoundError();
+  return current;
+}
+
+/** The private reason is immutable and authenticated to the changed Contact
+ * version. Events and the legacy reason columns contain metadata only.
+ * @param {any} client @param {Record<string,any>} command @param {any[]} contacts
+ * @param {string} reviewedContactId @param {Buffer} key */
+async function recordIdentityChange(
+  client,
+  command,
+  contacts,
+  reviewedContactId,
+  key,
+) {
+  const reviewed = contacts.find((contact) => contact.id === reviewedContactId);
+  const reviewedVersion = Number(reviewed.version) + 1;
+  await client.query(
+    `INSERT INTO crm.contact_change_reviews(contact_id,contact_version,actor_id,reason_envelope,created_at)
+     VALUES($1,$2,$3,$4::jsonb,$5)`,
+    [
+      reviewedContactId,
+      reviewedVersion,
+      command.actor.id,
+      JSON.stringify(
+        encryptContactReview(
+          command.reason,
+          reviewedContactId,
+          reviewedVersion,
+          key,
+        ),
+      ),
+      command.now,
+    ],
+  );
+  for (const contact of contacts) {
+    await client.query(
+      `INSERT INTO crm.domain_events(id,aggregate_type,aggregate_id,aggregate_version,event_type,payload,correlation_id,occurred_at)
+       VALUES($1,'contact',$2,$3,'contact.identity.changed',$4::jsonb,$5,$6)`,
+      [
+        `event-${randomUUID()}`,
+        contact.id,
+        Number(contact.version) + 1,
+        JSON.stringify({ contactId: contact.id, fields: ['identities'] }),
+        command.correlationId,
+        command.now,
+      ],
+    );
+  }
 }
 
 /** @param {any} client @param {string} key */
@@ -537,7 +690,10 @@ function auditEvent(change, command, identityId, version) {
     action: `contact.identity.${change}`,
     actor: command.actor.id,
     correlationId: command.correlationId,
-    reason: command.reason,
+    reason:
+      change === 'merged'
+        ? 'CONTACT_IDENTITY_MERGE'
+        : 'CONTACT_IDENTITY_UNMERGE',
     target: { id: identityId, type: 'contact_identity' },
     version,
   };

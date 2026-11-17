@@ -41,3 +41,20 @@ export {
   PostalCodeLookupError,
   ViaCepPostalCodeClient,
 } from './adapters/viacep-postal-code-client.js';
+
+export {
+  requireSellerClientActor,
+  lockSellerClientContact,
+  setSellerClientLink,
+  planSellerClientReconciliation,
+} from './adapters/postgres-seller-client-links.js';
+export {
+  authorizeContactWrite,
+  contactIsShared,
+} from './adapters/contact-access.js';
+export { encryptContactReview } from './domain/contact-review.js';
+
+export {
+  personalIdentityVisible,
+  contactConversationVisible,
+} from './adapters/contact-access.js';

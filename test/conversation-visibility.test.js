@@ -46,7 +46,14 @@ function visibilityHarness(owners) {
     },
   });
   const service = createOperationReadService({
-    contactRepository: {},
+    contactRepository: {
+      get: async () => {
+        throw Object.assign(new Error('CONTACT_NOT_FOUND'), {
+          code: 'CONTACT_NOT_FOUND',
+          statusCode: 404,
+        });
+      },
+    },
     cursorKey: Buffer.alloc(32, 3),
     handoffRepository: {},
     inboxRepository: repository,

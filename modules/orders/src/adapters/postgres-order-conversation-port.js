@@ -1,3 +1,8 @@
+import {
+  personalIdentityVisible,
+  contactConversationVisible,
+} from '@crm-silmer/contacts';
+
 import { decryptContactIdentityEnvelope } from '@crm-silmer/contacts/identity-envelope';
 import { contactPhoneHash, normalizeContactPhone } from '@crm-silmer/contacts';
 
@@ -274,8 +279,8 @@ export class PostgresOrderConversationPort {
   }
 
   /** The list search includes a manual order even without a conversation. */
-  /** @param {string} query */
-  async searchContactIds(query) {
+  /** @param {string} query @param {any} [reader] */
+  async searchContactIds(query, reader = {}) {
     const text = String(query).trim();
     if (!text) return [];
     const phone = normalizeContactPhone(text);
@@ -295,7 +300,8 @@ export class PostgresOrderConversationPort {
                 AND ((phone_lookup.source = 'manual'
                       AND phone_lookup.contact_id = contact.id)
                      OR (phone_lookup.source = 'whatsapp'
-                         AND phone_identity.current_contact_id = contact.id))
+                         AND phone_identity.current_contact_id = contact.id
+                         AND ($3::text IS NULL OR ${personalIdentityVisible('phone_identity', '$3')})))
             ) OR EXISTS (
               SELECT 1 FROM crm.site_contact_claims AS claim
               JOIN crm.conversations AS conversation
@@ -304,10 +310,15 @@ export class PostgresOrderConversationPort {
                 ON identity.id = conversation.contact_identity_id
               WHERE claim.phone_hash = $2
                 AND identity.current_contact_id = contact.id
+                AND ($3::text IS NULL OR ${contactConversationVisible('conversation', '$3')})
             )
           ))
        ORDER BY contact.id`,
-      [`%${text.replace(/[\\%_]/gu, '\\$&')}%`, phoneHash],
+      [
+        `%${text.replace(/[\\%_]/gu, '\\$&')}%`,
+        phoneHash,
+        reader.readAll ? null : (reader.actorId ?? null),
+      ],
     );
     return result.rows.map((row) => row.id);
   }
@@ -317,9 +328,10 @@ export class PostgresOrderConversationPort {
    * Phone matching compares digits only, so "(11) 98765" finds 5511987650000.
    *
    * @param {string} query
+   * @param {any} [reader]
    * @returns {Promise<string[]>}
    */
-  async searchConversationIds(query) {
+  async searchConversationIds(query, reader = {}) {
     const text = foldText(query);
     const digits = String(query).replace(/\D/gu, '');
     if (text === '') return [];
@@ -332,7 +344,9 @@ export class PostgresOrderConversationPort {
          ON conversation.id = orders.conversation_id
        JOIN crm.contact_identities identity
          ON identity.id = conversation.contact_identity_id
-       JOIN crm.contacts contact ON contact.id = identity.current_contact_id`,
+       JOIN crm.contacts contact ON contact.id = identity.current_contact_id
+       WHERE ($1::text IS NULL OR ${personalIdentityVisible('identity', '$1')})`,
+      [reader.readAll ? null : (reader.actorId ?? null)],
     );
     return result.rows
       .filter((row) => {

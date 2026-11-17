@@ -877,7 +877,10 @@ export function createOrderRuntime(options) {
 
     /** @param {Parameters<typeof service.list>[0]} [filters] @param {any} [actor] */
     async list(filters, actor) {
-      const page = await service.list(filters);
+      const page = await service.list(filters, {
+        actorId: actor?.id,
+        readAll: actor?.capabilities?.includes('COMMERCIAL_ADMIN'),
+      });
       return {
         counts: page.counts,
         items: await present(page.items, actor),

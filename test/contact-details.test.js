@@ -47,7 +47,11 @@ test('phone search uses a keyed hash and never sends plaintext to SQL', async ()
     database: {
       async query(/** @type {string} */ sql, /** @type {unknown[]} */ values) {
         queries.push({ sql, values });
-        return { rows: sql.includes('count(*)') ? [{ count: 0 }] : [] };
+        return {
+          rows: sql.includes('SELECT count(*)::integer count FROM crm.contacts')
+            ? [{ count: 0 }]
+            : [],
+        };
       },
     },
     envelopeKey: Buffer.alloc(32, 7),
@@ -119,6 +123,11 @@ test('direct contact creation rejects a phone already claimed on site, without w
     /** @param {string} sql */
     async query(sql) {
       statements.push(sql);
+      if (sql.includes('FROM crm.users'))
+        return { rows: [{ id: 'seller-1', disabled_at: null }] };
+      if (sql.includes('FROM crm.user_functions'))
+        return { rows: [{ function_name: 'Vendedor' }] };
+      if (sql.includes('FROM crm.user_capabilities')) return { rows: [] };
       if (sql.includes('manual_create_key = $1')) return { rows: [] };
       if (sql.includes('crm.site_contact_claims'))
         return { rows: [{ found: true }] };
@@ -205,6 +214,15 @@ test('a synthetic site-chat identity does not block adding a real phone to its c
     /** @type {string} */ sql,
     /** @type {any[]} */ values = [],
   ) => {
+    if (sql.includes('FROM crm.users'))
+      return { rows: [{ id: 'seller-1', disabled_at: null }] };
+    if (sql.includes('FROM crm.user_functions'))
+      return { rows: [{ function_name: 'Vendedor' }] };
+    if (sql.includes('FROM crm.user_capabilities')) return { rows: [] };
+    if (sql.includes('FROM crm.contacts contact'))
+      return { rows: [{ id: 'contact-1' }] };
+    if (sql.includes('count(*)') && sql.includes('crm.seller_client_links'))
+      return { rows: [{ count: 0 }] };
     if (sql.includes('INSERT INTO crm.idempotency_records')) {
       const [
         scope,
@@ -242,7 +260,7 @@ test('a synthetic site-chat identity does not block adding a real phone to its c
       receipt.response = JSON.parse(values[2]);
       return { rows: [{ completed: true }] };
     }
-    if (sql.includes('FROM crm.contacts WHERE id = $1 FOR UPDATE')) {
+    if (/FROM crm\.contacts WHERE id\s*=\s*\$1 FOR UPDATE/u.test(sql)) {
       contactReads += 1;
       return {
         rows: [
@@ -314,7 +332,7 @@ test('a synthetic site-chat identity does not block adding a real phone to its c
   );
   assert.equal(updated, false);
   // A later human mutation changes the contact version. The original command
-  // still replays its encrypted receipt without touching the current row.
+  // still replays its encrypted receipt after rechecking current authority.
   currentVersion = 3;
   const readsBeforeReplay = contactReads;
   const replay = await operations.setContactDetails({
@@ -326,5 +344,5 @@ test('a synthetic site-chat identity does not block adding a real phone to its c
     phone: '11987654321',
   });
   assert.deepEqual(replay, contact);
-  assert.equal(contactReads, readsBeforeReplay);
+  assert.ok(contactReads > readsBeforeReplay);
 });

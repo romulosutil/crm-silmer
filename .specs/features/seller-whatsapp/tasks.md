@@ -134,6 +134,22 @@ rodada integral e as duas expectativas de autorização corrigidas verificadas
 na repetição focal **3/3** (inclui encerramento). Nenhum skip nessas provas.
 Typecheck, ESLint, Prettier e `git diff --check` aprovados.
 
+Segundo seguimento do CI / OPS-DEPS-02: o run 1005 passou **808 testes
+PostgreSQL sem skips**, **2.861 testes de validate** e **1.065 E2E/axe**, mas
+foi bloqueado pelo novo advisory de picomatch. O
+[runbook da correção](../../../docs/runbooks/picomatch-security-override.md)
+registra a revisão do fork, procedência, limites e retirada do override exato
+restrito à árvore do Vite **8.3.5**, preservado. Os **2.004 testes do fork** e
+**quatro testes novos** de ataque/consumidores passaram; instalação pelo lock,
+assinaturas/attestations e auditorias completa/runtime passaram, sem supressão.
+O validate integral passou **2.865 testes**, zero falhas, 60 skips condicionais
+de live, tipos/lint e build aprovados.
+E2E/axe integral passou **1.065 testes**, sete skips legados, zero falhas ou
+retries, incluindo Chromium/Firefox com áudio sintético e superfícies móveis.
+Manifesto/lock, teste e runbook são necessários ao gate desta mesma entrega;
+nenhum próximo E, regra de produto ou infraestrutura foi alterado. Gates
+completos e conclusão do CI constam na PR para o SHA publicado.
+
 Nenhum resultado local homologa provedor/n8n real ou autoriza produção,
 pareamento, flags reais, mensagens a clientes ou efeitos financeiros.
 

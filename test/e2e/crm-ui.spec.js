@@ -334,6 +334,10 @@ async function mockCrm(page, options = {}) {
       });
       return;
     }
+    if (path === '/api/v1/orders/order-novo' && request.method() === 'GET') {
+      await route.fulfill({ json: { order: currentOrder } });
+      return;
+    }
     if (path === '/api/v1/inbox/summary' && request.method() === 'GET') {
       await route.fulfill({
         contentType: 'application/json',
@@ -2430,8 +2434,7 @@ test('PCX-11: offers "Criar pedido" in the header only to the owner and creates 
   ).toHaveCount(0);
 
   // PCX-11: the seller who has the conversation creates it from the header,
-  // pre-filled from the conversation; the link takes the button's place and
-  // the focus.
+  // pre-filled from the conversation; focus moves to the order page.
   let createdBody;
   await mockCrm(page, {
     noAdmin: true,
@@ -2452,14 +2455,8 @@ test('PCX-11: offers "Criar pedido" in the header only to the owner and creates 
   await confirmation
     .getByRole('button', { name: 'Cliente confirmou, criar pedido' })
     .click();
-  const link = page
-    .locator('.conv-head')
-    .getByRole('link', { name: 'Abrir pedido 11-CRM, pendente' });
-  await expect(link).toBeFocused();
-  await expect(link).toHaveAttribute(
-    'href',
-    '/pedidos/order-novo?conversa=conversation-1',
-  );
+  await expect(page).toHaveURL('/pedidos/order-novo?conversa=conversation-1');
+  await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
   await expect(page.locator('.notice-toast')).toContainText(
     'Pedido 11-CRM criado.',
   );

@@ -81,6 +81,15 @@ export const router = createRouter({
       meta: { title: 'Clientes' },
     },
     {
+      path: '/meus-clientes/:clientId?',
+      component: ClientsView,
+      props: (route) => ({
+        selectedId: String(route.params.clientId ?? ''),
+        mine: true,
+      }),
+      meta: { title: 'Meus clientes', viewKey: 'meus-clientes' },
+    },
+    {
       path: '/melhor-envio',
       component: MelhorEnvioView,
       meta: {

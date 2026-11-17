@@ -151,6 +151,9 @@ const orderConfirmationDialog = ref(null);
 const manualOrderError = ref('');
 const manualOrderErrorNotice = ref(null);
 const manualOrderConfirmation = ref(null);
+const manualOrderTarget = ref('');
+const orderSubjectsReady = ref(false);
+let manualOrderController;
 /** Bumped when the order changed, so Detalhes › Pedido reads it again. */
 const orderRevision = ref(0);
 const conversationHeading = ref(null);
@@ -605,7 +608,10 @@ const orderLinkLabel = computed(() => {
 });
 /** PCL-11: never while the conversation already has a pending order. */
 const canOfferOrder = computed(
-  () => canCreateOrder.value && active.value?.order?.status !== 'pendente',
+  () =>
+    canCreateOrder.value &&
+    (active.value?.order?.status !== 'pendente' ||
+      subjectState.value.subjects.length > 1),
 );
 /**
  * PCX-11/T126: keep order creation visible for every authorized conversation,
@@ -1282,6 +1288,11 @@ async function createOrder() {
     !canOfferOrder.value
   )
     return;
+  if (!orderSubjectsReady.value) {
+    actionMessage.value =
+      'Aguarde a leitura dos assuntos ou atualize a conversa antes de criar o pedido.';
+    return;
+  }
   const dialog = orderConfirmationDialog.value;
   const trigger = orderCreateTrigger.value;
   closeMore();
@@ -1291,11 +1302,25 @@ async function createOrder() {
   )
     return;
   manualOrderError.value = '';
+  const targets = subjectState.value.subjects
+    .filter((subject) => !subject.orderId || subject.orderStatus === 'pendente')
+    .map((subject) => ({
+      id: subject.id,
+      version: subject.version,
+      label: subjectLabel(subject),
+    }));
+  manualOrderTarget.value = targets.length === 1 ? targets[0].id : '';
   manualOrderConfirmation.value = {
     conversationId: conversation.id,
+    contactId: conversation.contact?.id,
     expectedVersion: conversation.version,
     idempotencyKey: commandKey(),
+    targets,
+    subjectCount: subjectState.value.subjects.length,
   };
+  const confirmation = manualOrderConfirmation.value;
+  await nextTick();
+  if (manualOrderConfirmation.value !== confirmation) return;
   openDialog(dialog, trigger);
 }
 
@@ -1304,11 +1329,26 @@ async function confirmManualOrder() {
   if (
     !confirmation ||
     confirmation.conversationId !== active.value?.id ||
+    confirmation.contactId !== active.value?.contact?.id ||
+    confirmation.expectedVersion !== active.value?.version ||
+    !canOfferOrder.value ||
+    isTerminal.value ||
     orderCreating.value ||
     busy.value
   )
     return;
   const conversationId = confirmation.conversationId;
+  const target = confirmation.targets.find(
+    (item) => item.id === manualOrderTarget.value,
+  );
+  if (confirmation.subjectCount > 0 && !target) {
+    manualOrderError.value = 'Selecione o assunto desta compra.';
+    await nextTick();
+    manualOrderErrorNotice.value?.focus();
+    return;
+  }
+  const controller = new AbortController();
+  manualOrderController = controller;
   orderCreating.value = true;
   manualOrderError.value = '';
   actionMessage.value = '';
@@ -1317,9 +1357,15 @@ async function confirmManualOrder() {
     const response = await request(
       `/api/v1/conversations/${encodeURIComponent(conversationId)}/orders`,
       {
-        body: { expectedVersion: confirmation.expectedVersion },
+        body: {
+          expectedVersion: confirmation.expectedVersion,
+          ...(target
+            ? { subjectId: target.id, expectedSubjectVersion: target.version }
+            : {}),
+        },
         idempotencyKey: confirmation.idempotencyKey,
         method: 'POST',
+        signal: controller.signal,
       },
     );
     if (
@@ -1328,6 +1374,7 @@ async function confirmManualOrder() {
     )
       return;
     created = response.data.order ?? null;
+    if (created) created = { ...created, created: response.status === 201 };
   } catch (cause) {
     if (
       manualOrderConfirmation.value !== confirmation ||
@@ -1342,31 +1389,77 @@ async function confirmManualOrder() {
     await nextTick();
     manualOrderErrorNotice.value?.focus();
   } finally {
-    orderCreating.value = false;
+    if (manualOrderController === controller) {
+      manualOrderController = undefined;
+      orderCreating.value = false;
+    }
   }
   if (created) {
     orderConfirmationDialog.value?.close();
     if (activeId.value === conversationId && detail.value) {
-      // The link appears at once; the refresh below confirms it.
+      // Keep the conversation projection current until navigation finishes.
       detail.value.conversation.order = {
         id: created.id,
         number: created.number,
         status: created.status,
       };
     }
-    notify(`Pedido ${created.number} criado.`);
+    notify(
+      `Pedido ${created.number} ${created.created ? 'criado' : 'aberto'}.`,
+    );
     orderRevision.value += 1;
-    await refreshInbox(true);
-  }
-  if (!created || activeId.value !== conversationId) return;
-  await nextTick();
-  const link = /** @type {any} */ (orderLink.value)?.$el;
-  if (created && link instanceof HTMLElement) {
-    link.focus();
-  } else if (!globalThis.document.activeElement?.closest('.conv-actions')) {
-    conversationHeading.value?.focus();
+    await router.push(
+      `/pedidos/${encodeURIComponent(created.id)}?conversa=${encodeURIComponent(conversationId)}`,
+    );
   }
 }
+
+function cancelManualOrder() {
+  manualOrderController?.abort();
+  manualOrderController = undefined;
+  orderCreating.value = false;
+  manualOrderConfirmation.value = null;
+  manualOrderTarget.value = '';
+  if (orderConfirmationDialog.value?.open)
+    orderConfirmationDialog.value.close();
+}
+
+watch(
+  () => [
+    active.value,
+    canOfferOrder.value,
+    isTerminal.value,
+    subjectState.value,
+    sessionUser.value,
+  ],
+  () => {
+    const confirmation = manualOrderConfirmation.value;
+    if (!confirmation) return;
+    const conversation = active.value;
+    const subjects = subjectState.value.subjects;
+    const changed =
+      conversation?.id !== confirmation.conversationId ||
+      conversation?.contact?.id !== confirmation.contactId ||
+      conversation?.version !== confirmation.expectedVersion ||
+      !canOfferOrder.value ||
+      isTerminal.value ||
+      subjects.length !== confirmation.subjectCount ||
+      confirmation.targets.some((target) => {
+        const current = subjects.find((subject) => subject.id === target.id);
+        return (
+          !current ||
+          current.version !== target.version ||
+          (current.orderId && current.orderStatus !== 'pendente')
+        );
+      });
+    if (changed) {
+      cancelManualOrder();
+      actionMessage.value =
+        'A conversa ou o assunto mudou. Confira os dados antes de criar o pedido.';
+    }
+  },
+  { flush: 'sync' },
+);
 
 /** Asked from "Mais", so the dialog hands focus back to that button. */
 function requestArchiveConfirmation() {
@@ -1940,7 +2033,7 @@ function clearPrivateConversation(id = activeId.value, forgetDraft = false) {
   actionMessage.value = '';
   error.value = '';
   manualOrderError.value = '';
-  manualOrderConfirmation.value = null;
+  cancelManualOrder();
   closeError.value = '';
   snoozeOpen.value = false;
   reminderAt.value = '';
@@ -1976,10 +2069,11 @@ async function selectConversation(id, silent = false) {
   const controller = new AbortController();
   detailController = controller;
   if (activeId.value !== id) {
+    orderSubjectsReady.value = false;
     keepOpenId = '';
     error.value = '';
     actionMessage.value = '';
-    orderConfirmationDialog.value?.close();
+    cancelManualOrder();
     contextDialog.value?.close();
     contactDialog.value?.close();
     contextOpen.value = false;
@@ -2099,8 +2193,10 @@ async function loadSubjects(conversationId) {
       ]),
     );
     subjectError.value = '';
+    orderSubjectsReady.value = true;
   } catch (cause) {
     if (controller === subjectController && cause?.name !== 'AbortError') {
+      orderSubjectsReady.value = false;
       if ([403, 404].includes(Number(cause?.status))) {
         clearPrivateConversation(conversationId, true);
         error.value = 'Esta conversa não está disponível para seu acesso.';
@@ -2796,6 +2892,20 @@ watch(
   liveEvent,
   (event) => {
     if (!event) return;
+    if (
+      manualOrderConfirmation.value &&
+      (event.reset ||
+        (event.type === 'identity.user.changed' &&
+          (!event.userId || event.userId === currentUserId.value)) ||
+        (['inbox.conversation.changed', 'inbox.contact.changed'].includes(
+          event.type,
+        ) &&
+          (!event.conversationId || event.conversationId === activeId.value)))
+    ) {
+      cancelManualOrder();
+      actionMessage.value =
+        'Os dados podem ter mudado. Confira a conversa antes de criar o pedido.';
+    }
     if (event.reset) {
       // A reset intentionally carries no hidden conversation id. Abort older
       // pages too, so a delayed response cannot put revoked data back on screen.
@@ -2872,6 +2982,7 @@ onMounted(() => {
   }, 30_000);
 });
 onBeforeUnmount(() => {
+  cancelManualOrder();
   threadResizeObserver?.disconnect();
   threadResizeObserver = undefined;
   /** @type {any} */ (filterSheet.value)?.close();
@@ -4226,7 +4337,7 @@ onBeforeUnmount(() => {
       aria-labelledby="order-confirmation-title"
       aria-describedby="order-confirmation-description"
       @cancel="orderCreating && $event.preventDefault()"
-      @close="manualOrderConfirmation = null"
+      @close="cancelManualOrder"
     >
       <form @submit.prevent="confirmManualOrder">
         <h2 id="order-confirmation-title">O cliente confirmou a compra?</h2>
@@ -4235,6 +4346,27 @@ onBeforeUnmount(() => {
           fechar esta compra. Pedir orçamento ou informações não é uma
           confirmação. Os dados coletados serão aproveitados no pedido pendente.
         </p>
+        <template v-if="manualOrderConfirmation?.subjectCount">
+          <label for="order-target">Assunto desta compra</label>
+          <select
+            id="order-target"
+            v-model="manualOrderTarget"
+            :disabled="orderCreating"
+            required
+          >
+            <option value="">Selecione um assunto</option>
+            <option
+              v-for="target in manualOrderConfirmation.targets"
+              :key="target.id"
+              :value="target.id"
+            >
+              {{ target.label }}
+            </option>
+          </select>
+          <p v-if="!manualOrderConfirmation.targets.length">
+            Crie um novo assunto para esta compra antes de abrir o pedido.
+          </p>
+        </template>
         <p
           v-if="manualOrderError"
           ref="manualOrderErrorNotice"
@@ -4254,7 +4386,10 @@ onBeforeUnmount(() => {
           <button
             type="submit"
             class="primary"
-            :disabled="orderCreating"
+            :disabled="
+              orderCreating ||
+              (manualOrderConfirmation?.subjectCount && !manualOrderTarget)
+            "
             :aria-busy="orderCreating ? 'true' : undefined"
           >
             {{

@@ -3,8 +3,34 @@
 WAP-T02a-01/02/03; WAP-17/30/31/33, OA-05/07 e ADRs 090/091.
 Contrato HTTP em [OpenAPI](../api/openapi.v1.yaml), desenho na
 [seção 7](../../.specs/features/seller-whatsapp/design.md#7-pedido-pela-conversa-contrato-e-transação).
-Esta entrega prepara e verifica o backend. Interface e gate integrado são
-WAP-E06/E07; provedor e produção exigem seus próprios aceites.
+WAP-E06 acrescenta a interface mínima; o gate integrado é WAP-E07 e provedor
+e produção exigem seus próprios aceites.
+
+## Interface mínima — WAP-E06
+
+Em Clientes, o vendedor acessa **Meus clientes**, que lê a carteira pelo
+`GET /api/v1/me/clients` existente e permite abrir uma conversa autorizada.
+Busca por nome e paginação usam o mesmo contrato; falha ou flag desligada não
+substitui a carteira pela lista geral. A leitura de cadastro não concede acesso
+à conversa nem ao Pedido: cada rota mantém sua própria autorização.
+
+O botão existente no cabeçalho abre confirmação humana. A tela captura Contact,
+conversa, versões, lista de Assuntos e chave idempotente; quando há Assuntos,
+exige o alvo e envia sua versão junto com a versão da conversa. Um Assunto com
+Pedido pendente pode devolver o mesmo Pedido. Após sucesso, abre a ficha e
+anuncia criação ou reutilização a partir do status HTTP 201/200; cancelar
+devolve foco ao acionador. O rascunho
+do chat permanece em memória na navegação da aplicação. Mudança de contexto,
+versão ou acesso cancela a confirmação e cerca respostas tardias; erro exige
+nova conferência. A API permanece responsável por autorizar e revalidar todas
+as condições, inclusive titular ativo e acesso comercial. Nenhuma dessas
+operações envia mensagem, ativa IA ou exige cadastro completo ou canal online.
+
+Rollback da interface usa um SHA compatível com o modelo de múltiplos alvos;
+desligue novas criações antes de qualquer retorno após uso desse modelo. Não
+reverter para leitor/escritor antigo depois de múltiplos alvos. E07 ainda deve
+provar o fluxo integrado com PostgreSQL e navegador; as projeções sintéticas
+de E06 não homologam provedor nem produção.
 
 ## Contrato e compatibilidade
 

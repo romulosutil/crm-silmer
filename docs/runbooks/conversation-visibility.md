@@ -13,6 +13,11 @@ o histórico do Contato não inclui conversa oculta. O Pedido conserva sua ACL
 comercial, sem conceder acesso à conversa. Transferir A → B com a Inbox aberta:
 A perde detalhe/rascunho e B pode ler. Replay e cursor antigo não recuperam acesso.
 
+WAP-E04 estende a regra às linhas pessoais: exigem titular, posse elegível e
+vínculo atual; sem dono não é público e transferência genérica é negada. O
+[contrato de ingresso e isolamento](seller-whatsapp-inbound.md) registra
+guardas, expansão 0079, replay, revogação e rollback que devem ser preservados.
+
 Testes locais e CI devem cobrir a matriz, SSE e transferência. O teste PostgreSQL
 usa apenas `crm_silmer_test` sintético; não executar contra banco operacional.
 

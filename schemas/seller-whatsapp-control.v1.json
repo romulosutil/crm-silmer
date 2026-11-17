@@ -150,6 +150,10 @@
       "additionalProperties": false,
       "required": ["source", "instance"],
       "properties": {
+        "sender": {
+          "type": "string",
+          "pattern": "^[0-9]{8,15}@s\\.whatsapp\\.net$"
+        },
         "instance": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
         "source": {
           "type": "object",

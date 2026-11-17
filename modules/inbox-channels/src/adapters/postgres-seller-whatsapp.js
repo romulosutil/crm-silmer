@@ -1412,7 +1412,7 @@ export class PostgresSellerWhatsAppRepository {
     });
   }
 
-  /** @param {{source:any,instance:string,token:string}} input */
+  /** @param {{source:any,instance:string,token:string,sender?:string}} input */
   async verifyIngress(input) {
     const source = input.source;
     id(source.bindingId);
@@ -1427,8 +1427,17 @@ export class PostgresSellerWhatsAppRepository {
         )
       ).rows[0];
       if (!initial) fail('FORBIDDEN', 403);
-      await this.#owner(client, initial.seller_id);
+      const owner = await this.#owner(client, initial.seller_id, true, true);
       const line = await this.#line(client, initial.seller_id);
+      const role = (
+        await client.query(
+          'SELECT function_name FROM crm.user_functions WHERE user_id=$1',
+          [initial.seller_id],
+        )
+      ).rows[0];
+      const inactive = Boolean(
+        owner.disabled_at || role?.function_name !== 'Vendedor',
+      );
       const binding = (
         await client.query(
           'SELECT * FROM crm.seller_whatsapp_bindings WHERE id=$1',
@@ -1442,25 +1451,35 @@ export class PostgresSellerWhatsAppRepository {
           : '0'.repeat(64);
       if (
         !binding ||
-        binding.revoked_at ||
+        (!inactive && binding.revoked_at) ||
         binding.line_id !== line.id ||
         binding.account_id !== source.accountId ||
         line.account_id !== source.accountId ||
         Number(binding.generation) !== source.generation ||
-        Number(line.generation) !== source.generation ||
+        (inactive
+          ? !(
+              line.state === 'blocked' &&
+              line.verified_at &&
+              line.confirmed_number_envelope &&
+              Number(line.generation) === source.generation + 1
+            )
+          : Number(line.generation) !== source.generation) ||
         binding.instance_name !== input.instance ||
         line.instance_name !== input.instance ||
+        (input.sender !== undefined &&
+          this.#digest(input.sender.split('@')[0]) !== line.number_digest) ||
         !timingSafeEqual(
           Buffer.from(binding.token_hash, 'hex'),
           Buffer.from(tokenHash, 'hex'),
         ) ||
-        ![
-          'preparing',
-          'awaiting_pairing',
-          'validating',
-          'connected',
-          'unknown',
-        ].includes(line.state)
+        (!(inactive && line.state === 'blocked') &&
+          ![
+            'preparing',
+            'awaiting_pairing',
+            'validating',
+            'connected',
+            'unknown',
+          ].includes(line.state))
       )
         fail('FORBIDDEN', 403);
       return {

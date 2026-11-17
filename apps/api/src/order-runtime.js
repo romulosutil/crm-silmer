@@ -1,11 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
-import {
-  authorize,
-  CAPABILITIES,
-  canReadConversation,
-} from '@crm-silmer/identity-access';
+import { authorize, CAPABILITIES } from '@crm-silmer/identity-access';
 import {
   createIdempotentCommandExecutor,
   PostgresIdempotencyRecordStore,
@@ -42,6 +38,7 @@ import { createFreightQuoteReader } from './shipping-runtime.js';
  * @typedef {{
  *   readAssignment(conversationId: string): Promise<{assignedUserId: string|null, version: number}|null>,
  *   readAssignments(conversationIds: string[]): Promise<Map<string, string|null>>,
+ *   readVisibleConversationIds(conversationIds: string[], actor: any): Promise<Set<string>>,
  *   readLatestMessageStates(conversationIds: string[]): Promise<Map<string, {direction: string, occurredAt: string, sentAt: string|null, deliveryStatus: string|null, status: string}>>,
  *   readOrderContexts(conversationIds: string[]): Promise<Map<string, any>>,
  *   readContactNames?(contactIds: string[]): Promise<Map<string, string|null>>,
@@ -95,6 +92,7 @@ export function createOrderRuntime(options) {
   for (const method of [
     'readAssignment',
     'readAssignments',
+    'readVisibleConversationIds',
     'readLatestMessageStates',
     'readUserNames',
   ]) {
@@ -234,12 +232,16 @@ export function createOrderRuntime(options) {
           .filter((id) => typeof id === 'string'),
       ),
     ];
+    const visibleConversations =
+      actor && conversationIds.length
+        ? await conversations.readVisibleConversationIds(conversationIds, actor)
+        : new Set(conversationIds);
     const [owners, latestMessageStates] =
       conversationIds.length === 0
         ? [new Map(), new Map()]
         : await Promise.all([
             conversations.readAssignments(conversationIds),
-            conversations.readLatestMessageStates(conversationIds),
+            conversations.readLatestMessageStates([...visibleConversations]),
           ]);
     const people = new Set();
     for (const order of orders) {
@@ -297,7 +299,7 @@ export function createOrderRuntime(options) {
       conversationId:
         !actor ||
         !order.conversationId ||
-        canReadConversation(actor, owners.get(order.conversationId))
+        visibleConversations.has(order.conversationId)
           ? order.conversationId
           : null,
       contactId:
@@ -342,7 +344,7 @@ export function createOrderRuntime(options) {
       id: order.id,
       isTest: order.isTest === true,
       lastMessage:
-        !actor || canReadConversation(actor, owners.get(order.conversationId))
+        !actor || visibleConversations.has(order.conversationId)
           ? (latestMessageStates.get(order.conversationId) ?? null)
           : null,
       leadTimeBusinessDays: order.leadTimeBusinessDays ?? null,
@@ -899,7 +901,12 @@ export function createOrderRuntime(options) {
       if (
         !assignment ||
         !actor ||
-        !canReadConversation(actor, assignment.assignedUserId)
+        !(
+          await conversations.readVisibleConversationIds(
+            [conversationId],
+            actor,
+          )
+        ).has(conversationId)
       ) {
         throw new OrderNotFoundError(
           'Conversation was not found',

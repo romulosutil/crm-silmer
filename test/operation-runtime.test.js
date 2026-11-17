@@ -228,7 +228,7 @@ test('INBOX-VEZ-01: a tab binds its cursor to reader, tab, owner, order-ready an
     bucket: 'respond',
     owner: 'all',
     orderReady: false,
-    visibility: { actorId: 'seller-1', readAll: false },
+    visibility: { actorId: 'seller-1', readAll: false, scopeVersion: '0' },
     limit: 1,
   });
   // The reader and the server instant travel apart from the filters.
@@ -256,7 +256,7 @@ test('INBOX-VEZ-01: a tab binds its cursor to reader, tab, owner, order-ready an
       bucket: 'respond',
       owner: 'all',
       orderReady: false,
-      visibility: { actorId: 'seller-1', readAll: false },
+      visibility: { actorId: 'seller-1', readAll: false, scopeVersion: '0' },
       orderVersion: 'latest-message-v1',
     }),
   );
@@ -394,7 +394,7 @@ test('CONV-ACL-01: owner and terminal preserve filters while cursors bind the vi
     fingerprintOf({
       sort: 'urgency',
       actorId: 'seller-1',
-      visibility: { actorId: 'seller-1', readAll: false },
+      visibility: { actorId: 'seller-1', readAll: false, scopeVersion: '0' },
     }),
   );
   const queue = await service.listInbox(
@@ -406,7 +406,7 @@ test('CONV-ACL-01: owner and terminal preserve filters while cursors bind the vi
     fingerprintOf({
       workQueue: 'closing',
       actorId: 'seller-1',
-      visibility: { actorId: 'seller-1', readAll: false },
+      visibility: { actorId: 'seller-1', readAll: false, scopeVersion: '0' },
     }),
   );
   // New narrowings are new scopes.
@@ -419,7 +419,7 @@ test('CONV-ACL-01: owner and terminal preserve filters while cursors bind the vi
     fingerprintOf({
       actorId: 'seller-1',
       owner: 'mine',
-      visibility: { actorId: 'seller-1', readAll: false },
+      visibility: { actorId: 'seller-1', readAll: false, scopeVersion: '0' },
     }),
   );
   assert.deepEqual(
@@ -429,7 +429,7 @@ test('CONV-ACL-01: owner and terminal preserve filters while cursors bind the vi
       actorId: 'seller-1',
       limit: 1,
       owner: 'mine',
-      visibility: { actorId: 'seller-1', readAll: false },
+      visibility: { actorId: 'seller-1', readAll: false, scopeVersion: '0' },
     },
   );
   const terminal = await service.listInbox({ terminal: 'true', limit: 1 });
@@ -762,6 +762,17 @@ test('PNL-06: only a COMMERCIAL_ADMIN reads who has conversations unanswered for
         /** @type {string} */ sql,
         /** @type {unknown[]} */ values,
       ) => {
+        if (sql.includes('FROM crm.users actor'))
+          return {
+            rows: [
+              {
+                id: values[0],
+                function_name: 'Vendedor',
+                disabled_at: null,
+                is_admin: values[0] === 'manager-1',
+              },
+            ],
+          };
         queries.push({ sql, values });
         if (/unanswered_count/u.test(sql)) {
           // The database order is not trusted: the repository sorts.
@@ -863,6 +874,17 @@ test('Painel: the Inbox summary reads the server clock and maps counts without e
         /** @type {string} */ sql,
         /** @type {unknown[]} */ values,
       ) => {
+        if (sql.includes('FROM crm.users actor'))
+          return {
+            rows: [
+              {
+                id: values[0],
+                function_name: 'Vendedor',
+                disabled_at: null,
+                is_admin: false,
+              },
+            ],
+          };
         queries.push({ sql, values });
         if (/pending_count/u.test(sql)) return { rows: [{ pending_count: 2 }] };
         return /failed_conversation_count/u.test(sql)

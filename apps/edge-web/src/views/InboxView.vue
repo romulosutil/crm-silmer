@@ -500,6 +500,7 @@ const takeoverReason = computed(() => {
 const canTransfer = computed(
   () =>
     canAct.value &&
+    active.value?.personalLine !== true &&
     active.value?.automationState === 'human' &&
     Boolean(active.value?.assignedUser),
 );
@@ -1087,7 +1088,14 @@ async function loadContactDetails() {
     if (controller === contactController && active.value?.contact.id === id)
       contactDetail.value = response.data.contact;
   } catch (cause) {
-    if (controller === contactController && cause?.name !== 'AbortError')
+    if (
+      controller === contactController &&
+      [403, 404].includes(Number(cause?.status))
+    ) {
+      clearPrivateConversation(activeId.value, true);
+      error.value = 'Esta conversa não está disponível para seu acesso.';
+      notify(error.value);
+    } else if (controller === contactController && cause?.name !== 'AbortError')
       contactError.value =
         'Não foi possível carregar os dados completos do contato.';
   } finally {
@@ -1314,8 +1322,18 @@ async function confirmManualOrder() {
         method: 'POST',
       },
     );
+    if (
+      manualOrderConfirmation.value !== confirmation ||
+      activeId.value !== conversationId
+    )
+      return;
     created = response.data.order ?? null;
   } catch (cause) {
+    if (
+      manualOrderConfirmation.value !== confirmation ||
+      activeId.value !== conversationId
+    )
+      return;
     manualOrderError.value =
       /** @type {any} */ (cause)?.status === 409
         ? 'A conversa mudou. Cancele esta confirmação, confira a intenção do cliente e abra a criação novamente.'
@@ -1922,6 +1940,7 @@ function clearPrivateConversation(id = activeId.value, forgetDraft = false) {
   actionMessage.value = '';
   error.value = '';
   manualOrderError.value = '';
+  manualOrderConfirmation.value = null;
   closeError.value = '';
   snoozeOpen.value = false;
   reminderAt.value = '';
@@ -2082,6 +2101,12 @@ async function loadSubjects(conversationId) {
     subjectError.value = '';
   } catch (cause) {
     if (controller === subjectController && cause?.name !== 'AbortError') {
+      if ([403, 404].includes(Number(cause?.status))) {
+        clearPrivateConversation(conversationId, true);
+        error.value = 'Esta conversa não está disponível para seu acesso.';
+        notify(error.value);
+        return;
+      }
       subjectError.value =
         'Não foi possível consultar os assuntos desta conversa.';
     }
@@ -2767,29 +2792,33 @@ watch(
   () => measureUnreadView(),
   { flush: 'post' },
 );
-watch(liveEvent, (event) => {
-  if (!event) return;
-  if (event.reset) {
-    // A reset intentionally carries no hidden conversation id. Abort older
-    // pages too, so a delayed response cannot put revoked data back on screen.
-    listController?.abort();
-    listController = undefined;
-    appendController?.abort();
-    appendController = undefined;
-    countController?.abort();
-    countController = undefined;
-    clearPrivateConversation();
-    conversations.value = [];
-    counts.value = {};
-    totalCount.value = 0;
-    nextCursor.value = '';
-  }
-  // PLI-08: an order changed elsewhere; Detalhes › Pedido reads it again.
-  if (event.reset || event.type === 'inbox.order.changed') {
-    orderChangedLive = true;
-  }
-  scheduleLiveRefresh();
-});
+watch(
+  liveEvent,
+  (event) => {
+    if (!event) return;
+    if (event.reset) {
+      // A reset intentionally carries no hidden conversation id. Abort older
+      // pages too, so a delayed response cannot put revoked data back on screen.
+      listController?.abort();
+      listController = undefined;
+      appendController?.abort();
+      appendController = undefined;
+      countController?.abort();
+      countController = undefined;
+      clearPrivateConversation();
+      conversations.value = [];
+      counts.value = {};
+      totalCount.value = 0;
+      nextCursor.value = '';
+    }
+    // PLI-08: an order changed elsewhere; Detalhes › Pedido reads it again.
+    if (event.reset || event.type === 'inbox.order.changed') {
+      orderChangedLive = true;
+    }
+    scheduleLiveRefresh();
+  },
+  { flush: 'sync' },
+);
 watch(liveConnection, (state, previous) => {
   if (state === 'conectado' && previous !== 'conectado') {
     void refreshInbox(true);

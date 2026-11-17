@@ -43,7 +43,7 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 | [ ] WAP-E01 | [Provar viabilidade do provedor e privacidade](PROMPTS.md#wap-e01)               | Sol/Opus     | Base documental | WAP-T01-01                                     |
 | [x] WAP-E02 | [Entregar conexão pessoal no backend e n8n](PROMPTS.md#wap-e02)                  | Sol/Opus     | WAP-E01         | WAP-T01-02, WAP-T01-03, WAP-T01-04             |
 | [x] WAP-E03 | [Entregar carteira e cadastro compartilhado no servidor](PROMPTS.md#wap-e03)     | Sol/Opus     | WAP-E02         | WAP-T02-01, WAP-T02-02, WAP-T02-03, WAP-T02-04 |
-| [ ] WAP-E04 | [Receber atendimento humano com isolamento ponta a ponta](PROMPTS.md#wap-e04)    | Sol/Opus     | WAP-E03         | WAP-T02-05, WAP-T02-06, WAP-T02-07             |
+| [x] WAP-E04 | [Receber atendimento humano com isolamento ponta a ponta](PROMPTS.md#wap-e04)    | Sol/Opus     | WAP-E03         | WAP-T02-05, WAP-T02-06, WAP-T02-07             |
 | [ ] WAP-E05 | [Criar Pedido por Assunto com compatibilidade transacional](PROMPTS.md#wap-e05)  | Sol/Opus     | WAP-E04         | WAP-T02a-01, WAP-T02a-02, WAP-T02a-03          |
 | [ ] WAP-E06 | [Entregar a interface mínima de Pedido pela conversa](PROMPTS.md#wap-e06)        | Terra/Sonnet | WAP-E05         | WAP-T02a-04                                    |
 | [ ] WAP-E07 | [Aceitar o fluxo passivo integrado de Pedido](PROMPTS.md#wap-e07)                | Sol/Opus     | WAP-E06         | WAP-T02a-05                                    |
@@ -54,6 +54,71 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 | [ ] WAP-E12 | [Homologar o piloto real da etapa 1](PROMPTS.md#wap-e12)                         | Sol/Opus     | WAP-E11         | WAP-T05-05, WAP-T05-06, WAP-T05-07             |
 
 ## Mapa de rastreabilidade dos 32 itens internos
+
+### Evidência WAP-E04 / WAP-T02-05–07 — atendimento humano isolado
+
+Entrega em 17/11/2026 sobre `origin/master` `a6f2cdc5`, com WAP-E03
+integrado. WAP-04–08/10/11/17/20/21/28/29/32; ADRs 090/091/092.
+[Contrato, fronteiras e rollback](../../../docs/runbooks/seller-whatsapp-inbound.md),
+[OpenAPI](../../../docs/api/openapi.v1.yaml). SHA/PR no handoff da entrega.
+
+- Ingresso pessoal pelo n8n autentica origem antes da persistência e revalida
+  binding/conta/linha/geração/titular na transação. Flag própria default off,
+  allowlist de vendedores e identidade técnica `seller-whatsapp-inbound/1.0`.
+  Workflow único compartilhado, não publicado; sem IA, resposta automática,
+  observação automática de Pedido, comando de saída ou importação incidental.
+- Contact/vínculo/conversa humana/atribuição são atômicos, sem fila pública.
+  Titular inativo previamente verificado conserva pendência privada Admin;
+  repetição/reconexão não duplica nem reclassifica origem. Expansão 0079 guarda
+  somente a origem imutável; envelopes, snapshots e retenção são preservados.
+- Predicado comum de linha/posse/vínculo protege Inbox, counts/paginação,
+  detalhe/contexto, mídia temporária/retida, Assuntos, sugestões, handoffs,
+  motivo de perda, lembretes/Central e contexto de frete. Mutações/recibos revalidam sob locks;
+  reancoragem concorrente retorna 409. Admin e ACL comercial são independentes:
+  Pedido/cotação legíveis não projetam IDs ou metadados da conversa oculta.
+- Transferência pessoal genérica é negada inclusive para Admin. Novo envio
+  pessoal permanece fechado com `WHATSAPP_SEND_UNAVAILABLE` até WAP-E08;
+  esta recusa não implementa nem antecipa a próxima entrega.
+- SSE revalida sessão/capacidade, projeta somente tipos/IDs permitidos e
+  invalida escopo também no heartbeat. Cursor anterior não cruza mudança de
+  vínculo/posse/linha/identidade. UI aborta requisições e limpa conteúdo privado;
+  respostas tardias não restauram dados. Conflito cadastral preserva rascunho
+  comum autorizado sem revelar carteira alheia. Criar pedido de `d7537b3c`
+  foi preservado.
+
+Verificação sintética em Node 24.20.0/npm 11.19.0 e PostgreSQL 17 portátil
+dedicado em loopback (sem Docker/WSL disponíveis no host):
+
+- Focais pedidos consolidados, contratos de ingresso, sanitização e ACL; novos
+  testes de cursor/eventos/heartbeat. Provas PostgreSQL reais incluem corrida,
+  rollback, inativo, duas linhas/mesmo Contact, callback antigo, reancoragem,
+  mídia HTTP e preservação da ACL comercial, sem skips.
+- Regressões PostgreSQL que usavam somente atores projetados passaram a
+  cadastrar usuários/funções/capacidades reais; assertivas de isolamento e
+  contratos públicos mantidas. Migrações anteriores são imutáveis; fixtures de
+  upgrade passam a esperar também 0079.
+- Auditorias `npm audit --audit-level=high` e
+  `npm audit --omit=dev --audit-level=high`: zero vulnerabilidades.
+- `npm run validate` final aprovado: **2.861 testes aprovados, zero falhas,
+  60 skips condicionais** de suítes live sem URL no comando geral; build,
+  formatação, typecheck, lint, fronteiras e validadores aprovados. As suítes
+  PostgreSQL desta fronteira foram executadas separadamente sem skips.
+- PostgreSQL focal final: ingresso/E02/n8n **40/40**; regressões de ACL/cadastro
+  **30 casos verdes**; mídia HTTP/quotas **21/21**. Última matriz de guards de
+  mídia e isolamento **29/29**, seguida de lembretes/Central/matriz ampliada
+  **12/12**. Grupos se sobrepõem; não somar como cenários distintos. Migração,
+  concorrência e rollback foram executados em banco real sintético.
+- E2E/axe/teclado/foco/mobile: cobertura final de **1.065 cenários aprovados**
+  e sete skips legados. A rodada completa passou 1.063 e encontrou duas
+  fixtures de renomeação que devolviam 404 em Assuntos; a fixture autorizada
+  foi corrigida sem mudar assertions e a repetição focal passou **4/4**.
+  Os quatro cenários novos cobrem duas sessões, revogação, resposta atrasada,
+  cadastro compartilhado e recusa de Assuntos em 390/1366 px. Sem build
+  concorrente no gate E2E. Banco dedicado encerrado ao fim das provas.
+
+`git diff --check` aprovado; commit/push/PR constam do handoff desta entrega.
+Nenhum resultado local homologa provedor/n8n real ou autoriza produção,
+pareamento, flags reais, mensagens a clientes ou efeitos financeiros.
 
 ### Evidência WAP-E03 / WAP-T02-01–04 — carteira e cadastro no servidor
 
@@ -239,9 +304,9 @@ inicial de sessões/PRs por T.
 | [x] WAP-T02-04  | Compor cadastro e vínculo de Cliente                     | [WAP-E03](PROMPTS.md#wap-e03) | WAP-18/20/21/24/29                |
 | [x] WAP-T01-03  | Expor comandos e estado de controle pessoal              | [WAP-E02](PROMPTS.md#wap-e02) | WAP-01/02/03/04/10/11/12          |
 | [x] WAP-T01-04  | Conectar controle n8n e desafio efêmero                  | [WAP-E02](PROMPTS.md#wap-e02) | WAP-02/03/04/10/11/12             |
-| [ ] WAP-T02-05  | Receber na linha pessoal com atribuição humana atômica   | [WAP-E04](PROMPTS.md#wap-e04) | WAP-04/05/06/08/10/20/21/32       |
-| [ ] WAP-T02-06  | Proteger conversa e leituras auxiliares da linha         | [WAP-E04](PROMPTS.md#wap-e04) | WAP-07/08/17/28                   |
-| [ ] WAP-T02-07  | Cercar eventos, replay e revogação de acesso             | [WAP-E04](PROMPTS.md#wap-e04) | WAP-07/11/28/29                   |
+| [x] WAP-T02-05  | Receber na linha pessoal com atribuição humana atômica   | [WAP-E04](PROMPTS.md#wap-e04) | WAP-04/05/06/08/10/20/21/32       |
+| [x] WAP-T02-06  | Proteger conversa e leituras auxiliares da linha         | [WAP-E04](PROMPTS.md#wap-e04) | WAP-07/08/17/28                   |
+| [x] WAP-T02-07  | Cercar eventos, replay e revogação de acesso             | [WAP-E04](PROMPTS.md#wap-e04) | WAP-07/11/28/29                   |
 | [ ] WAP-T02a-01 | Adicionar origem de Assunto ao Pedido                    | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/31/33                      |
 | [ ] WAP-T02a-02 | Resolver Pedido por alvo sem escolha arbitrária          | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/30/31/33                   |
 | [ ] WAP-T02a-03 | Criar ou reutilizar Pedido no alvo transacional          | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/31/33; OA-05/07            |

@@ -149,7 +149,17 @@ export function registerSellerWhatsAppRoutes(api, service, contextFor) {
       limits,
       async (request) => {
         const auth = await technical(request, 'whatsapp.control.read');
-        const body = controlObject(request.body, ['source', 'instance']);
+        const body = controlObject(request.body, [
+          'source',
+          'instance',
+          'sender',
+        ]);
+        if (
+          body.sender !== undefined &&
+          (typeof body.sender !== 'string' ||
+            !/^\d{8,15}@s\.whatsapp\.net$/u.test(body.sender))
+        )
+          throw error();
         const source = controlObject(body.source, [
           'bindingId',
           'lineId',

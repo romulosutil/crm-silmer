@@ -49,6 +49,18 @@ function harness(rows) {
     messageEnvelopeKey: KEY,
     database: {
       async query(/** @type {string} */ sql, /** @type {unknown[]} */ values) {
+        // These SQL-shape cases inspect the administrator's unscoped tab query.
+        if (sql.includes('FROM crm.users actor'))
+          return {
+            rows: [
+              {
+                id: values[0],
+                function_name: 'Vendedor',
+                disabled_at: null,
+                is_admin: true,
+              },
+            ],
+          };
         calls.push({ sql, values });
         return {
           rows: sql.includes('SELECT count(*)::integer count')
@@ -514,6 +526,17 @@ test('INBOX-VEZ-01: the four counts are one statement and one tab definition', a
     messageEnvelopeKey: KEY,
     database: {
       async query(/** @type {string} */ sql, /** @type {unknown[]} */ values) {
+        if (sql.includes('FROM crm.users actor'))
+          return {
+            rows: [
+              {
+                id: values[0],
+                function_name: 'Vendedor',
+                disabled_at: null,
+                is_admin: true,
+              },
+            ],
+          };
         calls.push({ sql, values });
         return { rows: [{ respond: 3, awaiting: 4, silent: 1, lost: 2 }] };
       },

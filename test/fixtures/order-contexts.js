@@ -16,3 +16,19 @@ export function orderContextsFrom(readOne) {
     return contexts;
   };
 }
+
+/** General-line fixture port; personal isolation uses the real PostgreSQL port.
+ * @this {{readAssignments:Function}}
+ * @param {string[]} ids @param {any} actor */
+export async function readVisibleConversationIds(ids, actor) {
+  const owners = await this.readAssignments(ids);
+  return new Set(
+    ids.filter(
+      (id) =>
+        owners.has(id) &&
+        (actor.capabilities?.includes('COMMERCIAL_ADMIN') ||
+          owners.get(id) === null ||
+          owners.get(id) === actor.id),
+    ),
+  );
+}

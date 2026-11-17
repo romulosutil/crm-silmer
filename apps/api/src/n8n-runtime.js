@@ -52,6 +52,26 @@ export function createN8nApiRuntime(database, options = {}) {
     'INBOX_MESSAGE_ENVELOPE_KEY',
   );
   const clock = options.clock ?? (() => new Date());
+  const inboundFlag = environment.SELLER_WHATSAPP_INBOUND_ENABLED;
+  if (inboundFlag !== undefined && !['true', 'false'].includes(inboundFlag))
+    throw new Error('Invalid SELLER_WHATSAPP_INBOUND_ENABLED');
+  let inboundSellers;
+  try {
+    inboundSellers = JSON.parse(
+      environment.SELLER_WHATSAPP_INBOUND_SELLER_IDS ?? '[]',
+    );
+  } catch {
+    throw new Error('Invalid SELLER_WHATSAPP_INBOUND_SELLER_IDS');
+  }
+  if (
+    !Array.isArray(inboundSellers) ||
+    inboundSellers.some(
+      (id) => typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/u.test(id),
+    ) ||
+    new Set(inboundSellers).size !== inboundSellers.length ||
+    (inboundFlag === 'true' && !inboundSellers.length)
+  )
+    throw new Error('Personal inbound requires explicit seller IDs');
   const repository = new PostgresN8nIntegrationRepository({
     contactEnvelopeKey,
     contactLookupKey,
@@ -60,6 +80,8 @@ export function createN8nApiRuntime(database, options = {}) {
     messageEnvelopeKey,
     orders: options.orders,
     requireHumanOrderCreation: true,
+    personalInboundEnabled: inboundFlag === 'true',
+    personalInboundSellerIds: inboundSellers,
     billingSendEnabled:
       environment.ORDER_BILLING_ENABLED === 'true' &&
       environment.ORDER_BILLING_CHAT_SEND_ENABLED === 'true',
@@ -108,6 +130,13 @@ export function createN8nApiRuntime(database, options = {}) {
     receiveInbound: service.receiveInbound,
     async recordEvent(/** @type {any} */ input) {
       if (input?.event_type === 'order.assistance.observed') {
+        const personal = await database.query(
+          `SELECT 1 FROM crm.conversations conversation JOIN crm.seller_whatsapp_lines line
+           ON line.account_id::text=conversation.provider_account_id WHERE conversation.id=$1`,
+          [input.conversation_id],
+        );
+        if (personal.rows.length)
+          throw new N8nMediaIngressError(403, 'PERSONAL_AUTOMATION_FORBIDDEN');
         if (!options.orderAssistance) {
           throw new N8nMediaIngressError(503, 'ORDER_ASSISTANCE_UNAVAILABLE');
         }

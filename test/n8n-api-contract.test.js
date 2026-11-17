@@ -68,6 +68,18 @@ test('validates every endpoint fixture and correlates required headers', async (
   assert.equal(validateEvent(event, contract), true);
 });
 
+test('WAP-E04: personal source is non-secret, strict and carried separately from the stable account', async () => {
+  const contract = await fixture('contract-v1.json');
+  const inbound = await fixture('messages-inbound-personal-whatsapp.json');
+  assert.equal(validateInbound(inbound, contract), true);
+  for (const source of [
+    { ...inbound.source, generation: 0 },
+    { ...inbound.source, generationToken: 'forbidden' },
+    { ...inbound.source, lineId: 'forged' },
+  ])
+    assert.throws(() => validateInbound({ ...inbound, source }, contract));
+});
+
 test('site chat is the active pilot while WhatsApp stays supported for rollout', async () => {
   const contract = await fixture('contract-v1.json');
   const whatsapp = await fixture('messages-inbound-whatsapp.json');

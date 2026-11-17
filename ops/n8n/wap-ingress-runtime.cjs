@@ -118,6 +118,62 @@ function eventBody(
     'sender',
     'server_url',
   ]);
+  if (['messages.upsert', 'messages.update'].includes(body.event)) {
+    if (
+      !instances.includes(body.instance) ||
+      !object(body.data) ||
+      typeof body.sender !== 'string' ||
+      !/^\d{8,15}@s\.whatsapp\.net$/.test(body.sender) ||
+      typeof body.date_time !== 'string' ||
+      !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(body.date_time) ||
+      !Number.isFinite(Date.parse(body.date_time))
+    )
+      denied();
+    const rawKey = body.event === 'messages.update' ? body.data : body.data.key;
+    if (!object(rawKey) || typeof rawKey.fromMe !== 'boolean') denied();
+    const key = {};
+    for (const field of [
+      'id',
+      'keyId',
+      'remoteJid',
+      'remoteJidAlt',
+      'participant',
+      'participantAlt',
+      'status',
+    ]) {
+      if (rawKey[field] === undefined) continue;
+      if (typeof rawKey[field] !== 'string' || rawKey[field].length > 512)
+        denied();
+      key[field] = rawKey[field];
+    }
+    key.fromMe = rawKey.fromMe;
+    const data =
+      body.event === 'messages.update'
+        ? key
+        : {
+            key,
+            messageTimestamp: body.data.messageTimestamp,
+            message: projectMessage(body.data.message),
+            pushName:
+              typeof body.data.pushName === 'string'
+                ? body.data.pushName.slice(0, 200)
+                : '',
+          };
+    if (
+      body.event === 'messages.upsert' &&
+      (typeof data.messageTimestamp !== 'number' ||
+        !Number.isFinite(data.messageTimestamp))
+    )
+      denied();
+    return {
+      event: body.event,
+      instance: body.instance,
+      source: sourceBody(body.source),
+      data,
+      sender: body.sender,
+      date_time: body.date_time,
+    };
+  }
   keys(body.data, ['state']);
   if (
     body.event !== 'connection.update' ||
@@ -139,13 +195,74 @@ function eventBody(
     data: { state: body.data.state },
   };
 }
+function projectMessage(raw, depth = 0) {
+  if (!object(raw) || depth > 3) denied();
+  const projected = {};
+  for (const field of [
+    'ephemeralMessage',
+    'viewOnceMessage',
+    'viewOnceMessageV2',
+    'documentWithCaptionMessage',
+  ])
+    if (object(raw[field]?.message))
+      projected[field] = {
+        message: projectMessage(raw[field].message, depth + 1),
+      };
+  if (typeof raw.conversation === 'string')
+    projected.conversation = raw.conversation.slice(0, 4096);
+  for (const field of [
+    'extendedTextMessage',
+    'imageMessage',
+    'audioMessage',
+    'videoMessage',
+    'documentMessage',
+    'stickerMessage',
+  ]) {
+    if (!object(raw[field])) continue;
+    const value = {};
+    for (const name of ['text', 'caption', 'mimetype', 'fileName'])
+      if (typeof raw[field][name] === 'string')
+        value[name] = raw[field][name].slice(
+          0,
+          name === 'text' || name === 'caption' ? 4096 : 255,
+        );
+    const quote = raw[field].contextInfo?.stanzaId;
+    if (typeof quote === 'string' && /^[A-Za-z0-9_-]{1,512}$/.test(quote))
+      value.contextInfo = { stanzaId: quote };
+    projected[field] = value;
+  }
+  // Unsupported content is represented only by its kind, never raw contacts,
+  // key material, thumbnails, remote URLs or arbitrary provider objects.
+  for (const field of [
+    'albumMessage',
+    'contactMessage',
+    'contactsArrayMessage',
+    'reactionMessage',
+    'protocolMessage',
+  ])
+    if (object(raw[field])) projected[field] = {};
+  if (object(raw.locationMessage)) {
+    const loc = raw.locationMessage;
+    projected.locationMessage = {
+      degreesLatitude: loc.degreesLatitude,
+      degreesLongitude: loc.degreesLongitude,
+      address: typeof loc.address === 'string' ? loc.address.slice(0, 255) : '',
+    };
+    if (
+      !Number.isFinite(loc.degreesLatitude) ||
+      !Number.isFinite(loc.degreesLongitude)
+    )
+      denied();
+  }
+  return projected;
+}
 function replaceObject(target, projected) {
   if (!object(target)) denied();
   for (const key of Object.keys(target)) delete target[key];
   Object.assign(target, projected);
   return target;
 }
-async function verifySource(source, instance, token, env, fetchImpl) {
+async function verifySource(source, instance, token, env, fetchImpl, sender) {
   const url = trustedVerifier(
     env.SILMER_WAP_INGRESS_VERIFY_URL,
     '/api/v1/integrations/n8n/whatsapp-control/ingress/verify',
@@ -171,7 +288,7 @@ async function verifySource(source, instance, token, env, fetchImpl) {
         [GENERATION_HEADER]: token,
         ...technicalHeaders(source.bindingId, source.bindingId),
       },
-      body: JSON.stringify({ source, instance }),
+      body: JSON.stringify({ source, instance, ...(sender ? { sender } : {}) }),
     });
   } catch {
     unavailable();
@@ -372,6 +489,7 @@ async function protectIngress(
         req.headers?.[GENERATION_HEADER],
         env,
         fetchImpl,
+        body.sender,
       );
     }
     // Mutate aliases too: WebhookContext caches references to req.headers/body.

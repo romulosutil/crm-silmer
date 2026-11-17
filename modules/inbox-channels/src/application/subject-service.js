@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
+import { lockConversationAccess } from '../adapters/conversation-access.js';
 
 export class SubjectError extends Error {
   /** @param {number} statusCode @param {string} code */
@@ -20,6 +21,17 @@ export function createSubjectService(database) {
     throw new TypeError('a transactional database is required');
   }
   const audit = new PostgresAuditTrail(database);
+
+  /** @param {any} transaction @param {string} conversationId @param {string} actorId */
+  async function subjectAccess(transaction, conversationId, actorId) {
+    try {
+      return await lockConversationAccess(transaction, conversationId, actorId);
+    } catch (error) {
+      if (/** @type {any} */ (error)?.statusCode === 403)
+        throw new SubjectError(403, 'FORBIDDEN');
+      throw error;
+    }
+  }
 
   /** @param {any} transaction @param {string} conversationId */
   async function context(transaction, conversationId) {
@@ -61,8 +73,14 @@ export function createSubjectService(database) {
     if (!grant.rows[0]) throw new SubjectError(403, 'FORBIDDEN');
   }
 
-  /** @param {any} transaction @param {string} operation @param {any} input @param {Record<string, unknown>} body @param {() => Promise<any>} work */
+  /** @param {any} transaction @param {string} operation @param {any} input @param {Record<string, unknown>} body @param {(actor:any) => Promise<any>} work */
   async function command(transaction, operation, input, body, work) {
+    if (input.actor?.kind !== 'human') throw new SubjectError(403, 'FORBIDDEN');
+    const access = await subjectAccess(
+      transaction,
+      input.conversationId,
+      input.actor.id,
+    );
     const key = requireId(input.idempotencyKey, 'IDEMPOTENCY_KEY');
     const fingerprint = createHash('sha256')
       .update(
@@ -87,7 +105,7 @@ export function createSubjectService(database) {
       }
       return replay.rows[0].result;
     }
-    const result = await work();
+    const result = await work(access.actor);
     await transaction.query(
       `INSERT INTO crm.subject_commands
          (operation, idempotency_key, fingerprint, result, actor_id, completed_at)
@@ -141,90 +159,99 @@ export function createSubjectService(database) {
   }
 
   return Object.freeze({
-    /** @param {string} conversationId @param {string} [orderQuery] */
-    async list(conversationId, orderQuery = '') {
-      const id = requireId(conversationId, 'CONVERSATION_ID');
-      const query = orderQuery.trim();
-      if (query.length > 40) throw new SubjectError(400, 'INVALID_ORDER_QUERY');
-      const conversation = await database.query(
-        `SELECT identity.current_contact_id AS contact_id,
+    /** @param {string} conversationId @param {string} [orderQuery] @param {any} [actor] */
+    async list(conversationId, orderQuery = '', actor = null) {
+      if (actor?.kind !== 'human') throw new SubjectError(403, 'FORBIDDEN');
+      return database.transaction(async (/** @type {any} */ database) => {
+        const access = await subjectAccess(database, conversationId, actor.id);
+        const id = requireId(conversationId, 'CONVERSATION_ID');
+        const query = orderQuery.trim();
+        if (query.length > 40)
+          throw new SubjectError(400, 'INVALID_ORDER_QUERY');
+        const conversation = await database.query(
+          `SELECT identity.current_contact_id AS contact_id,
                 conversation.contact_identity_id
          FROM crm.conversations conversation
          JOIN crm.contact_identities identity
            ON identity.id=conversation.contact_identity_id
          WHERE conversation.id=$1`,
-        [id],
-      );
-      if (!conversation.rows[0])
-        throw new SubjectError(404, 'CONVERSATION_NOT_FOUND');
-      const contactId = conversation.rows[0].contact_id;
-      const identityId = conversation.rows[0].contact_identity_id;
-      const [subjects, orders, links, reviews] = await Promise.all([
-        database.query(
-          `SELECT subject.id, subject.kind, subject.order_id, subject.position,
+          [id],
+        );
+        if (!conversation.rows[0])
+          throw new SubjectError(404, 'CONVERSATION_NOT_FOUND');
+        const contactId = conversation.rows[0].contact_id;
+        const identityId = conversation.rows[0].contact_identity_id;
+        const [subjects, orders, links, reviews] = await Promise.all([
+          database.query(
+            `SELECT subject.id, subject.kind, orders.id AS order_id, subject.position,
                   subject.is_current, subject.selected_source, subject.version,
                   orders.number AS order_number,
                   CASE WHEN orders.cancelled_at IS NOT NULL THEN 'cancelado'
                        ELSE orders.status END AS order_status
            FROM crm.conversation_subjects subject
            LEFT JOIN crm.orders orders ON orders.id=subject.order_id
+             AND ($3::boolean OR orders.manual_owner_id=$2 OR EXISTS (
+               SELECT 1 FROM crm.conversations owned WHERE owned.id=orders.conversation_id AND owned.assigned_user_id=$2))
            WHERE subject.conversation_id=$1
            ORDER BY subject.position`,
-          [id],
-        ),
-        database.query(
-          `SELECT id, number, status FROM crm.orders
-           WHERE origin='atendimento'
+            [id, actor.id, access.actor.isAdmin],
+          ),
+          database.query(
+            `SELECT orders.id, orders.number, orders.status FROM crm.orders orders
+           LEFT JOIN crm.conversations order_conversation ON order_conversation.id=orders.conversation_id
+           WHERE orders.origin='atendimento'
              AND (contact_id=$1 OR contact_id IN (
                SELECT source_contact_id FROM crm.identity_links
                WHERE contact_identity_id=$3 AND target_contact_id=$1
                  AND status='active'))
-             AND ($2='' OR position(lower($2) in lower(number))>0)
-           ORDER BY (status='pendente' AND cancelled_at IS NULL) DESC,
-                    created_at DESC, id DESC
+             AND ($2='' OR position(lower($2) in lower(orders.number))>0)
+             AND ($5::boolean OR orders.manual_owner_id=$4 OR order_conversation.assigned_user_id=$4)
+           ORDER BY (orders.status='pendente' AND orders.cancelled_at IS NULL) DESC,
+                    orders.created_at DESC, orders.id DESC
            LIMIT 101`,
-          [contactId, query, identityId],
-        ),
-        database.query(
-          `SELECT message_id, subject_id, assigned_by_kind
+            [contactId, query, identityId, actor.id, access.actor.isAdmin],
+          ),
+          database.query(
+            `SELECT message_id, subject_id, assigned_by_kind
            FROM crm.message_subject_links
            WHERE conversation_id=$1 ORDER BY message_id, subject_id`,
-          [id],
-        ),
-        // CP-16: only messages the agent flagged as ambiguous, still without
-        // any subject and without a human decision, ask the seller.
-        database.query(
-          `SELECT review.message_id FROM crm.message_subject_reviews review
+            [id],
+          ),
+          // CP-16: only messages the agent flagged as ambiguous, still without
+          // any subject and without a human decision, ask the seller.
+          database.query(
+            `SELECT review.message_id FROM crm.message_subject_reviews review
            WHERE review.conversation_id=$1 AND review.resolved_at IS NULL
              AND NOT EXISTS (
                SELECT 1 FROM crm.message_subject_links link
                WHERE link.message_id=review.message_id)
            ORDER BY review.message_id`,
-          [id],
-        ),
-      ]);
-      return {
-        currentSubjectId:
-          subjects.rows.find((/** @type {any} */ row) => row.is_current)?.id ??
-          null,
-        links: links.rows.map((/** @type {any} */ row) => ({
-          messageId: row.message_id,
-          subjectId: row.subject_id,
-          assignedByKind: row.assigned_by_kind,
-        })),
-        // UXA-14: reviews only open while the conversation has a subject,
-        // so "one order + also another one" still reaches the seller.
-        needsSubjectMessageIds: reviews.rows.map(
-          (/** @type {any} */ row) => row.message_id,
-        ),
-        orders: orders.rows.slice(0, 100).map((/** @type {any} */ row) => ({
-          id: row.id,
-          number: row.number,
-          status: row.status,
-        })),
-        ordersHasMore: orders.rows.length > 100,
-        subjects: subjects.rows.map(presentSubject),
-      };
+            [id],
+          ),
+        ]);
+        return {
+          currentSubjectId:
+            subjects.rows.find((/** @type {any} */ row) => row.is_current)
+              ?.id ?? null,
+          links: links.rows.map((/** @type {any} */ row) => ({
+            messageId: row.message_id,
+            subjectId: row.subject_id,
+            assignedByKind: row.assigned_by_kind,
+          })),
+          // UXA-14: reviews only open while the conversation has a subject,
+          // so "one order + also another one" still reaches the seller.
+          needsSubjectMessageIds: reviews.rows.map(
+            (/** @type {any} */ row) => row.message_id,
+          ),
+          orders: orders.rows.slice(0, 100).map((/** @type {any} */ row) => ({
+            id: row.id,
+            number: row.number,
+            status: row.status,
+          })),
+          ordersHasMore: orders.rows.length > 100,
+          subjects: subjects.rows.map(presentSubject),
+        };
+      });
     },
 
     /** @param {any} input */
@@ -242,7 +269,7 @@ export function createSubjectService(database) {
       // for `select: true` still replay; `select: false` is a distinct body.
       const body = select ? { orderId } : { orderId, select };
       return database.transaction((/** @type {any} */ transaction) =>
-        command(transaction, 'create', input, body, async () => {
+        command(transaction, 'create', input, body, async (access) => {
           const conversation = await context(transaction, conversationId);
           await requireOwner(transaction, conversation, input.actor);
           let orderNumber = null;
@@ -259,11 +286,15 @@ export function createSubjectService(database) {
                    SELECT source_contact_id FROM crm.identity_links
                    WHERE contact_identity_id=$3 AND target_contact_id=$2
                      AND status='active'))
+                 AND ($5::boolean OR manual_owner_id=$4 OR EXISTS (
+                   SELECT 1 FROM crm.conversations owned WHERE owned.id=crm.orders.conversation_id AND owned.assigned_user_id=$4))
                FOR SHARE`,
               [
                 orderId,
                 conversation.contact_id,
                 conversation.contact_identity_id,
+                access.id,
+                access.isAdmin,
               ],
             );
             if (!order.rows[0])

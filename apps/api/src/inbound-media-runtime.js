@@ -5,6 +5,7 @@ import {
 } from '@crm-silmer/identity-access';
 import { open } from 'node:fs/promises';
 import { mediaError } from './chat-media-runtime.js';
+import { contactConversationVisible } from '@crm-silmer/contacts';
 
 const MIME_TYPES = /** @type {Record<string, string[]>} */ ({
   image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
@@ -46,8 +47,12 @@ export function createInboundMediaRuntime({
            JOIN crm.conversations conversation ON conversation.id=message.conversation_id
            JOIN crm.transient_media media ON media.id=attachment.transient_media_id
            WHERE media.id=$1 AND message.conversation_id=$2
-             AND ($3::boolean OR conversation.assigned_user_id IS NULL
-               OR conversation.assigned_user_id=$4)
+             AND EXISTS (SELECT 1 FROM crm.users reader
+               JOIN crm.user_functions role ON role.user_id=reader.id
+               WHERE reader.id=$4 AND reader.disabled_at IS NULL AND role.function_name='Vendedor')
+             AND (($3::boolean AND EXISTS (SELECT 1 FROM crm.user_capabilities
+               WHERE user_id=$4 AND capability='COMMERCIAL_ADMIN'))
+               OR ${contactConversationVisible('conversation', '$4')})
              AND message.direction='inbound' AND media.media_type=message.message_type
              AND (message.message_type IN ('image','audio','video')
                OR (message.message_type='document' AND media.detected_mime_type

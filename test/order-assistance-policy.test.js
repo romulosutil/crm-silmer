@@ -6,15 +6,19 @@ import { createN8nIntegrationService } from '../modules/n8n-integration/src/serv
 import { createAutomationAuthRuntime } from '../apps/api/src/automation-auth-runtime.js';
 import { createOrderAssistanceService } from '../modules/inbox-channels/src/application/order-assistance.js';
 
-/** @param {{observe(input:any):Promise<any>}} [orderAssistance] */
-function integration(orderAssistance) {
+/** @param {{observe(input:any):Promise<any>}} [orderAssistance] @param {boolean} [personal] */
+function integration(orderAssistance, personal = false) {
   const key = Buffer.alloc(32, 71).toString('base64');
   const observations = /** @type {any[]} */ ([]);
   let writes = 0;
   const runtime = createN8nApiRuntime(
     {
-      query() {
-        throw new Error('No database writes are expected');
+      query(/** @type {string} */ sql) {
+        assert.match(
+          sql,
+          /SELECT 1 FROM crm\.conversations conversation JOIN crm\.seller_whatsapp_lines line/u,
+        );
+        return Promise.resolve({ rows: personal ? [{ present: 1 }] : [] });
       },
       transaction() {
         throw new Error('No database writes are expected');
@@ -45,6 +49,19 @@ function integration(orderAssistance) {
   );
   return { runtime, observations, writes: () => writes };
 }
+
+test('WAP-E04: the personal line cannot invoke the observation model or create a commercial suggestion', async () => {
+  const h = integration(undefined, true);
+  await assert.rejects(
+    h.runtime.recordEvent({
+      event_type: 'order.assistance.observed',
+      conversation_id: 'synthetic-personal',
+    }),
+    { code: 'PERSONAL_AUTOMATION_FORBIDDEN' },
+  );
+  assert.equal(h.observations.length, 0);
+  assert.equal(h.writes(), 0);
+});
 
 test('OA-T02: authenticated principal reaches observation persistence through the production route and runtime', async (t) => {
   const calls = /** @type {any[]} */ ([]);

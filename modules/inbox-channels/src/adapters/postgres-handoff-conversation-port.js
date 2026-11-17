@@ -1,4 +1,5 @@
 import { InboxConflictError } from '../domain/errors.js';
+import { contactConversationVisible } from '@crm-silmer/contacts';
 
 export class PostgresHandoffConversationPort {
   /** @param {{conversationId: string, expectedVersion: number, contactId: string, automationEpoch?: number, requireAutomationFence?: boolean}} input @param {{transaction: any}} context */
@@ -38,7 +39,7 @@ export class PostgresHandoffConversationPort {
   async assignHuman(input, context) {
     const database = queryable(context);
     const updated = await database.query(
-      `UPDATE crm.conversations
+      `UPDATE crm.conversations conversation
        SET automation_state = 'human',
            automation_epoch = automation_epoch + CASE WHEN $3 THEN 1 ELSE 0 END,
            assigned_user_id = $4,
@@ -46,6 +47,9 @@ export class PostgresHandoffConversationPort {
            version = version + 1,
            last_message_at = GREATEST(last_message_at, $5)
        WHERE id = $1 AND version = $2 AND terminal_at IS NULL
+         AND (NOT EXISTS (SELECT 1 FROM crm.seller_whatsapp_lines personal_line
+           WHERE personal_line.account_id::text=conversation.provider_account_id)
+           OR ${contactConversationVisible('conversation', '$4')})
        RETURNING id, version, state, automation_state, automation_epoch,
                  assigned_user_id, terminal_at`,
       [

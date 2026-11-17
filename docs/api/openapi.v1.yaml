@@ -305,7 +305,7 @@ paths:
           required: true
           schema: { type: string, minLength: 32, maxLength: 128 }
       summary: Comparar source/token capturados antes da fila com binding imutável
-      description: WAP-E02/WAP-10/12 / ADR 092. Basic técnico e workflow seller-whatsapp-control/1.0; correlação/chave bindingId, X-Silmer-Wap-Generation-Token efêmero. Sem efeito nem reclassificação para geração atual. Ingresso de mensagens de produto permanece E04.
+      description: WAP-E02/E04/WAP-10/12 / ADR 092. Basic técnico e workflow seller-whatsapp-control/1.0; correlação/chave bindingId, X-Silmer-Wap-Generation-Token efêmero. Mensagens exigem sender comprovado pelo número da linha. Sem efeito, persistência de token ou reclassificação para geração atual. O ingresso de produto revalida a origem na transação; flags e allowlist próprias permanecem desligadas por padrão.
       security: [{ automationBasic: [], idempotencyKey: [] }]
       requestBody:
         required: true
@@ -2501,6 +2501,7 @@ paths:
     post:
       operationId: receiveN8nInboundMessage
       summary: Persiste uma mensagem recebida pelo n8n e devolve o contexto oficial
+      description: WAP-E04. Na linha pessoal Evolution, source é obrigatória e deriva da autenticação pré-persistência do n8n. Revalidar binding, conta, linha, geração e titular na transação. Cliente/vínculo/atendimento humano atribuídos atomicamente; sem IA, resposta automática ou Pedido. Inativo conserva pendência privada administrativa. Default off e allowlist SELLER_WHATSAPP_INBOUND_SELLER_IDS; linha geral mantém o contrato anterior. Reconexão não reclassifica evento antigo.
       security: [{ automationBasic: [], idempotencyKey: [] }]
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -5523,6 +5524,8 @@ components:
           metadata,
         ]
       properties:
+        source:
+          $ref: '../../schemas/fixtures/external/n8n/contract-v1.schema.json#/$defs/personalWhatsAppSource'
         schema_version: { type: string, const: '1.0' }
         event_id: { type: string, minLength: 1, maxLength: 512 }
         occurred_at: { type: string, format: date-time }
@@ -5663,6 +5666,8 @@ components:
       additionalProperties: false
       required: [schema_version, event_id, event_type, occurred_at]
       properties:
+        source:
+          $ref: '../../schemas/fixtures/external/n8n/contract-v1.schema.json#/$defs/personalWhatsAppSource'
         schema_version: { type: string, const: '1.0' }
         event_id: { type: string, minLength: 1, maxLength: 512 }
         event_type:

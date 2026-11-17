@@ -16,7 +16,11 @@ const SELLER = Object.freeze({
   kind: 'human',
   capabilities: [],
 });
-const ADMIN = Object.freeze({ ...SELLER, capabilities: ['COMMERCIAL_ADMIN'] });
+const ADMIN = Object.freeze({
+  ...SELLER,
+  id: 'admin-a',
+  capabilities: ['COMMERCIAL_ADMIN'],
+});
 
 /** @param {Record<string, string|null>} owners */
 function visibilityHarness(owners) {
@@ -26,6 +30,17 @@ function visibilityHarness(owners) {
     messageEnvelopeKey: Buffer.alloc(32, 2),
     database: {
       async query(/** @type {string} */ sql, /** @type {any[]} */ values) {
+        if (sql.includes('FROM crm.users actor'))
+          return {
+            rows: [
+              {
+                id: values[0],
+                function_name: 'Vendedor',
+                disabled_at: null,
+                is_admin: values[0] === ADMIN.id,
+              },
+            ],
+          };
         queries.push({ sql, values });
         assert.match(
           sql,

@@ -5,8 +5,10 @@ import {
   randomBytes,
   randomUUID,
 } from 'node:crypto';
-import { authorize, canReadConversation } from '@crm-silmer/identity-access';
+import { authorize } from '@crm-silmer/identity-access';
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
+import { contactConversationVisible } from '@crm-silmer/contacts';
+import { lockConversationAccess } from '@crm-silmer/inbox-channels';
 
 export class ConversationShippingError extends Error {
   /** @param {number} statusCode @param {string} code */
@@ -251,6 +253,17 @@ export function createConversationShippingRuntime(database, options) {
 
   /** @param {any} client @param {any} input @param {boolean} [checkVersion] */
   async function context(client, input, checkVersion = true) {
+    try {
+      await lockConversationAccess(
+        client,
+        input.conversationId,
+        input.actor?.id,
+      );
+    } catch (error) {
+      if (Number(/** @type {any} */ (error)?.statusCode) === 403)
+        throw new ConversationShippingError(403, 'FORBIDDEN');
+      throw error;
+    }
     const actor = await actorFor(client, input.actor, 'shipping.quote');
     const conversations = await client.query(
       `SELECT id,assigned_user_id,automation_state,terminal_at
@@ -311,8 +324,8 @@ export function createConversationShippingRuntime(database, options) {
     return result.rows[0];
   }
 
-  /** @param {any} row @param {any} [actor] */
-  function present(row, actor) {
+  /** @param {any} row @param {boolean} [conversationReadable] */
+  function present(row, conversationReadable = true) {
     const { providerContext, ...payload } = decrypt(row, key);
     return {
       id: row.id,
@@ -320,14 +333,8 @@ export function createConversationShippingRuntime(database, options) {
       orderVersion: Number(row.order_version),
       ...payload,
       // Commercial estimates stay shared; their private conversation does not.
-      conversationId:
-        !actor || canReadConversation(actor, row.conversation_owner_id)
-          ? row.conversation_id
-          : null,
-      subjectId:
-        !actor || canReadConversation(actor, row.conversation_owner_id)
-          ? row.subject_id
-          : null,
+      conversationId: conversationReadable ? row.conversation_id : null,
+      subjectId: conversationReadable ? row.subject_id : null,
       totalPieces: row.total_pieces,
       selectedServiceId: row.selected_service_id,
       selectedAt: row.selected_at
@@ -513,11 +520,18 @@ export function createConversationShippingRuntime(database, options) {
            ORDER BY selected_at DESC NULLS LAST,created_at DESC,id DESC LIMIT 1`,
           [orderId],
         );
-        return {
-          quote: result.rows[0]
-            ? present(await rowFor(client, result.rows[0].id), actor)
-            : null,
-        };
+        if (!result.rows[0]) return { quote: null };
+        const row = await rowFor(client, result.rows[0].id);
+        const readable = await client.query(
+          `SELECT conversation.id FROM crm.conversations conversation
+           WHERE conversation.id=$1 AND ($3::boolean OR ${contactConversationVisible('conversation', '$2')})`,
+          [
+            row.conversation_id,
+            actor.id,
+            actor.capabilities.includes('COMMERCIAL_ADMIN'),
+          ],
+        );
+        return { quote: present(row, readable.rows.length > 0) };
       });
     },
   });

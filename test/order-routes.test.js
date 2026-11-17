@@ -1,3 +1,4 @@
+import { readVisibleConversationIds } from './fixtures/order-contexts.js';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
@@ -138,6 +139,7 @@ function orderHarness(options = {}) {
         id in assignments
           ? { assignedUserId: assignments[id], version: 4 }
           : null,
+      readVisibleConversationIds,
       readAssignments: async (/** @type {string[]} */ ids) =>
         new Map(ids.map((id) => [id, assignments[id] ?? null])),
       readLatestMessageStates: async (/** @type {string[]} */ ids) =>

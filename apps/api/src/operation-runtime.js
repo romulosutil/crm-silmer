@@ -121,7 +121,33 @@ export function createOperationReadService({
       : {}),
   });
 
+  /** Access changes invalidate pagination and open projections independently of
+   * message/activity versions. Only a digest leaves this query.
+   * @param {string|null|undefined} actorId */
+  async function accessScopeVersion(actorId) {
+    if (!actorId || !database) return '0';
+    const result = await database.query(
+      `SELECT md5(jsonb_build_array(
+        (SELECT jsonb_build_array(u.disabled_at,f.function_name,
+          (SELECT jsonb_agg(capability ORDER BY capability) FROM crm.user_capabilities WHERE user_id=$1))
+          FROM crm.users u LEFT JOIN crm.user_functions f ON f.user_id=u.id WHERE u.id=$1),
+        (SELECT COALESCE(version,0) FROM crm.seller_client_scope_versions WHERE seller_id=$1),
+        (SELECT jsonb_agg(jsonb_build_array(id,seller_id,account_id) ORDER BY id)
+          FROM crm.seller_whatsapp_lines),
+        (SELECT jsonb_agg(jsonb_build_array(conversation.id,conversation.assigned_user_id,identity.current_contact_id) ORDER BY conversation.id)
+          FROM crm.conversations conversation JOIN crm.contact_identities identity ON identity.id=conversation.contact_identity_id
+          WHERE conversation.assigned_user_id=$1 OR conversation.assigned_user_id IS NULL)
+      )::text) version`,
+      [actorId],
+    );
+    return result.rows[0]?.version ?? '0';
+  }
+
   return Object.freeze({
+    /** @param {{id:string}} actor */
+    async readAccessScope(actor) {
+      return accessScopeVersion(actor.id);
+    },
     /**
      * Painel: the reader's queue, the handoffs past their SLA and the
      * assistant's health, all worked out on the server clock. PNL-06: the
@@ -477,6 +503,7 @@ export function createOperationReadService({
         filters.visibility = {
           actorId: access.actorId,
           readAll: !readerFor(access).visibilityActorId,
+          scopeVersion: await accessScopeVersion(access.actorId),
         };
       }
       const ranked = filters.sort === 'urgency' || input.bucket !== undefined;
@@ -515,25 +542,29 @@ export function createOperationReadService({
      * @param {any} event @param {any} actor
      */
     async eventForReader(event, actor) {
-      if (actor?.capabilities?.includes(CAPABILITIES.COMMERCIAL_ADMIN))
-        return event;
       const reset = { cursor: event.cursor, type: 'stream.reset', payload: {} };
-      const conversationId = event.payload?.conversationId;
-      const contactId = event.payload?.contactId;
+      if (!actor?.id) return reset;
+      const projected = projectLiveEvent(event);
+      if (!projected) return reset;
+      const conversationId = projected.payload.conversationId;
+      const contactId = projected.payload.contactId;
+      if (actor.capabilities?.includes(CAPABILITIES.COMMERCIAL_ADMIN))
+        return projected;
       if (!actor?.id || (!conversationId && !contactId)) return reset;
       try {
-        if (contactId) {
+        // A shared Contact never authorizes an event about its private chat.
+        if (!conversationId && contactId) {
           await contactRepository.get(
             contactId,
             readerFor({ actorId: actor.id, capabilities: actor.capabilities }),
           );
-          return event;
+          return projected;
         }
         await inboxRepository.assertReadable(
           conversationId,
           readerFor({ actorId: actor.id, capabilities: actor.capabilities }),
         );
-        return event;
+        return projected;
       } catch (error) {
         if (Number(/** @type {any} */ (error)?.statusCode) === 404)
           return reset;
@@ -611,6 +642,7 @@ export function createOperationReadService({
           ? {
               reader: readerFor(access).visibilityActorId ?? 'admin',
               actorId: access.actorId,
+              scopeVersion: await accessScopeVersion(access.actorId),
             }
           : {}),
       };
@@ -1668,6 +1700,27 @@ function liveEventFor(row) {
     payload: { conversationId: row.aggregate_id },
     type: 'inbox.conversation.changed',
   };
+}
+
+/** Allowlisted public invalidations only, even for administrators and replay.
+ * @param {any} event */
+function projectLiveEvent(event) {
+  const fields = /** @type {Record<string,string[]>} */ ({
+    'inbox.contact.changed': ['contactId'],
+    'inbox.conversation.changed': ['conversationId'],
+    'inbox.order.changed': ['conversationId', 'orderId'],
+    'identity.user.changed': ['userId'],
+    'stream.reset': [],
+  })[event.type];
+  if (!fields) return null;
+  const payload = /** @type {Record<string,string>} */ ({});
+  for (const field of fields) {
+    const value = event.payload?.[field];
+    if (typeof value !== 'string' || value.length > 128 || !value.length)
+      return null;
+    payload[field] = value;
+  }
+  return { cursor: event.cursor, type: event.type, payload };
 }
 
 const OWNERS = new Set(['all', 'mine', 'unassigned']);

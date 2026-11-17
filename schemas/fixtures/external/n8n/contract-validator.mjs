@@ -10,6 +10,7 @@ const inboundKeys = Object.freeze([
   'occurred_at',
   'provider',
   'site_contact',
+  'source',
 ]);
 const attachmentKeys = Object.freeze([
   ...commonEnvelopeKeys,
@@ -43,6 +44,7 @@ const eventKeys = Object.freeze([
   // INBOX-AUDIO-TRANSCRIPT-01 and AGENTE-OBS-01.
   'transcript',
   'turn',
+  'source',
 ]);
 const turnKeys = Object.freeze([
   'answer_status',
@@ -153,6 +155,7 @@ export function validateInbound(payload, contract) {
   object(payload, 'INVALID_INBOUND');
   rejectUnknown(payload, inboundKeys);
   common(payload);
+  personalSource(payload.source);
   if (!contract.channels.includes(payload.channel)) fail('UNSUPPORTED_CHANNEL');
   for (const field of ['event_id', 'occurred_at']) {
     nonEmpty(payload[field], 'INVALID_INBOUND');
@@ -236,6 +239,7 @@ export function validateEvent(payload, contract, options = {}) {
   object(payload, 'INVALID_EVENT');
   rejectUnknown(payload, eventKeys);
   common(payload);
+  personalSource(payload.source);
   for (const field of ['event_id', 'event_type', 'occurred_at']) {
     nonEmpty(payload[field], 'INVALID_EVENT');
   }
@@ -552,6 +556,23 @@ export function validateProblem(problem) {
     fail('INVALID_PROBLEM');
   }
   return true;
+}
+
+/** @param {any} source */
+function personalSource(source) {
+  if (source === undefined) return;
+  object(source, 'INVALID_PERSONAL_SOURCE');
+  rejectUnknown(source, ['bindingId', 'lineId', 'accountId', 'generation']);
+  const uuid =
+    /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/iu;
+  if (
+    !['bindingId', 'lineId', 'accountId'].every(
+      (field) => typeof source[field] === 'string' && uuid.test(source[field]),
+    ) ||
+    !Number.isSafeInteger(source.generation) ||
+    source.generation < 1
+  )
+    fail('INVALID_PERSONAL_SOURCE');
 }
 
 /** @param {any} payload */

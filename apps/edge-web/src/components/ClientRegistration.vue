@@ -36,7 +36,7 @@ import { formatPhoneNumber } from '../lib/format.js';
 const props = defineProps({
   contact: { type: Object, required: true },
 });
-const emit = defineEmits(['saved', 'loaded']);
+const emit = defineEmits(['saved', 'loaded', 'unavailable']);
 
 /** Form order; also the order of the error summary. */
 const FIELD_ORDER = [...REGISTRATION_FIELDS, 'phone', 'email'];
@@ -102,6 +102,7 @@ let detailsAttempt = { fingerprint: '', key: '' };
 let registrationAttempt = { fingerprint: '', key: '' };
 /** @type {AbortController|undefined} */
 let cepController;
+const accessController = new AbortController();
 let cepSequence = 0;
 let lastCepLookup = '';
 /** @type {Record<string, string>} */
@@ -368,13 +369,25 @@ async function cancel() {
 
 /** @returns {Promise<Record<string, any>|null>} */
 async function fetchCurrent() {
+  const contactId = String(props.contact.id);
   try {
     const response = await request(
-      `/api/v1/contacts/${encodeURIComponent(String(props.contact.id))}`,
+      `/api/v1/contacts/${encodeURIComponent(contactId)}`,
+      { signal: accessController.signal },
     );
+    if (
+      accessController.signal.aborted ||
+      String(props.contact.id) !== contactId
+    )
+      return null;
     emit('loaded', response.data);
     return response.data ?? null;
-  } catch {
+  } catch (cause) {
+    if (
+      !accessController.signal.aborted &&
+      [403, 404].includes(Number(cause?.status))
+    )
+      emit('unavailable');
     return null;
   }
 }
@@ -558,7 +571,9 @@ async function save() {
         body,
         idempotencyKey: keyFor(detailsAttempt, body),
         method: 'POST',
+        signal: accessController.signal,
       });
+      if (accessController.signal.aborted || base.value !== current) return;
       const saved = response.data?.contact ?? {};
       current.version = Number(saved.version);
       current.phone = phone;
@@ -584,8 +599,10 @@ async function save() {
           body,
           idempotencyKey: keyFor(registrationAttempt, body),
           method: 'PUT',
+          signal: accessController.signal,
         },
       );
+      if (accessController.signal.aborted || base.value !== current) return;
       const saved = response.data?.contact ?? {};
       current.version = Number(saved.version);
       current.registration = { ...result.value };
@@ -599,6 +616,7 @@ async function save() {
     emit('saved', patch);
     await close();
   } catch (cause) {
+    if (accessController.signal.aborted || base.value !== current) return;
     // CP-25: phone and e-mail already saved reach the ficha even when the
     // registration did not.
     if (detailsSaved) emit('saved', { ...patch }, true);
@@ -615,8 +633,12 @@ async function handleSaveError(cause, partial = false) {
   generalError.value = partial ? `${PARTIAL_SAVE} Tente de novo.` : '';
   const status = Number(cause?.status);
   const code = String(cause?.code ?? '');
+  if ([403, 404].includes(status)) {
+    emit('unavailable');
+    return;
+  }
   // A definitive answer ends the attempt; the next save is a new command.
-  if ([400, 403, 404, 409].includes(status)) {
+  if ([400, 409].includes(status)) {
     detailsAttempt = { fingerprint: '', key: '' };
     registrationAttempt = { fingerprint: '', key: '' };
   }
@@ -642,18 +664,6 @@ async function handleSaveError(cause, partial = false) {
     }
     await showGeneralError(
       `${prefix}O cadastro não foi aceito. Confira os dados e tente de novo.`,
-    );
-    return;
-  }
-  if (status === 403) {
-    await showGeneralError(
-      `${prefix}Sem permissão para editar o cadastro deste cliente.`,
-    );
-    return;
-  }
-  if (status === 404) {
-    await showGeneralError(
-      `${prefix}Cliente não encontrado. Ele pode ter sido unido a outro cadastro; recarregue a página.`,
     );
     return;
   }
@@ -759,6 +769,10 @@ watch(
 
 onBeforeUnmount(() => {
   cepController?.abort();
+  accessController.abort();
+  base.value = null;
+  for (const field of Object.keys(draft))
+    draft[field] = field === 'stateRegistrationExempt' ? false : '';
 });
 </script>
 

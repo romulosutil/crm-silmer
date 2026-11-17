@@ -1,6 +1,10 @@
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import { authorize } from '@crm-silmer/identity-access';
-import { SILENT_AFTER_HOURS } from '@crm-silmer/inbox-channels';
+import {
+  SILENT_AFTER_HOURS,
+  lockConversationAccess,
+} from '@crm-silmer/inbox-channels';
+import { contactConversationVisible } from '@crm-silmer/contacts';
 import {
   fingerprintCommand,
   PostgresIdempotencyRecordStore,
@@ -451,6 +455,7 @@ export function createDashboardRuntime(database, options) {
                AND d.action_id=CASE WHEN c.assigned_user_id IS NULL AND h.id IS NOT NULL
                  THEN 'handoff:' || h.id ELSE 'conversation:' || c.id END
              WHERE c.archived_at IS NULL AND c.terminal_at IS NULL
+               AND ${contactConversationVisible('c', '$1')}
                AND c.state NOT IN ('encerrada','sem_lead','convertida_em_lead')
                AND ((c.assigned_user_id=$1 AND c.automation_state='human')
                  OR (c.assigned_user_id IS NULL AND h.id IS NOT NULL AND c.automation_state='human'))
@@ -486,7 +491,8 @@ export function createDashboardRuntime(database, options) {
             ],
           ),
           client.query(
-            `SELECT o.id,o.number,o.version,o.status,o.conversation_id,o.final_amount_cents,
+            `SELECT o.id,o.number,o.version,o.status,
+                    CASE WHEN ${contactConversationVisible('c', '$1')} THEN o.conversation_id ELSE NULL END AS conversation_id,o.final_amount_cents,
                     o.total_pieces,o.paid_on::text,o.delivered_on::text,o.finance_payment_review_required,
                     o.payment_condition,o.created_at,o.confirmed_at,contact.display_name,${DECISION_FIELDS}
              FROM crm.orders o LEFT JOIN crm.conversations c ON c.id=o.conversation_id
@@ -603,6 +609,14 @@ export function createDashboardRuntime(database, options) {
       } else if (input.remindAt !== undefined)
         throw new DashboardError(400, 'INVALID_REQUEST');
       return database.transaction(async (/** @type {any} */ client) => {
+        if (targetType === 'conversation')
+          await lockConversationAccess(client, targetId, input.actor.id).catch(
+            (error) => {
+              if (Number(error?.statusCode) === 403)
+                throw new DashboardError(403, 'FORBIDDEN');
+              throw error;
+            },
+          );
         const actor = await lockActor(client, input.actor, true);
         // Same lock order as orders: conversation, then order. Never lock an
         // order before waiting for its conversation's ownership fence.

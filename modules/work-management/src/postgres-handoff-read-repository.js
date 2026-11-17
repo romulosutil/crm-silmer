@@ -1,4 +1,5 @@
 import { decryptContactIdentityEnvelope } from '@crm-silmer/contacts/identity-envelope';
+import { contactConversationVisible } from '@crm-silmer/contacts';
 
 import { decryptHandoffSummary } from './cipher.js';
 
@@ -33,15 +34,16 @@ export class PostgresHandoffReadRepository {
     this.n8nEnvelopeKey = n8nEnvelopeKey && Buffer.from(n8nEnvelopeKey);
   }
 
-  /** @param {{after: null|{id: string, updatedAt: string}, limit: number}} input @param {{visibilityActorId?: string}} [reader] */
+  /** @param {{after: null|{id: string, updatedAt: string}, limit: number}} input @param {{actorId?:string|null,visibilityActorId?: string}} [reader] */
   async listOpen(input, reader = {}) {
     return this.#snapshot(async (database) => {
+      const scopedReader = await this.#currentReader(database, reader);
       const values = [];
       const predicates = ["handoff.status = 'pending'"];
-      if (reader.visibilityActorId) {
-        values.push(reader.visibilityActorId);
+      if (scopedReader.visibilityActorId) {
+        values.push(scopedReader.visibilityActorId);
         predicates.push(
-          `(conversation.assigned_user_id IS NULL OR conversation.assigned_user_id=$${values.length})`,
+          contactConversationVisible('conversation', `$${values.length}`),
         );
       }
       const countValues = [...values];
@@ -98,10 +100,11 @@ export class PostgresHandoffReadRepository {
    * or accepted), for the Inbox. At most one is open per conversation; null
    * when there is none.
    *
-   * @param {string} conversationId @param {{visibilityActorId?: string}} [reader]
+   * @param {string} conversationId @param {{actorId?:string|null,visibilityActorId?: string}} [reader]
    */
   async getOpenForConversation(conversationId, reader = {}) {
     return this.#snapshot(async (database) => {
+      const scopedReader = await this.#currentReader(database, reader);
       const result = await database.query(
         `SELECT handoff.id, handoff.deal_id, handoff.conversation_id,
                 handoff.status, handoff.version, handoff.reason_code,
@@ -112,11 +115,11 @@ export class PostgresHandoffReadRepository {
          JOIN crm.conversations conversation ON conversation.id=handoff.conversation_id
          LEFT JOIN crm.users preferred ON preferred.id = handoff.preferred_user_id
          WHERE handoff.conversation_id = $1
-           AND ($2::text IS NULL OR conversation.assigned_user_id IS NULL OR conversation.assigned_user_id=$2)
+           AND ($2::text IS NULL OR ${contactConversationVisible('conversation', '$2')})
            AND handoff.status IN ('pending', 'accepted')
          ORDER BY handoff.created_at DESC, handoff.id DESC
          LIMIT 1`,
-        [conversationId, reader.visibilityActorId ?? null],
+        [conversationId, scopedReader.visibilityActorId ?? null],
       );
       const row = result.rows[0];
       if (!row) return null;
@@ -136,6 +139,28 @@ export class PostgresHandoffReadRepository {
         version: Number(row.version),
       });
     });
+  }
+
+  /** @param {any} database @param {any} reader @returns {Promise<any>} */
+  async #currentReader(database, reader) {
+    if (!reader.actorId) return reader;
+    const user = (
+      await database.query(
+        `SELECT actor.disabled_at,role.function_name,
+         EXISTS(SELECT 1 FROM crm.user_capabilities WHERE user_id=actor.id AND capability='COMMERCIAL_ADMIN') is_admin
+       FROM crm.users actor LEFT JOIN crm.user_functions role ON role.user_id=actor.id WHERE actor.id=$1`,
+        [reader.actorId],
+      )
+    ).rows[0];
+    if (!user || user.disabled_at || user.function_name !== 'Vendedor')
+      throw Object.assign(new Error('FORBIDDEN'), {
+        code: 'FORBIDDEN',
+        statusCode: 403,
+      });
+    return {
+      ...reader,
+      visibilityActorId: user.is_admin ? undefined : reader.actorId,
+    };
   }
 
   /** @template T @param {(database: any) => Promise<T>} work */

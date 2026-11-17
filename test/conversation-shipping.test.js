@@ -36,10 +36,53 @@ function fixture() {
     commands: [],
     audits: [],
     calls: 0,
+    personal: false,
+    linked: true,
   };
   const db = {
     /** @param {string} sql @param {any[]} [values] */
     async query(sql, values = []) {
+      if (sql.includes('SELECT id, disabled_at FROM crm.users'))
+        return {
+          rows: state.disabled ? [] : [{ id: 'seller', disabled_at: null }],
+        };
+      if (sql.includes('SELECT function_name FROM crm.user_functions'))
+        return { rows: [{ function_name: state.role }] };
+      if (sql.includes('SELECT 1 FROM crm.user_capabilities'))
+        return {
+          rows: state.capabilities.includes('COMMERCIAL_ADMIN') ? [{}] : [],
+        };
+      if (
+        sql.includes(
+          'SELECT conversation.provider_account_id, identity.current_contact_id',
+        )
+      )
+        return {
+          rows: [
+            { provider_account_id: 'account', current_contact_id: 'contact' },
+          ],
+        };
+      if (
+        sql.includes(
+          'SELECT identity.current_contact_id FROM crm.contact_identities identity',
+        )
+      )
+        return { rows: [{ current_contact_id: 'contact' }] };
+      if (sql.includes('SELECT seller_id FROM crm.seller_whatsapp_lines'))
+        return { rows: state.personal ? [{ seller_id: 'seller' }] : [] };
+      if (sql.includes('SELECT id FROM crm.contacts'))
+        return { rows: [{ id: 'contact' }] };
+      if (
+        sql.includes(
+          'SELECT conversation.id FROM crm.conversations conversation',
+        )
+      ) {
+        const allowed =
+          state.capabilities.includes('COMMERCIAL_ADMIN') ||
+          ((!state.owner || state.owner === 'seller') &&
+            (!state.personal || (state.owner === 'seller' && state.linked)));
+        return { rows: allowed ? [{ id: 'conversation' }] : [] };
+      }
       if (sql.includes('SELECT u.id,u.name'))
         return {
           rows: state.disabled
@@ -367,4 +410,40 @@ test('CONV-ACL-01 shipping estimate rechecks current conversation owner after tr
     statusCode: 403,
     code: 'FORBIDDEN',
   });
+});
+
+test('WAP-T02-06: revoked personal link hides chat references and denies quote/select replay while commercial estimates survive', async () => {
+  const { runtime, state } = fixture();
+  state.personal = true;
+  const { quote } = await runtime.quote(INPUT);
+  const selection = {
+    ...INPUT,
+    quoteId: quote.id,
+    idempotencyKey: 'selection',
+    body: {
+      subjectId: 'subject',
+      orderId: 'order',
+      orderVersion: 1,
+      serviceId: 1,
+    },
+  };
+  await runtime.select(selection);
+  state.linked = false;
+  const { quote: hidden } = await runtime.read({
+    actor: INPUT.actor,
+    orderId: 'order',
+  });
+  assert.deepEqual(hidden.services, quote.services);
+  assert.equal(hidden.conversationId, null);
+  assert.equal(hidden.subjectId, null);
+  await assert.rejects(runtime.quote(INPUT), { code: 'FORBIDDEN' });
+  await assert.rejects(runtime.select(selection), { code: 'FORBIDDEN' });
+  assert.equal(state.calls, 1);
+  state.linked = true;
+  state.owner = null;
+  assert.equal(
+    (await runtime.read({ actor: INPUT.actor, orderId: 'order' })).quote
+      .conversationId,
+    null,
+  );
 });

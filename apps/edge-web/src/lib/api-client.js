@@ -73,6 +73,8 @@ export async function request(url, options = {}) {
     return { data: null, etag: response.headers.get('etag') };
   const type = response.headers.get('content-type') ?? '';
   const data = type.includes('json') ? await response.json() : {};
+  // WAP-T02-07: invalidation can occur while a response body is being read.
+  options.signal?.throwIfAborted();
   if (!response.ok) {
     const problem = data && typeof data === 'object' ? data : {};
     const nested = problem.error;

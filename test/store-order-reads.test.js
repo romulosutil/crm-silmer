@@ -1,3 +1,4 @@
+import { readVisibleConversationIds } from './fixtures/order-contexts.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
@@ -62,6 +63,7 @@ function harness(options = {}) {
     clock: () => STORE_NOW,
     conversations: {
       readAssignment: async () => ({ assignedUserId: 'admin-1', version: 1 }),
+      readVisibleConversationIds,
       readAssignments: async (/** @type {string[]} */ conversationIds) => {
         assignmentReads.push(conversationIds);
         return new Map(conversationIds.map((id) => [id, 'admin-1']));

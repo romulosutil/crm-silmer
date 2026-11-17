@@ -188,6 +188,26 @@ test('T11/MED-04: production runtime checks replay then blocks new media before 
         async query(/** @type {string} */ sql) {
           queries++;
           statements.push(sql);
+          if (sql.includes('FROM crm.users'))
+            return { rows: [{ id: actor.id, disabled_at: null }] };
+          if (sql.includes('FROM crm.user_functions'))
+            return { rows: [{ function_name: 'Vendedor' }] };
+          if (sql.includes('FROM crm.contact_identities identity'))
+            return { rows: [{ current_contact_id: 'contact' }] };
+          if (
+            sql.includes('FROM crm.conversations conversation') &&
+            sql.includes('current_contact_id')
+          )
+            return {
+              rows: [
+                {
+                  provider_account_id: 'general',
+                  current_contact_id: 'contact',
+                },
+              ],
+            };
+          if (sql.startsWith('SELECT conversation.id FROM crm.conversations'))
+            return { rows: [{ id: 'conversation' }] };
           return { rows: [] };
         },
       });
@@ -217,9 +237,12 @@ test('T11/MED-04: production runtime checks replay then blocks new media before 
     }),
     { statusCode: 403 },
   );
-  assert.equal(queries, 2);
+  assert.ok(
+    queries > 2,
+    'current access is revalidated before receipt or flag refusal',
+  );
   assert.equal(
-    statements.some((sql) => /crm.conversations|UPDATE|INSERT/u.test(sql)),
+    statements.some((sql) => /^\s*(UPDATE|INSERT|DELETE)\b/u.test(sql)),
     false,
   );
   await assert.rejects(

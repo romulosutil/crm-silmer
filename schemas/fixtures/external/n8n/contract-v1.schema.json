@@ -3,6 +3,18 @@
   "$id": "https://crm.silmer.invalid/schemas/integrations/n8n/v1",
   "title": "CRM Silmer n8n integration contract v1",
   "$defs": {
+    "personalWhatsAppSource": {
+      "description": "WAP-E04: immutable origin authenticated before n8n persistence; never a generation token.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bindingId", "lineId", "accountId", "generation"],
+      "properties": {
+        "bindingId": { "type": "string", "format": "uuid" },
+        "lineId": { "type": "string", "format": "uuid" },
+        "accountId": { "type": "string", "format": "uuid" },
+        "generation": { "type": "integer", "minimum": 1 }
+      }
+    },
     "commonEnvelope": {
       "type": "object",
       "required": ["schema_version"],

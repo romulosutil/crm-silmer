@@ -53,3 +53,4 @@ export {
   INBOX_STATES,
   TERMINAL_INBOX_STATES,
 } from './domain/inbox.js';
+export { lockConversationAccess } from './adapters/conversation-access.js';

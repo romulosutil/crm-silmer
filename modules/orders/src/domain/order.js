@@ -45,7 +45,7 @@ const orderDateFormat = new Intl.DateTimeFormat('en-CA', {
  *
  * @typedef {{
  *   id: string, number: string, numberSequence: number,
- *   conversationId: string|null, contactId?: string|null,
+ *   conversationId: string|null, contactId?: string|null, originSubjectId?: string|null,
  *   manualOwnerId?: string|null, manualCreateKey?: string|null,
  *   status: OrderStatus, fabCode: string,
  *   cancelledAt?: string|null, cancelledBy?: string|null,

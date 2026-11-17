@@ -132,7 +132,18 @@ export class InMemoryOrderRepository {
         }
         return clone(replay);
       }
-      if (input.conversationId && this.#pendingFor(input.conversationId)) {
+      if (
+        input.conversationId &&
+        [...this.#orders.values()].some(
+          (order) =>
+            order.conversationId === input.conversationId &&
+            order.status === 'pendente' &&
+            !order.cancelledAt &&
+            (!input.originSubjectId ||
+              !order.originSubjectId ||
+              order.originSubjectId === input.originSubjectId),
+        )
+      ) {
         throw new OrderConflictError(
           'The conversation already has a pending order',
           'ORDER_PENDING_EXISTS',
@@ -146,6 +157,7 @@ export class InMemoryOrderRepository {
         confirmedAt: null,
         confirmedBy: null,
         conversationId: input.conversationId,
+        originSubjectId: input.originSubjectId ?? null,
         contactId: input.contactId ?? null,
         createdAt: at,
         createdBy: input.createdBy,
@@ -398,12 +410,18 @@ export class InMemoryOrderRepository {
 
   /** @param {string} conversationId */
   #pendingFor(conversationId) {
-    return [...this.#orders.values()].find(
+    const candidates = [...this.#orders.values()].filter(
       (order) =>
         order.conversationId === conversationId &&
         order.status === 'pendente' &&
         !order.cancelledAt,
     );
+    if (candidates.length > 1)
+      throw new OrderConflictError(
+        'An explicit subject is required',
+        'ORDER_TARGET_REQUIRED',
+      );
+    return candidates[0];
   }
 
   /** @param {string} conversationId */
@@ -1027,6 +1045,24 @@ export class InMemoryOrderRepository {
           (eventType === 'order.milestones_saved' ? 0 : 1),
         version: current.version + 1,
       };
+      if (
+        next.status === 'pendente' &&
+        [...this.#orders.values()].some(
+          (candidate) =>
+            candidate.id !== next.id &&
+            candidate.status === 'pendente' &&
+            !candidate.cancelledAt &&
+            next.conversationId &&
+            candidate.conversationId === next.conversationId &&
+            (!next.originSubjectId ||
+              !candidate.originSubjectId ||
+              candidate.originSubjectId === next.originSubjectId),
+        )
+      )
+        throw new OrderConflictError(
+          'The target already has a pending order',
+          'ORDER_PENDING_EXISTS',
+        );
       this.#orders.set(orderId, next);
       this.#record(next, eventType, options.correlationId);
       return clone(next);

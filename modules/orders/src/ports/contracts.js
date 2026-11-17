@@ -9,7 +9,7 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  *
  * @typedef {{
  *   id: string, conversationId: string|null, contactId?: string|null,
- *   manualOwnerId?: string|null, manualCreateKey?: string|null,
+ *   manualOwnerId?: string|null, manualCreateKey?: string|null, originSubjectId?: string|null,
  *   fabCode: string, ficha: Ficha,
  *   totalPieces: number, missingFields: string[],
  *   createdByKind: 'automation'|'user', createdBy: string|null,
@@ -166,6 +166,7 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  *   createPending(input: CreatePendingOrderInput): Promise<Order>,
  *   findById(orderId: string): Promise<Order|null>,
  *   findPendingByConversation(conversationId: string): Promise<Order|null>,
+ *   bindSubject?(order: Order, subjectId: string): Promise<Order>,
  *   listByConversation(conversationId: string): Promise<Order[]>,
  *   list(query: OrderListQuery): Promise<OrderPage>,
  *   summary(query: OrdersSummaryQuery): Promise<OrdersSummary>,

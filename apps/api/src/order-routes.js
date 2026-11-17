@@ -67,6 +67,12 @@ const PUBLIC_CODES = new Set([
   'ORDER_STATUS_CONFLICT',
   'PRINT_FINANCIAL_TEXT_REVIEW_REQUIRED',
   'VERSION_CONFLICT',
+  'ORDER_TARGET_REQUIRED',
+  'ORDER_PENDING_EXISTS',
+  'ORDER_SUBJECT_UNAVAILABLE',
+  'SUBJECT_NOT_FOUND',
+  'CONVERSATION_CLOSED',
+  'ORDER_HUMAN_REQUIRED',
 ]);
 
 class OrderRequestError extends Error {
@@ -326,8 +332,23 @@ export function registerOrderRoutes(
           'CONVERSATION_ID',
         );
         const body = requireObject(request.body);
-        rejectUnknownKeys(body, ['expectedVersion']);
+        rejectUnknownKeys(body, [
+          'expectedVersion',
+          'subjectId',
+          'expectedSubjectVersion',
+        ]);
         const expectedVersion = requireVersion(body.expectedVersion);
+        const hasSubject = Object.hasOwn(body, 'subjectId');
+        if (hasSubject !== Object.hasOwn(body, 'expectedSubjectVersion'))
+          throw new OrderRequestError(400, 'INVALID_REQUEST');
+        const target = hasSubject
+          ? {
+              subjectId: requireIdentifier(body.subjectId, 'SUBJECT_ID'),
+              expectedSubjectVersion: requireVersion(
+                body.expectedSubjectVersion,
+              ),
+            }
+          : {};
         const command = await authorizeCommand(
           request,
           orders,
@@ -338,6 +359,7 @@ export function registerOrderRoutes(
           ...command,
           conversationId,
           expectedVersion,
+          ...target,
         });
         return reply
           .code(result.created ? 201 : 200)

@@ -40,7 +40,7 @@ import { decryptJson, encryptJson } from './envelope.js';
  * @typedef {{query: Queryable['query'], transaction: <T>(work: (transaction: Queryable) => Promise<T>) => Promise<T>}} TransactionalDatabase
  */
 
-const ORDER_COLUMNS = `id, number_sequence, number, conversation_id,
+const ORDER_COLUMNS = `id, number_sequence, number, conversation_id, origin_subject_id,
   contact_id, manual_owner_id, manual_create_key, status,
   fab_code, ficha_envelope, total_pieces, missing_fields, final_amount_cents,
   payment_condition, order_date::text AS order_date, confirmed_at,
@@ -304,6 +304,7 @@ export class PostgresOrderRepository {
       confirmedAt: isoOrNull(row.confirmed_at),
       confirmedBy: row.confirmed_by,
       conversationId: row.conversation_id,
+      originSubjectId: row.origin_subject_id ?? null,
       contactId: row.contact_id ?? null,
       manualCreateKey: row.manual_create_key ?? null,
       manualOwnerId: row.manual_owner_id ?? null,
@@ -416,6 +417,23 @@ export class PostgresOrderRepository {
             [input.conversationId],
           );
           contactId = linked.rows[0]?.current_contact_id;
+          const pending = await transaction.query(
+            `SELECT origin_subject_id FROM crm.orders WHERE conversation_id=$1
+             AND status='pendente' AND cancelled_at IS NULL`,
+            [input.conversationId],
+          );
+          if (
+            pending.rows.some(
+              (row) =>
+                !input.originSubjectId ||
+                !row.origin_subject_id ||
+                row.origin_subject_id === input.originSubjectId,
+            )
+          )
+            throw new OrderConflictError(
+              'The target already has a pending order',
+              'ORDER_PENDING_EXISTS',
+            );
         } else {
           if (
             !input.contactId ||
@@ -475,12 +493,12 @@ export class PostgresOrderRepository {
               ficha_version, ficha_envelope, total_pieces, missing_fields,
               created_by_kind, created_by, first_contact_at, version,
               created_at, updated_at, contact_id, manual_owner_id,
-              manual_create_key)
+              manual_create_key, origin_subject_id)
            SELECT $1, reserved.sequence,
                   lpad(reserved.sequence::text,
                        greatest(2, length(reserved.sequence::text)), '0') || '-CRM',
                   $2, 'pendente', $3, 1, $4::jsonb, $5, $6::text[], $7, $8,
-                  $10, 1, $9, $9, $11, $12, $13
+                  $10, 1, $9, $9, $11, $12, $13, $14
            FROM reserved
            ON CONFLICT (manual_create_key) DO NOTHING
            RETURNING ${ORDER_COLUMNS}`,
@@ -500,6 +518,7 @@ export class PostgresOrderRepository {
             contactId,
             input.manualOwnerId ?? null,
             input.manualCreateKey ?? null,
+            input.originSubjectId ?? null,
           ],
         );
         if (!inserted.rows[0] && input.manualCreateKey) {
@@ -530,7 +549,13 @@ export class PostgresOrderRepository {
         return order;
       });
     } catch (error) {
-      if (violates(error, 'orders_one_pending_per_conversation')) {
+      if (
+        [
+          'orders_one_pending_per_conversation',
+          'orders_one_pending_per_legacy_conversation',
+          'orders_one_pending_per_subject',
+        ].some((constraint) => violates(error, constraint))
+      ) {
         throw new OrderConflictError(
           'The conversation already has a pending order',
           'ORDER_PENDING_EXISTS',
@@ -975,7 +1000,53 @@ export class PostgresOrderRepository {
        WHERE conversation_id = $1 AND status = 'pendente' AND cancelled_at IS NULL`,
       [conversationId],
     );
+    if (result.rows.length > 1)
+      throw new OrderConflictError(
+        'An explicit subject is required',
+        'ORDER_TARGET_REQUIRED',
+      );
     return result.rows[0] ? this.#map(result.rows[0]) : null;
+  }
+
+  /** Persist the two directions in the caller's unit of work. A legacy draft
+   * is adopted only with an existing unique link, never inferred from recency.
+   * @param {Order} order @param {string} subjectId */
+  async bindSubject(order, subjectId) {
+    return this.#database.transaction(async (tx) => {
+      const linked = await tx.query(
+        `UPDATE crm.conversation_subjects SET kind='pedido',order_id=$2,
+          version=version+CASE WHEN order_id IS NULL THEN 1 ELSE 0 END,
+          updated_at=CASE WHEN order_id IS NULL THEN $5::timestamptz ELSE updated_at END
+         WHERE id=$1 AND conversation_id=$3 AND contact_id=$4
+           AND (order_id IS NULL OR order_id=$2) RETURNING id`,
+        [
+          subjectId,
+          order.id,
+          order.conversationId,
+          order.contactId,
+          order.updatedAt,
+        ],
+      );
+      if (!linked.rows[0])
+        throw new OrderConflictError(
+          'Subject changed',
+          'ORDER_TARGET_REQUIRED',
+        );
+      const result = await tx.query(
+        `UPDATE crm.orders SET origin_subject_id=$2 WHERE id=$1 AND status='pendente'
+          AND cancelled_at IS NULL AND (origin_subject_id=$2 OR
+            (origin_subject_id IS NULL AND
+              (SELECT count(*) FROM crm.conversation_subjects WHERE order_id=$1)=1))
+          RETURNING ${ORDER_COLUMNS}`,
+        [order.id, subjectId],
+      );
+      if (!result.rows[0])
+        throw new OrderConflictError(
+          'Order target changed',
+          'ORDER_TARGET_REQUIRED',
+        );
+      return this.#map(result.rows[0]);
+    });
   }
 
   /** @param {string} conversationId */
@@ -1628,6 +1699,19 @@ export class PostgresOrderRepository {
         // ADR 080: confirming freezes the freight of the locked row with the
         // total; neither confirming nor reopening writes the freight.
         const confirming = order.status === 'confirmado';
+        if (!confirming && order.conversationId) {
+          const conflict = await tx.query(
+            `SELECT 1 FROM crm.orders WHERE conversation_id=$1 AND id<>$2
+              AND status='pendente' AND cancelled_at IS NULL
+              AND ($3::text IS NULL OR origin_subject_id IS NULL OR origin_subject_id=$3)`,
+            [order.conversationId, order.id, current.origin_subject_id ?? null],
+          );
+          if (conflict.rows[0])
+            throw new OrderConflictError(
+              'Resolve the pending target before reopening',
+              'ORDER_PENDING_EXISTS',
+            );
+        }
         const freightCents = Number(current.freight_cents ?? 0);
         const sized = order.ficha.sizePricing !== undefined;
         if (confirming && sized && (order.freightCents ?? 0) !== freightCents) {
@@ -1740,7 +1824,7 @@ export class PostgresOrderRepository {
     ) {
       throw new OrderConflictError('Store orders are locked', 'ORDER_LOCKED');
     }
-    return this.#database.transaction(async (transaction) => {
+    const pending = this.#database.transaction(async (transaction) => {
       if (options.responsibleOnly) {
         if (options.agentTarget) throw new OrderForbiddenError();
         await assertActiveSeller(transaction, options.actor);
@@ -2032,6 +2116,20 @@ export class PostgresOrderRepository {
         options.correlationId,
       );
       return saved;
+    });
+    return pending.catch((error) => {
+      if (
+        [
+          'orders_one_pending_per_conversation',
+          'orders_one_pending_per_legacy_conversation',
+          'orders_one_pending_per_subject',
+        ].some((constraint) => violates(error, constraint))
+      )
+        throw new OrderConflictError(
+          'The target already has a pending order',
+          'ORDER_PENDING_EXISTS',
+        );
+      throw error;
     });
   }
 }

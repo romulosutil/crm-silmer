@@ -44,6 +44,9 @@ if (connectionString) {
         [id, `${id}@example.test`],
       );
     await pool.query(
+      `INSERT INTO crm.user_functions(user_id,function_name) VALUES('bind-seller','Vendedor'),('bind-other','Vendedor')`,
+    );
+    await pool.query(
       `INSERT INTO crm.contacts(id,created_at,updated_at) VALUES('bind-contact',now(),now())`,
     );
     await pool.query(
@@ -236,6 +239,9 @@ if (connectionString) {
     });
   test('T10/MED-08: admin read capability cannot bind another actor media', async () => {
     const id = await ready({ actorId: 'bind-other' });
+    await pool.query(
+      `INSERT INTO crm.user_capabilities(user_id,capability) VALUES('bind-seller','COMMERCIAL_ADMIN')`,
+    );
     await assert.rejects(
       service().sendHumanMessage(
         command(id, {
@@ -283,7 +289,8 @@ if (connectionString) {
           `UPDATE crm.conversations SET terminal_at=now(),state='sem_lead',version=2 WHERE id='bind-conversation'`,
         );
       await assert.rejects(service().sendHumanMessage(command(id)), {
-        statusCode: 409,
+        statusCode: scenario === 'transfer' ? 403 : 409,
+        code: scenario === 'transfer' ? 'INBOX_FORBIDDEN' : 'INBOX_CONFLICT',
       });
       assert.equal((await snapshot()).messages, 0);
       assert.equal((await snapshot()).reserved, '100');
@@ -361,7 +368,7 @@ if (connectionString) {
     );
     assert.deepEqual(await snapshot(), before);
   });
-  test('T11/MED-06: HTTP replay with fresh trace preserves semantic identity, changed caption or actor conflicts', async (t) => {
+  test('T11/MED-06: HTTP replay preserves semantic identity, conflicts on caption and refuses a revoked actor before replay', async (t) => {
     const id = await ready();
     /** @type {string[]} */ const traces = [];
     const inbox = service();
@@ -420,10 +427,9 @@ if (connectionString) {
       202,
     );
     assert.equal((await post('Different')).statusCode, 409);
-    assert.equal(
-      (await post('Synthetic', 'crm_session=other')).statusCode,
-      409,
-    );
+    const forbidden = await post('Synthetic', 'crm_session=other');
+    assert.equal(forbidden.statusCode, 403);
+    assert.equal(forbidden.json().error.code, 'INBOX_FORBIDDEN');
     assert.equal((await snapshot()).messages, 1);
     assert.equal((await snapshot()).used, '100');
   });

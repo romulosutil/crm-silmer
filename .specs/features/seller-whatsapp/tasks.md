@@ -117,6 +117,23 @@ dedicado em loopback (sem Docker/WSL disponíveis no host):
   concorrente no gate E2E. Banco dedicado encerrado ao fim das provas.
 
 `git diff --check` aprovado; commit/push/PR constam do handoff desta entrega.
+
+Seguimento do CI da [PR 397](https://github.com/romulosutil/crm-silmer/pull/397):
+o job estático/E2E passou; o job PostgreSQL encontrou uma chamada legada de
+Assuntos sem ator. A fixture passou a usar o vendedor sintético autenticado.
+O grupo posterior, ainda não alcançado pelo CI, também foi executado localmente:
+fixtures de mídia/Painel/abas agora cadastram papéis e concessões reais;
+cursores incluem a versão de escopo e o upgrade espera 0079. Transferência e
+replay por outro ator exigem `403 INBOX_FORBIDDEN` antes de consultar o recibo,
+preservando as assertions de rollback/quota e o conflito de conteúdo do titular.
+Somente testes e este registro mudaram; guardas, flags e runtime permanecem
+intactos. O resultado final do CI fica registrado no handoff da PR.
+Verificação local deste seguimento: pedidos cancelados **6/6**; abas, Painel
+e upgrade **16/16**; mídia **102 casos cobertos**, com 100 aprovações na
+rodada integral e as duas expectativas de autorização corrigidas verificadas
+na repetição focal **3/3** (inclui encerramento). Nenhum skip nessas provas.
+Typecheck, ESLint, Prettier e `git diff --check` aprovados.
+
 Nenhum resultado local homologa provedor/n8n real ou autoriza produção,
 pareamento, flags reais, mensagens a clientes ou efeitos financeiros.
 

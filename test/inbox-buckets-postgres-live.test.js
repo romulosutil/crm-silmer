@@ -859,6 +859,10 @@ test(
       );
     // The global matrix exercises an administrator's view; actorId still
     // names the same reader for ownership chips and personal reminders.
+    await pool.query(
+      `INSERT INTO crm.user_capabilities(user_id,capability) VALUES($1,'COMMERCIAL_ADMIN'),($2,'COMMERCIAL_ADMIN')`,
+      [A, B],
+    );
     const adminReader = (/** @type {string} */ actorId) => ({
       actorId,
       capabilities: ['COMMERCIAL_ADMIN'],
@@ -1172,7 +1176,7 @@ test(
                 bucket: 'respond',
                 owner: 'all',
                 orderReady: false,
-                visibility: { actorId: A, readAll: true },
+                visibility: { actorId: A, readAll: true, scopeVersion: '0' },
                 orderVersion: 'latest-message-v1',
               }),
             )
@@ -1267,8 +1271,18 @@ test(
 
     await t.test(
       'CONV-ACL-01: a seller only reads own or unassigned rows, counts and detail',
-      async () => {
+      async (t) => {
         const sellerReader = { actorId: A, capabilities: [] };
+        t.after(() =>
+          pool.query(
+            `INSERT INTO crm.user_capabilities(user_id,capability) VALUES($1,'COMMERCIAL_ADMIN') ON CONFLICT DO NOTHING`,
+            [A],
+          ),
+        );
+        await pool.query(
+          `DELETE FROM crm.user_capabilities WHERE user_id=$1 AND capability='COMMERCIAL_ADMIN'`,
+          [A],
+        );
         const visibleCases = cases.filter((item) => item.owner !== 'B');
         const counts = await reads.countInboxBuckets({}, sellerReader);
         for (const bucket of BUCKETS) {
@@ -1317,8 +1331,16 @@ test(
             ),
           );
         }
+        await pool.query(
+          `INSERT INTO crm.user_capabilities(user_id,capability) VALUES($1,'COMMERCIAL_ADMIN')`,
+          [A],
+        );
         const adminPage = await list({ bucket: 'respond', limit: 1 });
         assert.ok(adminPage.nextCursor);
+        await pool.query(
+          `DELETE FROM crm.user_capabilities WHERE user_id=$1 AND capability='COMMERCIAL_ADMIN'`,
+          [A],
+        );
         await assert.rejects(
           reads.listInbox(
             { bucket: 'respond', limit: 1, cursor: adminPage.nextCursor },
@@ -1434,7 +1456,7 @@ test(
           fingerprint({
             sort: 'urgency',
             actorId: A,
-            visibility: { actorId: A, readAll: true },
+            visibility: { actorId: A, readAll: true, scopeVersion: '0' },
           }),
         );
         const attention = await list({ workQueue: 'attention', limit: 1 });
@@ -1443,13 +1465,15 @@ test(
           fingerprint({
             workQueue: 'attention',
             actorId: A,
-            visibility: { actorId: A, readAll: true },
+            visibility: { actorId: A, readAll: true, scopeVersion: '0' },
           }),
         );
         const plain = await list({ limit: 1 });
         assert.equal(
           decode(plain.nextCursor).fingerprint,
-          fingerprint({ visibility: { actorId: A, readAll: true } }),
+          fingerprint({
+            visibility: { actorId: A, readAll: true, scopeVersion: '0' },
+          }),
         );
         const archivedPage = await list({ archived: true, limit: 100 });
         assert.deepEqual(labelsOf(archivedPage.items), ['archived']);

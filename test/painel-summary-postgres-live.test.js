@@ -116,6 +116,14 @@ if (connectionString) {
          VALUES ($1, 'Vendedor')`,
         [sellerId],
       );
+      await pool.query(
+        `INSERT INTO crm.users(id,email,password_hash,name) VALUES($1,$2,'$argon2id$synthetic','Outro vendedor sintético')`,
+        [`other-${runId}`, `other-${runId}@example.test`],
+      );
+      await pool.query(
+        `INSERT INTO crm.user_functions(user_id,function_name) VALUES($1,'Vendedor')`,
+        [`other-${runId}`],
+      );
 
       /** @param {string} suffix @param {string} occurredAt */
       const open = async (suffix, occurredAt) => {
@@ -253,6 +261,10 @@ if (connectionString) {
          VALUES ($1, $2, '$argon2id$synthetic', 'Ana Painel')`,
         [secondSellerId, `${secondSellerId}@example.test`],
       );
+      await pool.query(
+        `INSERT INTO crm.user_functions(user_id,function_name) VALUES($1,'Vendedor')`,
+        [secondSellerId],
+      );
       /** @param {string} conversationId */
       const assignToSecond = (conversationId) =>
         pool.query(
@@ -274,6 +286,10 @@ if (connectionString) {
          WHERE id = $1`,
         [closed, secondSellerId, NOW],
       );
+      await pool.query(
+        `INSERT INTO crm.user_capabilities(user_id,capability) VALUES($1,'COMMERCIAL_ADMIN')`,
+        [sellerId],
+      );
       const managerSummary = await reads.summarizeInbox({
         actorId: sellerId,
         capabilities: ['COMMERCIAL_ADMIN'],
@@ -288,6 +304,10 @@ if (connectionString) {
         count: 3,
         thresholdMinutes: 15,
       });
+      await pool.query(
+        `DELETE FROM crm.user_capabilities WHERE user_id=$1 AND capability='COMMERCIAL_ADMIN'`,
+        [sellerId],
+      );
       assert.deepEqual(
         { ...managerSummary, unanswered: null },
         await reads.summarizeInbox({ actorId: sellerId }),

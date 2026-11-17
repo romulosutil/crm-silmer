@@ -53,6 +53,9 @@ if (connectionString) {
       await migrate(pool, { migrations: await loadMigrations() });
       await pool.query(`INSERT INTO crm.users (id, email, password_hash, name)
         VALUES ('seller-1', 'seller-1@example.test', '$argon2id$synthetic', 'Vendedor Sintetico')`);
+      await pool.query(
+        "INSERT INTO crm.user_functions(user_id,function_name) VALUES ('seller-1','Vendedor')",
+      );
       const operations = createOperationReadRuntime(database, {
         environment: ENVIRONMENT,
       });
@@ -155,7 +158,21 @@ if (connectionString) {
       assert.equal(audits.length, 1);
       assert.equal(audits[0].reason, 'CONTACT_REGISTRATION');
       assert.equal(events.length, 1);
-      assert.deepEqual(events[0].payload, { contactId });
+      assert.deepEqual(events[0].payload, {
+        contactId,
+        fields: [
+          'personType',
+          'document',
+          'legalName',
+          'instagram',
+          'postalCode',
+          'city',
+          'state',
+          'street',
+          'district',
+          'number',
+        ],
+      });
       assert.equal(records.length, 1);
       // The immutable record keeps only id, version and status (ADR 047).
       const kept = await new PostgresIdempotencyRecordStore({
@@ -186,10 +203,23 @@ if (connectionString) {
       assert.equal('registration' in item, false);
       assert.doesNotMatch(JSON.stringify(page), privateValues);
 
+      await assert.rejects(
+        operations.setContactRegistration({
+          ...command,
+          expectedVersion: 2,
+          idempotencyKey: 'registration-denied-clear',
+          registration: { personType: 'company' },
+        }),
+        { code: 'CONTACT_FIELD_RESTRICTED', statusCode: 403 },
+      );
+      await pool.query(
+        "INSERT INTO crm.user_capabilities(user_id,capability) VALUES ('seller-1','COMMERCIAL_ADMIN')",
+      );
       const cleared = await operations.setContactRegistration({
         ...command,
         expectedVersion: 2,
         idempotencyKey: 'registration-live-2',
+        review: { confirmed: true, reason: 'Conferencia fiscal sintetica' },
         registration: { personType: 'company' },
       });
       assert.equal(cleared.version, 3);

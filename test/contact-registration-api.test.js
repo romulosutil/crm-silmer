@@ -71,6 +71,8 @@ function fakeDatabase(contact = {}) {
     events: /** @type {any[]} */ ([]),
     audits: /** @type {any[]} */ ([]),
     idempotency: new Map(),
+    isAdmin: false,
+    reviews: /** @type {any[]} */ ([]),
     whatsapp: new Set(contact.whatsapp ? ['contact-1'] : []),
   };
   /** @type {string[]} */
@@ -83,6 +85,20 @@ function fakeDatabase(contact = {}) {
     /** @param {string} sql @param {any[]} [values] */
     async query(sql, values = []) {
       statements.push(`${sql} ${JSON.stringify(values)}`);
+      if (sql.includes('FROM crm.users'))
+        return { rows: [{ id: 'seller-1', disabled_at: null }] };
+      if (sql.includes('FROM crm.user_functions'))
+        return { rows: [{ function_name: 'Vendedor' }] };
+      if (sql.includes('FROM crm.user_capabilities'))
+        return {
+          rows: state.isAdmin ? [{ capability: 'COMMERCIAL_ADMIN' }] : [],
+        };
+      if (sql.includes('FROM crm.contacts contact')) {
+        const row = state.contacts.get(values[0]);
+        return { rows: row ? [{ id: row.id }] : [] };
+      }
+      if (sql.includes('count(*)') && sql.includes('crm.seller_client_links'))
+        return { rows: [{ count: 0 }] };
       if (sql.includes('INSERT INTO crm.idempotency_records')) {
         const id = `${values[0]}|${values[1]}`;
         if (state.idempotency.has(id)) return { rows: [] };
@@ -110,7 +126,7 @@ function fakeDatabase(contact = {}) {
         const record = state.idempotency.get(`${values[0]}|${values[1]}`);
         return { rows: record ? [{ ...record }] : [] };
       }
-      if (sql.includes('FROM crm.contacts WHERE id = $1 FOR UPDATE')) {
+      if (/FROM crm\.contacts WHERE id\s*=\s*\$1 FOR UPDATE/u.test(sql)) {
         const row = state.contacts.get(values[0]);
         return { rows: row ? [{ ...row }] : [] };
       }
@@ -128,6 +144,10 @@ function fakeDatabase(contact = {}) {
       }
       if (sql.includes('INSERT INTO crm.domain_events')) {
         state.events.push(values);
+        return { rows: [] };
+      }
+      if (sql.includes('INSERT INTO crm.contact_change_reviews')) {
+        state.reviews.push(values);
         return { rows: [] };
       }
       if (sql.includes('crm.contact_identities')) {
@@ -266,6 +286,7 @@ test('PUT registration stores an encrypted, versioned registration without PII i
   assert.equal(database.state.events[0][2], 4);
   assert.deepEqual(JSON.parse(database.state.events[0][3]), {
     contactId: 'contact-1',
+    fields: Object.keys(REGISTRATION),
   });
   const record = [...database.state.idempotency.values()][0];
   assert.match(record.fingerprint, /^[a-f0-9]{64}$/u);
@@ -441,15 +462,33 @@ test('PUT registration replays the same key and rejects the key with other conte
   assert.deepEqual(reused.json(), {
     error: { code: 'IDEMPOTENCY_KEY_REUSED' },
   });
-  // PUT replaces the whole registration: omitted fields become null.
-  const replaced = await putRegistration(
+  // PUT omits fields to null; changing filled fiscal data now needs a live
+  // administrator and an explicit review, including on this legacy route.
+  const forbidden = await putRegistration(
     api,
     { expectedVersion: 4, registration: { personType: 'individual' } },
+    'registration-key-3',
+  );
+  assert.equal(forbidden.statusCode, 403);
+  assert.equal(database.state.contacts.get('contact-1').version, 4);
+  database.state.isAdmin = true;
+  const replaced = await putRegistration(
+    api,
+    {
+      expectedVersion: 4,
+      registration: { personType: 'individual' },
+      review: { confirmed: true, reason: 'Conferencia cadastral sintetica' },
+    },
     'registration-key-3',
   );
   assert.equal(replaced.statusCode, 200);
   assert.equal(replaced.json().contact.version, 5);
   assert.equal(replaced.json().contact.registrationStatus, 'incomplete');
+  assert.equal(database.state.reviews.length, 1);
+  assert.doesNotMatch(
+    JSON.stringify(database.state.reviews),
+    /Conferencia cadastral sintetica/u,
+  );
   assert.deepEqual(
     Object.entries(replaced.json().contact.registration).filter(
       ([, value]) => value !== null,
@@ -495,7 +534,8 @@ test('the detail returns the registration and the list only its status', async (
     database: {
       async query(/** @type {string} */ sql) {
         queries.push(sql);
-        if (sql.includes('count(*)')) return { rows: [{ count: 1 }] };
+        if (sql.includes('SELECT count(*)::integer count FROM crm.contacts'))
+          return { rows: [{ count: 1 }] };
         if (sql.includes('WITH contact_page')) {
           const listRow = Object.fromEntries(
             Object.entries(contactRow).filter(
@@ -504,7 +544,11 @@ test('the detail returns the registration and the list only its status', async (
           );
           return { rows: [listRow] };
         }
-        if (sql.includes('FROM crm.contacts WHERE id=$1'))
+        if (
+          /FROM crm\.contacts(?: (?:AS )?contact)? WHERE (?:contact\.)?id\s*=\s*\$1/u.test(
+            sql,
+          )
+        )
           return { rows: [contactRow] };
         return { rows: [] };
       },
@@ -520,7 +564,9 @@ test('the detail returns the registration and the list only its status', async (
   assert.equal(page.items[0].registrationStatus, 'complete');
   assert.equal('registration' in page.items[0], false);
   const listQueries = queries.filter(
-    (sql) => sql.includes('WITH contact_page') || sql.includes('count(*)'),
+    (sql) =>
+      sql.includes('WITH contact_page') ||
+      sql.includes('SELECT count(*)::integer count FROM crm.contacts'),
   );
   assert.equal(listQueries.length, 2);
   assert.ok(listQueries.every((sql) => !sql.includes('registration_envelope')));
@@ -529,7 +575,11 @@ test('the detail returns the registration and the list only its status', async (
   const never = await new PostgresContactReadRepository({
     database: {
       async query(/** @type {string} */ sql) {
-        if (sql.includes('FROM crm.contacts WHERE id=$1'))
+        if (
+          /FROM crm\.contacts(?: (?:AS )?contact)? WHERE (?:contact\.)?id\s*=\s*\$1/u.test(
+            sql,
+          )
+        )
           return {
             rows: [
               {

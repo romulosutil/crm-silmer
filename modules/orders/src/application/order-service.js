@@ -58,8 +58,8 @@ import {
  *   conversations: {
  *     readOrderContexts(conversationIds: string[]): Promise<Map<string, OrderConversationContext>>,
  *     readContactNames?(contactIds: string[]): Promise<Map<string, string|null>>,
- *     searchConversationIds(query: string): Promise<string[]>,
- *     searchContactIds?(query: string): Promise<string[]>,
+ *     searchConversationIds(query: string, reader?: any): Promise<string[]>,
+ *     searchContactIds?(query: string, reader?: any): Promise<string[]>,
  *     listAssignedOrderConversationIds?(userId: string): Promise<string[]>,
  *   },
  *   authorizeOwnership(input: {actor: OrderActor, conversationId: string}): Promise<void>,
@@ -808,8 +808,9 @@ export function createOrderService(options) {
      * `ownerId` (Painel, "Meus pedidos") keeps one seller's orders.
      *
      * @param {{cancellation?: 'active'|'cancelled'|'all', status?: string, origin?: string, q?: string, cursor?: string|null, limit?: number, delivery?: string, ownerId?: string}} [input]
+     * @param {any} [reader]
      */
-    async list(input = {}) {
+    async list(input = {}, reader = {}) {
       for (const key of Object.keys(input)) {
         if (!LIST_KEYS.has(key)) {
           throw new OrderInputError(`${key} is not allowed`, [key]);
@@ -870,9 +871,12 @@ export function createOrderService(options) {
         if (number && Number(number[1]) > 0) {
           query.numberSequence = Number(number[1]);
         }
-        query.conversationIds = await conversations.searchConversationIds(q);
+        query.conversationIds = await conversations.searchConversationIds(
+          q,
+          reader,
+        );
         if (conversations.searchContactIds) {
-          query.contactIds = await conversations.searchContactIds(q);
+          query.contactIds = await conversations.searchContactIds(q, reader);
         }
         const phoneDigests = options.phoneDigestsFor?.(q) ?? [];
         if (phoneDigests.length > 0) query.phoneDigests = phoneDigests;

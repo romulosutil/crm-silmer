@@ -1042,6 +1042,7 @@ if (connectionString) {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
       await migrate(pool, { migrations: await loadMigrations() });
+      await seedAttendant(pool);
       const { contacts } = servicesFor(pool);
       const source = await contacts.resolveInboundIdentity(
         identityInput(runId),

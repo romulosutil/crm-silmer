@@ -33,6 +33,11 @@ test('site chat identity cannot be merged by an ordinary human command', async (
     /** @param {string} sql */
     async query(sql) {
       statements.push(sql);
+      if (sql.includes('FROM crm.users'))
+        return { rows: [{ id: 'seller-1', disabled_at: null }] };
+      if (sql.includes('FROM crm.user_functions'))
+        return { rows: [{ function_name: 'Vendedor' }] };
+      if (sql.includes('FROM crm.user_capabilities')) return { rows: [] };
       if (sql.includes('WHERE l.merge_idempotency_key')) return { rows: [] };
       if (sql.includes('WHERE ci.id = $1'))
         return {
@@ -92,7 +97,8 @@ test('human phone lookup returns separate site and confirmed candidates via curr
   const database = {
     async query(/** @type {string} */ sql, /** @type {unknown[]} */ values) {
       queries.push({ sql, values });
-      if (sql.includes('count(*)')) return { rows: [{ count: 2 }] };
+      if (sql.includes('SELECT count(*)::integer count FROM crm.contacts'))
+        return { rows: [{ count: 2 }] };
       return {
         rows: [
           {
@@ -150,10 +156,8 @@ test('human phone lookup returns separate site and confirmed candidates via curr
     ),
   );
   assert.ok(
-    queries.every(
-      ({ sql }) =>
-        sql.includes('site_identity.current_contact_id = contact.id') ||
-        sql.includes('site_identity.current_contact_id = contact_page.id'),
+    queries.every(({ sql }) =>
+      /site_identity.current_contact_id\s*=\s*contact(?:_page)?.id/u.test(sql),
     ),
   );
 });

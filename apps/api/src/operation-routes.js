@@ -392,6 +392,77 @@ export function registerOperationRoutes(api, operations, contextFor) {
     }),
   );
 
+  api.get('/api/v1/me/clients', async (request, reply) =>
+    respond(reply, async () => {
+      const input = parseListQuery(request.query, ['cursor', 'limit', 'q']);
+      if ((input.q?.match(/\d/gu) ?? []).length >= 8)
+        throw new OperationReadRequestError(400, 'INVALID_REQUEST');
+      const access = await authorizeRead(request, operations, 'contact.read');
+      privateNoStoreHeaders(reply);
+      return reply.code(200).send(
+        await operations.listMyClients(input, {
+          actorId: access.actor.id,
+          capabilities: access.actor.capabilities ?? [],
+        }),
+      );
+    }),
+  );
+  api.post('/api/v1/me/clients', async (request, reply) =>
+    respond(reply, async () => {
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, ['displayName', 'phone', 'email']);
+      const principal = await operations.authorizeWrite({
+        action: 'contact.create',
+        authorization: request.headers.authorization,
+        cookie: request.headers.cookie,
+        csrfToken: request.headers['x-csrf-token'],
+        origin: request.headers.origin,
+      });
+      const result = await operations.createMyClient({
+        actor: principal.actor,
+        correlationId: contextFor(request).correlationId,
+        displayName: body.displayName,
+        phone: body.phone,
+        email: body.email,
+        idempotencyKey: requireIdentifier(
+          request.headers['idempotency-key'],
+          'IDEMPOTENCY_KEY',
+        ),
+      });
+      privateNoStoreHeaders(reply);
+      return reply
+        .code(result.created ? 201 : 200)
+        .send({ contact: result.contact, link: result.link });
+    }),
+  );
+  api.post('/api/v1/me/clients/:contactId/link', async (request, reply) =>
+    respond(reply, async () => {
+      const params = requireObject(request.params);
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, ['expectedVersion', 'expectedLinkVersion']);
+      const principal = await operations.authorizeWrite({
+        action: 'contact.rename',
+        authorization: request.headers.authorization,
+        cookie: request.headers.cookie,
+        csrfToken: request.headers['x-csrf-token'],
+        origin: request.headers.origin,
+      });
+      const result = await operations.linkMyClient({
+        actor: principal.actor,
+        contactId: requireIdentifier(params.contactId, 'CONTACT_ID'),
+        expectedVersion: body.expectedVersion,
+        expectedLinkVersion: body.expectedLinkVersion,
+        correlationId: contextFor(request).correlationId,
+        idempotencyKey: requireIdentifier(
+          request.headers['idempotency-key'],
+          'IDEMPOTENCY_KEY',
+        ),
+      });
+      privateNoStoreHeaders(reply);
+      return reply.code(200).send(result);
+    }),
+  );
+
   api.get('/api/v1/contacts', async (request, reply) =>
     respond(reply, async () => {
       const input = parseListQuery(request.query, ['cursor', 'limit', 'q']);
@@ -499,7 +570,7 @@ export function registerOperationRoutes(api, operations, contextFor) {
     respond(reply, async () => {
       const params = requireObject(request.params);
       const body = requireObject(request.body);
-      rejectUnknownKeys(body, ['phone', 'email', 'expectedVersion']);
+      rejectUnknownKeys(body, ['phone', 'email', 'expectedVersion', 'review']);
       const principal = await operations.authorizeWrite({
         action: 'contact.rename',
         authorization: request.headers.authorization,
@@ -512,6 +583,9 @@ export function registerOperationRoutes(api, operations, contextFor) {
         contactId: requireIdentifier(params.contactId, 'CONTACT_ID'),
         correlationId: contextFor(request).correlationId,
         email: body.email,
+        ...(body.review !== undefined
+          ? { review: parseContactReview(body.review) }
+          : {}),
         expectedVersion: body.expectedVersion,
         idempotencyKey: requireIdentifier(
           request.headers['idempotency-key'],
@@ -529,7 +603,7 @@ export function registerOperationRoutes(api, operations, contextFor) {
     respond(reply, async () => {
       const params = requireObject(request.params);
       const body = requireObject(request.body);
-      rejectUnknownKeys(body, ['expectedVersion', 'registration']);
+      rejectUnknownKeys(body, ['expectedVersion', 'registration', 'review']);
       const registration = requireObject(body.registration);
       rejectUnknownKeys(registration, REGISTRATION_FIELDS);
       const principal = await operations.authorizeWrite({
@@ -549,6 +623,9 @@ export function registerOperationRoutes(api, operations, contextFor) {
           'IDEMPOTENCY_KEY',
         ),
         registration,
+        ...(body.review !== undefined
+          ? { review: parseContactReview(body.review) }
+          : {}),
       });
       privateNoStoreHeaders(reply);
       return reply.code(200).send({ contact: result });
@@ -745,4 +822,20 @@ async function respond(reply, operation) {
       .code(publicStatus)
       .send({ error: field ? { code, field } : { code } });
   }
+}
+
+/** @param {unknown} value */
+function parseContactReview(value) {
+  if (value === undefined) return undefined;
+  const review = requireObject(value);
+  rejectUnknownKeys(review, ['confirmed', 'reason']);
+  if (
+    review.confirmed !== true ||
+    typeof review.reason !== 'string' ||
+    !review.reason.trim() ||
+    review.reason.length > 500 ||
+    /[\u0000-\u001f]/u.test(review.reason)
+  )
+    throw new OperationReadRequestError(400, 'CONTACT_REVIEW_REQUIRED');
+  return { confirmed: true, reason: review.reason.trim() };
 }

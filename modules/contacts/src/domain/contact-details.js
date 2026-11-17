@@ -43,7 +43,7 @@ export function contactPhoneHash(phone, key) {
     .digest('hex');
 }
 
-/** @param {{email: string|null, phone: string}} details @param {Buffer} key */
+/** @param {{email: string|null, phone: string|null}} details @param {Buffer} key */
 export function encryptContactDetails(details, key) {
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', key, iv);

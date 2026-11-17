@@ -9,6 +9,95 @@ info:
 servers:
   - url: /api/v1
 paths:
+  /me/clients:
+    get:
+      operationId: listPersonalClients
+      summary: Carteira própria, independente de conexão WhatsApp
+      description: WAP-E03. Escopo ativo antes de busca, cursor e contagem. Cursor assinado por leitor, modo e versão da carteira. Default off e allowlist SELLER_CLIENTS_SELLER_IDS; no-store. Telefone não é aceito na URL; busca pelo POST /contacts/search protegido.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 120 } }
+        - { name: cursor, in: query, schema: { type: string, maxLength: 1024 } }
+        - {
+            name: limit,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 50 },
+          }
+      responses:
+        '200':
+          description: Cadastro comum e relações permitidas; sem conceder ACL comercial
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ContactPage' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { description: Sessão ausente ou revogada }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { description: Limite vigente de 60 requisições por minuto }
+        '503': { description: Carteira desabilitada }
+    post:
+      operationId: createPersonalClient
+      summary: Cria Contact oficial e vínculo próprio atomicamente
+      description: WAP-E03. Sem identidade, conversa, Pedido ou envio. Colisão privada devolve conflito genérico sem candidato. Replay reautoriza; no-store.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ManualContactCreateRequest' }
+      responses:
+        '201':
+          description: Contact e vínculo criados na mesma transação
+          content:
+            application/json:
+              schema:
+                { $ref: '#/components/schemas/SellerClientCreateResponse' }
+        '200':
+          description: Replay autorizado de Contact e vínculo
+          content:
+            application/json:
+              schema:
+                { $ref: '#/components/schemas/SellerClientCreateResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { description: Sessão ausente ou revogada }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { description: Limite vigente de 60 requisições por minuto }
+        '503': { description: Carteira desabilitada }
+  /me/clients/{contactId}/link:
+    post:
+      operationId: linkPersonalClient
+      summary: Vincula um Contact selecionado e atualmente acessível à carteira própria
+      description: WAP-E03. Confere versão de Contact; reativação explícita exige versão do vínculo revogado. Não transfere identidade, conversa ou negócio. Replay reautoriza; no-store.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ContactId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                expectedLinkVersion: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          {
+            description: contactId original e vínculo id/version/status,
+            sem duplicar o par,
+          }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { description: Sessão ausente ou revogada }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { description: Limite vigente de 60 requisições por minuto }
+        '503': { description: Carteira desabilitada }
   /me/whatsapp:
     get:
       operationId: readPersonalWhatsApp
@@ -2191,6 +2280,7 @@ paths:
               additionalProperties: false
               required: [phone, expectedVersion]
               properties:
+                review: { $ref: '#/components/schemas/ContactChangeReview' }
                 phone: { type: string }
                 email: { type: string, format: email, maxLength: 254 }
                 expectedVersion: { type: integer, minimum: 1 }
@@ -5871,6 +5961,18 @@ components:
           latestActivityAt,
         ]
       properties:
+        shared:
+          {
+            type: boolean,
+            description: Cadastro comum em mais de uma carteira ativa; não identifica outros vendedores.,
+          }
+        link:
+          type: object
+          additionalProperties: false
+          properties:
+            id: { type: string, format: uuid }
+            version: { type: integer, minimum: 1 }
+            status: { type: string, const: active }
         id: { type: string }
         label: { type: string }
         phone:
@@ -6307,6 +6409,54 @@ components:
           items: { $ref: '#/components/schemas/ContactView' }
         nextCursor: { type: [string, 'null'] }
         totalCount: { type: integer, minimum: 0 }
+    SellerClientLink:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          sellerId,
+          contactId,
+          provenance,
+          sourceId,
+          status,
+          version,
+          changed,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        sellerId:
+          {
+            type: string,
+            description: Somente o vendedor autenticado nesta fronteira HTTP.,
+          }
+        contactId: { type: string }
+        provenance:
+          {
+            type: string,
+            enum:
+              [
+                manual_create,
+                explicit_link,
+                commercial_order,
+                personal_inbound,
+                personal_outbound,
+              ],
+          }
+        sourceId: { type: [string, 'null'] }
+        status: { type: string, enum: [active, revoked] }
+        version: { type: integer, minimum: 1 }
+        changed: { type: boolean }
+    SellerClientCreateResponse:
+      type: object
+      additionalProperties: false
+      required: [contact, link]
+      properties:
+        contact:
+          {
+            $ref: '#/components/schemas/ContactCreateResponse/properties/contact',
+          }
+        link: { $ref: '#/components/schemas/SellerClientLink' }
     ManualContactCreateRequest:
       type: object
       additionalProperties: false
@@ -6428,11 +6578,20 @@ components:
         number:
           { type: [string, 'null'], maxLength: 10, description: Aceita S/N. }
         complement: { type: [string, 'null'], maxLength: 80 }
+    ContactChangeReview:
+      type: object
+      additionalProperties: false
+      required: [confirmed, reason]
+      description: Conferência humana do Admin para alteração crítica; motivo livre cifrado em repouso.
+      properties:
+        confirmed: { type: boolean, const: true }
+        reason: { type: string, minLength: 1, maxLength: 500 }
     ContactRegistrationUpdateRequest:
       type: object
       additionalProperties: false
       required: [expectedVersion, registration]
       properties:
+        review: { $ref: '#/components/schemas/ContactChangeReview' }
         expectedVersion: { type: integer, minimum: 1 }
         registration:
           type: object

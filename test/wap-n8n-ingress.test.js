@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import test from 'node:test';
 import vm from 'node:vm';
@@ -57,6 +58,146 @@ const CONTROLLER_FIXTURE = `class Controller {
         return this.workflowExecutionService.executeManually(dbWorkflow, body);
   }
 } Controller;`;
+
+test('WAP-E02: product metadata is authoritatively compared before the first n8n input can contain IDs', async () => {
+  const envelope = {
+    operationId: randomUUID(),
+    lineId: randomUUID(),
+    generation: 3,
+    reference: randomUUID(),
+    challengeId: randomUUID(),
+    mode: 'code',
+  };
+  const config = {
+    ...env,
+    SILMER_WAP_INGRESS_PATHS: JSON.stringify({
+      'silmer/seller-whatsapp/challenge': 'challenge',
+    }),
+    SILMER_WAP_CONTROL_VERIFY_URL:
+      'https://crm.synthetic.invalid/api/v1/integrations/n8n/whatsapp-control/verify',
+  };
+  const input = () =>
+    context({
+      parameters: {
+        path: 'silmer/seller-whatsapp/challenge',
+        authentication: 'basicAuth',
+      },
+      req: { body: { ...envelope } },
+    });
+  let calls = 0;
+  const ctx = input();
+  assert.equal(
+    await protectIngress(
+      ctx,
+      config,
+      async (/** @type {any} */ url, /** @type {any} */ init) => {
+        calls++;
+        assert.equal(url, config.SILMER_WAP_CONTROL_VERIFY_URL);
+        assert.equal(init.headers.authorization, basic);
+        assert.equal(init.headers['x-correlation-id'], envelope.operationId);
+        assert.equal(init.headers['idempotency-key'], envelope.challengeId);
+        assert.equal(
+          init.headers['x-silmer-workflow-key'],
+          'seller-whatsapp-control',
+        );
+        assert.equal(init.redirect, 'error');
+        assert.deepEqual(JSON.parse(init.body), {
+          kind: 'challenge',
+          envelope,
+        });
+        return verificationResponse({ kind: 'challenge', envelope });
+      },
+    ),
+    false,
+  );
+  assert.deepEqual(ctx.req.body, envelope);
+  assert.deepEqual(ctx.req.headers, {});
+  assert.equal(calls, 1);
+  for (const result of [
+    { kind: 'challenge', envelope: { ...envelope, generation: 4 } },
+    { kind: 'control', envelope },
+    { kind: 'challenge', envelope, credential: token },
+  ]) {
+    const rejected = input();
+    assert.equal(
+      await protectIngress(rejected, config, async () =>
+        verificationResponse(result),
+      ),
+      true,
+    );
+    assert.equal(rejected.response.status, 403);
+  }
+  const revoked = input();
+  assert.equal(
+    await protectIngress(revoked, config, async () =>
+      verificationResponse({}, 403),
+    ),
+    true,
+  );
+  assert.equal(revoked.response.status, 403);
+  const unavailable = input();
+  assert.equal(
+    await protectIngress(unavailable, config, async () =>
+      verificationResponse({}, 503),
+    ),
+    true,
+  );
+  assert.equal(unavailable.response.status, 503);
+});
+
+test('WAP-E02: product source uses its own immutable binding and never assigns an old event to the current generation', async () => {
+  const binding = {
+    bindingId: randomUUID(),
+    lineId: randomUUID(),
+    accountId: randomUUID(),
+    generation: 2,
+  };
+  const instance = 'synthetic-personal';
+  const config = {
+    ...env,
+    SILMER_WAP_INGRESS_PATHS: JSON.stringify({
+      'silmer/seller-whatsapp/events': 'event',
+    }),
+    SILMER_WAP_INGRESS_INSTANCES: instance,
+    SILMER_WAP_INGRESS_VERIFY_URL:
+      'https://crm.synthetic.invalid/api/v1/integrations/n8n/whatsapp-control/ingress/verify',
+  };
+  const make = () =>
+    context({
+      parameters: { path: 'silmer/seller-whatsapp/events' },
+      req: {
+        body: {
+          event: 'connection.update',
+          instance,
+          source: binding,
+          data: { state: 'open' },
+        },
+      },
+    });
+  const accepted = make();
+  assert.equal(
+    await protectIngress(
+      accepted,
+      config,
+      async (/** @type {any} */ url, /** @type {any} */ init) => {
+        assert.equal(url, config.SILMER_WAP_INGRESS_VERIFY_URL);
+        assert.equal(init.headers['x-correlation-id'], binding.bindingId);
+        assert.equal(init.headers['idempotency-key'], binding.bindingId);
+        return verificationResponse({ source: binding, instance });
+      },
+    ),
+    false,
+  );
+  const stale = make();
+  assert.equal(
+    await protectIngress(stale, config, async () =>
+      verificationResponse({ source: { ...binding, generation: 3 }, instance }),
+    ),
+    true,
+  );
+  assert.equal(stale.response.status, 403);
+  assert.equal(stale.req.body.source.generation, 2);
+});
 
 /** @param {any} [options] */
 function context(options = {}) {

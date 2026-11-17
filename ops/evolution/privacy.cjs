@@ -80,9 +80,20 @@ function validateEnvironment(env) {
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(env.SILMER_EVOLUTION_INSTANCE || '')) {
     fail('EVOLUTION_INSTANCE_CONFIGURATION_INVALID');
   }
+  let personal;
+  if (env.SILMER_WAP_CONTROL_ENABLED === 'true') {
+    const { configuration } = require('./wap-control-runtime.cjs');
+    personal = configuration(env);
+  }
   return {
     webhookUrl: webhook.href,
     webhookToken: env.SILMER_EVOLUTION_WEBHOOK_TOKEN,
+    ...(personal
+      ? {
+          personalWebhookUrl: personal.webhook,
+          personalInstances: personal.instances,
+        }
+      : {}),
   };
 }
 
@@ -103,7 +114,16 @@ function protectWebhookRequest(config, profile) {
   } catch {
     fail('EVOLUTION_WEBHOOK_DESTINATION_REJECTED');
   }
-  if (destination !== profile.webhookUrl || !WEBHOOK_EVENTS.has(data.event)) {
+  const personal = profile.personalInstances?.includes(data.instance) === true;
+  if (
+    destination !==
+      (personal ? profile.personalWebhookUrl : profile.webhookUrl) ||
+    !WEBHOOK_EVENTS.has(data.event) ||
+    (personal &&
+      (data.event !== 'connection.update' ||
+        !data.source ||
+        !config.headers?.['X-Silmer-Wap-Generation-Token']))
+  ) {
     fail('EVOLUTION_WEBHOOK_DESTINATION_REJECTED');
   }
   // Upstream includes its instance API key in every webhook payload.
@@ -153,9 +173,23 @@ function installRuntimeProtection(env = process.env) {
   protectStream(process.stdout, 'EVOLUTION_RUNTIME_OUTPUT_REDACTED');
   protectStream(process.stderr, 'EVOLUTION_RUNTIME_ERROR_REDACTED');
   const load = Module._load;
+  const expressWrappers = new WeakMap();
   Module._load = function loadProtected(request, parent, isMain) {
     const result = load.call(this, request, parent, isMain);
     if (request === 'axios') protectAxios(result, profile);
+    if (request === 'express') {
+      if (!expressWrappers.has(result)) {
+        const { protectExpress } = require('./wap-control-runtime.cjs');
+        expressWrappers.set(
+          result,
+          protectExpress(result, {
+            env,
+            generationRuntime: require('./silmer-wap-generation.cjs'),
+          }),
+        );
+      }
+      return expressWrappers.get(result);
+    }
     return result;
   };
   const { PrismaClient } = require('@prisma/client');

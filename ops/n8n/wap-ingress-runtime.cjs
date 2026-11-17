@@ -50,7 +50,7 @@ function configuration(env) {
       ([path, kind]) =>
         !RESERVED_PATH.test(path) ||
         !/^[A-Za-z0-9/_-]{1,128}$/.test(path) ||
-        !['challenge', 'event'].includes(kind),
+        !['control', 'challenge', 'event'].includes(kind),
     )
   )
     denied();
@@ -104,7 +104,10 @@ function sourceBody(source) {
     generation: source.generation,
   };
 }
-function eventBody(body) {
+function eventBody(
+  body,
+  instances = ['wap-synthetic-qr', 'wap-synthetic-code'],
+) {
   keys(body, [
     'event',
     'instance',
@@ -118,7 +121,7 @@ function eventBody(body) {
   keys(body.data, ['state']);
   if (
     body.event !== 'connection.update' ||
-    !['wap-synthetic-qr', 'wap-synthetic-code'].includes(body.instance) ||
+    !instances.includes(body.instance) ||
     !['connecting', 'close', 'open'].includes(body.data.state)
   )
     denied();
@@ -143,8 +146,12 @@ function replaceObject(target, projected) {
   return target;
 }
 async function verifySource(source, instance, token, env, fetchImpl) {
+  const url = trustedVerifier(
+    env.SILMER_WAP_INGRESS_VERIFY_URL,
+    '/api/v1/integrations/n8n/whatsapp-control/ingress/verify',
+    VERIFY_URL,
+  );
   if (
-    env.SILMER_WAP_INGRESS_VERIFY_URL !== VERIFY_URL ||
     !/^Basic [A-Za-z0-9+/]+=*$/.test(
       env.SILMER_WAP_INGRESS_VERIFY_BASIC || '',
     ) ||
@@ -154,7 +161,7 @@ async function verifySource(source, instance, token, env, fetchImpl) {
     denied();
   let response;
   try {
-    response = await fetchImpl(VERIFY_URL, {
+    response = await fetchImpl(url, {
       method: 'POST',
       redirect: 'error',
       signal: AbortSignal.timeout(5000),
@@ -162,6 +169,7 @@ async function verifySource(source, instance, token, env, fetchImpl) {
         'Content-Type': 'application/json',
         Authorization: env.SILMER_WAP_INGRESS_VERIFY_BASIC,
         [GENERATION_HEADER]: token,
+        ...technicalHeaders(source.bindingId, source.bindingId),
       },
       body: JSON.stringify({ source, instance }),
     });
@@ -189,6 +197,123 @@ async function verifySource(source, instance, token, env, fetchImpl) {
     parsed.instance !== instance ||
     Object.keys(source).some((key) => canonical[key] !== source[key])
   )
+    denied();
+  return canonical;
+}
+
+function trustedVerifier(raw, path, synthetic) {
+  if (raw === synthetic && synthetic) return raw;
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    denied();
+  }
+  if (
+    url.protocol !== 'https:' ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    url.pathname !== path
+  )
+    denied();
+  return url.href;
+}
+function technicalHeaders(correlation, key) {
+  return {
+    'x-silmer-workflow-key': 'seller-whatsapp-control',
+    'x-silmer-workflow-version': '1.0',
+    'x-silmer-execution-id': `ingress:${correlation}`,
+    'x-correlation-id': correlation,
+    'idempotency-key': key,
+  };
+}
+function controlEnvelope(value, kind) {
+  const base = ['operationId', 'lineId', 'generation', 'reference'];
+  keys(value, [
+    ...base,
+    ...(kind === 'control' ? ['action'] : ['challengeId', 'mode']),
+  ]);
+  const uuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (
+    ![
+      'operationId',
+      'lineId',
+      'reference',
+      ...(kind === 'challenge' ? ['challengeId'] : []),
+    ].every((key) => typeof value[key] === 'string' && uuid.test(value[key])) ||
+    !Number.isSafeInteger(value.generation) ||
+    value.generation < 1 ||
+    (kind === 'control'
+      ? !['connect', 'reconcile', 'disconnect'].includes(value.action)
+      : !['qr', 'code'].includes(value.mode))
+  )
+    denied();
+  return {
+    operationId: value.operationId,
+    lineId: value.lineId,
+    generation: value.generation,
+    reference: value.reference,
+    ...(kind === 'control'
+      ? { action: value.action }
+      : { challengeId: value.challengeId, mode: value.mode }),
+  };
+}
+async function verifyControl(body, kind, env, fetchImpl) {
+  const envelope = controlEnvelope(body, kind);
+  const path = '/api/v1/integrations/n8n/whatsapp-control/verify';
+  const url = trustedVerifier(
+    env.SILMER_WAP_CONTROL_VERIFY_URL,
+    path,
+    env.SILMER_WAP_INGRESS_SYNTHETIC === 'true'
+      ? `http://wap-control-fixture:8080${path}`
+      : undefined,
+  );
+  if (
+    !/^Basic [A-Za-z0-9+/]+=*$/.test(env.SILMER_WAP_INGRESS_VERIFY_BASIC || '')
+  )
+    denied();
+  let response;
+  try {
+    response = await fetchImpl(url, {
+      method: 'POST',
+      redirect: 'error',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+      headers: {
+        authorization: env.SILMER_WAP_INGRESS_VERIFY_BASIC,
+        'content-type': 'application/json',
+        ...technicalHeaders(
+          envelope.operationId,
+          kind === 'control' ? envelope.operationId : envelope.challengeId,
+        ),
+      },
+      body: JSON.stringify({ kind, envelope }),
+    });
+  } catch {
+    unavailable();
+  }
+  if (response.status >= 500) unavailable();
+  if (response.status !== 200) denied();
+  let size = 0;
+  const chunks = [];
+  let parsed;
+  try {
+    for await (const chunk of response.body) {
+      size += chunk.length;
+      if (size > 4096) denied();
+      chunks.push(Buffer.from(chunk));
+    }
+    parsed = JSON.parse(Buffer.concat(chunks).toString());
+  } catch {
+    denied();
+  }
+  keys(parsed, ['kind', 'envelope']);
+  if (parsed.kind !== kind) denied();
+  const canonical = controlEnvelope(parsed.envelope, kind);
+  if (Object.keys(canonical).some((key) => canonical[key] !== envelope[key]))
     denied();
   return canonical;
 }
@@ -224,10 +349,23 @@ async function protectIngress(
     )
       denied();
     let body;
-    if (paths[path] === 'challenge') {
+    if (
+      path.startsWith('silmer/seller-whatsapp/') &&
+      ['control', 'challenge'].includes(paths[path])
+    ) {
+      body = await verifyControl(req.body, paths[path], env, fetchImpl);
+    } else if (paths[path] === 'challenge') {
       body = challengeBody(req.body);
     } else {
-      body = eventBody(req.body);
+      const instances = path.startsWith('silmer/seller-whatsapp/')
+        ? (env.SILMER_WAP_INGRESS_INSTANCES || '').split(',')
+        : undefined;
+      if (
+        instances &&
+        (!instances.length || instances.some((instance) => !ID.test(instance)))
+      )
+        denied();
+      body = eventBody(req.body, instances);
       body.source = await verifySource(
         body.source,
         body.instance,
@@ -265,7 +403,8 @@ async function protectIngress(
 function scopedWorkflow(workflow) {
   return (
     (typeof workflow?.name === 'string' &&
-      workflow.name.startsWith('WAP-E01 isolated ')) ||
+      (workflow.name.startsWith('WAP-E01 isolated ') ||
+        workflow.name.startsWith('Silmer seller WhatsApp '))) ||
     (Array.isArray(workflow?.nodes) &&
       workflow.nodes.some(
         (node) =>

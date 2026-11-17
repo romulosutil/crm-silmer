@@ -9,6 +9,230 @@ info:
 servers:
   - url: /api/v1
 paths:
+  /me/whatsapp:
+    get:
+      operationId: readPersonalWhatsApp
+      summary: Estado da própria linha, sem criar ou reconectar
+      description: WAP-E02/WAP-01/02/11. Sessão e origem atuais; número próprio mascarado. No-store; controle default off.
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200':
+          {
+            description: Linha,
+            versão,
+            geração,
+            operação pendente e disponibilidade; sem QR/código,
+          }
+        '401': { description: Sessão ausente ou revogada }
+        '403': { description: Origem, função ou capacidade recusada }
+        '429': { description: Limite vigente de 60 requisições/minuto }
+        '503': { description: Controle sem configuração válida }
+  /me/whatsapp/connect:
+    post:
+      operationId: connectPersonalWhatsApp
+      summary: Reservar preparação da própria linha no ledger
+      description: WAP-E02/WAP-02/04/10. Titular, instância e destino derivados no servidor. Não ativa a linha nem entrega desafio. Idempotency-Key UUID; corpo máximo 8 KiB.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters: [{ $ref: '#/components/parameters/Origin' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                $ref: '../../schemas/seller-whatsapp-control.v1.json#/$defs/connect',
+              }
+      responses:
+        '202':
+          {
+            description: Operação opaca e projeção atual,
+            ou replay autorizado sem novo efeito,
+          }
+        '400': { description: Corpo inválido ou destino arbitrário }
+        '401': { description: Sessão inválida }
+        '403': { description: CSRF, origem, função ou capacidade recusada }
+        '409':
+          {
+            description: Versão/número/geração/chave em conflito ou operação incerta,
+          }
+        '429': { description: Limite vigente de 60 requisições/minuto }
+        '503': { description: Controle desligado ou titular fora da allowlist }
+  /me/whatsapp/disconnect:
+    post:
+      operationId: disconnectPersonalWhatsApp
+      summary: Revogar geração pessoal e reservar desconexão
+      description: WAP-E02/WAP-10/11. Revogação local imediata; efeito externo incerto exige leitura antes de logout. Número, carteira, ACL e histórico preservados.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters: [{ $ref: '#/components/parameters/Origin' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                $ref: '../../schemas/seller-whatsapp-control.v1.json#/$defs/disconnect',
+              }
+      responses:
+        '202':
+          {
+            description: Metadados da intenção/operação e eventual revogação aguardando reconciliação,
+          }
+        '400': { description: Corpo inválido }
+        '401': { description: Sessão inválida }
+        '403': { description: CSRF, origem, função ou capacidade recusada }
+        '409': { description: Versão, geração ou chave em conflito }
+        '429': { description: Limite vigente de 60 requisições/minuto }
+        '503': { description: Controle desligado }
+  /me/whatsapp/pairing-challenge:
+    post:
+      operationId: requestPersonalWhatsAppChallenge
+      summary: Desafio efêmero de uso único, somente para o titular atual
+      description: WAP-E02/WAP-03/10. Resposta síncrona API→n8n→Evolution, no-store, nunca persistida ou recuperada por replay. Renovação explícita com CAS e renewChallengeId somente após resolver incerteza; TTL isolado não permite repetir efeito.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters: [{ $ref: '#/components/parameters/Origin' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                $ref: '../../schemas/seller-whatsapp-control.v1.json#/$defs/challengeRequest',
+              }
+      responses:
+        '200':
+          description: Bytes efêmeros, TTL e metadados; sessão/titular/geração revalidados depois do retorno remoto
+          content:
+            application/json:
+              schema:
+                {
+                  $ref: '../../schemas/seller-whatsapp-control.v1.json#/$defs/challengeResponse',
+                }
+        '400': { description: Corpo inválido }
+        '401': { description: Sessão inválida }
+        '403':
+          {
+            description: Capacidade ou titularidade recusada; Admin não herda QR alheio,
+          }
+        '409':
+          {
+            description: Replay,
+            versão/geração obsoleta ou resultado incerto; consultar estado antes de renovar,
+          }
+        '429': { description: Limite vigente de 60 requisições/minuto }
+        '503': { description: Controle desligado ou indisponível }
+  /integrations/n8n/whatsapp-control/verify:
+    post:
+      operationId: verifyWhatsAppControlMetadata
+      parameters:
+        - { $ref: '#/components/parameters/CorrelationId' }
+        - { $ref: '#/components/parameters/WorkflowKey' }
+        - { $ref: '#/components/parameters/WorkflowVersion' }
+        - { $ref: '#/components/parameters/ExecutionId' }
+      summary: Verificar IDs contra ledger antes da primeira persistência n8n
+      description: WAP-E02/WAP-03/12. Somente metadados canônicos; sem reserva ou segredo. Basic AUTOMATION_EXECUTOR e headers técnicos vigentes; allowlist seller-whatsapp-control/1.0. Correlação operationId e chave operationId ou challengeId.
+      security: [{ automationBasic: [], idempotencyKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                $ref: '../../schemas/seller-whatsapp-control.v1.json#/$defs/technicalRequest',
+              }
+      responses:
+        '200':
+          { description: Mesmo envelope canônico validado sem dados privados }
+        '400': { description: Metadados ou headers inválidos }
+        '401': { description: Basic inválido }
+        '403': { description: Workflow, titular, instância ou fonte recusados }
+        '409': { description: Operação ou geração obsoleta }
+        '503': { description: Controle desligado ou indisponível }
+  /integrations/n8n/whatsapp-control/operations:
+    post:
+      operationId: reserveWhatsAppControlEffect
+      parameters:
+        - { $ref: '#/components/parameters/CorrelationId' }
+        - { $ref: '#/components/parameters/WorkflowKey' }
+        - { $ref: '#/components/parameters/WorkflowVersion' }
+        - { $ref: '#/components/parameters/ExecutionId' }
+      summary: Reservar despacho autorizado para n8n
+      description: WAP-E02/WAP-10/12. Fence única de connect/disconnect/desafio, sem revisão inbound; reconcile somente lê. Resposta privada efêmera, sem cache/log/persistência n8n. Mesmos headers de verify; executionId acompanha o resultId emitido no servidor.
+      security: [{ automationBasic: [], idempotencyKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                $ref: '../../schemas/seller-whatsapp-control.v1.json#/$defs/technicalRequest',
+              }
+      responses:
+        '200':
+          {
+            description: Destino privado derivado,
+            binding e resultId autorizados somente para execução técnica,
+          }
+        '400': { description: Corpo ou headers inválidos }
+        '401': { description: Basic inválido }
+        '403': { description: Workflow ou titularidade recusados }
+        '409': { description: Efeito já reservado/incerto ou geração obsoleta }
+        '503': { description: Controle desligado }
+  /integrations/n8n/whatsapp-control/results:
+    post:
+      operationId: recordWhatsAppControlResult
+      parameters:
+        - { $ref: '#/components/parameters/CorrelationId' }
+        - { $ref: '#/components/parameters/WorkflowKey' }
+        - { $ref: '#/components/parameters/WorkflowVersion' }
+        - { $ref: '#/components/parameters/ExecutionId' }
+      summary: Registrar recibo técnico sem QR/código/payload bruto
+      description: WAP-E02/WAP-04/10. Basic e headers vigentes, workflow seller-whatsapp-control/1.0, correlação operationId, chave resultId; execução e resultado ligados à reserva. Callback antigo registra recibo sem restaurar geração ou superar observação mais recente.
+      security: [{ automationBasic: [], idempotencyKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                $ref: '../../schemas/seller-whatsapp-control.v1.json#/$defs/result',
+              }
+      responses:
+        '200': { description: Recibo mínimo accepted/duplicate/stale }
+        '400': { description: Corpo ou headers inválidos }
+        '401': { description: Basic inválido }
+        '403': { description: Workflow, resultado ou execução sem reserva }
+        '409': { description: Mesmo resultId com conteúdo diferente }
+        '503': { description: Controle desligado }
+  /integrations/n8n/whatsapp-control/ingress/verify:
+    post:
+      operationId: verifyWhatsAppGenerationIngress
+      parameters:
+        - { $ref: '#/components/parameters/CorrelationId' }
+        - { $ref: '#/components/parameters/WorkflowKey' }
+        - { $ref: '#/components/parameters/WorkflowVersion' }
+        - { $ref: '#/components/parameters/ExecutionId' }
+        - name: X-Silmer-Wap-Generation-Token
+          in: header
+          required: true
+          schema: { type: string, minLength: 32, maxLength: 128 }
+      summary: Comparar source/token capturados antes da fila com binding imutável
+      description: WAP-E02/WAP-10/12 / ADR 092. Basic técnico e workflow seller-whatsapp-control/1.0; correlação/chave bindingId, X-Silmer-Wap-Generation-Token efêmero. Sem efeito nem reclassificação para geração atual. Ingresso de mensagens de produto permanece E04.
+      security: [{ automationBasic: [], idempotencyKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                $ref: '../../schemas/seller-whatsapp-control.v1.json#/$defs/ingress',
+              }
+      responses:
+        '200': { description: Source e instância canônicos sem token }
+        '400': { description: Corpo ou headers inválidos }
+        '401': { description: Basic inválido }
+        '403':
+          { description: Binding/token/instância/geração/titular recusados }
+        '503': { description: Controle desligado ou indisponível }
   /api/health/operations:
     servers: [{ url: / }]
     get:

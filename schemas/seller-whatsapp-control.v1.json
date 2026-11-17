@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crm-silmer.local/schemas/seller-whatsapp-control.v1.json",
+  "title": "WAP-E02 control metadata v1",
+  "$defs": {
+    "uuid": { "type": "string", "format": "uuid" },
+    "generation": { "type": "integer", "minimum": 1 },
+    "phone": { "type": "string", "pattern": "^\\+?[1-9][0-9]{7,14}$" },
+    "connect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expectedNumber", "expectedVersion"],
+      "properties": {
+        "expectedNumber": { "$ref": "#/$defs/phone" },
+        "expectedVersion": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "disconnect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expectedVersion", "expectedGeneration"],
+      "properties": {
+        "expectedVersion": { "$ref": "#/$defs/generation" },
+        "expectedGeneration": { "$ref": "#/$defs/generation" }
+      }
+    },
+    "challengeRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operationId", "expectedVersion", "generation", "mode"],
+      "properties": {
+        "operationId": { "$ref": "#/$defs/uuid" },
+        "expectedVersion": { "$ref": "#/$defs/generation" },
+        "generation": { "$ref": "#/$defs/generation" },
+        "mode": { "enum": ["qr", "code"] },
+        "renewChallengeId": { "$ref": "#/$defs/uuid" }
+      }
+    },
+    "controlEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operationId",
+        "lineId",
+        "generation",
+        "action",
+        "reference"
+      ],
+      "properties": {
+        "operationId": { "$ref": "#/$defs/uuid" },
+        "lineId": { "$ref": "#/$defs/uuid" },
+        "generation": { "$ref": "#/$defs/generation" },
+        "action": { "enum": ["connect", "disconnect", "reconcile"] },
+        "reference": { "$ref": "#/$defs/uuid" }
+      }
+    },
+    "challengeEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operationId",
+        "lineId",
+        "generation",
+        "challengeId",
+        "mode",
+        "reference"
+      ],
+      "properties": {
+        "operationId": { "$ref": "#/$defs/uuid" },
+        "lineId": { "$ref": "#/$defs/uuid" },
+        "generation": { "$ref": "#/$defs/generation" },
+        "challengeId": { "$ref": "#/$defs/uuid" },
+        "mode": { "enum": ["qr", "code"] },
+        "reference": { "$ref": "#/$defs/uuid" }
+      }
+    },
+    "technicalRequest": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "envelope"],
+          "properties": {
+            "kind": { "const": "control" },
+            "envelope": { "$ref": "#/$defs/controlEnvelope" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "envelope"],
+          "properties": {
+            "kind": { "const": "challenge" },
+            "envelope": { "$ref": "#/$defs/challengeEnvelope" }
+          }
+        }
+      ]
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operationId",
+        "lineId",
+        "generation",
+        "resultId",
+        "effect",
+        "outcome"
+      ],
+      "properties": {
+        "operationId": { "$ref": "#/$defs/uuid" },
+        "lineId": { "$ref": "#/$defs/uuid" },
+        "generation": { "$ref": "#/$defs/generation" },
+        "resultId": { "$ref": "#/$defs/uuid" },
+        "effect": { "enum": ["connect", "disconnect", "reconcile"] },
+        "outcome": {
+          "enum": ["succeeded", "failed_before_effect", "unknown", "reconciled"]
+        },
+        "confirmedNumber": { "$ref": "#/$defs/phone" },
+        "webhookVerified": { "type": "boolean" },
+        "bindingVerified": { "type": "boolean" },
+        "providerState": { "enum": ["open", "connecting", "close", "absent"] }
+      }
+    },
+    "challengeResponse": {
+      "description": "Ephemeral HTTP response only. Never use as ledger, job, log or idempotency response.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "challengeId",
+        "operationId",
+        "generation",
+        "mode",
+        "expiresAt",
+        "value",
+        "version"
+      ],
+      "properties": {
+        "challengeId": { "$ref": "#/$defs/uuid" },
+        "operationId": { "$ref": "#/$defs/uuid" },
+        "generation": { "$ref": "#/$defs/generation" },
+        "mode": { "enum": ["qr", "code"] },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "value": { "type": "string", "minLength": 1, "maxLength": 512000 },
+        "version": { "$ref": "#/$defs/generation" }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "instance"],
+      "properties": {
+        "instance": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["bindingId", "lineId", "accountId", "generation"],
+          "properties": {
+            "bindingId": { "$ref": "#/$defs/uuid" },
+            "lineId": { "$ref": "#/$defs/uuid" },
+            "accountId": { "$ref": "#/$defs/uuid" },
+            "generation": { "$ref": "#/$defs/generation" }
+          }
+        }
+      }
+    }
+  }
+}

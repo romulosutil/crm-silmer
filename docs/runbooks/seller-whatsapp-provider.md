@@ -9,6 +9,11 @@ Base inicial `f7a06389`, posterior à integração da PR 382 e do SDD; preserva
 `d7537b3c`. Correção publicada sobre `c14df42c`, após a integração externa do
 PR 391 durante a execução.
 
+Continuação WAP-E02: o [runbook de controle pessoal](seller-whatsapp-control.md)
+registra o backend, o verificador autoritativo e os workflows gerados inativos,
+com suas provas sintéticas. A execução posterior usa o gate técnico corrigido
+de E01, sem concluir os gates mobile/retenção operacional registrados abaixo.
+
 ## Correção técnica — RFC 069 / ADR 092
 
 O proprietário autorizou a correção dos dois bloqueios centrais em 16/11/2026.

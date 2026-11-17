@@ -13,6 +13,8 @@ export {
   normalizeMetaWhatsAppWebhook,
 } from './adapters/meta-whatsapp.js';
 export { InMemoryInboxRepository } from './adapters/in-memory-inbox-repository.js';
+export { PostgresSellerWhatsAppRepository } from './adapters/postgres-seller-whatsapp.js';
+export { sellerWhatsAppConfiguration } from './seller-whatsapp-configuration.js';
 export { PostgresConversationConversionPort } from './adapters/postgres-conversation-conversion-port.js';
 export {
   appendConversationStreamEvent,

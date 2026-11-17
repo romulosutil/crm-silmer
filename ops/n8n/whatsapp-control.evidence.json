@@ -1,0 +1,45 @@
+{
+  "scope": "WAP-E02/WAP-T01-04; isolated synthetic, no real pairing/provider",
+  "technicalGate": "passed",
+  "checks": {
+    "success": {
+      "databaseAndLogicalBackup": false,
+      "logs": false,
+      "stateAndSnapshot": false
+    },
+    "challengeReplayRejectedBeforePersistence": true,
+    "nativeUnauthenticatedStatus": 401,
+    "unauthorizedMetadataNeverReachesGateway": true,
+    "failedAfterChallengeStatus": 500,
+    "failureAfterChallenge": {
+      "databaseAndLogicalBackup": false,
+      "logs": false,
+      "stateAndSnapshot": false
+    },
+    "inProgressWithChallenge": {
+      "databaseAndLogicalBackup": false,
+      "logs": false,
+      "stateAndSnapshot": false
+    },
+    "manualDispatched": true,
+    "providerSocketCapturedAuthoritativeSource": true,
+    "manualRuntimeSucceeded": true,
+    "manual": {
+      "databaseAndLogicalBackup": false,
+      "logs": false,
+      "stateAndSnapshot": false
+    },
+    "manualPartialAndPinRejected": true,
+    "manualAndPinDenied": {
+      "databaseAndLogicalBackup": false,
+      "logs": false,
+      "stateAndSnapshot": false
+    },
+    "defaultOffOnFreshProcess": true,
+    "stoppedPhysicalDatabaseAndWal": false,
+    "stoppedStateSnapshot": false
+  },
+  "privacyFailures": [],
+  "cleanup": "owned-resources-removed",
+  "n8nPatchedImage": "sha256:68f9cc1daab7284c2f5eade189eda187712a79cc658e9cb8647fdbd98ae8575d"
+}

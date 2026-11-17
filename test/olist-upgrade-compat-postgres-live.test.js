@@ -142,7 +142,7 @@ if (connectionString) {
           const current = await predicates();
           /** Evaluate trusted catalog expressions in PostgreSQL independently of
            * foreign-key fixtures; actual insert rejection is covered above.
-           * @param {Record<string,string|null>} values */
+           * @param {Record<string,string|number|null>} values */
           async function evaluate(values) {
             const row = {
               job_type: 'billing.checkout.create',
@@ -155,11 +155,17 @@ if (connectionString) {
               queue: 'default',
               effect_policy: 'internal',
               olist_export_id: null,
+              whatsapp_operation_id: null,
+              whatsapp_action: null,
+              max_attempts: 1,
               ...values,
             };
             const entries = Object.entries(row);
             const fields = entries
-              .map(([name], index) => `$${index + 1}::text AS ${name}`)
+              .map(
+                ([name], index) =>
+                  `$${index + 1}::${name === 'max_attempts' ? 'integer' : 'text'} AS ${name}`,
+              )
               .join(',');
             const { rows } = await pool.query(
               `SELECT (${previous.outbox_jobs_target_check}) AS old_target,
@@ -245,6 +251,67 @@ if (connectionString) {
                 olist_export_id: randomUUID(),
               })
             ).new_target,
+            false,
+          );
+          // New personal-control targets must not leak into a previous job.
+          /** @type {Array<Record<string,string|number|null>>} */
+          const previousTargets = [
+            { job_type: 'billing.checkout.create' },
+            olist,
+          ];
+          /** @type {Array<Record<string,string|number|null>>} */
+          const personalMetadata = [
+            { whatsapp_operation_id: randomUUID() },
+            { whatsapp_action: 'connect' },
+          ];
+          for (const legacy of previousTargets) {
+            for (const metadata of personalMetadata)
+              assert.equal(
+                (await evaluate({ ...legacy, ...metadata })).new_target,
+                false,
+              );
+          }
+          const control = {
+            job_type: 'whatsapp.control.deliver',
+            whatsapp_operation_id: randomUUID(),
+            whatsapp_action: 'connect',
+            queue: 'whatsapp_control',
+            effect_policy: 'manual',
+            max_attempts: 1,
+          };
+          const reconcile = {
+            ...control,
+            job_type: 'whatsapp.control.reconcile',
+            whatsapp_action: 'reconcile',
+            effect_policy: 'queryable',
+            max_attempts: 8,
+          };
+          /** @type {Array<Record<string,string|number|null>>} */
+          const invalidTargets = [
+            { whatsapp_operation_id: null },
+            { whatsapp_action: null },
+            { queue: 'default' },
+            { effect_policy: 'internal' },
+            { olist_export_id: randomUUID() },
+            { message_id: 'unexpected' },
+          ];
+          for (const job of [control, reconcile]) {
+            const accepted = await evaluate(job);
+            assert.equal(accepted.new_target, true);
+            assert.equal(accepted.accepted_type, true);
+            for (const invalid of invalidTargets)
+              assert.equal(
+                (await evaluate({ ...job, ...invalid })).new_target,
+                false,
+              );
+          }
+          assert.equal(
+            (await evaluate({ ...control, max_attempts: 2 })).new_target,
+            false,
+          );
+          assert.equal(
+            (await evaluate({ ...reconcile, whatsapp_action: 'connect' }))
+              .new_target,
             false,
           );
         },

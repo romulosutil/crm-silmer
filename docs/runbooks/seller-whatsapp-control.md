@@ -187,3 +187,31 @@ também removeu seus containers/volumes/rede/imagem próprios. Nenhum recurso
 preexistente foi alterado. A alteração alheia de index.html fica no patch externo
 `C:/Users/sutil/AppData/Local/Temp/crm-silmer-wap-e02-index-20261116.patch`
 (SHA-256 `033fa180ed8450aa218f428a9e4d38b145666b9b426036cffcb7d978087dfb75`).
+
+## Correção de CI — PR 395
+
+O primeiro CI de `4a267d7d` aprovou estática/E2E e encontrou uma falha em
+`olist-upgrade-compat-postgres-live`: a linha SQL sintética usada para avaliar
+os predicados não tinha os campos WAP acrescentados à outbox. A fixture agora
+inclui `whatsapp_operation_id`, `whatsapp_action` e `max_attempts` (inteiro),
+mantendo todas as comparações anteriores de compatibilidade e restrição.
+
+Os novos negativos também expuseram a semântica de `CHECK(NULL)` do PostgreSQL:
+sem um guard explícito, uma ação WAP nula podia passar pela constraint.
+A expand 0077, ainda não integrada ou aplicada em ambiente real, exige agora
+`whatsapp_action IS NOT NULL` na fronteira pessoal. INSERTs reais dos dois tipos
+de job sem ação devem falhar com `23514/outbox_jobs_target_check`. A matriz
+também verifica alvos misturados, fila/política incorretas e tentativa mutante
+com mais de uma execução, sem retirar ou relaxar nenhuma assertion anterior.
+
+Reprodução e validação em PostgreSQL 17 dedicado, Node 24.20.0/npm 11.19.0:
+o teste original reproduziu o erro de coluna; a fixture ampliada expôs o NULL;
+após o guard, as três suítes focalizadas passaram em 28 testes, zero skips.
+Formatação, tipos, lint e diff-check focais aprovados. A execução integral do
+job PostgreSQL também revelou a lista explícita de migrações do teste de
+upgrade de cobrança terminando em 0076. Acrescentou-se 0077 à igualdade exata,
+preservando as verificações de checksums e jobs anteriores; o caso isolado
+passou sem skips. As etapas anteriores da cadeia passaram integralmente;
+somente o bloco final afetado foi repetido após essa correção: 308 aprovados,
+zero falhas/skips. O novo CI do PR será acompanhado até concluir, sem merge e
+sem efeitos em ambiente real.

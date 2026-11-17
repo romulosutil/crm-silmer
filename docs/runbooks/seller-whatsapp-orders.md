@@ -26,11 +26,10 @@ nova conferência. A API permanece responsável por autorizar e revalidar todas
 as condições, inclusive titular ativo e acesso comercial. Nenhuma dessas
 operações envia mensagem, ativa IA ou exige cadastro completo ou canal online.
 
-Rollback da interface usa um SHA compatível com o modelo de múltiplos alvos;
-desligue novas criações antes de qualquer retorno após uso desse modelo. Não
-reverter para leitor/escritor antigo depois de múltiplos alvos. E07 ainda deve
-provar o fluxo integrado com PostgreSQL e navegador; as projeções sintéticas
-de E06 não homologam provedor nem produção.
+Rollback da interface usa um SHA compatível com o modelo de múltiplos alvos.
+Desligue novas criações antes de qualquer retorno após uso desse modelo.
+O ensaio WAP-E07 está descrito abaixo e tem seus resultados no
+[registro de aceite](../../.specs/features/seller-whatsapp/validation-pedido.md).
 
 ## Contrato e compatibilidade
 
@@ -145,3 +144,27 @@ que sinaliza skip sem banco. A prova focal real não admite skips. No Windows
 sandbox, `TEMP`/`TMP` foram apontados ao diretório de artefatos da tarefa para
 que URLs de fixtures não fossem truncadas pelo `#` do caminho do sandbox.
 Resultados integrais e limites de E2E ficam registrados no checklist da entrega.
+
+### Ensaio integrado WAP-E07
+
+Reserve um cluster PostgreSQL descartável em loopback e crie nele o banco
+`crm_silmer_test_wap_e07`. O teste exige esse nome e host `127.0.0.1`,
+recria os schemas `crm` e `crm_meta` e aplica as expansões e o contrato 0081.
+Defina `TEST_DATABASE_URL` para esse banco. Rode em um checkout com as
+dependências do lockfile e Chromium Playwright instalados.
+
+```powershell
+npm run build
+node --test test/integration/seller-whatsapp-passive-order.test.js
+```
+
+O ensaio sobe Fastify e o proxy local do frontend. Reserve a porta de edge
+4187 ou use `WAP_TEST_EDGE_PORT` para indicar outra porta livre em loopback.
+O teste usa contas, credenciais e origens de linha sintéticas, envia o evento
+ao endpoint autenticado de inbound do n8n e usa sessões reais no navegador.
+A resolução cadastral explícita e a queda da linha são estados de fixture.
+Confira o registro de aceite para a cobertura e os limites da prova.
+
+Execute as suítes live já existentes serialmente em outro banco sintético
+dedicado `crm_silmer_test`, pois cada suíte reinicializa schemas.
+Encerre a instância descartável após a execução.

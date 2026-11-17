@@ -117,6 +117,12 @@ for (const viewport of [
         b.getByText('Cliente sintético a', { exact: true }),
       ).toHaveCount(0);
 
+      const title = a.getByRole('heading', { name: 'Clientes', exact: true });
+      await expect(title).toBeFocused();
+      await emit(a);
+      await expect(a.locator(`#client-${sessionA.contact.id}`)).toBeVisible();
+      await expect(title).toBeFocused();
+
       const open = a.getByRole('button', {
         name: 'Completar cadastro',
         exact: true,

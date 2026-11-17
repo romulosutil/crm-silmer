@@ -357,6 +357,8 @@ function scheduleLiveRefresh() {
 
 /** WAP-T02-07: revoke every cached projection before any asynchronous reread. */
 function clearPrivateContact() {
+  const focused = globalThis.document.activeElement;
+  const hadPrivateContent = contacts.value.length > 0 || detail.value !== null;
   for (const controller of [
     listController,
     detailController,
@@ -384,7 +386,16 @@ function clearPrivateContact() {
   renameCurrentKnown.value = false;
   actionMessage.value = '';
   error.value = '';
-  void nextTick(() => searchInput.value?.focus({ preventScroll: true }));
+  // A live reset can arrive during route entry. Keep focus on surviving
+  // controls, including the title on entry. Revocation can also arrive while
+  // focus is already on the body, for example after disabling pagination.
+  void nextTick(() => {
+    if (
+      document.activeElement === document.body &&
+      (hadPrivateContent || (focused && !focused.isConnected))
+    )
+      searchInput.value?.focus({ preventScroll: true });
+  });
 }
 
 function contactUnavailable() {

@@ -18,6 +18,7 @@ import { registerChatMediaUploadRoutes } from './chat-media-upload-routes.js';
 import { registerChatMediaStatusRoutes } from './chat-media-status-routes.js';
 import { registerChatMediaContentRoutes } from './chat-media-content-routes.js';
 import { registerIdentityRoutes } from './identity-routes.js';
+import { registerSellerWhatsAppRoutes } from './seller-whatsapp-routes.js';
 import { registerFinanceRoutes } from './finance-routes.js';
 import { registerDashboardRoutes } from './dashboard-routes.js';
 import { registerDashboardCheckpointRoutes } from './dashboard-checkpoint-routes.js';
@@ -58,6 +59,7 @@ export const WEBHOOK_REQUESTS_PER_SECOND = 20;
  *   automationAuth?: {authorize(input: {action: string, authorization: unknown, correlationId: string}): Promise<unknown>},
  *   commercial?: Record<string, any>,
  *   identity?: Record<string, any>,
+ *   sellerWhatsApp?: any,
  *   n8n?: any,
  *   conversations?: any,
  *   chatMedia?: any,
@@ -92,6 +94,15 @@ export function createApi(options = {}, runtime = {}) {
   /** @type {WeakMap<object, { correlationId: string, requestId: string, startedAt: number }>} */
   const requests = new WeakMap();
 
+  registerSellerWhatsAppRoutes(
+    api,
+    runtime.sellerWhatsApp,
+    (/** @type {object} */ request) => {
+      const context = requests.get(request);
+      if (!context) throw new Error('Request context unavailable');
+      return context;
+    },
+  );
   if (runtime.commercial) {
     api.decorate('commercial', runtime.commercial);
   }

@@ -160,7 +160,7 @@ export class PostgresJobQueue {
       );
       const selected = await client.query(
         `SELECT id, job_type, idempotency_key, channel_event_id,
-                transient_media_id, message_id, chat_media_id, olist_export_id, queue, priority, available_at,
+                transient_media_id, message_id, chat_media_id, olist_export_id, whatsapp_operation_id, whatsapp_action, queue, priority, available_at,
                 attempt_count, max_attempts, effect_policy, deletion_reason
          FROM crm.outbox_jobs
          WHERE queue = $1
@@ -182,7 +182,7 @@ export class PostgresJobQueue {
                updated_at = $4, completed_at = NULL, last_error_code = NULL
            WHERE id = $1
            RETURNING id, job_type, idempotency_key, channel_event_id,
-                     transient_media_id, message_id, chat_media_id, olist_export_id, queue, priority, available_at,
+                     transient_media_id, message_id, chat_media_id, olist_export_id, whatsapp_operation_id, whatsapp_action, queue, priority, available_at,
                      attempt_count, max_attempts, effect_policy,
                      deletion_reason`,
           [row.id, normalizedWorkerId, lockedUntil, claimedAt],
@@ -699,6 +699,12 @@ function normalizeJob(row, attemptId) {
     messageId: nullableString(row.message_id),
     ...(row.olist_export_id
       ? { olistExportId: String(row.olist_export_id) }
+      : {}),
+    ...(row.whatsapp_operation_id
+      ? {
+          whatsappOperationId: String(row.whatsapp_operation_id),
+          whatsappAction: String(row.whatsapp_action),
+        }
       : {}),
     priority: Number(row.priority),
     queue: String(row.queue),

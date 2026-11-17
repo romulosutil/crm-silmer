@@ -67,6 +67,8 @@ function createGenerationRuntime(options = {}) {
   const sockets = new WeakMap();
   const secrets = new WeakMap();
   const latest = new Map();
+  const currentBindings = new Map();
+  const capturedByInstance = new Map();
   const usedBindings = new Set();
   const usedTokenHashes = new Set();
   const selected = (instance) => allowlist.has(instance);
@@ -106,8 +108,48 @@ function createGenerationRuntime(options = {}) {
       secrets.set(context, token);
       pending.set(instance, context);
       latest.set(instance, snapshot);
+      currentBindings.set(instance, context);
       usedBindings.add(snapshot.bindingId);
       usedTokenHashes.add(tokenHash);
+    },
+    // The control adapter may renew a challenge only after CRM reconciliation.
+    // Reasserting the exact binding does not replace the captured socket source.
+    ensureBinding(instance, source, token) {
+      requireSelected(instance);
+      const snapshot = immutableSource(source);
+      const current = currentBindings.get(instance);
+      if (
+        current &&
+        Object.keys(snapshot).every(
+          (key) => current.source[key] === snapshot[key],
+        )
+      ) {
+        if (
+          typeof token !== 'string' ||
+          createHash('sha256').update(token).digest('hex') !==
+            createHash('sha256').update(secrets.get(current)).digest('hex')
+        )
+          reject('WAP_GENERATION_BINDING_REUSED');
+        return Object.freeze({ duplicate: true });
+      }
+      this.bindNextSocket(instance, snapshot, token);
+      return Object.freeze({ duplicate: false });
+    },
+    // Connection state alone cannot prove which socket generation is online.
+    // A pending binding never passes; process restart intentionally loses proof.
+    bindingMatchesSocket(instance, source, token) {
+      requireSelected(instance);
+      const snapshot = immutableSource(source);
+      const captured = capturedByInstance.get(instance);
+      return Boolean(
+        captured &&
+        typeof token === 'string' &&
+        Object.keys(snapshot).every(
+          (key) => captured.source[key] === snapshot[key],
+        ) &&
+        createHash('sha256').update(token).digest('hex') ===
+          createHash('sha256').update(secrets.get(captured)).digest('hex'),
+      );
     },
     captureSocket(instance, socket) {
       const existing =
@@ -121,10 +163,15 @@ function createGenerationRuntime(options = {}) {
       if (existing) {
         return existing;
       }
+      // A native reconnect has already allocated a different socket. Failure to
+      // capture it must not leave the previous socket as proof of connection.
+      // Existing callbacks still retain their immutable context in sockets/local.
+      capturedByInstance.delete(instance);
       const context = pending.get(instance);
       if (!context) reject('WAP_GENERATION_BINDING_REQUIRED');
       pending.delete(instance);
       sockets.set(socket, context);
+      capturedByInstance.set(instance, context);
       return context;
     },
     wrap(context, callback) {

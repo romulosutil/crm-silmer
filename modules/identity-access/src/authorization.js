@@ -16,6 +16,8 @@ export const CAPABILITIES = Object.freeze({
 export const OPERATIONAL_ACTIONS = Object.freeze(
   new Set([
     'contact.identity.merge',
+    'whatsapp.personal.read',
+    'whatsapp.personal.manage',
     'contact.identity.unmerge',
     'contact.create',
     'contact.read',

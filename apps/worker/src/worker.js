@@ -43,6 +43,7 @@ import {
   PrivateMediaVolume,
 } from '@crm-silmer/integration-reliability';
 import { createSafeLogger, MetricRegistry, SERVICES } from '@crm-silmer/shared';
+import { createWhatsAppControlWorkerRuntime } from './whatsapp-control-runtime.js';
 
 /**
  * Process boundary for asynchronous jobs. Concrete handlers are injected by
@@ -720,7 +721,7 @@ export function createChatMediaWorkerRuntime(options) {
 }
 
 /** Starts text delivery without waiting for an external signature CDN.
- * @param {{commandWorker: {start: Function},mediaWorker: {start: Function},chatMediaWorker?: {start: Function},chatMediaCleanup?:{start:Function},retentionScheduler: {start: Function},signatureRefresh: {start: () => Promise<void>},scannerDaemon?: {start: () => Promise<void>},stallScheduler?: {start: Function},billingWorker?: {start: Function},olistWorker?: {start: Function},olistReconciliationWorker?: {start: Function}}} services */
+ * @param {{commandWorker: {start: Function},mediaWorker: {start: Function},chatMediaWorker?: {start: Function},chatMediaCleanup?:{start:Function},retentionScheduler: {start: Function},signatureRefresh: {start: () => Promise<void>},scannerDaemon?: {start: () => Promise<void>},stallScheduler?: {start: Function},billingWorker?: {start: Function},whatsappControlWorker?: {start: Function},olistWorker?: {start: Function},olistReconciliationWorker?: {start: Function}}} services */
 export async function startWorkerServices({
   commandWorker,
   mediaWorker,
@@ -731,6 +732,7 @@ export async function startWorkerServices({
   scannerDaemon,
   stallScheduler,
   billingWorker,
+  whatsappControlWorker,
   olistWorker,
   olistReconciliationWorker,
 }) {
@@ -745,6 +747,7 @@ export async function startWorkerServices({
   await olistReconciliationWorker?.start();
   void signatureRefresh.start();
   await billingWorker?.start();
+  await whatsappControlWorker?.start();
 }
 
 /**
@@ -832,6 +835,15 @@ export async function startWorkerFromEnvironment(options = {}) {
       logger,
       queue,
       workerId: `n8n-${process.pid}`,
+    });
+    const whatsappControlWorker = createWhatsAppControlWorkerRuntime({
+      database,
+      environment,
+      logger,
+      queue,
+      healthSignals,
+      workerId: `wap-${process.pid}`,
+      WorkerRuntime,
     });
     const billingWorker =
       environment.ORDER_BILLING_ENABLED === 'true' ||
@@ -942,6 +954,7 @@ export async function startWorkerFromEnvironment(options = {}) {
       scannerDaemon,
       stallScheduler,
       billingWorker,
+      whatsappControlWorker,
     });
     return Object.freeze({
       runtime: Object.freeze({
@@ -955,6 +968,7 @@ export async function startWorkerFromEnvironment(options = {}) {
         scannerDaemon,
         stallScheduler,
         billingWorker,
+        whatsappControlWorker,
       }),
       stop: async () => {
         await stallScheduler.stop();
@@ -966,6 +980,7 @@ export async function startWorkerFromEnvironment(options = {}) {
           mediaWorker.stop(),
           chatMediaWorker?.stop(),
           billingWorker?.stop(),
+          whatsappControlWorker?.stop(),
           olistWorker?.stop(),
           olistReconciliationWorker?.stop(),
         ]);

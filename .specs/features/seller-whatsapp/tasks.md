@@ -41,7 +41,7 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 | Estado / ID | Entrega                                                                          | Modelo       | Dependência     | Checklist interno                              |
 | ----------- | -------------------------------------------------------------------------------- | ------------ | --------------- | ---------------------------------------------- |
 | [ ] WAP-E01 | [Provar viabilidade do provedor e privacidade](PROMPTS.md#wap-e01)               | Sol/Opus     | Base documental | WAP-T01-01                                     |
-| [ ] WAP-E02 | [Entregar conexão pessoal no backend e n8n](PROMPTS.md#wap-e02)                  | Sol/Opus     | WAP-E01         | WAP-T01-02, WAP-T01-03, WAP-T01-04             |
+| [x] WAP-E02 | [Entregar conexão pessoal no backend e n8n](PROMPTS.md#wap-e02)                  | Sol/Opus     | WAP-E01         | WAP-T01-02, WAP-T01-03, WAP-T01-04             |
 | [ ] WAP-E03 | [Entregar carteira e cadastro compartilhado no servidor](PROMPTS.md#wap-e03)     | Sol/Opus     | WAP-E02         | WAP-T02-01, WAP-T02-02, WAP-T02-03, WAP-T02-04 |
 | [ ] WAP-E04 | [Receber atendimento humano com isolamento ponta a ponta](PROMPTS.md#wap-e04)    | Sol/Opus     | WAP-E03         | WAP-T02-05, WAP-T02-06, WAP-T02-07             |
 | [ ] WAP-E05 | [Criar Pedido por Assunto com compatibilidade transacional](PROMPTS.md#wap-e05)  | Sol/Opus     | WAP-E04         | WAP-T02a-01, WAP-T02a-02, WAP-T02a-03          |
@@ -54,6 +54,49 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 | [ ] WAP-E12 | [Homologar o piloto real da etapa 1](PROMPTS.md#wap-e12)                         | Sol/Opus     | WAP-E11         | WAP-T05-05, WAP-T05-06, WAP-T05-07             |
 
 ## Mapa de rastreabilidade dos 32 itens internos
+
+### Evidência WAP-E02 / WAP-T01-02/03/04 — backend e controle desligados
+
+Entrega implementada em 16/11/2026 sobre `origin/master` `7d032732`, com o gate
+técnico corrigido de E01 integrado e autorização posterior para executar E02.
+WAP-E01/T01-01 continuam abertos para mobile/retenção operacional; esta entrega
+não os homologa. [Contrato/runbook e comandos](../../../docs/runbooks/seller-whatsapp-control.md),
+[schemas](../../../schemas/seller-whatsapp-control.v1.json) e
+[evidência n8n sanitizada](../../../ops/n8n/whatsapp-control.evidence.json).
+
+- T01-02: migração expand 0077 e repositório; linha/conta/instância estáveis,
+  reserva de número inclusive desconectado e conflito geral, CAS/geração,
+  bindings imutáveis e ledger/outbox de metadados. Nenhum backfill comercial.
+- T01-03: estado e comandos humanos próprios, sessão/origem/CSRF/capacidade,
+  versão/idempotência/limite e técnico Basic com workflow/correlação/execução.
+  GET sem efeito; QR/código só ao titular atual e sem persistência/replay.
+- T01-04: worker e workflows gerados inativos, controle parametrizado n8n →
+  Evolution, desafio síncrono efêmero e reconciliação só por leitura. Conectar
+  exige número/webhook/socket atual comprovados; callback antigo não reativa.
+  Revogação é imediata mesmo com desafio/efeito em voo; logout aguarda leitura.
+- PostgreSQL real sintético: **22 testes novos e 20 de regressão compartilhada**,
+  zero skips/falhas; upgrade, constraints, duas transações/abas, callback antigo,
+  inativação/reativação, socket antigo, desafio incerto e disconnect concorrente.
+  `npm run test:database`: 15 aprovados; seis suítes focalizadas: 74 aprovados.
+- n8n real com adapter/generation reais e upstream sintético:
+  `technicalGate=passed`, `privacyFailures=[]`; nenhum canário em banco/dump,
+  logs, snapshots ou arquivos físicos PostgreSQL/WAL. Sucesso, erro após bytes,
+  progresso, manual real, replay, pinData e default off cobertos; recursos removidos.
+- Gates em Node 24.20.0/npm 11.19.0: `validate` **2.846 aprovados/55 skips
+  condicionais/zero falhas**, build aprovado; E2E **1.061 aprovados/sete skips
+  legados/zero falhas ou retries**; audit **zero vulnerabilidades**. As duas
+  suítes PostgreSQL novas foram executadas separadamente sem skips. O gate foi
+  repetido somente após atualizar a lista exata esperada de ações técnicas WAP.
+- Manifest/lock do worker declaram o módulo interno reutilizado; as duas suítes
+  novas integram o job PostgreSQL existente do CI (30 testes focais aprovados).
+  São ajustes necessários à mesma entrega, sem dependência externa nova.
+
+Sem publicação de workflow, pareamento, flags reais, mensagens ou efeito
+financeiro. Preservados Contact/ACL comercial/snapshots/retenção/linha geral e
+Criar pedido de `d7537b3c`; patch alheio de index.html guardado fora do checkout.
+Rollback desliga controle/ingresso, preservando expand/ledger/ACL/incerteza;
+nunca apaga instância ou reativa geração antiga. E04/E08 e homologação continuam
+pendentes; nenhum próximo E foi iniciado nesta sessão. SHA/PR no handoff.
 
 ### Evidência WAP-E01 / WAP-T01-01 — spike executado, aceite bloqueado
 
@@ -114,13 +157,13 @@ inicial de sessões/PRs por T.
 | Estado / item   | Critério preservado                                      | Entrega executora             | Requisitos                        |
 | --------------- | -------------------------------------------------------- | ----------------------------- | --------------------------------- |
 | [ ] WAP-T01-01  | Provar controle, código mobile e privacidade do provedor | [WAP-E01](PROMPTS.md#wap-e01) | WAP-02/03/04/10/12                |
-| [ ] WAP-T01-02  | Persistir linha pessoal e ledger de controle             | [WAP-E02](PROMPTS.md#wap-e02) | WAP-02/04/10/11/12                |
+| [x] WAP-T01-02  | Persistir linha pessoal e ledger de controle             | [WAP-E02](PROMPTS.md#wap-e02) | WAP-02/04/10/11/12                |
 | [ ] WAP-T02-01  | Persistir vínculo durável de carteira                    | [WAP-E03](PROMPTS.md#wap-e03) | WAP-06/08/18/20/21/24/29          |
 | [ ] WAP-T02-02  | Aplicar escrita compartilhada por campo                  | [WAP-E03](PROMPTS.md#wap-e03) | WAP-25/26/27/28/29/30             |
 | [ ] WAP-T02-03  | Isolar leituras de Clientes e projeções comuns           | [WAP-E03](PROMPTS.md#wap-e03) | WAP-07/08/20/21/24/28             |
 | [ ] WAP-T02-04  | Compor cadastro e vínculo de Cliente                     | [WAP-E03](PROMPTS.md#wap-e03) | WAP-18/20/21/24/29                |
-| [ ] WAP-T01-03  | Expor comandos e estado de controle pessoal              | [WAP-E02](PROMPTS.md#wap-e02) | WAP-01/02/03/04/10/11/12          |
-| [ ] WAP-T01-04  | Conectar controle n8n e desafio efêmero                  | [WAP-E02](PROMPTS.md#wap-e02) | WAP-02/03/04/10/11/12             |
+| [x] WAP-T01-03  | Expor comandos e estado de controle pessoal              | [WAP-E02](PROMPTS.md#wap-e02) | WAP-01/02/03/04/10/11/12          |
+| [x] WAP-T01-04  | Conectar controle n8n e desafio efêmero                  | [WAP-E02](PROMPTS.md#wap-e02) | WAP-02/03/04/10/11/12             |
 | [ ] WAP-T02-05  | Receber na linha pessoal com atribuição humana atômica   | [WAP-E04](PROMPTS.md#wap-e04) | WAP-04/05/06/08/10/20/21/32       |
 | [ ] WAP-T02-06  | Proteger conversa e leituras auxiliares da linha         | [WAP-E04](PROMPTS.md#wap-e04) | WAP-07/08/17/28                   |
 | [ ] WAP-T02-07  | Cercar eventos, replay e revogação de acesso             | [WAP-E04](PROMPTS.md#wap-e04) | WAP-07/11/28/29                   |

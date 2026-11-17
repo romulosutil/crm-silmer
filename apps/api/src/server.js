@@ -23,6 +23,8 @@ import { createCommercialRuntime } from './commercial-runtime.js';
 import { createConversationHandoffRuntime } from './conversation-handoff-runtime.js';
 import { createConversationApiRuntime } from './conversation-runtime.js';
 import { createIdentityApiRuntime } from './identity-runtime.js';
+import { createSellerWhatsAppRuntime } from './seller-whatsapp-runtime.js';
+import { sellerWhatsAppConfiguration } from '@crm-silmer/inbox-channels';
 import { createFinanceApiRuntime } from './finance-runtime.js';
 import { createDashboardApiRuntime } from './dashboard-runtime.js';
 import { createDashboardCheckpointRuntime } from './dashboard-checkpoint-runtime.js';
@@ -63,6 +65,7 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  *   readiness?: () => boolean | Promise<boolean>,
  *   metaWebhook?: ReturnType<typeof createMetaWebhookRuntime>,
  *   identity?: ReturnType<typeof createIdentityApiRuntime>,
+ *   sellerWhatsApp?: ReturnType<typeof createSellerWhatsAppRuntime>,
  *   automationAuth?: ReturnType<typeof createAutomationAuthRuntime>,
  *   operationalAuth?: Record<string, any>,
  *   conversations?: Record<string, any>,
@@ -393,10 +396,30 @@ export function createServerApi(runtime = {}) {
           billingChat,
         })
       : undefined);
+  const wapConfiguration = sellerWhatsAppConfiguration(environment);
+  if (
+    wapConfiguration.enabled &&
+    (!runtime.database || !operations || !automationAuth)
+  )
+    throw new Error(
+      'Seller WhatsApp control requires database, operational and technical authorization',
+    );
+  const sellerWhatsApp =
+    runtime.sellerWhatsApp ??
+    (runtime.database &&
+    operations &&
+    wapConfiguration.envelopeKey.length === 32 &&
+    wapConfiguration.lookupKey.length === 32
+      ? createSellerWhatsAppRuntime(runtime.database, {
+          access: operations,
+          environment,
+        })
+      : undefined);
   const api = createApi(
     { trustProxy: runtime.trustProxy ?? false },
     {
       ...runtime,
+      sellerWhatsApp,
       finance,
       dashboard,
       dashboardCheckpoint,

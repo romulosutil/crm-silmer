@@ -7,6 +7,7 @@ import { decryptContactIdentityEnvelope } from '@crm-silmer/contacts/identity-en
 import { contactPhoneHash, normalizeContactPhone } from '@crm-silmer/contacts';
 
 import { decryptJson } from './envelope.js';
+import { OrderConflictError, OrderNotFoundError } from '../domain/errors.js';
 
 /**
  * @typedef {{query: (sql: string, values?: unknown[]) => Promise<{rows: any[]}>}} Queryable
@@ -229,6 +230,85 @@ export class PostgresOrderConversationPort {
             ? (row.display_name ?? null)
             : null,
           // The first inbound message of this conversation opened it.
+          openedAt: new Date(row.opened_at).toISOString(),
+        },
+      ]),
+    );
+  }
+
+  /** WAP-33: absence of an explicit target is safe only with zero/one subject.
+   * Callers that mutate bind this port to the command transaction and already
+   * hold conversation/Contact authority locks.
+   * @param {string} conversationId @param {string|undefined} subjectId
+   * @param {number|undefined} expectedSubjectVersion
+   */
+  async resolveOrderTarget(conversationId, subjectId, expectedSubjectVersion) {
+    const { rows } = await this.#database.query(
+      `SELECT subject.id,subject.order_id,subject.version,subject.contact_id,
+              identity.current_contact_id
+       FROM crm.conversation_subjects subject
+       JOIN crm.conversations conversation ON conversation.id=subject.conversation_id
+       JOIN crm.contact_identities identity ON identity.id=conversation.contact_identity_id
+       WHERE subject.conversation_id=$1 ORDER BY subject.id`,
+      [conversationId],
+    );
+    if (!subjectId && rows.length > 1)
+      throw new OrderConflictError(
+        'An explicit subject is required',
+        'ORDER_TARGET_REQUIRED',
+      );
+    const subject = subjectId
+      ? rows.find((row) => row.id === subjectId)
+      : rows[0];
+    if (subjectId && !subject)
+      throw new OrderNotFoundError(
+        'Subject was not found',
+        'SUBJECT_NOT_FOUND',
+      );
+    if (subject && subject.contact_id !== subject.current_contact_id)
+      throw new OrderConflictError(
+        'Subject Contact changed',
+        'ORDER_TARGET_REQUIRED',
+      );
+    if (subjectId && Number(subject.version) !== expectedSubjectVersion)
+      throw new OrderConflictError('Subject version changed');
+    return {
+      subjectId: subject?.id ?? null,
+      orderId: subject?.order_id ?? null,
+    };
+  }
+
+  /** @param {string[]} subjectIds
+   * @returns {Promise<Map<string, import('../application/order-service.js').OrderConversationContext>>} */
+  async readSubjectOrderContexts(subjectIds) {
+    if (!subjectIds.length) return new Map();
+    const result = await this.#database.query(
+      `SELECT subject.id,conversation.opened_at,contact.display_name,contact.display_name_source,
+              briefing.version,briefing.envelope,briefing.legacy_conversation_id
+       FROM crm.conversation_subjects subject
+       JOIN crm.conversations conversation ON conversation.id=subject.conversation_id
+       JOIN crm.contact_identities identity ON identity.id=conversation.contact_identity_id
+       JOIN crm.contacts contact ON contact.id=identity.current_contact_id
+       LEFT JOIN crm.subject_briefings briefing ON briefing.subject_id=subject.id
+       WHERE subject.id=ANY($1::text[])`,
+      [subjectIds],
+    );
+    return new Map(
+      result.rows.map((row) => [
+        row.id,
+        {
+          briefing: row.envelope
+            ? decryptJson(
+                row.envelope,
+                row.legacy_conversation_id
+                  ? `n8n-briefing:${row.legacy_conversation_id}:${row.version}`
+                  : `n8n-subject-briefing:${row.id}:${row.version}`,
+                this.#envelopeKey,
+              )
+            : null,
+          customerName: CONFIRMED_NAME_SOURCES.has(row.display_name_source)
+            ? (row.display_name ?? null)
+            : null,
           openedAt: new Date(row.opened_at).toISOString(),
         },
       ]),

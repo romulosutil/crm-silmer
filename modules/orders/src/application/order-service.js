@@ -57,6 +57,8 @@ import {
  *   repository: import('../ports/contracts.js').OrderRepository,
  *   conversations: {
  *     readOrderContexts(conversationIds: string[]): Promise<Map<string, OrderConversationContext>>,
+ *     readSubjectOrderContexts?(subjectIds: string[]): Promise<Map<string, OrderConversationContext>>,
+ *     resolveOrderTarget?(conversationId: string, subjectId?: string, expectedSubjectVersion?: number): Promise<{subjectId: string|null, orderId: string|null}>,
  *     readContactNames?(contactIds: string[]): Promise<Map<string, string|null>>,
  *     searchConversationIds(query: string, reader?: any): Promise<string[]>,
  *     searchContactIds?(query: string, reader?: any): Promise<string[]>,
@@ -217,13 +219,24 @@ export function createOrderService(options) {
     ) {
       return orders;
     }
-    const [contexts, contactNames] = await Promise.all([
+    const [contexts, contactNames, subjectContexts] = await Promise.all([
       conversations.readOrderContexts(pendingConversations),
       pendingManualContacts.length && conversations.readContactNames
         ? conversations.readContactNames(
             /** @type {string[]} */ (pendingManualContacts),
           )
         : new Map(),
+      conversations.readSubjectOrderContexts?.(
+        orders
+          .filter(
+            (order) =>
+              order.status === 'pendente' &&
+              !order.cancelledAt &&
+              !frozenIds.has(order.id),
+          )
+          .map((order) => order.originSubjectId)
+          .filter((id) => typeof id === 'string'),
+      ) ?? new Map(),
     ]);
     return orders.map((order) => {
       if (
@@ -244,15 +257,23 @@ export function createOrderService(options) {
           },
         };
       }
-      const context = contexts.get(
-        /** @type {string} */ (order.conversationId),
-      );
+      const context = order.originSubjectId
+        ? subjectContexts.get(order.originSubjectId)
+        : contexts.get(/** @type {string} */ (order.conversationId));
       if (!context) return order;
       return {
         ...order,
         ficha: {
           ...order.ficha,
-          summary: { ...order.ficha.summary, cliente: orderClient(context) },
+          summary: {
+            ...order.ficha.summary,
+            cliente:
+              order.originSubjectId &&
+              !context.customerName &&
+              !context.briefing?.customer_name
+                ? order.ficha.summary.cliente
+                : orderClient(context),
+          },
         },
       };
     });
@@ -370,18 +391,71 @@ export function createOrderService(options) {
   }
 
   /**
-   * @param {{conversationId: string, correlationId: string, createdByKind: 'automation'|'user', createdBy: string|null, actor?: OrderActor}} input
+   * @param {{conversationId: string, correlationId: string, createdByKind: 'automation'|'user', createdBy: string|null, actor?: OrderActor, subjectId?: string, expectedSubjectVersion?: number}} input
    * @returns {Promise<{created: boolean, order: Order}>}
    */
   async function ensurePending(input) {
-    const existing = await repository.findPendingByConversation(
-      input.conversationId,
-    );
-    if (existing) return { created: false, order: await readOne(existing) };
+    const target =
+      input.createdByKind === 'user' && conversations.resolveOrderTarget
+        ? await conversations.resolveOrderTarget(
+            input.conversationId,
+            input.subjectId,
+            input.expectedSubjectVersion,
+          )
+        : { subjectId: null, orderId: null };
+    if (input.subjectId && !conversations.resolveOrderTarget)
+      throw new OrderConflictError(
+        'Subject creation is unavailable',
+        'ORDER_SUBJECT_UNAVAILABLE',
+      );
+    let existing;
+    if (target.subjectId && !target.orderId) {
+      const orders = await repository.listByConversation(input.conversationId);
+      if (
+        orders.some(
+          (order) =>
+            order.status === 'pendente' &&
+            !order.cancelledAt &&
+            !order.originSubjectId,
+        )
+      )
+        throw new OrderConflictError(
+          'Resolve the legacy draft first',
+          'ORDER_TARGET_REQUIRED',
+        );
+      existing = null;
+    } else
+      existing = target.orderId
+        ? await repository.findById(target.orderId)
+        : await repository.findPendingByConversation(input.conversationId);
+    if (existing) {
+      if (
+        target.subjectId &&
+        (existing.status !== 'pendente' ||
+          existing.cancelledAt ||
+          existing.conversationId !== input.conversationId)
+      )
+        throw new OrderConflictError(
+          'Subject already has historical order',
+          'ORDER_STATUS_CONFLICT',
+        );
+      if (target.subjectId && existing.originSubjectId !== target.subjectId) {
+        if (!repository.bindSubject)
+          throw new OrderConflictError(
+            'Subject creation is unavailable',
+            'ORDER_SUBJECT_UNAVAILABLE',
+          );
+        existing = await repository.bindSubject(existing, target.subjectId);
+      }
+      return { created: false, order: await readOne(existing) };
+    }
+    if (target.orderId) throw new OrderNotFoundError();
 
     const context = (
-      await conversations.readOrderContexts([input.conversationId])
-    ).get(input.conversationId);
+      target.subjectId && conversations.readSubjectOrderContexts
+        ? await conversations.readSubjectOrderContexts([target.subjectId])
+        : await conversations.readOrderContexts([input.conversationId])
+    ).get(target.subjectId ?? input.conversationId);
     if (!context) {
       throw new OrderNotFoundError(
         'Conversation was not found',
@@ -400,6 +474,7 @@ export function createOrderService(options) {
       const order = await repository.createPending({
         ...(input.actor ? { actor: input.actor } : {}),
         conversationId: input.conversationId,
+        originSubjectId: target.subjectId,
         correlationId: input.correlationId,
         createdBy: input.createdBy,
         createdByKind: input.createdByKind,
@@ -412,15 +487,24 @@ export function createOrderService(options) {
         now: clock(),
         totalPieces: derived.totalPieces,
       });
-      return { created: true, order: current(order) };
+      const linked =
+        target.subjectId && repository.bindSubject
+          ? await repository.bindSubject(order, target.subjectId)
+          : order;
+      return { created: true, order: current(linked) };
     } catch (error) {
       // Two intents raced; the one that lost reuses the winner's order.
       if (/** @type {any} */ (error)?.code !== 'ORDER_PENDING_EXISTS') {
         throw error;
       }
-      const winner = await repository.findPendingByConversation(
-        input.conversationId,
-      );
+      const winner = target.subjectId
+        ? (await repository.listByConversation(input.conversationId)).find(
+            (order) =>
+              order.originSubjectId === target.subjectId &&
+              order.status === 'pendente' &&
+              !order.cancelledAt,
+          )
+        : await repository.findPendingByConversation(input.conversationId);
       if (!winner) throw error;
       return { created: false, order: await readOne(winner) };
     }
@@ -589,7 +673,7 @@ export function createOrderService(options) {
      * PCL-10/PCL-11: the owner or an admin creates the order the agent never
      * detected; an existing pending order is returned instead.
      *
-     * @param {{conversationId: string, correlationId: string, actor: OrderActor}} input
+     * @param {{conversationId: string, correlationId: string, actor: OrderActor, subjectId?: string, expectedSubjectVersion?: number}} input
      */
     async createManual(input) {
       const conversationId = requireId(input.conversationId, 'conversationId');
@@ -603,6 +687,8 @@ export function createOrderService(options) {
         createdBy: input.actor.id,
         createdByKind: 'user',
         actor: input.actor,
+        subjectId: input.subjectId,
+        expectedSubjectVersion: input.expectedSubjectVersion,
       });
     },
 
@@ -676,9 +762,16 @@ export function createOrderService(options) {
           'Explicit projection requires subject and order',
         );
       }
+      if (!input.orderId && conversations.resolveOrderTarget)
+        await conversations.resolveOrderTarget(conversationId);
       const pending = input.orderId
         ? await repository.findById(requireId(input.orderId, 'orderId'))
         : await repository.findPendingByConversation(conversationId);
+      if (!input.orderId && pending?.originSubjectId)
+        throw new OrderConflictError(
+          'Projection requires subject and order',
+          'ORDER_TARGET_REQUIRED',
+        );
       if (!pending) {
         return { applied: false, order: null, reason: 'no_pending_order' };
       }
@@ -897,12 +990,20 @@ export function createOrderService(options) {
      * @returns {Promise<Order|null>}
      */
     async currentForConversation(conversationId) {
+      if (conversations.resolveOrderTarget)
+        await conversations.resolveOrderTarget(conversationId);
       const orders = await repository.listByConversation(
         requireId(conversationId, 'conversationId'),
       );
-      const pending = orders.find(
+      const candidates = orders.filter(
         (order) => order.status === 'pendente' && !order.cancelledAt,
       );
+      if (candidates.length > 1)
+        throw new OrderConflictError(
+          'An explicit subject is required',
+          'ORDER_TARGET_REQUIRED',
+        );
+      const pending = candidates[0];
       if (pending) return readOne(pending);
       const confirmed = orders
         .filter((order) => order.status === 'confirmado' && !order.cancelledAt)

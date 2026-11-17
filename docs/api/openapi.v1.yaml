@@ -3400,6 +3400,10 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          {
+            description: ORDER_TARGET_REQUIRED quando o contexto exige Assunto explícito,
+          }
   /conversations/{conversationId}/orders:
     post:
       operationId: createConversationOrder
@@ -3407,8 +3411,11 @@ paths:
       description: >-
         Ação order.create, restrita ao dono da conversa ou a COMMERCIAL_ADMIN.
         O pedido nasce pendente, com número NN-CRM reservado, pré-preenchido
-        com a pré-ficha atual da conversa. Se a conversa já tem pedido
-        pendente, responde 200 com o pedido existente.
+        com a pré-ficha do Assunto alvo. subjectId e expectedSubjectVersion são
+        opcionais em par; omissão exige legado inequívoco, senão ORDER_TARGET_REQUIRED.
+        Alvo com pendente elegível responde 200; histórico exige novo Assunto.
+        Pedido/vínculo/número/evento/auditoria/recibo compartilham transação.
+        Escritor por alvo exige flags privadas e allowlist, default off (WAP-E05).
       security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
       parameters:
         - $ref: '#/components/parameters/ConversationId'
@@ -7537,6 +7544,9 @@ components:
         conversationId:
           type: [string, 'null']
           description: Nulo em pedidos manuais de atendimento e da loja do site.
+        originSubjectId:
+          type: [string, 'null']
+          description: Origem persistida quando disponível; nula ou omitida sem acesso à conversa. Não concede acesso comercial ou ao chat.
         contactId:
           type: [string, 'null']
           format: uuid
@@ -7960,11 +7970,16 @@ components:
       type: object
       additionalProperties: false
       required: [expectedVersion]
+      dependentRequired:
+        subjectId: [expectedSubjectVersion]
+        expectedSubjectVersion: [subjectId]
       properties:
         expectedVersion:
           type: integer
           minimum: 1
           description: Versão atual da conversa.
+        subjectId: { type: string, minLength: 1, maxLength: 128 }
+        expectedSubjectVersion: { type: integer, minimum: 1 }
     ManualOrderCreateRequest:
       type: object
       additionalProperties: false

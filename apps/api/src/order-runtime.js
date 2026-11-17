@@ -29,6 +29,7 @@ import {
 } from '@crm-silmer/orders';
 
 import { createFreightQuoteReader } from './shipping-runtime.js';
+import { lockConversationAccess } from '@crm-silmer/inbox-channels';
 
 /**
  * @typedef {{
@@ -79,6 +80,7 @@ import { createFreightQuoteReader } from './shipping-runtime.js';
  *   clock?: () => Date,
  *   idFactory?: () => string,
  *   withMilestoneTransaction?: (method:'confirmPayment'|'confirmDelivery',input:any)=>Promise<any>,
+ *   withCreationTransaction?: (input:any)=>Promise<any>,
  * }} options
  */
 export function createOrderRuntime(options) {
@@ -304,6 +306,14 @@ export function createOrderRuntime(options) {
           : null,
       contactId:
         currentContactIds.get(order.contactId) ?? order.contactId ?? null,
+      ...(order.originSubjectId
+        ? {
+            originSubjectId:
+              !actor || visibleConversations.has(order.conversationId)
+                ? order.originSubjectId
+                : null,
+          }
+        : {}),
       createdAt: order.createdAt,
       deliveredOn: order.deliveredOn,
       fabCode: order.fabCode,
@@ -585,15 +595,38 @@ export function createOrderRuntime(options) {
      * PCL-10/PCL-11 behind the conversation version the seller saw; an
      * existing pending order is answered with `created: false`.
      *
-     * @param {OrderCommand & {conversationId: string, expectedVersion: number}} input
+     * @param {OrderCommand & {conversationId: string, expectedVersion: number, subjectId?: string, expectedSubjectVersion?: number}} input
      */
     async createManual(input) {
       const expectedVersion = requireVersion(input.expectedVersion);
+      if (
+        (input.subjectId !== undefined) !==
+        (input.expectedSubjectVersion !== undefined)
+      )
+        throw new OrderInputError(
+          'subjectId and expectedSubjectVersion are required together',
+        );
+      if (input.subjectId !== undefined) {
+        if (typeof input.subjectId !== 'string' || !input.subjectId.trim())
+          throw new OrderInputError('subjectId is required');
+        requireVersion(input.expectedSubjectVersion);
+      }
+      if (options.withCreationTransaction)
+        return options.withCreationTransaction(input);
       return run(
         input,
         {
           action: 'order.create',
-          command: { conversationId: input.conversationId, expectedVersion },
+          command: {
+            conversationId: input.conversationId,
+            expectedVersion,
+            ...(input.subjectId === undefined
+              ? {}
+              : {
+                  subjectId: input.subjectId,
+                  expectedSubjectVersion: input.expectedSubjectVersion,
+                }),
+          },
           expectedVersion,
           target: { id: input.conversationId, type: 'conversation' },
         },
@@ -946,7 +979,7 @@ function requireVersion(value) {
  * order routes share the Inbox read (session) and write (session + CSRF) rules.
  *
  * @param {any} database
- * @param {{access: OrderAccess, environment?: Record<string, string|undefined>, storage?: any, phoneDigestsFor?: (query: string) => string[], milestoneTransactions?:boolean}} options
+ * @param {{access: OrderAccess, environment?: Record<string, string|undefined>, storage?: any, phoneDigestsFor?: (query: string) => string[], milestoneTransactions?:boolean, creationTransactions?:boolean}} options
  */
 export function createOrderApiRuntime(database, options) {
   const environment = options.environment ?? process.env;
@@ -955,6 +988,166 @@ export function createOrderApiRuntime(database, options) {
     'N8N_INTEGRATION_ENVELOPE_KEY',
   );
   return createOrderRuntime({
+    withCreationTransaction:
+      options.creationTransactions === false
+        ? undefined
+        : (input) =>
+            database.transaction(async (/** @type {any} */ tx) => {
+              if (input.actor?.kind !== 'human' || !input.actor.id)
+                throw new OrderForbiddenError();
+              const personal = (
+                await tx.query(
+                  `SELECT line.seller_id FROM crm.conversations conversation
+                 JOIN crm.seller_whatsapp_lines line ON line.account_id::text=conversation.provider_account_id
+                 WHERE conversation.id=$1`,
+                  [input.conversationId],
+                )
+              ).rows[0];
+              // An Admin may execute for the responsible seller, whose active
+              // status and portfolio still matter. Sort both locks first.
+              const principals = await tx.query(
+                'SELECT id,disabled_at FROM crm.users WHERE id=ANY($1::text[]) ORDER BY id FOR UPDATE',
+                [
+                  [
+                    ...new Set([
+                      input.actor.id,
+                      ...(personal ? [personal.seller_id] : []),
+                    ]),
+                  ],
+                ],
+              );
+              // Same lock order as portfolio revocation/subject commands. This runs
+              // before looking at the encrypted receipt, including on every replay.
+              const access = await lockConversationAccess(
+                tx,
+                input.conversationId,
+                input.actor.id,
+              ).catch((error) => {
+                if (error?.statusCode === 403) throw new OrderForbiddenError();
+                throw error;
+              });
+              if ((personal?.seller_id ?? null) !== access.personalSellerId)
+                throw new OrderConflictError('Line ownership changed');
+              const role = (
+                await tx.query(
+                  'SELECT function_name FROM crm.user_functions WHERE user_id=$1 FOR SHARE',
+                  [input.actor.id],
+                )
+              ).rows[0];
+              const grants = await tx.query(
+                'SELECT capability FROM crm.user_capabilities WHERE user_id=$1 FOR SHARE',
+                [input.actor.id],
+              );
+              const actor = {
+                id: input.actor.id,
+                kind: /** @type {const} */ ('human'),
+                functionName: role?.function_name,
+                capabilities: grants.rows.map(
+                  (/** @type {any} */ row) => row.capability,
+                ),
+              };
+              authorize(actor, 'order.create');
+              const conversation = (
+                await tx.query(
+                  'SELECT assigned_user_id,automation_state,terminal_at FROM crm.conversations WHERE id=$1 FOR UPDATE',
+                  [input.conversationId],
+                )
+              ).rows[0];
+              if (
+                !conversation ||
+                (conversation.assigned_user_id !== actor.id &&
+                  !access.actor.isAdmin)
+              )
+                throw new OrderForbiddenError();
+              if (personal) {
+                const owner = principals.rows.find(
+                  (/** @type {any} */ row) => row.id === personal.seller_id,
+                );
+                const eligible = (
+                  await tx.query(
+                    `SELECT 1 FROM crm.user_functions role
+                   JOIN crm.seller_client_links link ON link.seller_id=role.user_id AND link.status='active'
+                   JOIN crm.contact_identities identity ON identity.current_contact_id=link.contact_id
+                   JOIN crm.conversations conversation ON conversation.contact_identity_id=identity.id
+                   WHERE role.user_id=$1 AND role.function_name='Vendedor' AND conversation.id=$2
+                   FOR SHARE OF role,link`,
+                    [personal.seller_id, input.conversationId],
+                  )
+                ).rows[0];
+                if (
+                  !owner ||
+                  owner.disabled_at ||
+                  !eligible ||
+                  conversation.assigned_user_id !== personal.seller_id
+                )
+                  throw new OrderForbiddenError();
+              }
+              if (conversation.terminal_at)
+                throw new OrderConflictError(
+                  'Conversation is closed',
+                  'CONVERSATION_CLOSED',
+                );
+              if (conversation.automation_state !== 'human')
+                throw new OrderConflictError(
+                  'Human attendance is required',
+                  'ORDER_HUMAN_REQUIRED',
+                );
+              const subjects = (
+                await tx.query(
+                  'SELECT id,order_id FROM crm.conversation_subjects WHERE conversation_id=$1 ORDER BY id FOR UPDATE',
+                  [input.conversationId],
+                )
+              ).rows;
+              if (
+                input.subjectId !== undefined &&
+                !subjects.some(
+                  (/** @type {any} */ row) => row.id === input.subjectId,
+                )
+              )
+                throw new OrderNotFoundError(
+                  'Subject was not found',
+                  'SUBJECT_NOT_FOUND',
+                );
+              if (
+                input.subjectId ||
+                access.personalSellerId ||
+                subjects.some((/** @type {any} */ row) => !row.order_id)
+              ) {
+                const allowed = (environment.ORDER_SUBJECT_SELLER_IDS ?? '')
+                  .split(',')
+                  .map((value) => value.trim())
+                  .filter(Boolean);
+                if (
+                  environment.ORDER_SUBJECT_CREATION_ENABLED !== 'true' ||
+                  environment.ORDER_SUBJECT_READERS_READY !== 'true' ||
+                  !allowed.includes(
+                    access.personalSellerId ?? conversation.assigned_user_id,
+                  )
+                )
+                  throw new OrderConflictError(
+                    'Subject creation is unavailable',
+                    'ORDER_SUBJECT_UNAVAILABLE',
+                  );
+                const schema = (
+                  await tx.query(
+                    "SELECT to_regclass('crm.orders_one_pending_per_subject') IS NOT NULL AND to_regclass('crm.orders_one_pending_per_legacy_conversation') IS NOT NULL AND to_regclass('crm.orders_one_pending_per_conversation') IS NULL AS ready",
+                  )
+                ).rows[0];
+                if (!schema?.ready)
+                  throw new OrderConflictError(
+                    'Subject schema is not ready',
+                    'ORDER_SUBJECT_UNAVAILABLE',
+                  );
+              }
+              const bound = {
+                query: tx.query.bind(tx),
+                transaction: async (/** @type {any} */ work) => work(tx),
+              };
+              return createOrderApiRuntime(bound, {
+                ...options,
+                creationTransactions: false,
+              }).createManual({ ...input, actor });
+            }),
     // ADR 080: the shipping estimates the freight command may apply. Without
     // the Melhor Envio configuration the reader refuses to apply an estimate
     // and informing a value keeps working.

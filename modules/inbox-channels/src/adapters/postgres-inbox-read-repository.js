@@ -133,6 +133,11 @@ const CURRENT_ORDER_JOIN = `LEFT JOIN LATERAL (
              FROM crm.orders candidate_order
              WHERE candidate_order.conversation_id=conversation.id
                AND candidate_order.cancelled_at IS NULL
+               AND (SELECT count(*) FROM crm.conversation_subjects order_subject
+                    WHERE order_subject.conversation_id=conversation.id) <= 1
+               AND (SELECT count(*) FROM crm.orders pending_target
+                    WHERE pending_target.conversation_id=conversation.id
+                      AND pending_target.status='pendente' AND pending_target.cancelled_at IS NULL) <= 1
              ORDER BY (candidate_order.status = 'pendente') DESC,
                       candidate_order.confirmed_at DESC NULLS LAST,
                       candidate_order.number_sequence DESC

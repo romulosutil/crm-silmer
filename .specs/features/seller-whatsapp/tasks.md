@@ -44,7 +44,7 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 | [x] WAP-E02 | [Entregar conexão pessoal no backend e n8n](PROMPTS.md#wap-e02)                  | Sol/Opus     | WAP-E01         | WAP-T01-02, WAP-T01-03, WAP-T01-04             |
 | [x] WAP-E03 | [Entregar carteira e cadastro compartilhado no servidor](PROMPTS.md#wap-e03)     | Sol/Opus     | WAP-E02         | WAP-T02-01, WAP-T02-02, WAP-T02-03, WAP-T02-04 |
 | [x] WAP-E04 | [Receber atendimento humano com isolamento ponta a ponta](PROMPTS.md#wap-e04)    | Sol/Opus     | WAP-E03         | WAP-T02-05, WAP-T02-06, WAP-T02-07             |
-| [ ] WAP-E05 | [Criar Pedido por Assunto com compatibilidade transacional](PROMPTS.md#wap-e05)  | Sol/Opus     | WAP-E04         | WAP-T02a-01, WAP-T02a-02, WAP-T02a-03          |
+| [x] WAP-E05 | [Criar Pedido por Assunto com compatibilidade transacional](PROMPTS.md#wap-e05)  | Sol/Opus     | WAP-E04         | WAP-T02a-01, WAP-T02a-02, WAP-T02a-03          |
 | [ ] WAP-E06 | [Entregar a interface mínima de Pedido pela conversa](PROMPTS.md#wap-e06)        | Terra/Sonnet | WAP-E05         | WAP-T02a-04                                    |
 | [ ] WAP-E07 | [Aceitar o fluxo passivo integrado de Pedido](PROMPTS.md#wap-e07)                | Sol/Opus     | WAP-E06         | WAP-T02a-05                                    |
 | [ ] WAP-E08 | [Completar mensagens correntes e efeitos pela linha correta](PROMPTS.md#wap-e08) | Sol/Opus     | WAP-E07         | WAP-T02-08, WAP-T03-01, WAP-T03-02, WAP-T02-09 |
@@ -54,6 +54,64 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 | [ ] WAP-E12 | [Homologar o piloto real da etapa 1](PROMPTS.md#wap-e12)                         | Sol/Opus     | WAP-E11         | WAP-T05-05, WAP-T05-06, WAP-T05-07             |
 
 ## Mapa de rastreabilidade dos 32 itens internos
+
+### Evidência WAP-E05 / WAP-T02a-01–03 — Pedido por Assunto
+
+Entrega em 17/11/2026 sobre `origin/master` `f5833287`, com WAP-E04
+integrado. WAP-17/30/31/33 e OA-05/07; ADRs 090/091.
+[Contrato, gates e rollback](../../../docs/runbooks/seller-whatsapp-orders.md),
+[OpenAPI](../../../docs/api/openapi.v1.yaml). SHA/PR no handoff da entrega.
+
+- 0080 expande origem nullable com FK composta, CHECK de conversa e índice,
+  reutilizando a UNIQUE de 0037 e conservando o índice global. Backfill só
+  alcança pendente ativo com vínculo único comprovado e mesma conversa/Contact;
+  confirmados/cancelados/vínculos múltiplos permanecem intactos.
+- Leitores/ports preservam origem, nome oficial, primeiro contato, snapshots e
+  briefing do alvo; recusam ambiguidade e projeção automática sem alvo seguro.
+  Adoção posterior também exige vínculo único; nome da pré-ficha legada não
+  desaparece. Assistência e serviço de Assuntos conservam a origem na transação.
+- 0081 é contrato explícito após instalar todos os consumidores compatíveis:
+  cria unicidades parciais legado/alvo antes de remover o índice global.
+  Criação por alvo/pessoal exige flags próprias default off, confirmação dos
+  leitores compatíveis, allowlist do responsável e índices prontos.
+- POST existente recebe o par opcional Assunto/versão no fingerprint. Locks
+  revalidam humano/ativo/capacidade, titular, carteira, Contact, posse,
+  atendimento aberto e CAS antes de efeito ou replay. Pedido/vínculo/número,
+  evento/auditoria/recibo cifrado compartilham conexão e commit. Duas chaves
+  sobre versão inicial criam uma vez; a perdedora recebe conflito e relê o alvo.
+- Novo alvo permite outro Pedido; pendente elegível abre sem duplicar;
+  confirmado/cancelado exige outro Assunto. Reabertura preserva origem e
+  disputa unicidade, sem coexistir com legado não resolvido. Canal offline
+  não bloqueia criação local. Admin conserva titular como responsável e não
+  contorna carteira revogada. ACL comercial não libera conversa/Assunto ocultos.
+
+Evidência sintética, Node 24.20.0/npm 11.19.0 e PostgreSQL 17.11 portátil
+exclusivo em loopback, encerrado ao terminar as provas (sem Docker neste host):
+
+- `npm run test:database`: **15/15**. Focais consolidados de ports, assistência,
+  rotas, runtime e contrato em memória: **105/105**.
+- PostgreSQL integrado WAP-E05 + Pedidos/assistência/cancelamento: **70/70**,
+  zero skips. Última prova focal após cercar adoção ambígua: **14/14**, zero
+  skips, em segundo banco dedicado para não disputar schemas. Grupos se
+  sobrepõem; não somar como cenários distintos.
+- Consumidores n8n/ACL, migrações/rollback e upgrade de cobrança: **28/28**,
+  zero skips. Fixture do upgrade passa a exigir 0080; assertions preservadas.
+- `npm run validate`: **2.865 aprovados, zero falhas, 61 skips condicionais**
+  das suítes live sem URL no comando geral; formatação, typecheck, lint,
+  fronteiras, validadores e build aprovados. Provas reais acima sem skips.
+- E2E/axe/teclado/foco/mobile: **1.065 cenários aprovados**, sete skips legados.
+  Rodada integral teve 1.063 aprovados e duas falhas de timing em áudio Firefox
+  e cobrança; `playwright test --last-failed --workers=1` passou **2/2** sem
+  mudar assertions ou código desses testes. Rodada inicial com build concorrente
+  foi interrompida e descartada; rodada usada não teve build concorrente.
+- `npm audit --audit-level=high`: **zero vulnerabilidades**. Revisão QA somente
+  leitura não encontrou bloqueios no diff final. `git diff --check` aprovado.
+
+CI PostgreSQL inclui a nova suíte explicitamente; a expansão 0080 também faz
+parte da expectativa do upgrade existente. Sem UI de E06, flag/ambiente real,
+pareamento, publicação de workflow, envio, IA ou cobrança. Após múltiplos alvos,
+rollback somente para SHA compatível com criação desligada. WAP-T02a-04/05 e
+E06/E07 continuam pendentes; não há homologação do provedor ou produção.
 
 ### Evidência WAP-E04 / WAP-T02-05–07 — atendimento humano isolado
 
@@ -340,9 +398,9 @@ inicial de sessões/PRs por T.
 | [x] WAP-T02-05  | Receber na linha pessoal com atribuição humana atômica   | [WAP-E04](PROMPTS.md#wap-e04) | WAP-04/05/06/08/10/20/21/32       |
 | [x] WAP-T02-06  | Proteger conversa e leituras auxiliares da linha         | [WAP-E04](PROMPTS.md#wap-e04) | WAP-07/08/17/28                   |
 | [x] WAP-T02-07  | Cercar eventos, replay e revogação de acesso             | [WAP-E04](PROMPTS.md#wap-e04) | WAP-07/11/28/29                   |
-| [ ] WAP-T02a-01 | Adicionar origem de Assunto ao Pedido                    | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/31/33                      |
-| [ ] WAP-T02a-02 | Resolver Pedido por alvo sem escolha arbitrária          | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/30/31/33                   |
-| [ ] WAP-T02a-03 | Criar ou reutilizar Pedido no alvo transacional          | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/31/33; OA-05/07            |
+| [x] WAP-T02a-01 | Adicionar origem de Assunto ao Pedido                    | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/31/33                      |
+| [x] WAP-T02a-02 | Resolver Pedido por alvo sem escolha arbitrária          | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/30/31/33                   |
+| [x] WAP-T02a-03 | Criar ou reutilizar Pedido no alvo transacional          | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/31/33; OA-05/07            |
 | [ ] WAP-T02a-04 | Entregar fluxo passivo de Pedido em Meus clientes        | [WAP-E06](PROMPTS.md#wap-e06) | WAP-01/17/31/32/33                |
 | [ ] WAP-T02a-05 | Verificar gate prioritário ponta a ponta                 | [WAP-E07](PROMPTS.md#wap-e07) | WAP-17/19/31/32/33                |
 | [ ] WAP-T02-08  | Revalidar linha na reserva e no despacho humano          | [WAP-E08](PROMPTS.md#wap-e08) | WAP-06/10/11/12/19                |

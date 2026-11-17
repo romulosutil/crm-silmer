@@ -347,6 +347,17 @@ export function createSubjectService(database) {
               select,
             ],
           );
+          // WAP-T02a-02: a newly proven legacy link may establish origin only
+          // for an active draft in this exact conversation/Contact. History
+          // and orders referenced by several cycles stay untouched.
+          if (orderId)
+            await transaction.query(
+              `UPDATE crm.orders SET origin_subject_id=$1
+             WHERE id=$2 AND conversation_id=$3 AND contact_id=$4
+               AND origin_subject_id IS NULL AND status='pendente' AND cancelled_at IS NULL
+               AND (SELECT count(*) FROM crm.conversation_subjects WHERE order_id=$2)=1`,
+              [subjectId, orderId, conversationId, subjectContactId],
+            );
           await record(
             transaction,
             input,

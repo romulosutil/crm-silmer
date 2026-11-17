@@ -618,6 +618,13 @@ export class PostgresOrderAssistanceRepository {
         ],
       );
     }
+    // OA-05/WAP-33: provenance joins the suggestion decision's transaction.
+    await tx.query(
+      `UPDATE crm.orders SET origin_subject_id=$2 WHERE id=$1
+       AND conversation_id=$3 AND status='pendente' AND cancelled_at IS NULL
+       AND (origin_subject_id IS NULL OR origin_subject_id=$2)`,
+      [order.id, subjectId, conversation.id],
+    );
     const previousSnapshot = (
       await tx.query(
         'SELECT version FROM crm.subject_briefings WHERE subject_id=$1 FOR UPDATE',

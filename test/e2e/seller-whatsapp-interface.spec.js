@@ -277,3 +277,50 @@ test('vincula contato acessível com a versão escolhida e mantém o mesmo ID', 
   await expect(page).toHaveURL(/meus-clientes\/contact-synthetic/u);
   expect(commands).toEqual([{ expectedVersion: 4 }]);
 });
+
+test('administrador confirma e motiva troca de telefone compartilhado', async ({
+  page,
+}) => {
+  await installMocks(page, {}, { fixedClock: false, admin: true });
+  const contact = {
+    id: 'contact-shared',
+    label: 'Contato sintético',
+    displayName: 'Contato sintético',
+    version: 4,
+    identities: [],
+    shared: true,
+    phone: '5511999990000',
+    phoneSource: 'manual',
+    email: null,
+    registration: null,
+  };
+  /** @type {any[]} */
+  const commands = [];
+  await page.route('**/api/v1/contacts?**', (route) =>
+    route.fulfill({
+      json: { items: [contact], totalCount: 1, nextCursor: null },
+    }),
+  );
+  await page.route('**/api/v1/contacts/contact-shared', (route) =>
+    route.fulfill({ json: { contact, identities: [], conversations: [] } }),
+  );
+  await page.route('**/api/v1/contacts/contact-shared/details', (route) => {
+    const body = route.request().postDataJSON();
+    commands.push(body);
+    return route.fulfill({
+      json: { contact: { ...contact, phone: body.phone, version: 5 } },
+    });
+  });
+  await page.goto('/clientes/contact-shared');
+  await page.getByRole('button', { name: 'Completar cadastro' }).click();
+  await page.getByLabel('Celular', { exact: true }).fill('5511988880000');
+  await page.getByLabel('Conferi a alteração').check();
+  await page.getByLabel('Motivo da alteração').fill('Conferido com o cliente');
+  await page.getByRole('button', { name: 'Salvar cadastro' }).click();
+  await expect.poll(() => commands.length).toBe(1);
+  expect(commands[0]).toMatchObject({
+    expectedVersion: 4,
+    phone: '5511988880000',
+    review: { confirmed: true, reason: 'Conferido com o cliente' },
+  });
+});

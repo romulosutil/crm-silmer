@@ -1039,6 +1039,18 @@
   font-size: var(--text-xs);
 }
 
+/* WAP-11: the holder's line is down. Words first, the tone only supports. */
+.composer-help.composer-line-down {
+  color: var(--status-warning-text);
+  font-size: var(--text-sm);
+}
+
+.composer-line-down a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
 .inbox-composer .media-composer__toolbar {
   flex: none;
   flex-wrap: wrap;

@@ -430,8 +430,30 @@ const activeLine = computed(() => lineOf(active.value));
  * while replying is possible; otherwise `#reply-help` says why not.
  */
 const replyLineHint = computed(() =>
-  canReply.value ? (activeLine.value?.sendHint ?? '') : '',
+  canReply.value && !personalLineDown.value
+    ? (activeLine.value?.sendHint ?? '')
+    : '',
 );
+/**
+ * WAP-11: the reader's own personal line cannot send now (disconnected,
+ * blocked, pairing or unknown). Reading, the draft and the order tools stay;
+ * only "Enviar resposta" waits, and `#reply-line` says how to reconnect. The
+ * detail carries `personalLineUsable` for the holder only.
+ */
+const personalLineDown = computed(
+  () =>
+    active.value?.personalLine === true &&
+    Boolean(currentUserId.value) &&
+    active.value?.assignedUser?.id === currentUserId.value &&
+    active.value?.personalLineUsable === false,
+);
+/** `#reply-line` exists: the exit of a reply, or why it cannot leave. */
+const showReplyLine = computed(
+  () =>
+    Boolean(replyLineHint.value) || (canReply.value && personalLineDown.value),
+);
+/** "Enviar resposta" may send, a draft aside. */
+const replySendable = computed(() => canReply.value && !personalLineDown.value);
 const transferOptions = computed(() =>
   assignableUsers.value.filter((user) => user.id !== currentUserId.value),
 );
@@ -746,7 +768,7 @@ const hasMoreActions = computed(
 );
 const canSendReply = computed(
   () =>
-    canReply.value &&
+    replySendable.value &&
     !busy.value &&
     !mediaSending.value &&
     Boolean(reply.value.trim()),
@@ -2627,7 +2649,7 @@ async function changeAutomation(path, successMessage) {
 }
 
 async function sendReply() {
-  if (!canReply.value || !active.value || busy.value || mediaSending.value)
+  if (!replySendable.value || !active.value || busy.value || mediaSending.value)
     return;
   const conversationId = active.value.id;
   const draftScope = replyDrafts.value;
@@ -4003,14 +4025,31 @@ onBeforeUnmount(() => {
                     :aria-disabled="canReply ? undefined : 'true'"
                     :readonly="!canReply"
                     :aria-describedby="
-                      replyLineHint ? 'reply-help reply-line' : 'reply-help'
+                      showReplyLine ? 'reply-help reply-line' : 'reply-help'
                     "
                     @keydown="replyKeydown"
                   ></textarea>
                   <!-- WAP-09: the number a reply leaves by. Plain text read
                        with the field and the send button, never a live
-                       region: it changes only with the conversation. -->
-                  <p v-if="replyLineHint" id="reply-line" class="composer-help">
+                       region: it changes only with the conversation.
+                       WAP-11: the holder's own line down says how to
+                       reconnect instead; the draft stays. -->
+                  <p
+                    v-if="canReply && personalLineDown"
+                    id="reply-line"
+                    class="composer-help composer-line-down"
+                  >
+                    Seu WhatsApp está desconectado. Reconecte em
+                    <RouterLink to="/conta#my-whatsapp-title"
+                      >Conta › Meu WhatsApp</RouterLink
+                    >
+                    para enviar.
+                  </p>
+                  <p
+                    v-else-if="replyLineHint"
+                    id="reply-line"
+                    class="composer-help"
+                  >
                     {{ replyLineHint }}
                   </p>
                   <p
@@ -4051,17 +4090,17 @@ onBeforeUnmount(() => {
                     busy ||
                     mediaSending ||
                     recordingActive ||
-                    (canReply && !reply.trim())
+                    (replySendable && !reply.trim())
                   "
-                  :aria-disabled="canReply ? undefined : 'true'"
+                  :aria-disabled="replySendable ? undefined : 'true'"
                   :aria-describedby="
                     canReply
-                      ? replyLineHint
+                      ? showReplyLine
                         ? 'reply-line'
                         : undefined
                       : 'reply-help'
                   "
-                  @click="canReply || $event.preventDefault()"
+                  @click="replySendable || $event.preventDefault()"
                 >
                   <AppIcon name="send" />
                   <span class="composer-label">Enviar resposta</span>

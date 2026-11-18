@@ -81,6 +81,9 @@ const unread = computed(() =>
       }}</span
       >{{ messageText(conversation.lastMessage) }}</span
     >
+    <!-- WAP-09: the line badge is an origin, not a status. The success tone
+         recalls WhatsApp; the message icon (aria-hidden) sets it apart from
+         "Pedido pronto", and the words carry the meaning. -->
     <span v-if="badges.visible.length || line" class="conv-badges"
       ><span
         v-for="badge in badges.visible"
@@ -97,7 +100,9 @@ const unread = computed(() =>
         ><span class="sr-only">{{
           badges.hidden.map((badge) => badge.label).join(', ')
         }}</span></span
-      ><span v-if="line" class="badge" data-badge="line">{{ line }}</span></span
+      ><span v-if="line" class="badge" data-badge="line" data-tone="success"
+        ><AppIcon name="message" />{{ line }}</span
+      ></span
     >
   </button>
 </template>

@@ -15,6 +15,23 @@ import { decryptInboxMessageEnvelope } from './postgres-inbox-repository.js';
 const SELLER_NAME_ORDER = new Intl.Collator('pt-BR', { sensitivity: 'base' });
 const PERSONAL_LINE_PROJECTION = `EXISTS (SELECT 1 FROM crm.seller_whatsapp_lines personal_line
   WHERE personal_line.account_id::text=conversation.provider_account_id) AS personal_line`;
+/**
+ * WAP-11: whether the reader's own personal line can send right now, the same
+ * line test the send path applies (connected, verified, current binding). It
+ * is true only for the holder: nobody else learns the line's state.
+ * @param {string} actor the SQL parameter holding the reader's id
+ */
+const personalLineUsableProjection = (
+  actor,
+) => `EXISTS (SELECT 1 FROM crm.seller_whatsapp_lines usable_line
+  JOIN crm.seller_whatsapp_bindings usable_binding
+    ON usable_binding.line_id=usable_line.id
+   AND usable_binding.generation=usable_line.generation
+   AND usable_binding.revoked_at IS NULL
+  WHERE usable_line.account_id::text=conversation.provider_account_id
+    AND usable_line.seller_id=${actor}::text
+    AND usable_line.state='connected'
+    AND usable_line.verified_at IS NOT NULL) AS personal_line_usable`;
 
 const DOCUMENT_IMAGE_MIME_TYPES = new Set([
   'image/jpeg',
@@ -758,6 +775,7 @@ export class PostgresInboxReadRepository {
               .query(
                 `SELECT conversation.id, conversation.state,
                     ${PERSONAL_LINE_PROJECTION},
+                    ${personalLineUsableProjection('$3')},
                     conversation.automation_state, conversation.automation_epoch,
                     conversation.assigned_user_id, conversation.version,
                     conversation.opened_at, conversation.last_message_at,
@@ -799,7 +817,11 @@ export class PostgresInboxReadRepository {
              ${WAITING_JOIN}
              WHERE conversation.id=$1
                AND ($2::text IS NULL OR ${contactConversationVisible('conversation', '$2')})`,
-                [conversationId, reader.visibilityActorId ?? null],
+                [
+                  conversationId,
+                  reader.visibilityActorId ?? null,
+                  reader.actorId ?? null,
+                ],
               )
               .then((/** @type {any} */ result) => {
                 if (!result.rows[0]) throw notFound('CONVERSATION_NOT_FOUND');
@@ -1590,6 +1612,10 @@ function mapConversationSummary(row, repository, turnAsOf = null) {
     : null;
   return Object.freeze({
     personalLine: row.personal_line === true,
+    // WAP-11: only the detail reads it, and only true for the line's holder.
+    ...(row.personal_line_usable === undefined
+      ? {}
+      : { personalLineUsable: row.personal_line_usable === true }),
     assignedUser: row.assigned_user_id
       ? {
           functionName: row.function_name,

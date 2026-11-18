@@ -31,6 +31,7 @@ const body = {
   expectedLinkVersion: 1,
   expectedLineVersion: 1,
   expectedGeneration: 1,
+  expectedConversation: null,
 };
 const ids = JSON.stringify([seller]);
 const environment = {
@@ -337,6 +338,14 @@ test('WAP-E10 strict body, headers and query refuse arbitrary destinations', asy
     { expectedLinkVersion: '1' },
     { expectedLineVersion: 1.5 },
     { expectedGeneration: -1 },
+    { expectedConversation: undefined },
+    { expectedConversation: 'conversation-1' },
+    { expectedConversation: [] },
+    { expectedConversation: {} },
+    { expectedConversation: { id: 'conversation-1' } },
+    { expectedConversation: { id: 'conversation-1', version: 0 } },
+    { expectedConversation: { id: 'bad id', version: 1 } },
+    { expectedConversation: { id: 'c', version: 1, to: '+5511999999999' } },
   ])
     problem(
       await app.inject({
@@ -464,6 +473,7 @@ test('WAP-E10 maps every domain refusal to its public code and 201/200', async (
     ['WHATSAPP_GENERATION_STALE', 409],
     ['WHATSAPP_IDENTITY_CONFLICT', 409],
     ['CONVERSATION_UNAVAILABLE', 409],
+    ['CONVERSATION_VERSION_CONFLICT', 409],
     ['IDEMPOTENCY_KEY_REUSED', 409, 'IDEMPOTENCY_CONFLICT'],
     ['IDEMPOTENCY_RECORD_PENDING', 500, 'IDEMPOTENCY_CONFLICT'],
     ['WHATSAPP_DESTINATION_INVALID', 422],
@@ -529,6 +539,14 @@ test('WAP-E10 maps every domain refusal to its public code and 201/200', async (
   assert.equal(last.idempotencyKey, headers['idempotency-key']);
   assert.equal(typeof last.correlationId, 'string');
   assert.equal(last.to, undefined);
+  assert.equal(last.expectedConversation, null);
+  await app.inject({
+    method: 'POST',
+    url: send,
+    headers,
+    payload: { ...body, expectedConversation: { id: 'c', version: 3 } },
+  });
+  assert.deepEqual(sent.at(-1).expectedConversation, { id: 'c', version: 3 });
 });
 
 test('WAP-E10 preview is read-only and never reveals another Contact', async () => {
@@ -536,8 +554,12 @@ test('WAP-E10 preview is read-only and never reveals another Contact', async () 
   const accountId = randomUUID();
   /** @type {string[]} */
   const statements = [];
-  /** @type {{identityContact: string|null, conversation: any}} */
-  const world = { identityContact: null, conversation: null };
+  /** @type {{identityContact: string|null, conversation: any, phone: string}} */
+  const world = {
+    identityContact: null,
+    conversation: null,
+    phone: '(11) 90000-4321',
+  };
   /** @param {string} sql */
   const answer = (sql) => {
     if (/FROM crm\.users/u.test(sql))
@@ -570,7 +592,7 @@ test('WAP-E10 preview is read-only and never reveals another Contact', async () 
           link_id: 'link-1',
           link_version: '5',
           contact_details_envelope: encryptContactDetails(
-            { email: null, phone: '(11) 90000-4321' },
+            { email: null, phone: world.phone },
             key,
           ),
         },
@@ -643,9 +665,15 @@ test('WAP-E10 preview is read-only and never reveals another Contact', async () 
     id: 'conversation-1',
     version: 7,
   });
+  // The titular's own confirmed number is never a customer destination.
+  world.phone = '11000001234';
+  const own = await read();
+  assert.equal(own.restriction, 'destination_invalid');
+  assert.equal(own.available, false);
+  assert.equal(own.conversation, null);
   assert.equal(
     statements.filter((s) => s === 'SET TRANSACTION READ ONLY').length,
-    4,
+    5,
   );
   for (const sql of statements) {
     assert.doesNotMatch(

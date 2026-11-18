@@ -2356,8 +2356,9 @@ paths:
         SELLER_WHATSAPP_FIRST_SEND_ENABLED e allowlist
         SELLER_WHATSAPP_FIRST_SEND_SELLER_IDS, além das guardas de envio
         pessoal, ingresso pessoal e carteira. pendingSend indica envio
-        anterior do titular ainda na fila, em despacho ou incerto nessa
-        conversa; reconciliar antes de repetir. no-store.
+        anterior do titular ainda na fila, em despacho ou incerto em qualquer
+        ciclo, ativo ou encerrado, da mesma linha e destino; reconciliar antes
+        de repetir. no-store.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/ContactId'
@@ -2388,7 +2389,8 @@ paths:
         Linha offline antes da reserva não cria nada. Timeout depois da
         reserva fica outcome_unknown e exige reconciliação, sem nova tentativa
         cega. Enquanto houver envio anterior do titular na fila, em despacho
-        ou incerto na conversa ativa, responde 409 WHATSAPP_OPERATION_UNCERTAIN
+        ou incerto em qualquer ciclo da mesma linha e destino, inclusive
+        encerrado, responde 409 WHATSAPP_OPERATION_UNCERTAIN
         sem gravar nada. expectedConversation repete a conversa da prévia e é
         conferido sob lock: duas abas da mesma prévia produzem um 201 e um
         409; só uma nova prévia depois da conclusão permite outra mensagem.
@@ -9034,8 +9036,9 @@ components:
             pendingSend:
               type: boolean
               description: >-
-                Envio anterior do titular na conversa reutilizável ainda em
-                fila, despacho ou outcome_unknown; o POST responde 409
+                Envio anterior do titular em qualquer ciclo, ativo ou
+                encerrado, da mesma linha e destino ainda em fila, despacho
+                ou outcome_unknown; o POST responde 409
                 WHATSAPP_OPERATION_UNCERTAIN até a reconciliação.
     SellerWhatsAppFirstSendRequest:
       type: object

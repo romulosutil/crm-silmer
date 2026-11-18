@@ -155,18 +155,23 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
     if (!inboundSellers.has(actorId)) throw refusal(503, FIRST_SEND_DISABLED);
   }
 
-  /** WAP-24: an earlier send of this titular that is not settled (queued,
-   * dispatching or uncertain) must be reconciled before another message.
-   * @param {any} client @param {any} conversation @param {string} actorId */
-  async function pendingSend(client, conversation, actorId) {
-    if (!conversation) return false;
+  /** WAP-10/22/23/24: an earlier send of this titular that is not settled
+   * (queued, dispatching or uncertain) must be reconciled before another
+   * message. Every cycle of this line and destination counts: closing the
+   * conversation does not settle an uncertain effect. Only the actor's own
+   * messages are read, so another seller's sends never leak.
+   * @param {any} client @param {any} line @param {string} to @param {string} actorId */
+  async function pendingSend(client, line, to, actorId) {
     return Boolean(
       (
         await client.query(
-          `SELECT 1 FROM crm.messages WHERE conversation_id=$1 AND direction='outbound'
-             AND author_id=$2 AND (status IN ('queued','sending','outcome_unknown')
-               OR delivery_status='outcome_unknown') LIMIT 1`,
-          [conversation.id, actorId],
+          `SELECT 1 FROM crm.messages m
+           JOIN crm.conversations c ON c.id=m.conversation_id
+           WHERE c.provider=$1 AND c.provider_account_id=$2
+             AND c.external_conversation_id=$3 AND m.direction='outbound'
+             AND m.author_id=$4 AND (m.status IN ('queued','sending','outcome_unknown')
+               OR m.delivery_status='outcome_unknown') LIMIT 1`,
+          [PROVIDER, line.account_id, to, actorId],
         )
       ).rows[0],
     );
@@ -381,7 +386,7 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
     let conversation = await activeConversation(client, line, to, true);
     if (conversation && !reusable(conversation, identity, actorId))
       throw refusal(409, 'CONVERSATION_UNAVAILABLE');
-    if (await pendingSend(client, conversation, actorId))
+    if (await pendingSend(client, line, to, actorId))
       throw refusal(409, 'WHATSAPP_OPERATION_UNCERTAIN');
     // Checked under the conversation lock: another tab or an inbound reply
     // that opened/changed the conversation since the preview wins.
@@ -546,6 +551,7 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
         let restriction = null;
         /** @type {any} */
         let conversation = null;
+        let pending = false;
         if (!line) restriction = 'line_not_configured';
         else if (!lineUsable(line)) restriction = 'line_unavailable';
         else if (!to || !validDestination(line, to))
@@ -562,7 +568,11 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
             restriction ??= 'identity_conflict';
           else if (active && !reusable(active, identity, actorId))
             restriction ??= 'conversation_unavailable';
-          else if (active) conversation = active;
+          else {
+            if (active) conversation = active;
+            // Same order as the POST: closed cycles count as well.
+            pending = await pendingSend(client, line, to, actorId);
+          }
         }
         return {
           preview: {
@@ -590,7 +600,7 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
               : null,
             available: restriction === null,
             restriction,
-            pendingSend: await pendingSend(client, conversation, actorId),
+            pendingSend: pending,
           },
         };
       });

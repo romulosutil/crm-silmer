@@ -50,7 +50,7 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 | [x] WAP-E08 | [Completar mensagens correntes e efeitos pela linha correta](PROMPTS.md#wap-e08) | Sol/Opus     | WAP-E07         | WAP-T02-08, WAP-T03-01, WAP-T03-02, WAP-T02-09 |
 | [x] WAP-E09 | [Completar Meus clientes e Meu WhatsApp na interface](PROMPTS.md#wap-e09)        | Terra/Sonnet | WAP-E08         | WAP-T04-01, WAP-T04-02, WAP-T04-05             |
 | [x] WAP-E10 | [Entregar primeiro envio humano individual](PROMPTS.md#wap-e10)                  | Sol/Opus     | WAP-E09         | WAP-T04-03, WAP-T04-04                         |
-| [ ] WAP-E11 | [Concluir verificação e prontidão operacional](PROMPTS.md#wap-e11)               | Sol/Opus     | WAP-E10         | WAP-T05-01, WAP-T05-02, WAP-T05-03, WAP-T05-04 |
+| [x] WAP-E11 | [Concluir verificação e prontidão operacional](PROMPTS.md#wap-e11)               | Sol/Opus     | WAP-E10         | WAP-T05-01, WAP-T05-02, WAP-T05-03, WAP-T05-04 |
 | [ ] WAP-E12 | [Homologar o piloto real da etapa 1](PROMPTS.md#wap-e12)                         | Sol/Opus     | WAP-E11         | WAP-T05-05, WAP-T05-06, WAP-T05-07             |
 
 ## Mapa de rastreabilidade dos 32 itens internos
@@ -452,9 +452,13 @@ inicial de sessões/PRs por T.
 | [x] WAP-T04-04  | Expor compositor do primeiro envio opcional              | [WAP-E10](PROMPTS.md#wap-e10) | WAP-22/23/24/32                   |
 | [x] WAP-T02-09  | Preservar cobrança e preparo pela linha correta          | [WAP-E08](PROMPTS.md#wap-e08) | WAP-17/19/27/28/30                |
 | [x] WAP-T04-05  | Conservar contexto das ações comerciais na carteira      | [WAP-E09](PROMPTS.md#wap-e09) | WAP-17/19/25/28/30                |
-| [ ] WAP-T05-01  | Consolidar flags, allowlist e limites sem ativação       | [WAP-E11](PROMPTS.md#wap-e11) | WAP-12/16                         |
-| [ ] WAP-T05-02  | Auditar regressão funcional, a11y e privacidade          | [WAP-E11](PROMPTS.md#wap-e11) | WAP-01–12/17–33                   |
-| [ ] WAP-T05-03  | Ensaiar rollback e recovery sem reativar efeitos         | [WAP-E11](PROMPTS.md#wap-e11) | WAP-10/11/12/16/29/33             |
+| [x] WAP-T05-01  | Consolidar flags, allowlist e limites sem ativação       | [WAP-E11](PROMPTS.md#wap-e11) | WAP-12/16                         |
+| [x] WAP-T05-02  | Auditar regressão funcional, a11y e privacidade          | [WAP-E11](PROMPTS.md#wap-e11) | WAP-01–12/17–33                   |
+| [x] WAP-T05-03  | Ensaiar rollback e recovery sem reativar efeitos         | [WAP-E11](PROMPTS.md#wap-e11) | WAP-10/11/12/16/29/33             |
+| [x] WAP-T05-04  | Consolidar roteiro operacional e evidências              | [WAP-E11](PROMPTS.md#wap-e11) | WAP-12/16; WAP-T05                |
+| [ ] WAP-T05-05  | Homologar fluxo passivo real de Pedido                   | [WAP-E12](PROMPTS.md#wap-e12) | WAP-04/05/07/17/31/32/33          |
+| [ ] WAP-T05-06  | Homologar pareamento mobile e sincronização reais        | [WAP-E12](PROMPTS.md#wap-e12) | WAP-01/02/03/04/09/10/11/12       |
+| [ ] WAP-T05-07  | Homologar ações comerciais e primeiro envio do piloto    | [WAP-E12](PROMPTS.md#wap-e12) | WAP-17–30/32                      |
 
 ### Evidência local de WAP-E08
 
@@ -474,10 +478,6 @@ envia o documento pelo nó de mídia existente. O Playwright verificou a
 confirmação, o foco, a repetição idempotente e o axe em 390 e 1366 px.
 O [runbook](../../../docs/runbooks/seller-whatsapp-outbound.md) registra o
 contrato, o ensaio e o rollback.
-| [ ] WAP-T05-04  | Consolidar roteiro operacional e evidências              | [WAP-E11](PROMPTS.md#wap-e11) | WAP-12/16; WAP-T05                |
-| [ ] WAP-T05-05  | Homologar fluxo passivo real de Pedido                   | [WAP-E12](PROMPTS.md#wap-e12) | WAP-04/05/07/17/31/32/33          |
-| [ ] WAP-T05-06  | Homologar pareamento mobile e sincronização reais        | [WAP-E12](PROMPTS.md#wap-e12) | WAP-01/02/03/04/09/10/11/12       |
-| [ ] WAP-T05-07  | Homologar ações comerciais e primeiro envio do piloto    | [WAP-E12](PROMPTS.md#wap-e12) | WAP-17–30/32                      |
 
 ### Evidência local de WAP-E09
 
@@ -523,6 +523,39 @@ registra contrato, códigos e rollback. Gate de liberação: a flag segue
 desligada em ambiente real até E12 provar que o JID da resposta coincide com
 o `+E164` gravado (nono dígito); não corrigir por fusão por telefone. A prova
 local não homologa provedor, n8n real ou produção.
+
+### Evidência local de WAP-E11
+
+Verificação independente e prontidão em 18/11/2026 sobre E10 `aad6f171`
+([registro](validation-etapa1.md), [prontidão](../../../docs/runbooks/seller-whatsapp.md),
+[recovery](../../../docs/runbooks/seller-whatsapp-recovery.md)). WAP-T05-01:
+matriz fail-closed de todas as flags e allowlists de API, worker, n8n e
+Evolution, 14/14; ensaio de capacidade sintético para 2 e 10 vendedores, sem
+deadlock ou timeout, com limites numéricos propostos por usuário e serviço.
+Os limites sem código restringem o piloto a dois vendedores e não provam
+produção. WAP-T05-02: revisão adversarial sem P0; todas as suítes PostgreSQL
+da etapa 1 e da linha geral, zero falhas e zero skips; QR/código ausentes em
+788 colunas e nos logs. Correções nas fronteiras donas, com teste vermelho
+antes: `9c6ae568`, Pedido legado na linha geral com alvo desligado (P1);
+`22c95d35`, envio incerto através de ciclos encerrados (P2); `7eaae6d6` e
+`1ae5fa87`, fixtures que paravam o job PostgreSQL do CI desde o E05.
+
+WAP-T05-03: drill de desligamento, implantação em fases e restore por
+snapshot local, 7/7 em três execuções, zero skips. Preserva carteira, ACL,
+ledger, `outcome_unknown` e snapshots, sem QR restaurado. Rollback testado
+em `60f11d42` e no HEAD com primeiro envio desligado; `f5833287` não é
+permitido. O código não tem trava pós-restore: o bloqueio até a
+reconciliação é procedimento obrigatório, e a trava fica como lacuna P1 para
+decisão antes do piloto. WAP-T05-04: checklist de publicação e piloto, mapa
+de versões e ordem API/migração → workflows → flags. O CI passa a rodar as
+suítes de integração E08/E10 e o drill (`beeeb520`).
+
+`npm run validate`: 2.889 aprovados, zero falhas, 61 skips live sem URL;
+`npm run test:e2e -- --workers=2`: 1.115 aprovados e sete skips existentes;
+auditorias completa e de runtime sem vulnerabilidades;
+`validate:topology` e `test:recovery:mocks` (18) aprovados. Pendentes,
+sem evidência live: CI verde da PR, imagens com digest, spike do provedor
+(E01), pareamento e tráfego reais, restore remoto e aprovações (WAP-E12).
 
 ## Cobertura por requisito
 

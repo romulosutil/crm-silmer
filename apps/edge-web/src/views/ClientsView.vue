@@ -10,7 +10,8 @@ import {
 } from 'vue';
 import { useRouter } from 'vue-router';
 import ClientRegistration from '../components/ClientRegistration.vue';
-import { request } from '../lib/api-client.js';
+import PortfolioCreate from '../components/PortfolioCreate.vue';
+import { commandKey, request } from '../lib/api-client.js';
 import {
   CHANNEL_LABELS,
   conversationLabel,
@@ -49,6 +50,9 @@ const renameCurrentKnown = ref(false);
 const actionMessage = ref('');
 const nameInput = ref(null);
 const renameTrigger = ref(null);
+const showOnboarding = ref(true);
+const linking = ref(false);
+let linkAttempt;
 let listController;
 let detailController;
 let appendController;
@@ -58,6 +62,45 @@ let searchTimer = 0;
 
 const filtered = computed(() => contacts.value);
 const selected = computed(() => detail.value?.contact ?? null);
+
+async function onClientCreated(id) {
+  await router.push(`/meus-clientes/${encodeURIComponent(id)}`);
+  await loadContacts();
+}
+
+async function linkSelected() {
+  const contact = selected.value;
+  if (!contact || linking.value) return;
+  const fingerprint = `${contact.id}:${contact.version}`;
+  if (linkAttempt?.fingerprint !== fingerprint)
+    linkAttempt = { fingerprint, key: commandKey() };
+  const controller = new AbortController();
+  commandController?.abort();
+  commandController = controller;
+  linking.value = true;
+  error.value = '';
+  try {
+    await request(`/api/v1/me/clients/${encodeURIComponent(contact.id)}/link`, {
+      method: 'POST',
+      body: { expectedVersion: contact.version },
+      idempotencyKey: linkAttempt.key,
+      signal: controller.signal,
+    });
+    if (commandController !== controller || selected.value?.id !== contact.id)
+      return;
+    linkAttempt = undefined;
+    await router.push(`/meus-clientes/${encodeURIComponent(contact.id)}`);
+  } catch (cause) {
+    if (commandController !== controller || cause?.name === 'AbortError')
+      return;
+    error.value =
+      cause?.status === 409
+        ? 'O cadastro ou vínculo mudou. Atualize o cliente antes de tentar novamente.'
+        : 'Não foi possível vincular este cliente à sua carteira.';
+  } finally {
+    if (commandController === controller) linking.value = false;
+  }
+}
 
 function openContact(contact, event) {
   if (event.target?.closest?.('a, button, input, select, textarea')) return;
@@ -379,6 +422,8 @@ function clearPrivateContact() {
   detailLoading.value = false;
   refreshing.value = false;
   busy.value = false;
+  linking.value = false;
+  linkAttempt = undefined;
   renaming.value = false;
   draftName.value = '';
   renameBase.value = null;
@@ -485,7 +530,31 @@ onBeforeUnmount(() => {
       </RouterLink>
     </header>
 
+    <section
+      v-if="mine && showOnboarding"
+      class="surface"
+      aria-labelledby="portfolio-onboarding-title"
+    >
+      <h2 id="portfolio-onboarding-title">Atenda com seu WhatsApp</h2>
+      <p>Você pode organizar sua carteira antes de conectar a linha.</p>
+      <div class="inline-actions">
+        <RouterLink to="/conta#my-whatsapp-title"
+          >Configurar Meu WhatsApp</RouterLink
+        >
+        <button
+          type="button"
+          @click="
+            showOnboarding = false;
+            nextTick(() => heading?.focus());
+          "
+        >
+          Agora não
+        </button>
+      </div>
+    </section>
+
     <div class="filter-bar">
+      <PortfolioCreate v-if="mine" @created="onClientCreated" />
       <div class="search-control">
         <label for="client-search">{{
           mine
@@ -677,12 +746,25 @@ onBeforeUnmount(() => {
                 Editar nome
               </button>
             </div>
+            <button
+              v-if="!mine && sessionUser?.functionName === 'Vendedor'"
+              type="button"
+              :disabled="linking"
+              @click="linkSelected"
+            >
+              {{ linking ? 'Vinculando…' : 'Vincular à minha carteira' }}
+            </button>
           </template>
         </div>
         <div v-if="detailLoading" class="loading-state" role="status">
           Carregando histórico…
         </div>
         <template v-else>
+          <p v-if="selected.shared" class="audit-note">
+            Este cadastro é compartilhado. Alterações nos dados comuns também
+            aparecem para outras pessoas vinculadas; conversas e pedidos mantêm
+            suas próprias permissões.
+          </p>
           <dl class="client-facts client-facts--single">
             <div>
               <dt>Cadastrado em</dt>

@@ -25,6 +25,7 @@ async function setup(page, { delayed = false, existing = false } = {}) {
     displayName: 'Cliente Ana T.',
     identities: [],
     provisional: false,
+    shared: true,
     version: 1,
     registration: null,
   };
@@ -121,6 +122,9 @@ for (const width of [1366, 390]) {
     await expect(
       page.getByRole('heading', { name: 'Meus clientes' }),
     ).toBeFocused();
+    await expect(
+      page.getByText('Este cadastro é compartilhado.', { exact: false }),
+    ).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     const conversation = page.getByRole('link', {
       name: 'WhatsApp',

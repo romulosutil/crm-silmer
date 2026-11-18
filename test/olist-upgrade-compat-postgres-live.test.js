@@ -75,10 +75,16 @@ if (connectionString) {
           const result = await migrate(pool, { migrations });
           // Supplemental source expansion follows the Olist foundation without
           // changing any preexisting outbox row or target predicate.
+          // `migrate` applies the expand phase only; contract files such as
+          // 0081 (WAP-E05) run in their own explicit step.
           assert.deepEqual(
             result.applied,
             migrations
-              .filter((entry) => entry.version >= foundation.version)
+              .filter(
+                (entry) =>
+                  entry.version >= foundation.version &&
+                  entry.phase === 'expand',
+              )
               .map((entry) => entry.version),
           );
           const before = await pool.query(

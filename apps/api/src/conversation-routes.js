@@ -1,3 +1,9 @@
+/** 5xx codes the Inbox must tell apart; every other 5xx stays generic. */
+const PUBLIC_UNAVAILABLE_CODES = new Set([
+  // WAP-E04/E08: the personal line cannot send; the draft is kept.
+  'WHATSAPP_SEND_UNAVAILABLE',
+]);
+
 class ConversationRequestError extends Error {
   /** @param {number} statusCode @param {string} code */
   constructor(statusCode, code) {
@@ -273,7 +279,13 @@ async function respond(reply, request, contextFor, operation) {
     if (!Number.isSafeInteger(statusCode) || statusCode < 400) throw error;
     const context = contextFor(request);
     const publicStatus = statusCode >= 500 ? 503 : statusCode;
-    const code = statusCode >= 500 ? 'SERVICE_UNAVAILABLE' : publicCode(error);
+    const rawCode = String(normalized.code);
+    const code =
+      statusCode >= 500
+        ? PUBLIC_UNAVAILABLE_CODES.has(rawCode)
+          ? rawCode
+          : 'SERVICE_UNAVAILABLE'
+        : publicCode(error);
     return reply.code(publicStatus).send({
       accepted: false,
       error: { code },

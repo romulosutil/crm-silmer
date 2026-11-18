@@ -34,7 +34,11 @@ const REGISTRATION_CODES = new Set([
 ]);
 
 /** 5xx codes the client must tell apart to keep the form usable. */
-const PUBLIC_UNAVAILABLE_CODES = new Set(['POSTAL_CODE_UNAVAILABLE']);
+const PUBLIC_UNAVAILABLE_CODES = new Set([
+  'POSTAL_CODE_UNAVAILABLE',
+  // WAP-E03: the portfolio flag is off, like WHATSAPP_CONTROL_DISABLED.
+  'SELLER_CLIENTS_DISABLED',
+]);
 
 class OperationReadRequestError extends Error {
   /** @param {number} statusCode @param {string} code */
@@ -802,7 +806,10 @@ async function respond(reply, operation) {
     const publicStatus = statusCode >= 500 ? 503 : statusCode;
     const allowed = new Set([
       'CONTACT_CONFLICT',
+      // WAP-E03/E09: restricted shared field; the form keeps the draft.
+      'CONTACT_FIELD_RESTRICTED',
       'CONTACT_PHONE_MATCH',
+      'CONTACT_REVIEW_REQUIRED',
       'CONTACT_NOT_FOUND',
       'CONVERSATION_NOT_FOUND',
       'FORBIDDEN',

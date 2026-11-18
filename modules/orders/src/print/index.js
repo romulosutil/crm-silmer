@@ -6,6 +6,7 @@ import { renderFichaHtmlV6 } from './ficha-canonical-v6.js';
 import { renderFichaHtmlV7 } from './ficha-canonical-v7.js';
 import { renderFichaHtmlV8 } from './ficha-canonical-v8.js';
 import { renderFichaHtmlV9 } from './ficha-canonical-v9.js';
+import { renderFichaParaImpressao } from './ficha-para-impressao.js';
 import { renderStoreFichaHtml, TEMPLATE_STORE_V1 } from './ficha-loja-v1.js';
 import {
   TEMPLATE_V2,
@@ -60,7 +61,7 @@ export const PRINT_TEMPLATE = TEMPLATE_V9;
  *
  * @param {any} order
  * @param {string} [template]
- * @param {{printedAt?: Date}} [options] when the paper was printed (v8 footer)
+ * @param {{printedAt?: Date, layout?: 'impressao'}} [options]
  * @returns {string}
  */
 export function renderOrderFicha(
@@ -69,6 +70,9 @@ export function renderOrderFicha(
   options = {},
 ) {
   if (order?.origin === 'loja') return renderStoreFichaHtml(order);
+  if (options.layout === 'impressao') {
+    return renderFichaParaImpressao(printSnapshot(order, TEMPLATE_V9).pedido);
+  }
   const snapshot = printSnapshot(order, template);
   if (template === TEMPLATE_V9) {
     return renderFichaHtmlV9(snapshot, {

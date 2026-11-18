@@ -2,10 +2,8 @@
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import OrderIcon from './OrderIcon.vue';
 
-// PED-RD-02 item 3: "Mais ações do pedido", the page header's disclosure for
-// the actions that are not "Abrir conversa" or "Gerar PDF". Same menu markup,
-// keys and focus rules as the item menu in OrderItemsSection (EDIT-01). The
-// page decides which actions exist; with none, no button is drawn at all.
+// PED-RD-02 item 3: "Mais ações do pedido" groups the secondary actions
+// with the same keys and focus rules as the item menu (EDIT-01).
 const props = defineProps({
   canCancel: { type: Boolean, default: false },
   // A section in edit: the item stays, but waits (it explains why).
@@ -13,8 +11,10 @@ const props = defineProps({
   cancelHint: { type: String, default: '' },
   canShare: { type: Boolean, default: false },
   shareDisabled: { type: Boolean, default: false },
+  canDownloadDetailed: { type: Boolean, default: false },
+  downloadDetailedDisabled: { type: Boolean, default: false },
 });
-const emit = defineEmits(['cancel', 'share']);
+const emit = defineEmits(['cancel', 'share', 'download-detailed']);
 
 const open = ref(false);
 /** @type {import('vue').Ref<HTMLElement|null>} */
@@ -101,6 +101,12 @@ function share() {
   emit('share');
 }
 
+function downloadDetailed() {
+  if (props.downloadDetailedDisabled) return;
+  close();
+  emit('download-detailed');
+}
+
 function cancel() {
   if (props.cancelDisabled) return;
   // The dialog returns the focus to this button, where the menu was opened.
@@ -111,7 +117,7 @@ function cancel() {
 
 <template>
   <div
-    v-if="canCancel || canShare"
+    v-if="canCancel || canShare || canDownloadDetailed"
     ref="root"
     class="op-more"
     @focusout="onFocusOut"
@@ -136,6 +142,15 @@ function cancel() {
       role="menu"
       aria-label="Mais ações do pedido"
     >
+      <button
+        v-if="canDownloadDetailed"
+        type="button"
+        role="menuitem"
+        :disabled="downloadDetailedDisabled"
+        @click="downloadDetailed"
+      >
+        PDF detalhado
+      </button>
       <button
         v-if="canShare"
         type="button"

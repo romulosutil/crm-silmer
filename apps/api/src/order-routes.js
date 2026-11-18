@@ -364,7 +364,7 @@ export function registerOrderRoutes(
           const params = requireObject(request.params);
           const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
           const query = requireObject(request.query ?? {});
-          rejectUnknownKeys(query, ['expectedVersion']);
+          rejectUnknownKeys(query, ['expectedVersion', 'layout']);
           const expectedVersion =
             query.expectedVersion === undefined
               ? null
@@ -374,6 +374,10 @@ export function registerOrderRoutes(
                     ? Number(query.expectedVersion)
                     : null,
                 );
+          const layout = query.layout;
+          if (layout !== undefined && layout !== 'impressao') {
+            throw new OrderRequestError(400, 'INVALID_REQUEST');
+          }
           const principal = await authorizeRead(request, orders, 'order.print');
           const { order } = await orders.get(orderId);
           if (
@@ -384,9 +388,13 @@ export function registerOrderRoutes(
           if (order.status !== 'confirmado') {
             throw new OrderRequestError(409, 'ORDER_NOT_CONFIRMED');
           }
+          if (layout && order.origin === 'loja') {
+            throw new OrderRequestError(400, 'INVALID_REQUEST');
+          }
           // A document under review answers 422 without download headers.
           const html = fichaRenderer(order, undefined, {
             printedAt: new Date(),
+            layout,
           });
           reply.header('cache-control', 'private, no-store');
           reply.header('vary', 'Origin, Cookie');
@@ -395,7 +403,9 @@ export function registerOrderRoutes(
             'content-security-policy',
             "default-src 'none'; sandbox",
           );
-          const disposition = attachment(`pedido-${order.number}.pdf`);
+          const disposition = attachment(
+            `pedido-${order.number}${layout ? '-impressao' : ''}.pdf`,
+          );
           if (request.method === 'HEAD') {
             return reply
               .header('content-disposition', disposition)

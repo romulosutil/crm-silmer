@@ -85,3 +85,13 @@ Requisitos: [spec.md](spec.md). Decisão:
 - Depends on: FPI-T05.
 - Done when: a validação aceita a v9 com o registro e a recusa sem ele
   (FPI-13). Rollback: reverter só o commit que troca `PRINT_TEMPLATE`.
+
+### FPI-T07: disponibilizar o PDF para impressão
+
+- [x] Implementar o layout A4 paisagem e a ação no detalhe do pedido
+      ([ADR 093](../../../docs/adr/093-ficha-de-pedido-para-impressao.md)).
+- Depends on: FPI-T06.
+- Done when: FPI-14 a FPI-16 têm cobertura de rota, impressão e teclado.
+- Tests: `test/order-routes.test.js`, `test/e2e/ficha-impressao.spec.js` e
+  `test/e2e/orders.spec.js`.
+- Gate: checks do projeto, testes no Chromium e `git diff --check`.

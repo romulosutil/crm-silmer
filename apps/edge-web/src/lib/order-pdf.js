@@ -8,12 +8,16 @@ async function errorCode(response) {
   }
 }
 
-/** @param {string} orderId @param {number} [expectedVersion] */
-export async function getOrderPdf(orderId, expectedVersion) {
-  const query =
-    expectedVersion === undefined ? '' : `?expectedVersion=${expectedVersion}`;
+/** @param {string} orderId @param {number} [expectedVersion] @param {'impressao'} [layout] */
+export async function getOrderPdf(orderId, expectedVersion, layout) {
+  const query = new globalThis.URLSearchParams();
+  if (expectedVersion !== undefined) {
+    query.set('expectedVersion', String(expectedVersion));
+  }
+  if (layout === 'impressao') query.set('layout', layout);
+  const search = query.size ? `?${query}` : '';
   const response = await globalThis.fetch(
-    `/api/v1/orders/${encodeURIComponent(orderId)}/pdf${query}`,
+    `/api/v1/orders/${encodeURIComponent(orderId)}/pdf${search}`,
     { credentials: 'same-origin', headers: { Accept: 'application/pdf' } },
   );
   if (!response.ok) {
@@ -30,9 +34,10 @@ export async function getOrderPdf(orderId, expectedVersion) {
   return response.blob();
 }
 
-/** @param {Blob} blob @param {string} number */
-export function pdfFile(blob, number) {
-  return new globalThis.File([blob], `pedido-${number}.pdf`, {
+/** @param {Blob} blob @param {string} number @param {'impressao'} [layout] */
+export function pdfFile(blob, number, layout) {
+  const suffix = layout === 'impressao' ? '-impressao' : '';
+  return new globalThis.File([blob], `pedido-${number}${suffix}.pdf`, {
     type: 'application/pdf',
   });
 }

@@ -337,6 +337,12 @@ test('LOJ-27/PIM-13: only a completed PDF generation clears the store notice', a
   t.after(() => api.close());
   const created = await notify();
   const url = `/api/v1/orders/${created.id}/pdf`;
+  const compact = await api.inject({
+    headers: readHeaders,
+    url: url + '?layout=impressao',
+  });
+  assert.equal(compact.statusCode, 400);
+  assert.equal(compact.headers['content-disposition'], undefined);
   const head = await api.inject({ headers: readHeaders, method: 'HEAD', url });
   assert.equal(head.statusCode, 200);
   const afterHead = await repository.findById(created.id);

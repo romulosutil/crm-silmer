@@ -52,23 +52,29 @@ async function setup(page, options = {}) {
       [conversation.lastMessage],
     ]),
   );
-  if (options.receivedImage || options.receivedPdf) {
+  const receivedDocument = options.receivedPdf || options.sizeRejected;
+  const hasAttachment = !options.unavailable && !options.sizeRejected;
+  if (options.receivedImage || receivedDocument) {
     messages.get('conversation-1')?.push(
       /** @type {any} */ ({
         id: 'received-image',
-        type: options.receivedPdf ? 'document' : 'image',
-        preview: options.receivedPdf ? 'Documento' : 'Imagem',
+        type: receivedDocument ? 'document' : 'image',
+        preview: receivedDocument ? 'Documento' : 'Imagem',
         direction: options.direction ?? 'inbound',
         occurredAt: '2026-10-29T10:00:00Z',
         media: options.missingMedia
           ? null
           : {
-              mediaId: 'media-inbound',
-              kind: options.receivedPdf ? 'document' : 'image',
-              state: options.unavailable ? 'unavailable' : 'attached',
-              contentUrl: options.unavailable
-                ? null
-                : '/api/v1/conversations/conversation-1/media/media-inbound/content',
+              mediaId: hasAttachment ? 'media-inbound' : null,
+              kind: receivedDocument ? 'document' : 'image',
+              state: options.sizeRejected
+                ? 'too_large'
+                : hasAttachment
+                  ? 'attached'
+                  : 'unavailable',
+              contentUrl: hasAttachment
+                ? '/api/v1/conversations/conversation-1/media/media-inbound/content'
+                : null,
             },
       }),
     );
@@ -211,6 +217,9 @@ async function setup(page, options = {}) {
     return route.fulfill({ json: { items: [], users: [], order: null } });
   });
   await page.goto('/inbox');
+  if (options.openConversation) {
+    await page.getByRole('button', { name: /Cliente sintético 1/ }).click();
+  }
   await expect(
     page.getByRole('textbox', { name: 'Responder', exact: true }),
   ).toBeVisible();
@@ -262,13 +271,44 @@ test('INBOX-PDF-01 received document renders and downloads in the real Inbox by 
   await page.screenshot({ path: 'test-results/inbox-pdf-conversation.png' });
 });
 
+for (const width of [390, 1366]) {
+  test(`Inbox explains a confirmed size limit in the conversation at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    const reads = /** @type {string[]} */ ([]);
+    page.on('request', (request) => {
+      if (/\/media\/[^/?]+\/content$/u.test(request.url()))
+        reads.push(request.url());
+    });
+    await page.setViewportSize({ width, height: 844 });
+    await setup(page, { sizeRejected: true, openConversation: width === 390 });
+    const notice = page.locator('.media-message').getByRole('status');
+    await expect(notice).toBeVisible();
+    await expect(notice).toHaveText(
+      'O arquivo não chegou ao CRM porque passou do limite de tamanho. Peça ao cliente para enviar uma versão menor.',
+    );
+    await expect(page.getByRole('button', { name: 'Baixar PDF' })).toHaveCount(
+      0,
+    );
+    const bounds = await notice.boundingBox();
+    expect(bounds).not.toBeNull();
+    expect((bounds?.x ?? 0) + (bounds?.width ?? 0)).toBeLessThanOrEqual(width);
+    expect(reads).toHaveLength(0);
+    const report = await new AxeBuilder({ page })
+      .include('.media-message')
+      .analyze();
+    expect(report.violations).toEqual([]);
+    await notice.screenshot({ path: testInfo.outputPath('notice.png') });
+  });
+}
+
 test('INBOX-PDF-01 missing document bytes are visible in the real Inbox', async ({
   page,
 }) => {
   await setup(page, { receivedPdf: true, unavailable: true });
-  await expect(
-    page.locator('.media-message').getByRole('status'),
-  ).toBeVisible();
+  await expect(page.locator('.media-message').getByRole('status')).toHaveText(
+    'Arquivo indisponível no momento.',
+  );
   await expect(page.getByRole('button', { name: 'Baixar PDF' })).toHaveCount(0);
 });
 

@@ -38,6 +38,14 @@ const MEDIA_PROJECTION = `COALESCE(media.id::text, inbound_media.id) media_id,
   COALESCE(media.size_bytes, inbound_media.size_bytes) media_size_bytes,
   media.duration_ms media_duration_ms,
   COALESCE(media.validation_status, inbound_media.validation_status) media_validation_status,
+  CASE WHEN media.id IS NULL AND inbound_media.id IS NULL
+    AND message.direction='inbound'
+    AND message.message_type IN ('image','audio','video','document') THEN EXISTS (
+      SELECT 1 FROM crm.n8n_events failure
+      WHERE failure.message_id=message.id AND failure.conversation_id=message.conversation_id
+        AND failure.event_type='workflow.failed'
+        AND failure.outcome->>'failureCode'='INBOUND_MEDIA_TOO_LARGE'
+    ) ELSE false END media_too_large,
   reservation.workflow_version reserved_workflow_version`;
 // Persisted binding, never a payload URL or a storage request. One original
 // reservation is authoritative; contradictory provenance fails closed.
@@ -324,7 +332,7 @@ function listProjection(byUrgency) {
                   last_message.media_id, last_message.media_kind,
                   last_message.media_state, last_message.media_mime_type,
                   last_message.media_size_bytes, last_message.media_duration_ms,
-                  last_message.media_validation_status,
+                  last_message.media_validation_status, last_message.media_too_large,
                   last_message.reserved_workflow_version`;
 }
 
@@ -1693,6 +1701,17 @@ function mapMessage(row, repository) {
     row.id,
     repository.messageEnvelopeKey,
   );
+  const oversizedMedia = row.media_too_large
+    ? Object.freeze({
+        mediaId: null,
+        kind: row.message_type,
+        state: 'too_large',
+        mimeType: content.mimeType ?? null,
+        sizeBytes: null,
+        durationMs: null,
+        contentUrl: null,
+      })
+    : null;
   const missingDocumentMedia =
     row.direction === 'inbound' &&
     row.message_type === 'document' &&
@@ -1745,7 +1764,7 @@ function mapMessage(row, repository) {
               ? `/api/v1/conversations/${encodeURIComponent(row.conversation_id)}/media/${encodeURIComponent(row.media_id)}/content`
               : null,
         })
-      : missingDocumentMedia,
+      : (oversizedMedia ?? missingDocumentMedia),
     deliveryMode: row.reserved_workflow_version
       ? /^dev-mvp-simple-\d+$/u.test(row.reserved_workflow_version)
         ? 'dev'

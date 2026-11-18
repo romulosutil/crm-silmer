@@ -379,6 +379,18 @@ function validateEventShape(input) {
   }
   if (
     input.eventType === 'workflow.failed' &&
+    input.failure?.code === 'INBOUND_MEDIA_TOO_LARGE' &&
+    (!input.conversationId ||
+      !input.externalMessageId ||
+      input.commandId ||
+      Object.keys(input.failure).some((key) => key !== 'code'))
+  ) {
+    throw new N8nValidationError(
+      'An inbound size failure requires its message and conversation',
+    );
+  }
+  if (
+    input.eventType === 'workflow.failed' &&
     input.failure?.phase !== undefined
   ) {
     if (

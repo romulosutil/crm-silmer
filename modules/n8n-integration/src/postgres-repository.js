@@ -1473,6 +1473,25 @@ export class PostgresN8nIntegrationRepository {
         outcome.transcriptStatus = eventInput.transcript.status;
       } else if (eventInput.eventType === 'workflow.failed') {
         outcome.failureCode = safeFailureCode(eventInput.failure?.code);
+        if (outcome.failureCode === 'INBOUND_MEDIA_TOO_LARGE') {
+          const message = (
+            await client.query(
+              `SELECT message.id FROM crm.messages AS message
+               JOIN crm.conversations AS conversation ON conversation.id=message.conversation_id
+               JOIN crm.contact_identities AS identity ON identity.id=conversation.contact_identity_id
+               WHERE message.conversation_id=$1 AND message.external_message_id=$2
+                 AND identity.channel='whatsapp' AND message.direction='inbound'
+                 AND message.message_type IN ('image','audio','video','document')`,
+              [resolvedConversationId, eventInput.externalMessageId],
+            )
+          ).rows[0];
+          if (!message) {
+            throw new N8nNotFoundError(
+              'Inbound WhatsApp attachment message was not found',
+            );
+          }
+          messageId = message.id;
+        }
         if (eventInput.failure?.phase === 'before_message_send') {
           const command = await selectPanelCommand(
             client,

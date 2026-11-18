@@ -10,6 +10,9 @@ import {
   privateRepresentations,
   classifyPrivateTar,
 } from '../ops/evolution/wap-spike-privacy.mjs';
+import { patchEvolutionInboundDocuments } from '../ops/n8n/patch-evolution-inbound-documents.mjs';
+import { patchEvolutionInboundSizeNotice } from '../ops/n8n/patch-evolution-inbound-size-notice.mjs';
+import { patchEvolutionInboundImages } from '../ops/n8n/patch-evolution-inbound-images.mjs';
 import { patchWahaInboundImages } from '../ops/n8n/patch-waha-inbound-images.mjs';
 import { createWahaWorkflow } from '../ops/n8n/workflows/create-waha-workflow.mjs';
 import {
@@ -1388,6 +1391,98 @@ test('IMG-01/03/04: complete Evolution image branch preserves bytes, digest and 
     JSON.stringify(failed).includes('PRIVATE_PROVIDER_DETAIL'),
     false,
   );
+});
+
+test('Evolution Inbox reports the specific message only for oversized supported bytes', () => {
+  const original = patchEvolutionInboundDocuments(
+    patchEvolutionInboundImages(persistedImageWorkflow().result),
+  ).workflow;
+  const { workflow, changedNodeNames } =
+    patchEvolutionInboundSizeNotice(original);
+  const prefix = 'Inbox - Imagem recebida - ';
+  const name = prefix + 'Preparar falha';
+  assert.deepEqual(changedNodeNames, [name]);
+  assert.deepEqual(workflow.connections, original.connections);
+  assert.deepEqual(workflow.settings, original.settings);
+  const node = workflow.nodes.find(
+    (/** @type {any} */ item) => item.name === name,
+  );
+  assert.deepEqual(
+    workflow.nodes.filter((/** @type {any} */ item) => item.name !== name),
+    original.nodes.filter((/** @type {any} */ item) => item.name !== name),
+  );
+  assert.deepEqual(patchEvolutionInboundSizeNotice(workflow), {
+    workflow,
+    changedNodeNames: [],
+  });
+  const prepare = new Function(
+    '$',
+    '$execution',
+    'Buffer',
+    node.parameters.jsCode,
+  );
+  const normalized = {
+    channel: 'whatsapp',
+    message_type: 'document',
+    media_mime_type: 'image/png',
+    event_id: 'synthetic-document',
+  };
+  const lookUp = prefix + 'Consultar URL';
+  /** @param {any} response */
+  function run(response, source = normalized) {
+    const upstream = /** @type {Record<string, any>} */ ({
+      'Normalizar evento WhatsApp (MVP)': source,
+      'CRM - Registrar inbound (MVP)': {
+        conversation_id: 'synthetic-conversation',
+      },
+      [lookUp]: response,
+    });
+    return prepare(
+      (/** @type {string} */ key) => ({ item: { json: upstream[key] } }),
+      { id: '42' },
+      Buffer,
+    ).json.payload;
+  }
+  const limit = 5 * 1024 * 1024;
+  const tooLarge = Buffer.alloc(limit + 1).toString('base64');
+  const rejected = run({ mimetype: 'image/png', base64: tooLarge });
+  assert.equal(typeof rejected.occurred_at, 'string');
+  assert.deepEqual(
+    { ...rejected, occurred_at: null },
+    {
+      schema_version: '1.0',
+      event_id: 'inbound-image-failed:42',
+      event_type: 'workflow.failed',
+      occurred_at: null,
+      conversation_id: 'synthetic-conversation',
+      external_message_id: 'synthetic-document',
+      failure: { code: 'INBOUND_MEDIA_TOO_LARGE' },
+    },
+  );
+  for (const response of [
+    undefined,
+    { error: 'INBOUND_MEDIA_TOO_LARGE', statusCode: 413 },
+    { mimetype: 'image/jpeg', base64: tooLarge },
+    { mimetype: 'image/png', base64: '!' + tooLarge.slice(1) },
+    { mimetype: 'image/png', base64: Buffer.alloc(limit).toString('base64') },
+  ]) {
+    const payload = run(response);
+    assert.deepEqual(payload.failure, { code: 'INBOUND_MEDIA_STORE_FAILED' });
+    assert.equal(payload.external_message_id, undefined);
+  }
+  const pdf = Buffer.alloc(16 * 1024 * 1024 + 1);
+  pdf.write('%PDF-');
+  const pdfSource = { ...normalized, media_mime_type: 'application/pdf' };
+  for (const [size, expectedCode] of [
+    [pdf.length - 1, 'INBOUND_MEDIA_STORE_FAILED'],
+    [pdf.length, 'INBOUND_MEDIA_TOO_LARGE'],
+  ]) {
+    const response = {
+      mimetype: 'application/pdf',
+      base64: pdf.subarray(0, Number(size)).toString('base64'),
+    };
+    assert.equal(run(response, pdfSource).failure.code, expectedCode);
+  }
 });
 
 test('EVOL-01: latest WAHA graph is restored narrowly using Meta transport baseline; late domain/Inbox image changes survive', () => {

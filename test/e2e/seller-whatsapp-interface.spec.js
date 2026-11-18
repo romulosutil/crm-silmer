@@ -324,3 +324,53 @@ test('administrador confirma e motiva troca de telefone compartilhado', async ({
     review: { confirmed: true, reason: 'Conferido com o cliente' },
   });
 });
+
+test('duas abas não restauram desafio após mudança de geração', async ({
+  page,
+  context,
+}) => {
+  await installMocks(page, {}, { fixedClock: false });
+  const other = await context.newPage();
+  await installMocks(other, {}, { fixedClock: false });
+  const line = {
+    id: 'line-synthetic',
+    state: 'awaiting_pairing',
+    version: 2,
+    generation: 1,
+    maskedNumber: '••••0000',
+  };
+  const operation = { id: 'operation-synthetic' };
+  for (const tab of [page, other]) {
+    await tab.route('**/api/v1/me/whatsapp', (route) =>
+      route.fulfill({ json: { line, operation, available: true } }),
+    );
+    await tab.route('**/api/v1/me/whatsapp/pairing-challenge', (route) =>
+      route.fulfill({
+        json: {
+          operationId: operation.id,
+          generation: 1,
+          challengeId: 'challenge-synthetic',
+          mode: 'code',
+          value: 'TEST-CODE',
+          version: 2,
+          expiresAt: new Date(Date.now() + 30000).toISOString(),
+        },
+      }),
+    );
+  }
+  await page.goto('/conta');
+  await page.getByRole('button', { name: 'Mostrar código' }).click();
+  await expect(page.getByText('TEST-CODE')).toBeVisible();
+  await other.goto('/conta');
+  line.state = 'disconnected';
+  line.generation = 2;
+  line.version = 3;
+  await other.getByRole('button', { name: 'Atualizar estado' }).click();
+  await expect(other.getByText('Desconectado', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Atualizar estado' }).click();
+  await expect(page.getByText('TEST-CODE')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Mostrar código' }),
+  ).toHaveCount(0);
+  await other.close();
+});

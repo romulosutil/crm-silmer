@@ -258,3 +258,47 @@ test('no route hands a conversation back to the agent (ADR 015)', async (t) => {
   }
   assert.deepEqual(calls, []);
 });
+
+test('WAP-E04/E08: an unavailable personal line keeps its public 503 code; other 5xx stay generic', async (t) => {
+  for (const [code, expected] of [
+    ['WHATSAPP_SEND_UNAVAILABLE', 'WHATSAPP_SEND_UNAVAILABLE'],
+    ['40P01', 'SERVICE_UNAVAILABLE'],
+    ['OUTBOX_UNAVAILABLE', 'SERVICE_UNAVAILABLE'],
+  ]) {
+    const api = createApi(
+      {},
+      {
+        conversations: {
+          async authorize() {
+            return { actor: { id: 'seller-test', kind: 'human' } };
+          },
+          async sendMessage() {
+            throw Object.assign(new Error('private-detail-canary'), {
+              code,
+              statusCode: code === '40P01' ? 500 : 503,
+            });
+          },
+        },
+      },
+    );
+    t.after(() => api.close());
+    const response = await api.inject({
+      headers: baseHeaders,
+      method: 'POST',
+      payload: {
+        content: { text: 'private-content-canary' },
+        expectedVersion: 1,
+        messageType: 'text',
+        reason: 'Resposta',
+      },
+      url: '/api/v1/conversations/conversation-synthetic/messages',
+    });
+    assert.equal(response.statusCode, 503);
+    assert.equal(response.json().accepted, false);
+    assert.equal(response.json().error.code, expected);
+    assert.doesNotMatch(
+      response.body,
+      /private-content-canary|private-detail-canary|40P01/u,
+    );
+  }
+});

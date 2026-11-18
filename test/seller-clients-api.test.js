@@ -67,6 +67,7 @@ function harness(options = {}) {
           /** @type {any} */ reader,
         ) {
           calls.push(['list', input, reader]);
+          if (options.listError) throw options.listError;
           return {
             items: [{ ...CONTACT, link: LINK }],
             nextCursor: null,
@@ -84,6 +85,11 @@ function harness(options = {}) {
         async linkMyClient(/** @type {any} */ input) {
           calls.push(['link', input]);
           return { contactId: CONTACT.id, link: LINK };
+        },
+        async setContactDetails(/** @type {any} */ input) {
+          calls.push(['details', input]);
+          if (options.detailsError) throw options.detailsError;
+          return CONTACT;
         },
       },
     },
@@ -308,4 +314,52 @@ test('WAP-E03 portfolio ingresses are default off and require an explicit seller
       }),
     /SELLER_CLIENTS_SELLER_IDS requires explicit seller IDs/u,
   );
+});
+
+/** @param {number} statusCode @param {string} code */
+function failure(statusCode, code) {
+  return Object.assign(new Error(`${code} synthetic-detail-canary`), {
+    code,
+    statusCode,
+  });
+}
+
+test('WAP-E03 publishes the restricted shared-field codes the registration form relies on', async (t) => {
+  for (const [statusCode, code] of /** @type {Array<[number, string]>} */ ([
+    [403, 'CONTACT_FIELD_RESTRICTED'],
+    [400, 'CONTACT_REVIEW_REQUIRED'],
+  ])) {
+    const { api, calls } = harness({
+      detailsError: failure(statusCode, code),
+    });
+    t.after(() => api.close());
+    const response = await api.inject({
+      method: 'POST',
+      url: `/api/v1/contacts/${CONTACT.id}/details`,
+      headers: HEADERS,
+      payload: { expectedVersion: 4, phone: '11999999999' },
+    });
+    assert.equal(response.statusCode, statusCode);
+    assert.deepEqual(response.json(), { error: { code } });
+    assert.equal(calls.filter(([name]) => name === 'details').length, 1);
+  }
+});
+
+test('WAP-E03 a disabled portfolio answers 503 SELLER_CLIENTS_DISABLED; other 5xx stay generic', async (t) => {
+  for (const [error, code] of /** @type {Array<[Error, string]>} */ ([
+    [failure(503, 'SELLER_CLIENTS_DISABLED'), 'SELLER_CLIENTS_DISABLED'],
+    [failure(503, 'IDENTITY_UNAVAILABLE'), 'SERVICE_UNAVAILABLE'],
+    [failure(500, '40P01'), 'SERVICE_UNAVAILABLE'],
+  ])) {
+    const { api } = harness({ listError: error });
+    t.after(() => api.close());
+    const response = await api.inject({
+      method: 'GET',
+      url: '/api/v1/me/clients',
+      headers: HEADERS,
+    });
+    assert.equal(response.statusCode, 503);
+    assert.deepEqual(response.json(), { error: { code } });
+    assert.doesNotMatch(response.body, /synthetic-detail-canary|40P01/u);
+  }
 });

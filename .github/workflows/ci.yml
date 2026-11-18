@@ -153,7 +153,8 @@ jobs:
         env:
           TEST_DATABASE_URL: postgresql://postgres:issue12-ci-only@127.0.0.1:5432/crm_silmer_test
         run: npm run test:identity:live && npm run test:webhook:live && npm run test:worker:live && npm run test:deal:live && npm run test:finance:live && npm run test:olist:live && node --test --test-concurrency=1 test/order-billing-postgres-live.test.js test/order-billing-chat-postgres-live.test.js test/order-billing-send-postgres-live.test.js test/order-billing-completion-postgres-live.test.js test/order-billing-upgrade-postgres-live.test.js test/inbox-postgres-live.test.js test/inbound-media-postgres-live.test.js test/n8n-integration-postgres-live.test.js test/chat-media-bind-postgres-live.test.js test/chat-media-upload-postgres-live.test.js test/painel-summary-postgres-live.test.js test/contact-registration-postgres-live.test.js test/vendedor-evolucao-postgres-live.test.js test/shipping-postgres-live.test.js test/health-errors-postgres-live.test.js test/operational-signals-postgres-live.test.js test/health-errors-retention.test.js test/operation-read-postgres-live.test.js test/order-assistance-postgres-live.test.js test/dashboard-postgres-live.test.js test/dashboard-checkpoint-postgres-live.test.js test/dashboard-metrics-postgres-live.test.js test/lead-outcome-postgres-live.test.js test/inbox-buckets-postgres-live.test.js test/conversation-reminder-postgres-live.test.js test/seller-whatsapp-postgres-live.test.js test/seller-whatsapp-control-postgres-live.test.js test/seller-client-links-postgres-live.test.js test/seller-clients-postgres-live.test.js test/seller-client-identity-postgres-live.test.js test/seller-whatsapp-inbound-postgres-live.test.js test/seller-conversation-access-postgres-live.test.js test/order-subject-postgres-live.test.js
-      # WAP-E11: the seller WhatsApp integration suites and the recovery drill
+      # WAP-E11/E12: the seller WhatsApp integration suites, the recovery drill
+      # and the pilot rehearsal
       # each require their own dedicated synthetic database. The E08 suite
       # renders the order PDF through the real Chromium renderer.
       - name: Restore Playwright Chromium
@@ -174,10 +175,11 @@ jobs:
         env:
           CI_DATABASE_BASE: postgresql://postgres:issue12-ci-only@127.0.0.1:5432
         run: |
-          node --input-type=module -e "import pg from 'pg'; const c = new pg.Client({ connectionString: process.env.CI_DATABASE_BASE + '/crm_silmer_test' }); await c.connect(); for (const name of ['crm_silmer_test_wap_e08', 'crm_silmer_test_wap_e10', 'crm_silmer_test_e11', 'crm_silmer_test_e11restore']) await c.query('CREATE DATABASE ' + name); await c.end();"
+          node --input-type=module -e "import pg from 'pg'; const c = new pg.Client({ connectionString: process.env.CI_DATABASE_BASE + '/crm_silmer_test' }); await c.connect(); for (const name of ['crm_silmer_test_wap_e08', 'crm_silmer_test_wap_e10', 'crm_silmer_test_e11', 'crm_silmer_test_e11restore', 'crm_silmer_test_wap_e12']) await c.query('CREATE DATABASE ' + name); await c.end();"
           TEST_DATABASE_URL="$CI_DATABASE_BASE/crm_silmer_test_wap_e08" node --test --test-concurrency=1 test/integration/seller-whatsapp-outbound.test.js
           TEST_DATABASE_URL="$CI_DATABASE_BASE/crm_silmer_test_wap_e10" node --test --test-concurrency=1 test/integration/seller-whatsapp-first-send.test.js
           TEST_DATABASE_URL="$CI_DATABASE_BASE/crm_silmer_test_e11" TEST_RESTORE_DATABASE_URL="$CI_DATABASE_BASE/crm_silmer_test_e11restore" node --test --test-concurrency=1 test/integration/seller-whatsapp-recovery-drill.test.js
+          TEST_DATABASE_URL="$CI_DATABASE_BASE/crm_silmer_test_wap_e12" node --test --test-concurrency=1 test/integration/seller-whatsapp-pilot-rehearsal.test.js
 
       - name: Reject generated diff
         run: git diff --check && test -z "$(git status --short)"

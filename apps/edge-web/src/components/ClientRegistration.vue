@@ -187,7 +187,8 @@ const documentLabel = computed(() =>
 const phoneLocked = computed(() =>
   Boolean(
     base.value?.phone &&
-    ['manual', 'whatsapp'].includes(String(base.value.phoneSource)),
+    ['manual', 'whatsapp'].includes(String(base.value.phoneSource)) &&
+    !canReview.value,
   ),
 );
 const summaryItems = computed(() =>
@@ -313,7 +314,7 @@ async function open() {
   draft.district = text(data.district);
   draft.number = text(data.number);
   draft.complement = text(data.complement);
-  draft.phone = '';
+  draft.phone = canReview.value ? text(contact.phone) : '';
   draft.email = text(contact.email);
   base.value = {
     contactId: String(contact.id),
@@ -560,7 +561,9 @@ async function save() {
   errors.value = {};
   const detailsChanged =
     Boolean(phone) &&
-    (!phoneLocked.value || (email ?? null) !== (current.email ?? null));
+    ((!phoneLocked.value &&
+      (phone !== current.phone || current.phoneSource === 'site_unverified')) ||
+      (email ?? null) !== (current.email ?? null));
   const registrationChanged = !sameRegistration(
     result.value,
     current.registration,
@@ -577,7 +580,16 @@ async function save() {
   let detailsSaved = false;
   try {
     if (detailsChanged) {
-      const body = { email, expectedVersion: current.version, phone };
+      const body = {
+        email,
+        expectedVersion: current.version,
+        phone,
+        ...(canReview.value &&
+        reviewConfirmed.value &&
+        reviewReason.value.trim()
+          ? { review: { confirmed: true, reason: reviewReason.value.trim() } }
+          : {}),
+      };
       const response = await request(`/api/v1/contacts/${contactId}/details`, {
         body,
         idempotencyKey: keyFor(detailsAttempt, body),
@@ -1258,10 +1270,10 @@ onBeforeUnmount(() => {
       </div>
 
       <fieldset v-if="canReview">
-        <legend>Conferência de alteração fiscal</legend>
+        <legend>Conferência de alteração compartilhada</legend>
         <p>
-          Para alterar um CPF, CNPJ ou tipo de pessoa já preenchido, confirme a
-          conferência e informe o motivo.
+          Para alterar telefone, CPF, CNPJ ou tipo de pessoa já preenchido,
+          confirme a conferência e informe o motivo.
         </p>
         <label
           ><input v-model="reviewConfirmed" type="checkbox" /> Conferi a

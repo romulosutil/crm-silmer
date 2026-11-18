@@ -154,6 +154,8 @@ const manualOrderConfirmation = ref(null);
 const manualOrderTarget = ref('');
 const orderSubjectsReady = ref(false);
 let manualOrderController;
+/** Reads whether this conversation creates by Subject before the dialog. */
+let manualOrderOpenController;
 /** Bumped when the order changed, so Detalhes › Pedido reads it again. */
 const orderRevision = ref(0);
 const conversationHeading = ref(null);
@@ -1301,14 +1303,49 @@ async function createOrder() {
     !(trigger instanceof HTMLElement)
   )
     return;
+  if (manualOrderOpenController) return;
   manualOrderError.value = '';
-  const targets = subjectState.value.subjects
-    .filter((subject) => !subject.orderId || subject.orderStatus === 'pendente')
-    .map((subject) => ({
-      id: subject.id,
-      version: subject.version,
-      label: subjectLabel(subject),
-    }));
+  // WAP-E11: a Subject is asked for only when the server says this
+  // conversation's responsible seller creates by Subject now. Any other
+  // answer keeps the general line's legacy creation; the POST decides again.
+  const opening = new AbortController();
+  manualOrderOpenController = opening;
+  let targeted = false;
+  try {
+    const response = await request(
+      `/api/v1/conversations/${encodeURIComponent(conversation.id)}/order`,
+      { signal: opening.signal },
+    );
+    targeted = response.data?.subjectCreationAvailable === true;
+  } catch (cause) {
+    // Several pending targets: only an explicit Subject can resolve it.
+    targeted = /** @type {any} */ (cause)?.code === 'ORDER_TARGET_REQUIRED';
+  } finally {
+    if (manualOrderOpenController === opening)
+      manualOrderOpenController = undefined;
+  }
+  if (
+    opening.signal.aborted ||
+    active.value?.id !== conversation.id ||
+    active.value?.version !== conversation.version ||
+    manualOrderConfirmation.value ||
+    orderCreating.value ||
+    busy.value ||
+    isTerminal.value ||
+    !canOfferOrder.value
+  )
+    return;
+  const targets = targeted
+    ? subjectState.value.subjects
+        .filter(
+          (subject) => !subject.orderId || subject.orderStatus === 'pendente',
+        )
+        .map((subject) => ({
+          id: subject.id,
+          version: subject.version,
+          label: subjectLabel(subject),
+        }))
+    : [];
   manualOrderTarget.value = targets.length === 1 ? targets[0].id : '';
   manualOrderConfirmation.value = {
     conversationId: conversation.id,
@@ -1316,6 +1353,7 @@ async function createOrder() {
     expectedVersion: conversation.version,
     idempotencyKey: commandKey(),
     targets,
+    targeted,
     subjectCount: subjectState.value.subjects.length,
   };
   const confirmation = manualOrderConfirmation.value;
@@ -1341,7 +1379,7 @@ async function confirmManualOrder() {
   const target = confirmation.targets.find(
     (item) => item.id === manualOrderTarget.value,
   );
-  if (confirmation.subjectCount > 0 && !target) {
+  if (confirmation.targeted && confirmation.subjectCount > 0 && !target) {
     manualOrderError.value = 'Selecione o assunto desta compra.';
     await nextTick();
     manualOrderErrorNotice.value?.focus();
@@ -1415,6 +1453,8 @@ async function confirmManualOrder() {
 }
 
 function cancelManualOrder() {
+  manualOrderOpenController?.abort();
+  manualOrderOpenController = undefined;
   manualOrderController?.abort();
   manualOrderController = undefined;
   orderCreating.value = false;
@@ -4350,7 +4390,12 @@ onBeforeUnmount(() => {
           fechar esta compra. Pedir orçamento ou informações não é uma
           confirmação. Os dados coletados serão aproveitados no pedido pendente.
         </p>
-        <template v-if="manualOrderConfirmation?.subjectCount">
+        <template
+          v-if="
+            manualOrderConfirmation?.targeted &&
+            manualOrderConfirmation.subjectCount
+          "
+        >
           <label for="order-target">Assunto desta compra</label>
           <select
             id="order-target"
@@ -4392,7 +4437,9 @@ onBeforeUnmount(() => {
             class="primary"
             :disabled="
               orderCreating ||
-              (manualOrderConfirmation?.subjectCount && !manualOrderTarget)
+              (manualOrderConfirmation?.targeted &&
+                manualOrderConfirmation.subjectCount &&
+                !manualOrderTarget)
             "
             :aria-busy="orderCreating ? 'true' : undefined"
           >

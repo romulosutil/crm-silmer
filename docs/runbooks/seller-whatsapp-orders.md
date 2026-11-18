@@ -15,8 +15,8 @@ substitui a carteira pela lista geral. A leitura de cadastro não concede acesso
 à conversa nem ao Pedido: cada rota mantém sua própria autorização.
 
 O botão existente no cabeçalho abre confirmação humana. A tela captura Contact,
-conversa, versões, lista de Assuntos e chave idempotente; quando há Assuntos,
-exige o alvo e envia sua versão junto com a versão da conversa. Um Assunto com
+conversa, versões, lista de Assuntos e chave idempotente; quando há Assuntos
+e a criação por alvo está disponível para a conversa, exige o alvo e envia sua versão junto com a versão da conversa. Um Assunto com
 Pedido pendente pode devolver o mesmo Pedido. Após sucesso, abre a ficha e
 anuncia criação ou reutilização a partir do status HTTP 201/200; cancelar
 devolve foco ao acionador. O rascunho
@@ -36,9 +36,30 @@ O ensaio WAP-E07 está descrito abaixo e tem seus resultados no
 `POST /api/v1/conversations/:conversationId/orders` conserva sessão, CSRF,
 Origin, `Idempotency-Key` e `expectedVersion` da conversa. Aceita
 `subjectId`/`expectedSubjectVersion` opcionais **em par**. O alvo e a versão
-integram o fingerprint. Sem par, zero ou um Assunto permitem resolver o legado;
-vários Assuntos retornam `409 ORDER_TARGET_REQUIRED`, mesmo havendo um atual.
-Não há escolha pela ordem do banco ou pela última interação.
+integram o fingerprint. Com a criação por alvo disponível (seção abaixo), sem
+par, zero ou um Assunto permitem resolver o legado; vários Assuntos retornam
+`409 ORDER_TARGET_REQUIRED`, mesmo havendo um atual. Não há escolha pela ordem
+do banco ou pela última interação.
+
+### Linha geral com criação por alvo desligada
+
+Sem os três gates (ou sem os índices de 0081) para o responsável da conversa,
+a linha geral cria como na `master` `f5833287`: corpo sem par grava rascunho
+legado (`origin_subject_id` nulo), sem promover nem alterar Assuntos, e repetir
+devolve `200` com o mesmo pendente. Assuntos sem Pedido (geral manual) ou com
+Pedidos confirmados (cliente recorrente do bot) não bloqueiam a criação,
+`GET /api/v1/conversations/:id/order` nem a projeção automática: quantidade de
+Assuntos não é ambiguidade. Continuam recusados: par explícito ou linha pessoal
+(`ORDER_SUBJECT_UNAVAILABLE`), vários pendentes na conversa e projeção sem par
+sobre pendente com origem (`ORDER_TARGET_REQUIRED`).
+
+O mesmo `GET` informa `subjectCreationAvailable`, apenas orientativo; o POST
+decide de novo na transação. O Inbox só pede o Assunto quando esse campo é
+`true` ou quando a leitura responde `ORDER_TARGET_REQUIRED`; qualquer outra
+resposta mantém o diálogo da linha geral sem seletor. Provas: subteste
+`WAP-E11: general line keeps legacy creation while targeted creation is off`
+em `test/order-subject-postgres-live.test.js` e os cenários `WAP-E11` de
+`test/e2e/seller-whatsapp-order.spec.js` (390 e 1366 px, teclado, foco, axe).
 
 Assunto geral sem Pedido é promovido na transação. Assunto com pendente
 elegível devolve o mesmo Pedido; confirmado/cancelado exige outro Assunto.

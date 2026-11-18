@@ -81,6 +81,7 @@ import { lockConversationAccess } from '@crm-silmer/inbox-channels';
  *   idFactory?: () => string,
  *   withMilestoneTransaction?: (method:'confirmPayment'|'confirmDelivery',input:any)=>Promise<any>,
  *   withCreationTransaction?: (input:any)=>Promise<any>,
+ *   subjectCreationAvailable?: (conversationId: string) => Promise<boolean>,
  * }} options
  */
 export function createOrderRuntime(options) {
@@ -595,7 +596,7 @@ export function createOrderRuntime(options) {
      * PCL-10/PCL-11 behind the conversation version the seller saw; an
      * existing pending order is answered with `created: false`.
      *
-     * @param {OrderCommand & {conversationId: string, expectedVersion: number, subjectId?: string, expectedSubjectVersion?: number}} input
+     * @param {OrderCommand & {conversationId: string, expectedVersion: number, subjectId?: string, expectedSubjectVersion?: number, implicitSubjectTarget?: boolean}} input
      */
     async createManual(input) {
       const expectedVersion = requireVersion(input.expectedVersion);
@@ -947,14 +948,22 @@ export function createOrderRuntime(options) {
         );
       }
       const order = await service.currentForConversation(conversationId);
-      if (order) return { order: await presentOne(order, actor) };
+      // WAP-E11: tells the Inbox whether this conversation's responsible
+      // seller may create by Subject now; only then does it ask for one.
+      const targeting = options.subjectCreationAvailable
+        ? {
+            subjectCreationAvailable:
+              await options.subjectCreationAvailable(conversationId),
+          }
+        : {};
+      if (order) return { order: await presentOne(order, actor), ...targeting };
       if (!(await conversations.readAssignment(conversationId))) {
         throw new OrderNotFoundError(
           'Conversation was not found',
           'CONVERSATION_NOT_FOUND',
         );
       }
-      return { order: null };
+      return { order: null, ...targeting };
     },
   });
 }
@@ -987,7 +996,51 @@ export function createOrderApiRuntime(database, options) {
     environment.N8N_INTEGRATION_ENVELOPE_KEY,
     'N8N_INTEGRATION_ENVELOPE_KEY',
   );
+  /**
+   * WAP-T02a: creation by Subject needs every gate (both literal flags, the
+   * responsible seller in the private allowlist) and the 0081 indexes. Any
+   * miss means "not available", never an error by itself.
+   *
+   * @param {{query: Function}} queryable @param {string|null|undefined} responsibleId
+   */
+  async function subjectCreationAvailable(queryable, responsibleId) {
+    const allowed = (environment.ORDER_SUBJECT_SELLER_IDS ?? '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+    if (
+      environment.ORDER_SUBJECT_CREATION_ENABLED !== 'true' ||
+      environment.ORDER_SUBJECT_READERS_READY !== 'true' ||
+      !responsibleId ||
+      !allowed.includes(responsibleId)
+    )
+      return false;
+    const schema = (
+      await queryable.query(
+        "SELECT to_regclass('crm.orders_one_pending_per_subject') IS NOT NULL AND to_regclass('crm.orders_one_pending_per_legacy_conversation') IS NOT NULL AND to_regclass('crm.orders_one_pending_per_conversation') IS NULL AS ready",
+      )
+    ).rows[0];
+    return schema?.ready === true;
+  }
   return createOrderRuntime({
+    // Advisory for the Inbox; the creation transaction decides again.
+    subjectCreationAvailable: async (/** @type {string} */ conversationId) => {
+      const row = (
+        await database.query(
+          `SELECT conversation.assigned_user_id,line.seller_id FROM crm.conversations conversation
+           LEFT JOIN crm.seller_whatsapp_lines line ON line.account_id::text=conversation.provider_account_id
+           WHERE conversation.id=$1`,
+          [conversationId],
+        )
+      ).rows[0];
+      return Boolean(
+        row &&
+        (await subjectCreationAvailable(
+          database,
+          row.seller_id ?? row.assigned_user_id,
+        )),
+      );
+    },
     withCreationTransaction:
       options.creationTransactions === false
         ? undefined
@@ -1108,37 +1161,22 @@ export function createOrderApiRuntime(database, options) {
                   'Subject was not found',
                   'SUBJECT_NOT_FOUND',
                 );
+              // WAP-E11: targeted creation is a rollout, not a precondition
+              // of the general line. With it off, a body without target keeps
+              // master's legacy draft (origin NULL) whatever Subjects exist;
+              // an explicit target or a personal line still fails closed.
+              const targeted = await subjectCreationAvailable(
+                tx,
+                access.personalSellerId ?? conversation.assigned_user_id,
+              );
               if (
-                input.subjectId ||
-                access.personalSellerId ||
-                subjects.some((/** @type {any} */ row) => !row.order_id)
-              ) {
-                const allowed = (environment.ORDER_SUBJECT_SELLER_IDS ?? '')
-                  .split(',')
-                  .map((value) => value.trim())
-                  .filter(Boolean);
-                if (
-                  environment.ORDER_SUBJECT_CREATION_ENABLED !== 'true' ||
-                  environment.ORDER_SUBJECT_READERS_READY !== 'true' ||
-                  !allowed.includes(
-                    access.personalSellerId ?? conversation.assigned_user_id,
-                  )
-                )
-                  throw new OrderConflictError(
-                    'Subject creation is unavailable',
-                    'ORDER_SUBJECT_UNAVAILABLE',
-                  );
-                const schema = (
-                  await tx.query(
-                    "SELECT to_regclass('crm.orders_one_pending_per_subject') IS NOT NULL AND to_regclass('crm.orders_one_pending_per_legacy_conversation') IS NOT NULL AND to_regclass('crm.orders_one_pending_per_conversation') IS NULL AS ready",
-                  )
-                ).rows[0];
-                if (!schema?.ready)
-                  throw new OrderConflictError(
-                    'Subject schema is not ready',
-                    'ORDER_SUBJECT_UNAVAILABLE',
-                  );
-              }
+                (input.subjectId !== undefined || access.personalSellerId) &&
+                !targeted
+              )
+                throw new OrderConflictError(
+                  'Subject creation is unavailable',
+                  'ORDER_SUBJECT_UNAVAILABLE',
+                );
               const bound = {
                 query: tx.query.bind(tx),
                 transaction: async (/** @type {any} */ work) => work(tx),
@@ -1146,7 +1184,11 @@ export function createOrderApiRuntime(database, options) {
               return createOrderApiRuntime(bound, {
                 ...options,
                 creationTransactions: false,
-              }).createManual({ ...input, actor });
+              }).createManual({
+                ...input,
+                actor,
+                implicitSubjectTarget: targeted,
+              });
             }),
     // ADR 080: the shipping estimates the freight command may apply. Without
     // the Melhor Envio configuration the reader refuses to apply an estimate

@@ -391,12 +391,19 @@ export function createOrderService(options) {
   }
 
   /**
-   * @param {{conversationId: string, correlationId: string, createdByKind: 'automation'|'user', createdBy: string|null, actor?: OrderActor, subjectId?: string, expectedSubjectVersion?: number}} input
+   * WAP-E11: without an explicit pair, a Subject is implied only while
+   * creation by Subject is available (`implicitSubjectTarget`, decided by
+   * the caller's gates). Otherwise the conversation keeps the legacy draft:
+   * Subjects alone are not ambiguity; several pending orders still are.
+   *
+   * @param {{conversationId: string, correlationId: string, createdByKind: 'automation'|'user', createdBy: string|null, actor?: OrderActor, subjectId?: string, expectedSubjectVersion?: number, implicitSubjectTarget?: boolean}} input
    * @returns {Promise<{created: boolean, order: Order}>}
    */
   async function ensurePending(input) {
     const target =
-      input.createdByKind === 'user' && conversations.resolveOrderTarget
+      input.createdByKind === 'user' &&
+      conversations.resolveOrderTarget &&
+      (input.subjectId !== undefined || input.implicitSubjectTarget !== false)
         ? await conversations.resolveOrderTarget(
             input.conversationId,
             input.subjectId,
@@ -673,7 +680,7 @@ export function createOrderService(options) {
      * PCL-10/PCL-11: the owner or an admin creates the order the agent never
      * detected; an existing pending order is returned instead.
      *
-     * @param {{conversationId: string, correlationId: string, actor: OrderActor, subjectId?: string, expectedSubjectVersion?: number}} input
+     * @param {{conversationId: string, correlationId: string, actor: OrderActor, subjectId?: string, expectedSubjectVersion?: number, implicitSubjectTarget?: boolean}} input
      */
     async createManual(input) {
       const conversationId = requireId(input.conversationId, 'conversationId');
@@ -689,6 +696,7 @@ export function createOrderService(options) {
         actor: input.actor,
         subjectId: input.subjectId,
         expectedSubjectVersion: input.expectedSubjectVersion,
+        implicitSubjectTarget: input.implicitSubjectTarget,
       });
     },
 
@@ -762,8 +770,9 @@ export function createOrderService(options) {
           'Explicit projection requires subject and order',
         );
       }
-      if (!input.orderId && conversations.resolveOrderTarget)
-        await conversations.resolveOrderTarget(conversationId);
+      // WAP-E11: the conversation path refuses several pending orders (in
+      // findPendingByConversation) and a draft with a persisted origin, not
+      // a mere count of Subjects such as a returning customer's history.
       const pending = input.orderId
         ? await repository.findById(requireId(input.orderId, 'orderId'))
         : await repository.findPendingByConversation(conversationId);
@@ -990,8 +999,7 @@ export function createOrderService(options) {
      * @returns {Promise<Order|null>}
      */
     async currentForConversation(conversationId) {
-      if (conversations.resolveOrderTarget)
-        await conversations.resolveOrderTarget(conversationId);
+      // WAP-E11: ambiguity is several pending orders, not several Subjects.
       const orders = await repository.listByConversation(
         requireId(conversationId, 'conversationId'),
       );

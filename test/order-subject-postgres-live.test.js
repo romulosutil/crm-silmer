@@ -908,6 +908,13 @@ else {
             ),
             { code: 'ORDER_SUBJECT_UNAVAILABLE' },
           );
+          // A legacy body on a personal line is still a targeted creation.
+          await assert.rejects(
+            runtime({ ORDER_SUBJECT_CREATION_ENABLED: 'false' }).createManual(
+              command('personal'),
+            ),
+            { code: 'ORDER_SUBJECT_UNAVAILABLE' },
+          );
           const first = await runtime().createManual(input);
           assert.equal(first.order.seller.id, seller.id);
           assert.equal(first.order.contactId, contact);
@@ -991,6 +998,174 @@ else {
               )
             ).rows[0].n,
             2,
+          );
+        },
+      );
+      await t.test(
+        'WAP-E11: general line keeps legacy creation while targeted creation is off',
+        async () => {
+          const offSettings = [
+            {
+              ORDER_SUBJECT_CREATION_ENABLED: 'false',
+              ORDER_SUBJECT_READERS_READY: 'false',
+              ORDER_SUBJECT_SELLER_IDS: '',
+            },
+            { ORDER_SUBJECT_SELLER_IDS: 'someone-else' },
+          ];
+          /** @param {string} id */
+          const legacyRows = async (id) =>
+            (
+              await pool.query(
+                `SELECT id,origin_subject_id,status FROM crm.orders
+                 WHERE conversation_id=$1 AND cancelled_at IS NULL ORDER BY number_sequence`,
+                [id],
+              )
+            ).rows;
+          /** @param {string} id */
+          const confirmDraft = (id) =>
+            pool.query(
+              `UPDATE crm.orders SET status='confirmado',final_amount_cents=100,payment_condition='pix',confirmed_at=$2,confirmed_by=$3,order_date='2026-11-17' WHERE id=$1`,
+              [id, NOW, seller.id],
+            );
+          for (const [index, overrides] of offSettings.entries()) {
+            const off = runtime(overrides);
+            // 1. A manual "geral" Subject without order does not block the line.
+            const geral = `general-geral-${index}`;
+            await conversation(geral);
+            await subject(`${geral}-s`, geral);
+            await assert.rejects(
+              off.createManual(command(geral, `${geral}-s`)),
+              { code: 'ORDER_SUBJECT_UNAVAILABLE' },
+            );
+            const key = randomUUID();
+            const created = await off.createManual(
+              command(geral, undefined, key),
+            );
+            assert.equal(created.created, true);
+            assert.equal(created.order.status, 'pendente');
+            assert.deepEqual(await legacyRows(geral), [
+              {
+                id: created.order.id,
+                origin_subject_id: null,
+                status: 'pendente',
+              },
+            ]);
+            assert.equal(
+              (
+                await pool.query(
+                  'SELECT order_id,version FROM crm.conversation_subjects WHERE id=$1',
+                  [`${geral}-s`],
+                )
+              ).rows[0].order_id,
+              null,
+            );
+            const replay = await off.createManual(
+              command(geral, undefined, key),
+            );
+            assert.equal(replay.order.id, created.order.id);
+            const repeat = await off.createManual(command(geral));
+            assert.equal(repeat.created, false);
+            assert.equal(repeat.order.id, created.order.id);
+            assert.equal((await legacyRows(geral)).length, 1);
+            // The Inbox asks for a Subject only when the server says so.
+            assert.equal(
+              (await off.currentForConversation(geral, seller))
+                .subjectCreationAvailable,
+              false,
+            );
+            // 2. A single bot Subject whose order is confirmed opens a new draft.
+            const single = `general-confirmed-${index}`;
+            await conversation(single);
+            await draftBeforeUpgrade(`${single}-order`, single);
+            await subject(`${single}-s`, single, `${single}-order`);
+            await confirmDraft(`${single}-order`);
+            const next = await off.createManual(command(single));
+            assert.equal(next.created, true);
+            assert.notEqual(next.order.id, `${single}-order`);
+            assert.deepEqual(
+              (await legacyRows(single)).map((row) => row.origin_subject_id),
+              [null, null],
+            );
+            // 3. A repeat customer (two Subjects, both confirmed) reads, projects
+            // and creates as before: Subject count is not pending ambiguity.
+            const repeated = `general-repeat-${index}`;
+            await conversation(repeated);
+            for (const suffix of ['a', 'b']) {
+              await draftBeforeUpgrade(`${repeated}-${suffix}`, repeated);
+              await subject(
+                `${repeated}-s${suffix}`,
+                repeated,
+                `${repeated}-${suffix}`,
+              );
+              await confirmDraft(`${repeated}-${suffix}`);
+            }
+            for (const reader of [off, runtime()]) {
+              assert.equal(
+                (await reader.currentForConversation(repeated, seller)).order
+                  ?.status,
+                'confirmado',
+              );
+              assert.deepEqual(
+                await reader.projectAgentBriefing({
+                  conversationId: repeated,
+                  correlationId: randomUUID(),
+                  briefing: { order_name: 'Sem pendente' },
+                  automationState: 'assistant',
+                }),
+                { applied: false, order: null, reason: 'no_pending_order' },
+              );
+            }
+            const third = await off.createManual(command(repeated));
+            assert.equal(third.created, true);
+            assert.equal(
+              (await off.createManual(command(repeated))).order.id,
+              third.order.id,
+            );
+            for (const reader of [off, runtime()]) {
+              assert.equal(
+                (await reader.currentForConversation(repeated, seller)).order
+                  ?.id,
+                third.order.id,
+              );
+              const projected = await reader.projectAgentBriefing({
+                conversationId: repeated,
+                correlationId: randomUUID(),
+                briefing: { order_name: 'Projeção legada' },
+                automationState: 'assistant',
+              });
+              assert.equal(
+                projected.applied,
+                true,
+                projected.reason ?? undefined,
+              );
+              assert.equal(projected.order?.id, third.order.id);
+            }
+            assert.deepEqual(
+              (await legacyRows(repeated)).map((row) => [
+                row.origin_subject_id,
+                row.status,
+              ]),
+              [
+                [null, 'confirmado'],
+                [null, 'confirmado'],
+                [null, 'pendente'],
+              ],
+            );
+          }
+          // The allowlisted seller with every gate on is told targeting applies.
+          assert.equal(
+            (await runtime().currentForConversation('general-geral-0', seller))
+              .subjectCreationAvailable,
+            true,
+          );
+          // Real ambiguity still refuses whatever the gates say.
+          await assert.rejects(
+            runtime(offSettings[0]).createManual(command('reopen')),
+            { code: 'ORDER_TARGET_REQUIRED' },
+          );
+          await assert.rejects(
+            runtime(offSettings[0]).currentForConversation('reopen', seller),
+            { code: 'ORDER_TARGET_REQUIRED' },
           );
         },
       );

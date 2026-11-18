@@ -52,7 +52,26 @@ const renameCurrentKnown = ref(false);
 const actionMessage = ref('');
 const nameInput = ref(null);
 const renameTrigger = ref(null);
-const showOnboarding = ref(true);
+// WAP-01: "Atenda com seu WhatsApp" only for a seller who may pair and has
+// no connected line. "Agora não" is remembered per user in this browser only
+// (a viewer convenience; nothing depends on it).
+const ONBOARDING_DISMISSED_KEY = 'crm.portfolio-whatsapp-onboarding.dismissed';
+const personalWhatsApp = ref(null);
+const onboardingDismissed = ref(false);
+// /me/clients refused this account (e.g. an administrator): no portfolio.
+const portfolioUnavailable = ref(false);
+const isAdmin = computed(() =>
+  (sessionUser.value?.capabilities ?? []).includes('COMMERCIAL_ADMIN'),
+);
+const showOnboarding = computed(
+  () =>
+    props.mine &&
+    !portfolioUnavailable.value &&
+    !isAdmin.value &&
+    !onboardingDismissed.value &&
+    personalWhatsApp.value?.available === true &&
+    personalWhatsApp.value?.line?.state !== 'connected',
+);
 const linking = ref(false);
 let linkAttempt;
 let listController;
@@ -162,11 +181,23 @@ async function loadContacts(silent = false) {
     totalCount.value = response.data.totalCount;
     nextCursor.value = response.data.nextCursor;
     hasLoadedContacts.value = true;
+    portfolioUnavailable.value = false;
     error.value = '';
     const id = props.selectedId || selected.value?.id || contacts.value[0]?.id;
     if (id) await loadContact(id, silent);
     else detail.value = null;
   } catch (cause) {
+    if (
+      props.mine &&
+      listController === currentController &&
+      Number(cause?.status) === 403
+    ) {
+      portfolioUnavailable.value = true;
+      contacts.value = [];
+      detail.value = null;
+      error.value = '';
+      return;
+    }
     if (listController === currentController && cause?.name !== 'AbortError') {
       error.value = hasLoadedContacts.value
         ? 'Não foi possível atualizar os clientes. Os dados exibidos podem estar desatualizados.'
@@ -494,9 +525,53 @@ watch(
     if (id && id !== selected.value?.id) void loadContact(id);
   },
 );
+function onboardingKey() {
+  const id = sessionUser.value?.id;
+  return id ? `${ONBOARDING_DISMISSED_KEY}:${id}` : '';
+}
+function readOnboardingDismissed() {
+  const key = onboardingKey();
+  try {
+    onboardingDismissed.value = Boolean(
+      key && globalThis.localStorage?.getItem(key) === 'true',
+    );
+  } catch {
+    onboardingDismissed.value = false;
+  }
+}
+function dismissOnboarding() {
+  onboardingDismissed.value = true;
+  const key = onboardingKey();
+  try {
+    if (key) globalThis.localStorage?.setItem(key, 'true');
+  } catch {
+    // Dismissed for this visit when browser storage is unavailable.
+  }
+  void nextTick(() => heading.value?.focus());
+}
+let whatsappController;
+/** Read-only: the line's state decides the banner; no failure is shown. */
+async function loadPersonalWhatsApp() {
+  whatsappController?.abort();
+  personalWhatsApp.value = null;
+  if (!props.mine || isAdmin.value) return;
+  const controller = new AbortController();
+  whatsappController = controller;
+  try {
+    const response = await request('/api/v1/me/whatsapp', {
+      signal: controller.signal,
+    });
+    if (whatsappController === controller)
+      personalWhatsApp.value = response.data ?? null;
+  } catch {
+    if (whatsappController === controller) personalWhatsApp.value = null;
+  }
+}
 onMounted(() => {
   heading.value?.focus();
+  readOnboardingDismissed();
   void loadContacts();
+  void loadPersonalWhatsApp();
 });
 watch(
   liveEvent,
@@ -521,6 +596,8 @@ watch(
   () => {
     firstMessageDrafts.clear();
     firstMessageEpoch.value++;
+    readOnboardingDismissed();
+    void loadPersonalWhatsApp();
   },
   { flush: 'sync' },
 );
@@ -535,6 +612,7 @@ watch(query, () => {
 onBeforeUnmount(() => {
   // Leaving the view drops the whole draft map with it.
   clearPrivateContact(null);
+  whatsappController?.abort();
   if (searchTimer) globalThis.clearTimeout(searchTimer);
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
 });
@@ -571,19 +649,11 @@ onBeforeUnmount(() => {
         <RouterLink to="/conta#my-whatsapp-title"
           >Configurar Meu WhatsApp</RouterLink
         >
-        <button
-          type="button"
-          @click="
-            showOnboarding = false;
-            nextTick(() => heading?.focus());
-          "
-        >
-          Agora não
-        </button>
+        <button type="button" @click="dismissOnboarding">Agora não</button>
       </div>
     </section>
 
-    <div class="filter-bar">
+    <div v-if="!portfolioUnavailable" class="filter-bar">
       <PortfolioCreate v-if="mine" @created="onClientCreated" />
       <div class="search-control">
         <label for="client-search">{{
@@ -622,7 +692,15 @@ onBeforeUnmount(() => {
     <p v-if="actionMessage" role="status" class="audit-note">
       {{ actionMessage }}
     </p>
-    <div v-if="loading" class="loading-state" role="status">
+    <section
+      v-if="mine && portfolioUnavailable"
+      class="surface empty-list"
+      aria-labelledby="portfolio-unavailable-title"
+    >
+      <h2 id="portfolio-unavailable-title">Carteira indisponível</h2>
+      <p>Meus clientes não está disponível para sua conta.</p>
+    </section>
+    <div v-else-if="loading" class="loading-state" role="status">
       Carregando contatos…
     </div>
     <section

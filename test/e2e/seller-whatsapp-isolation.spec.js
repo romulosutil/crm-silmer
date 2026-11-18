@@ -418,8 +418,10 @@ for (const theme of ['light', 'dark']) {
         await page.goto('/inbox');
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
 
-        // The row: a quiet seal in words on a personal line, never
-        // focusable; nothing on the general line.
+        // The row: a seal in words on a personal line, in the success tone
+        // (it recalls WhatsApp) with a hidden message icon that sets the
+        // origin apart from "Pedido pronto"; never focusable; nothing on the
+        // general line.
         const row = page.locator(
           `.conversation-row[data-conversation-id="${scene.id}"]`,
         );
@@ -427,12 +429,19 @@ for (const theme of ['light', 'dark']) {
         const badge = row.locator('[data-badge="line"]');
         if (scene.badge) {
           await expect(badge).toHaveText(scene.badge);
-          await expect(badge).not.toHaveAttribute('data-tone');
+          await expect(badge).toHaveAttribute('data-tone', 'success');
+          await expect(badge.locator('svg')).toHaveCount(1);
+          await expect(badge.locator('svg')).toHaveAttribute(
+            'aria-hidden',
+            'true',
+          );
         } else {
           await expect(badge).toHaveCount(0);
         }
         await expect(
-          page.locator('[data-badge="line"][tabindex], [data-badge="line"] *'),
+          page.locator(
+            '[data-badge="line"][tabindex], [data-badge="line"] [tabindex]:not([tabindex="-1"]), [data-badge="line"] a, [data-badge="line"] button',
+          ),
         ).toHaveCount(0);
         // Only the personal conversation carries a line; general-line rows
         // and other channels stay as they were.
@@ -445,6 +454,10 @@ for (const theme of ['light', 'dark']) {
           ),
         ).toHaveCount(0);
 
+        if (scene.badge)
+          await row.screenshot({
+            path: `test-results/fix-badge-${scene.id}-${width}-${theme}.png`,
+          });
         if (theme === 'light' && width === 390)
           await page.screenshot({
             path: `test-results/wap-09-${scene.id}-${width}-list.png`,
@@ -503,3 +516,137 @@ for (const theme of ['light', 'dark']) {
     }
   }
 }
+
+// WAP-11: the holder's own personal line is down (disconnected, blocked,
+// pairing or unknown: the detail says `personalLineUsable: false`). The
+// composer says so and how to reconnect, "Enviar resposta" is aria-disabled
+// with that reason, the draft stays and reading and ordering stay available.
+// A connected line keeps the exit hint.
+const LINE_DOWN =
+  'Seu WhatsApp está desconectado. Reconecte em Conta › Meu WhatsApp para enviar.';
+for (const theme of ['light', 'dark']) {
+  for (const width of [390, 1366]) {
+    test(`WAP-11 linha pessoal desconectada em ${width}px ${theme}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.addInitScript((appearance) => {
+        globalThis.localStorage.setItem('silmer-theme', appearance);
+      }, theme);
+      const mock = await installMocks(page, {}, { fixedClock: false });
+      const item = /** @type {Record<string, any>|undefined} */ (
+        mock.items.find(({ id }) => id === 'r-joao')
+      );
+      if (!item) throw new Error('Missing synthetic personal conversation');
+      item.personalLine = true;
+      item.personalLineUsable = false;
+      /** @type {string[]} */
+      const sends = [];
+      page.on('request', (request) => {
+        if (
+          request.method() === 'POST' &&
+          /\/conversations\/r-joao\/messages/u.test(request.url())
+        )
+          sends.push(request.url());
+      });
+      await page.goto('/inbox/r-joao');
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+
+      const note = page.locator('#reply-line');
+      await expect(note).toHaveText(LINE_DOWN);
+      await expect(note).toBeVisible();
+      await expect(note).not.toHaveAttribute('aria-live');
+      await expect(page.getByText('Sai pelo seu WhatsApp')).toHaveCount(0);
+      const account = note.getByRole('link', {
+        name: 'Conta › Meu WhatsApp',
+        exact: true,
+      });
+      await expect(account).toHaveAttribute('href', '/conta#my-whatsapp-title');
+
+      const field = page.getByRole('textbox', {
+        name: 'Responder',
+        exact: true,
+      });
+      await expect(field).toBeEditable();
+      await field.fill('Rascunho com a linha fora');
+      await expect(field).toHaveAccessibleDescription(
+        new RegExp(`${LINE_DOWN}$`, 'u'),
+      );
+      const send = page.getByRole('button', {
+        name: 'Enviar resposta',
+        exact: true,
+      });
+      // aria-disabled, never the native attribute: it stays focusable and
+      // reads why.
+      await expect(send).toHaveAttribute('aria-disabled', 'true');
+      await expect(send).not.toHaveAttribute('disabled');
+      await expect(send).toHaveAccessibleDescription(LINE_DOWN);
+
+      // Neither Enter nor the button sends; the draft stays.
+      await field.focus();
+      await page.keyboard.press('Enter');
+      await send.focus();
+      await page.keyboard.press('Enter');
+      // A pointer click, past Playwright's aria-disabled actionability wait.
+      await send.click({ force: true });
+      await expect(field).toHaveValue('Rascunho com a linha fora');
+      expect(sends).toEqual([]);
+
+      // Ordering and reading stay.
+      await expect(
+        page.getByRole('button', { name: 'Criar pedido', exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText('Olá, gostaria de um orçamento de uniformes.', {
+          exact: true,
+        }),
+      ).toBeVisible();
+
+      // The link is reached by keyboard right after the field.
+      await field.focus();
+      await page.keyboard.press('Tab');
+      await expect(account).toBeFocused();
+
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () =>
+              globalThis.document.documentElement.scrollWidth <=
+              globalThis.innerWidth,
+          ),
+        )
+        .toBe(true);
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+      await page.screenshot({
+        path: `test-results/fix-line-down-${width}-${theme}.png`,
+      });
+
+      await page.keyboard.press('Enter');
+      await expect(page).toHaveURL(/\/conta#my-whatsapp-title$/u);
+    });
+  }
+}
+
+test('WAP-11 linha pessoal conectada mantém a saída e o envio', async ({
+  page,
+}) => {
+  const mock = await installMocks(page, {}, { fixedClock: false });
+  const item = /** @type {Record<string, any>|undefined} */ (
+    mock.items.find(({ id }) => id === 'r-joao')
+  );
+  if (!item) throw new Error('Missing synthetic personal conversation');
+  item.personalLine = true;
+  item.personalLineUsable = true;
+  await page.goto('/inbox/r-joao');
+  await expect(page.locator('#reply-line')).toHaveText('Sai pelo seu WhatsApp');
+  await page
+    .getByRole('textbox', { name: 'Responder', exact: true })
+    .fill('Pronto para enviar');
+  const send = page.getByRole('button', {
+    name: 'Enviar resposta',
+    exact: true,
+  });
+  await expect(send).not.toHaveAttribute('aria-disabled');
+  await expect(send).toBeEnabled();
+  await expect(page.getByText(LINE_DOWN)).toHaveCount(0);
+});

@@ -422,6 +422,68 @@ test(
               .personalLine,
             true,
           );
+          // WAP-11: the holder reads whether the line can send; nobody else
+          // learns anything about it (no state, no number).
+          const usable = async (/** @type {string} */ id) =>
+            (await inbox.get(own.id, reader(id))).conversation
+              .personalLineUsable;
+          assert.equal(await usable(sellerA), false, 'disconnected line');
+          const ownLine = (
+            await pool.query(
+              'SELECT id,account_id,instance_name,generation FROM crm.seller_whatsapp_lines WHERE seller_id=$1',
+              [sellerA],
+            )
+          ).rows[0];
+          const confirmed = JSON.stringify(
+            encryptContactDetails({ phone: '5511987000099', email: null }, key),
+          );
+          await pool.query(
+            `UPDATE crm.seller_whatsapp_lines SET state='connected',verified_at=now(),
+               confirmed_number_envelope=$2::jsonb,version=version+1 WHERE id=$1`,
+            [ownLine.id, confirmed],
+          );
+          assert.equal(await usable(sellerA), false, 'no active binding');
+          const bindingId = randomUUID();
+          await pool.query(
+            `INSERT INTO crm.seller_whatsapp_bindings
+             (id,line_id,account_id,instance_name,generation,token_hash,token_envelope,created_at)
+             VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,now())`,
+            [
+              bindingId,
+              ownLine.id,
+              ownLine.account_id,
+              ownLine.instance_name,
+              ownLine.generation,
+              bindingId.replaceAll('-', '').padEnd(64, 'a'),
+              confirmed,
+            ],
+          );
+          assert.equal(await usable(sellerA), true, 'connected holder');
+          assert.equal(await usable(admin), false, 'admin is not the holder');
+          assert.equal(
+            (await inbox.list({ limit: 100 }, reader(admin))).items.some(
+              (/** @type {any} */ item) =>
+                item.id === own.id && 'personalLineUsable' in item,
+            ),
+            false,
+            'the list never carries the line state',
+          );
+          for (const state of ['blocked', 'awaiting_pairing', 'unknown']) {
+            await pool.query(
+              'UPDATE crm.seller_whatsapp_lines SET state=$2,version=version+1 WHERE id=$1',
+              [ownLine.id, state],
+            );
+            assert.equal(await usable(sellerA), false, state);
+          }
+          await pool.query(
+            'UPDATE crm.seller_whatsapp_bindings SET revoked_at=now() WHERE id=$1',
+            [bindingId],
+          );
+          await pool.query(
+            "UPDATE crm.seller_whatsapp_lines SET state='disconnected',version=version+1 WHERE id=$1",
+            [ownLine.id],
+          );
+          assert.equal(await usable(sellerA), false, 'revoked binding');
           await assert.rejects(inbox.get(other.id, reader(sellerA)), {
             code: 'CONVERSATION_NOT_FOUND',
           });

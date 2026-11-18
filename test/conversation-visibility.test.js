@@ -47,7 +47,9 @@ function visibilityHarness(owners) {
           /assigned_user_id/u,
           'the repository must enforce ownership in SQL',
         );
-        assert.equal(values.length, 2);
+        // The detail adds the reader only for its own line's usability
+        // (WAP-11); visibility is still the second value.
+        assert.ok(values.length === 2 || values.length === 3);
         const [id, reader] = values;
         const owner = owners[id];
         return {
@@ -118,7 +120,8 @@ test('CONV-ACL-01: hidden detail and assistant context stop before querying mess
     1,
     'a denied detail must not fetch encrypted message bodies',
   );
-  assert.deepEqual(queries[0].values, ['hidden', SELLER.id]);
+  // WAP-11: the third value is the reader, for its own line's usability.
+  assert.deepEqual(queries[0].values, ['hidden', SELLER.id, SELLER.id]);
   await assert.rejects(
     service.getAssistantContext({ conversationId: 'hidden' }, access),
     { code: 'CONVERSATION_NOT_FOUND', statusCode: 404 },

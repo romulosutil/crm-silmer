@@ -710,6 +710,13 @@ A [ADR 037](docs/adr/037-gerar-pdf-da-ficha-para-uso-mobile.md) acrescenta
 compartilhá-la pelo recurso nativo do celular. O PDF usa o mesmo HTML aprovado;
 a rota HTML segue disponível. Não há envio automático pelo WhatsApp.
 
+A [ADR 093](docs/adr/093-ficha-de-pedido-para-impressao.md) usa **PDF para
+impressão** como ação principal no detalhe dos pedidos confirmados de
+atendimento. O **PDF detalhado** fica em **Mais ações do pedido**.
+O mesmo snapshot alimenta a grade A4 paisagem com controle de produção e
+referência textual da estampa. O parâmetro `layout=impressao` escolhe o
+formato reduzido.
+
 Arquivos da arte (até 5 de 10 MB e a arte final) são enviados e baixados
 pela página do pedido e ficam no RustFS interno, só pela API
 ([ADR 023](docs/adr/023-arquivos-da-arte-no-rustfs.md)). Aviso a Rose e

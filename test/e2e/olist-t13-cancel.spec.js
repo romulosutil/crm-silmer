@@ -570,7 +570,11 @@ test('offers no cancellation to a locked order, to a reader without commercial a
   await expect(
     page.getByText('A composição não pode ser editada, reaberta ou cancelada.'),
   ).toBeVisible();
-  await expect(page.getByRole('button', MORE)).toHaveCount(0);
+  await page.getByRole('button', MORE).click();
+  await expect(
+    page.getByRole('menuitem', { name: 'PDF detalhado' }),
+  ).toBeVisible();
+  await expect(page.getByRole('menuitem', CANCEL_ITEM)).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: /Reabrir pedido/u }),
   ).toHaveCount(0);
@@ -579,7 +583,11 @@ test('offers no cancellation to a locked order, to a reader without commercial a
   // Quem só lê (outro responsável) não vê a ação, e nenhum botão de escrita.
   await page.goto('/pedidos/order-outro-dono');
   await expect(page.getByText('Somente Ricardo Lima ou um')).toBeVisible();
-  await expect(page.getByRole('button', MORE)).toHaveCount(0);
+  await page.getByRole('button', MORE).click();
+  await expect(
+    page.getByRole('menuitem', { name: 'PDF detalhado' }),
+  ).toBeVisible();
+  await expect(page.getByRole('menuitem', CANCEL_ITEM)).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: /Reabrir pedido/u }),
   ).toHaveCount(0);

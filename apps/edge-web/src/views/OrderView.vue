@@ -188,6 +188,12 @@ const isPending = computed(() => order.value?.status === 'pendente');
 // ADR 027: a site shop order is born confirmed and locked; the page shows it
 // read only, with its simplified ficha to download.
 const isStore = computed(() => isStoreOrder(order.value));
+const canPrintCompact = computed(
+  () => order.value?.status === 'confirmado' && !isStore.value,
+);
+const primaryPdfLabel = computed(() =>
+  isStore.value ? 'Gerar PDF' : 'PDF para impressão',
+);
 const isAdmin = computed(() =>
   (sessionUser.value?.capabilities ?? []).includes('COMMERCIAL_ADMIN'),
 );
@@ -267,8 +273,8 @@ const showProgress = computed(
 /**
  * Mobile first (PO, 15/10/2026): on a phone the page's main action stays in
  * a fixed footer — the next step while one is missing and "Gerar pedido" once
- * none is (PFI-16), for whoever may confirm a pending order, and "Gerar PDF"
- * once it is confirmed. It steps aside while a section is being
+ * none is (PFI-16), for whoever may confirm a pending order, and the primary
+ * PDF action once it is confirmed. It steps aside while a section is being
  * edited, so the editor's own Salvar and Cancelar stay in reach.
  */
 const mobileAction = computed(() => {
@@ -545,8 +551,12 @@ async function confirmDelivery(context) {
   }
 }
 
-/** PIM-13: download the approved ficha as a PDF, or offer the mobile share sheet. */
-async function generatePdf(share = false) {
+/**
+ * PIM-13/FPI-16: download either PDF or offer the detailed one to the share sheet.
+ * @param {boolean} [share]
+ * @param {'impressao'} [layout]
+ */
+async function generatePdf(share = false, layout) {
   if (pdfBusy.value || isPending.value || !order.value) return;
   const id = props.orderId;
   const { version, number } = order.value;
@@ -562,16 +572,20 @@ async function generatePdf(share = false) {
   const firstStorePdf = storeFichaPending(order.value);
   try {
     const cached =
-      share && readyPdf?.id === id && readyPdf.version === version
+      share && !layout && readyPdf?.id === id && readyPdf.version === version
         ? readyPdf.file
         : null;
     const fromCache = Boolean(cached);
     const file =
       cached ??
-      pdfFile(await getOrderPdf(id, share ? version : undefined), number);
+      pdfFile(
+        await getOrderPdf(id, share ? version : undefined, layout),
+        number,
+        layout,
+      );
     if (!current()) return;
     if (!fromCache) {
-      readyPdf = share ? { id, version, file } : null;
+      if (!layout) readyPdf = share ? { id, version, file } : null;
       if (firstStorePdf && editingSection.value === '') await load(true);
     }
     if (share) {
@@ -613,6 +627,10 @@ async function generatePdf(share = false) {
   } finally {
     pdfBusy.value = false;
   }
+}
+
+function downloadPrimaryPdf() {
+  return generatePdf(false, canPrintCompact.value ? 'impressao' : undefined);
 }
 
 /**
@@ -791,7 +809,7 @@ provide('orderEditing', {
   isPhone,
   isSectionOpen,
   openSection,
-  print: () => generatePdf(),
+  print: downloadPrimaryPdf,
   // EDIT-01: the way out of a version conflict in a section edited in place.
   // Resolves to whether the order was replaced.
   reload: () => load(true, true),
@@ -1082,12 +1100,13 @@ onBeforeUnmount(() => {
           <button
             type="button"
             class="op-print"
+            :class="{ primary: canPrintCompact }"
             :disabled="isPending || pdfBusy"
             :aria-describedby="isPending ? 'order-print-reason' : undefined"
-            @click="generatePdf()"
+            @click="downloadPrimaryPdf"
           >
             <OrderIcon name="download" />{{
-              pdfBusy ? 'Gerando PDF…' : 'Gerar PDF'
+              pdfBusy ? 'Gerando PDF…' : primaryPdfLabel
             }}
           </button>
           <OrderMoreActions
@@ -1096,6 +1115,9 @@ onBeforeUnmount(() => {
             cancel-hint="Salve ou cancele a seção em edição antes de cancelar o pedido."
             :can-share="shareAvailable && !isPending && !isPhone"
             :share-disabled="pdfBusy"
+            :can-download-detailed="canPrintCompact"
+            :download-detailed-disabled="pdfBusy"
+            @download-detailed="generatePdf()"
             @cancel="cancelAction?.open($event)"
             @share="generatePdf(true)"
           />
@@ -1258,10 +1280,10 @@ onBeforeUnmount(() => {
           type="button"
           class="primary"
           :disabled="pdfBusy"
-          @click="generatePdf()"
+          @click="downloadPrimaryPdf"
         >
           <OrderIcon name="download" />{{
-            pdfBusy ? 'Gerando PDF…' : 'Gerar PDF'
+            pdfBusy ? 'Gerando PDF…' : primaryPdfLabel
           }}
         </button>
         <button

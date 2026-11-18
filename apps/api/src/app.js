@@ -82,7 +82,7 @@ export const WEBHOOK_REQUESTS_PER_SECOND = 20;
  *   olist?: any,
  *   orderPdfRenderer?: (html: string) => Promise<Buffer>,
  *   orderWhatsAppPdf?: ReturnType<typeof import('./order-whatsapp-pdf-runtime.js').createOrderWhatsAppPdfRuntime>,
- *   orderFichaRenderer?: (order: any, template?: string, options?: {printedAt?: Date}) => string,
+ *   orderFichaRenderer?: (order: any, template?: string, options?: {printedAt?: Date, layout?: 'impressao'}) => string,
  *   storeOrders?: import('./store-order-runtime.js').StoreOrderRuntime
  *   subjects?: Record<string, any>,
  * }} [runtime]

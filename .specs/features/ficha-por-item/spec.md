@@ -47,6 +47,30 @@ FPI-08 e "Anotações" e divisão em metades de FPI-11). A v9 está selecionada 
 | FPI-12 | Duas folhas por item (v9) | O template v9 imprime duas folhas A4 retrato consecutivas por item (item 1 página 1, item 1 página 2, item 2 página 1, …), seguidas das folhas extras de continuação, se houver; "Folha X de N" conta todas. O cabeçalho (faixa do público, "Item N de M", marca, Pedido e datas) repete nas duas. **Página 1:** cabeçalho; "Dados do pedido", com a linha "Controle de produção e arte na folha X de N"; "Dados do item", idêntico à v8; "Observações e anotações do pedido", com a lista numerada das observações do pedido (inclusive as instruções complementares de FPI-10) em tipo reduzido de no mínimo 13 px, seguida de linhas pautadas para anotação à mão que ocupam o espaço restante, no mínimo três. **Página 2:** cabeçalho; painel curto "Dados do pedido", que identifica a folha solta; "Controle de produção" expandido, com os mesmos 7 campos em branco de FPI-07, mais altos e com mais respiro; painel "Arte" de largura total, que ocupa todo o espaço vertical restante (`object-fit: contain`, "Sem arte anexada" tracejado sem imagem, "Estampa (referência)" sob a caixa, regras de `artPreview` de FPI-11). Não há "Anotações" pautadas na página 2 nem Controle de produção na página 1. Observação nunca é cortada: o que não couber na página 1 continua numa folha extra final, "Observações (continuação)", com aviso no painel; sem sobras, não há folha extra nem aviso. Isto substitui FPI-02 na v9. Verificação: amostras de 1 e de 4 itens, com e sem observações, com observação longa que force a continuação e com e sem prévia da arte, contando folhas, ordem dos blocos de cada folha, tamanho mínimo de fonte e a ausência de "Anotações" na página 2; no Chromium, uma página A4 por folha.                                                                                                                                        |
 | FPI-13 | Imutabilidade e gate (v9) | A v9 é um arquivo novo. Os templates v2 a v8 e seus hashes, amostras e registros de aprovação não mudam. `PRINT_TEMPLATE` continua em v8 até existir a aprovação provisória do PO vinculada ao hash das amostras v9, e a validação recusa a v9 sem esse registro. A troca acontece num commit próprio, e reverter é reverter só esse commit. A folha de estilos da v9 tem o hash admitido na CSP da rota de impressão, e nenhuma requisição externa é feita. A assinatura física de Rose e Operação continua sendo gate de produção. Verificação: testes de hash, validador de aprovação e `PRINT_TEMPLATE` em v8 no fim de FPI-T05.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
+## PDF para impressão
+
+- **FPI-14.** Quando uma sessão com `order.print` solicitar
+  `GET /api/v1/orders/:orderId/pdf?layout=impressao` para um pedido confirmado
+  de atendimento, a API deve baixar `pedido-<número>-impressao.pdf`, com
+  `Cache-Control: private, no-store`. Pedido pendente retorna 409, falta de
+  autorização retorna 403 e layout desconhecido ou compacto para a loja
+  retorna 400. O PDF sem parâmetro usa o template aprovado.
+- **FPI-15.** Quando o layout de impressão for escolhido, a ficha deve usar A4
+  paisagem com cabeçalho do pedido, especificações e uma linha para cada
+  tamanho com quantidade e espaço de conferência. A grade deve mostrar o
+  número uma vez por item, mesmo quando ele tem vários tamanhos. O PDF
+  também deve trazer o total calculado, as observações
+  uma vez e sete campos de produção à mão por item. A tabela deve repetir seu
+  cabeçalho nas continuações. O conteúdo de fábrica e seus bloqueios seguem
+  FPI-10. A ficha deve preservar a referência textual da estampa e excluir
+  imagens. O exemplo sintético da v1 com dois itens e oito tamanhos deve
+  ocupar uma página no Chromium.
+- **FPI-16.** Quando o detalhe mostrar um pedido confirmado de atendimento,
+  o botão principal no cabeçalho e no rodapé móvel deve baixar **PDF para
+  impressão**. **Mais ações do pedido** deve oferecer **PDF detalhado**,
+  acionável por teclado, com retorno de foco ao botão do menu. O
+  compartilhamento segue usando o PDF detalhado.
+
 ## Notas
 
 - O conteúdo de FPI-10 foi aprovado em FIP-02 e FIP-05, que hoje só existem na

@@ -19,7 +19,10 @@ ativação, infraestrutura, configuração de segredo ou migração.
 Pedido pendente/reaberto gera resumo provisório; confirmado mostra **Pedido
 confirmado**; cancelado mostra **documento histórico**. Campo ausente continua
 **Não informado**/**A definir**. O recibo não tem valor fiscal e não comprova
-pagamento. A ficha de produção continua em **Gerar PDF**, com seu fluxo próprio.
+pagamento. A lista de Pedidos oferece **Gerar PDF** para a ficha de produção.
+No detalhe de um pedido de atendimento confirmado, a ação principal baixa o
+**PDF para impressão** e o menu **Mais ações do pedido** oferece o **PDF
+detalhado**.
 
 ## Gravações e atualização
 

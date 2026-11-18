@@ -984,6 +984,13 @@ não é persistido. A Web Share API compartilha o arquivo quando disponível;
 o WhatsApp é escolhido pela pessoa no aparelho. Na loja, o registro de
 primeiro acesso ocorre após renderização bem-sucedida; `HEAD` não registra.
 
+Para pedidos confirmados de atendimento, `?layout=impressao` escolhe a
+variante da [ADR 093](docs/adr/093-ficha-de-pedido-para-impressao.md).
+O anexo recebe o sufixo `-impressao.pdf`. A permissão, o limite de frequência
+e a validação de conteúdo são os mesmos da ficha detalhada. Layout
+desconhecido ou solicitado para pedido de loja retorna 400. A outra ação
+continua pedindo o PDF detalhado sem parâmetro.
+
 Pedido da loja (ADRs 027 e 028): `origin = loja`, sem conversa, nasce
 confirmado pelo ator `system:loja-do-site` ao preço de
 `modules/orders/src/domain/store-catalog.js` (R$ 180,00, prazo por cor), com

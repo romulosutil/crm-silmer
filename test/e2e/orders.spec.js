@@ -290,7 +290,7 @@ test('locks printing while the order is pending and says why (PIM-01)', async ({
   await mockOrders(page);
   await page.goto('/pedidos/order-pendente');
 
-  const print = page.getByRole('button', { name: 'Gerar PDF' });
+  const print = page.getByRole('button', { name: 'PDF para impressão' });
   await expect(print).toBeDisabled();
   await expect(
     page.getByText('Disponível depois de gerar o pedido'),
@@ -460,20 +460,59 @@ test('lists exactly what is missing to generate, point by point, and fills the i
   expect(writes.filter((call) => call.action === 'confirm')).toHaveLength(0);
 });
 
-test('downloads a confirmed order as PDF from its page', async ({ page }) => {
+test('FPI-16: the print PDF is the primary download on a confirmed order', async ({
+  page,
+}) => {
   await mockOrders(page);
   await page.goto('/pedidos/order-confirmado');
 
-  const print = page.getByRole('button', { name: 'Gerar PDF' });
+  const print = page.getByRole('button', { name: 'PDF para impressão' });
   await expect(print).toBeEnabled();
-  const [download] = await Promise.all([
+  await expect(print).toHaveClass(/\bprimary\b/u);
+  const [download, request] = await Promise.all([
     page.waitForEvent('download'),
+    page.waitForRequest((request) =>
+      new URL(request.url()).pathname.endsWith('/pdf'),
+    ),
     print.click(),
   ]);
-  expect(download.suggestedFilename()).toBe('pedido-05-CRM.pdf');
+  expect(new URL(request.url()).searchParams.get('layout')).toBe('impressao');
+  expect(download.suggestedFilename()).toBe('pedido-05-CRM-impressao.pdf');
 });
 
-test('offers the generated PDF to the phone share sheet', async ({ page }) => {
+test('FPI-16: keyboard users download the detailed PDF from the actions menu', async ({
+  page,
+}) => {
+  await mockOrders(page);
+  await page.goto('/pedidos/order-confirmado');
+
+  const trigger = page.getByRole('button', { name: 'Mais ações do pedido' });
+  const action = page.getByRole('menuitem', { name: 'PDF detalhado' });
+  await expect(action).toHaveCount(0);
+  await trigger.focus();
+  await trigger.press('Enter');
+  await expect(action).toBeFocused();
+  const [download, request] = await Promise.all([
+    page.waitForEvent('download'),
+    page.waitForRequest((request) =>
+      new URL(request.url()).pathname.endsWith('/pdf'),
+    ),
+    action.press('Enter'),
+  ]);
+  expect(new URL(request.url()).searchParams.has('layout')).toBe(false);
+  expect(download.suggestedFilename()).toBe('pedido-05-CRM.pdf');
+  await expect(trigger).toBeFocused();
+  await expect(
+    page.getByRole('menu', { name: 'Mais ações do pedido' }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'PDF para impressão', exact: true }),
+  ).toBeEnabled();
+});
+
+test('FPI-16: offers the detailed PDF to the phone share sheet after downloading the print PDF', async ({
+  page,
+}) => {
   await page.setViewportSize({ height: 844, width: 390 });
   await page.addInitScript(() => {
     /** @type {any} */ (globalThis).__sharedPdfNames = [];
@@ -491,6 +530,15 @@ test('offers the generated PDF to the phone share sheet', async ({ page }) => {
   });
   await mockOrders(page);
   await page.goto('/pedidos/order-confirmado');
+
+  const [compact] = await Promise.all([
+    page.waitForEvent('download'),
+    page
+      .locator('.op-mobile-action')
+      .getByRole('button', { name: 'PDF para impressão' })
+      .click(),
+  ]);
+  expect(compact.suggestedFilename()).toBe('pedido-05-CRM-impressao.pdf');
 
   const share = page.locator('.op-mobile-action').getByRole('button', {
     name: 'Compartilhar PDF',
@@ -699,7 +747,9 @@ test('shows no progress to generate on a confirmed order or a store order (PFI-1
   await expect(
     page.getByRole('region', { name: 'Para gerar o pedido' }),
   ).toHaveCount(0);
-  await expect(page.locator('.op-mobile-action')).toHaveText('Gerar PDF');
+  await expect(page.locator('.op-mobile-action')).toHaveText(
+    'PDF para impressão',
+  );
 
   await page.goto('/pedidos/order-loja');
   await expect(
@@ -1799,7 +1849,9 @@ test('manual orders change only the delivery date and preserve payment and first
     },
   ]);
   await expect(page.locator('.op-head .op-status')).toHaveText(/Confirmado/u);
-  await expect(page.getByRole('button', { name: 'Gerar PDF' })).toBeEnabled();
+  await expect(
+    page.getByRole('button', { name: 'PDF para impressão' }),
+  ).toBeEnabled();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
@@ -1839,7 +1891,9 @@ test('confirms the first delivery using today without changing payment or reopen
     { action: 'delivery-confirmation', body: { expectedVersion: 4 } },
   ]);
   await expect(page.locator('.op-head .op-status')).toHaveText(/Confirmado/u);
-  await expect(page.getByRole('button', { name: 'Gerar PDF' })).toBeEnabled();
+  await expect(
+    page.getByRole('button', { name: 'PDF para impressão' }),
+  ).toBeEnabled();
 });
 
 test('delivery correction refuses future and empty dates without clearing delivery or payment (DDE-02/03)', async ({
@@ -4249,7 +4303,9 @@ test('confirms the order, frees printing, reopens it and locks printing again', 
 
   const closing = page.getByRole('region', { name: 'Fechamento e pagamento' });
   await expect(closing).toContainText('pedido pendente');
-  await expect(page.getByRole('button', { name: 'Gerar PDF' })).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'PDF para impressão' }),
+  ).toBeDisabled();
 
   // PFI-19: "Gerar pedido" opens the review with the amount and the method.
   const generate = closing.getByRole('button', { name: 'Gerar pedido' });
@@ -4272,7 +4328,9 @@ test('confirms the order, frees printing, reopens it and locks printing again', 
   await expect(closing).toContainText('R$ 4.820,00');
   await expect(closing).toContainText('Pix');
   await expect(closing).toContainText('Confirmado por Marina Aguiar');
-  await expect(page.getByRole('button', { name: 'Gerar PDF' })).toBeEnabled();
+  await expect(
+    page.getByRole('button', { name: 'PDF para impressão' }),
+  ).toBeEnabled();
   await expect(
     page.getByText('Disponível depois de gerar o pedido'),
   ).toHaveCount(0);
@@ -4301,14 +4359,18 @@ test('confirms the order, frees printing, reopens it and locks printing again', 
   await reopenDialog.getByRole('button', { name: 'Manter confirmado' }).click();
   await expect(reopenDialog).toHaveCount(0);
   expect(writes).toHaveLength(1);
-  await expect(page.getByRole('button', { name: 'Gerar PDF' })).toBeEnabled();
+  await expect(
+    page.getByRole('button', { name: 'PDF para impressão' }),
+  ).toBeEnabled();
 
   await reopenButton.click();
   await reopenDialog
     .getByRole('button', { name: 'Reabrir pedido 07-CRM' })
     .click();
   await expect(reopenDialog).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Gerar PDF' })).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'PDF para impressão' }),
+  ).toBeDisabled();
   await expect(closing).toContainText('pedido pendente');
   expect(writes[1].action).toBe('reopen');
   await expect(
@@ -4717,7 +4779,9 @@ test('keeps the dialog open and asks to reload when the order changed (PFI-19, P
     'Este pedido mudou. Cancele a edição para ver a versão atual.',
   );
   await expect(alert).toBeFocused();
-  await expect(page.getByRole('button', { name: 'Gerar PDF' })).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'PDF para impressão' }),
+  ).toBeDisabled();
 });
 
 test('keeps the dialog accessible and thumb sized, light and dark (PFI-19)', async ({
@@ -4964,7 +5028,9 @@ test('hides Gerar and Reabrir from whoever does not own the conversation', async
   );
   await expect(page.getByLabel('Valor final')).toHaveCount(0);
   // PIM-05: any operational session prints a confirmed order.
-  await expect(page.getByRole('button', { name: 'Gerar PDF' })).toBeEnabled();
+  await expect(
+    page.getByRole('button', { name: 'PDF para impressão' }),
+  ).toBeEnabled();
 });
 
 test('keeps the main action of the order in a fixed footer on a phone', async ({
@@ -4981,7 +5047,9 @@ test('keeps the main action of the order in a fixed footer on a phone', async ({
   await expect(page.getByRole('button', { name: 'Gerar pedido' })).toHaveCount(
     1,
   );
-  await expect(page.getByRole('button', { name: 'Gerar PDF' })).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'PDF para impressão' }),
+  ).toHaveCount(0);
   const box = await footer.boundingBox();
   expect(Math.round((box?.y ?? 0) + (box?.height ?? 0))).toBe(844 - 64);
   const target = await generate.boundingBox();
@@ -5060,8 +5128,12 @@ test('generates a confirmed order PDF from the footer without covering the page'
   await page.goto('/pedidos/order-confirmado');
 
   const footer = page.locator('.op-mobile-action');
-  await expect(footer.getByRole('button', { name: 'Gerar PDF' })).toBeEnabled();
-  await expect(page.getByRole('button', { name: 'Gerar PDF' })).toHaveCount(1);
+  await expect(
+    footer.getByRole('button', { name: 'PDF para impressão' }),
+  ).toBeEnabled();
+  await expect(
+    page.getByRole('button', { name: 'PDF para impressão' }),
+  ).toHaveCount(1);
   await page.evaluate(() =>
     globalThis.scrollTo(0, globalThis.document.documentElement.scrollHeight),
   );
@@ -5077,7 +5149,7 @@ test('generates a confirmed order PDF from the footer without covering the page'
   await expect(footer).toBeHidden();
   await expect(
     page.locator('.op-head-actions').getByRole('button', {
-      name: 'Gerar PDF',
+      name: 'PDF para impressão',
     }),
   ).toBeVisible();
 });

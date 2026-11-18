@@ -1680,13 +1680,91 @@ test('PIM-13: denied PDF read never reaches the renderer', async (t) => {
   });
   t.after(() => api.close());
   const confirmed = await createConfirmed(runtime, 'conversation-1');
-  const response = await api.inject({
-    headers: readHeaders,
-    method: 'GET',
-    url: `/api/v1/orders/${confirmed.id}/pdf`,
-  });
-  assert.equal(response.statusCode, 403);
+  for (const query of ['', '?layout=impressao']) {
+    const response = await api.inject({
+      headers: readHeaders,
+      method: 'GET',
+      url: `/api/v1/orders/${confirmed.id}/pdf${query}`,
+    });
+    assert.equal(response.statusCode, 403);
+  }
   assert.equal(calls, 0);
+});
+
+test('FPI-14: the explicit print layout follows the ficha PDF contract', async (t) => {
+  const rendered = /** @type {string[]} */ ([]);
+  const { api, guards, runtime } = orderHarness({
+    pdfRenderer: async (html) => {
+      rendered.push(html);
+      return Buffer.from('%PDF-1.7\nsynthetic PDF');
+    },
+  });
+  t.after(() => api.close());
+  const confirmed = await createConfirmed(runtime, 'conversation-1');
+  const pending = await createPending(runtime, 'conversation-2');
+  const base = `/api/v1/orders/${confirmed.id}/pdf`;
+  guards.length = 0;
+  const compact = await api.inject({
+    headers: readHeaders,
+    url: base + '?layout=impressao',
+  });
+  assert.equal(compact.statusCode, 200);
+  assert.match(String(compact.headers['content-type']), /^application\/pdf/u);
+  assert.equal(compact.headers['cache-control'], 'private, no-store');
+  assert.match(
+    String(compact.headers['content-disposition']),
+    /pedido-01-CRM-impressao\.pdf/u,
+  );
+  assert.match(rendered[0], /size: A4 landscape/u);
+  assert.deepEqual(
+    guards.map(({ input }) => input.action),
+    ['order.print'],
+  );
+
+  const detailed = await api.inject({ headers: readHeaders, url: base });
+  assert.equal(detailed.statusCode, 200);
+  assert.match(
+    String(detailed.headers['content-disposition']),
+    /pedido-01-CRM\.pdf/u,
+  );
+  assert.match(rendered[1], /size: A4 portrait/u);
+  const head = await api.inject({
+    method: 'HEAD',
+    headers: readHeaders,
+    url: `${base}?layout=impressao&expectedVersion=${confirmed.version}`,
+  });
+  assert.equal(head.statusCode, 200);
+  assert.match(
+    String(head.headers['content-disposition']),
+    /pedido-01-CRM-impressao\.pdf/u,
+  );
+
+  const stale = await api.inject({
+    headers: readHeaders,
+    url: `${base}?layout=impressao&expectedVersion=${confirmed.version + 1}`,
+  });
+  assert.equal(stale.statusCode, 409);
+  assert.equal(stale.json().error.code, 'VERSION_CONFLICT');
+  assert.equal(stale.headers['content-disposition'], undefined);
+
+  for (const query of [
+    'layout=outro',
+    'layout=impressao&layout=impressao',
+    'layout=impressao&x=1',
+  ]) {
+    const bad = await api.inject({
+      headers: readHeaders,
+      url: base + '?' + query,
+    });
+    assert.equal(bad.statusCode, 400, query);
+  }
+  const refused = await api.inject({
+    headers: readHeaders,
+    url: `/api/v1/orders/${pending.id}/pdf?layout=impressao`,
+  });
+  assert.equal(refused.statusCode, 409);
+  assert.deepEqual(refused.json(), { error: { code: 'ORDER_NOT_CONFIRMED' } });
+  assert.equal(rendered.length, 2);
 });
 
 test('PIM-14: PDF generation is limited to ten requests per minute', async (t) => {

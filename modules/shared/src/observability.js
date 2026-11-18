@@ -83,6 +83,7 @@ const categoricalPolicies = new Map([
         '57014',
         '57P01',
         'DATABASE_CONNECTION_TIMEOUT',
+        'DATABASE_SCHEMA_NOT_READY',
         'JOB_FAILED',
         'WORKER_HEALTH_PUBLISH_FAILED',
         'OPERATIONAL_SAMPLING_FAILED',

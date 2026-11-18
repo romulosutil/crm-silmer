@@ -655,6 +655,14 @@ Migrações seguem expand/contract. Remover tabela/coluna ocorre somente quando 
 digest anterior já não depender dela. Rollback normal reaponta para o digest
 anterior; restore de banco é último recurso.
 
+API e worker verificam as migrations expand e seus checksums antes de abrir
+a porta HTTP ou iniciar filas (OPS-ERR-BOOT-01). Para releases que incluem
+expansões, aplique-as com o runner da revisão candidata antes de promover os
+consumidores, inclusive quando o EasyPanel está configurado para implantar no
+merge. Uma falha `DATABASE_SCHEMA_NOT_READY` exige conferir a versão e, após
+aplicar a expansão aprovada, verificar a tentativa de deploy e os sinais de
+saúde. Não inicie outro consumidor para executar a migration.
+
 Triggers de rollback:
 
 - 5xx acima de 5% por 5 minutos;

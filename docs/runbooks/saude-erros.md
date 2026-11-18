@@ -327,6 +327,34 @@ fronteiras, validadores e build aprovados. `npm audit --audit-level=high`
 retornou zero vulnerabilidades. Sem banco de testes configurado, os testes
 PostgreSQL condicionais continuam fora dessa evidência local.
 
+### Inicialização com schema compatível — OPS-ERR-BOOT-01
+
+Na triagem após o rollout WAP-E04 de 17/11/2026, a compilação da API no
+EasyPanel terminou às 17h51 de Brasília. O worker registrou falhas de poll a
+partir de 17h52. Às 17h56, a API já atendia requisições e retornava HTTP 500
+com SQLSTATE `42P01` (relação ausente). O último `API_NOT_READY` aparecia às
+17h57 e o último `API_5XX` às 18h01. Na revisão após a virada do dia,
+live, ready e saúde operacional voltaram a responder HTTP 200. A amostra
+correlaciona falhas de inicialização e não explica todos os 5xx de 14 dias.
+
+Aplique as migrations expand da revisão candidata pelo procedimento da
+[topologia](../../EASYPANEL-TOPOLOGY.md#9-migração-e-rollback) antes de
+promover API e worker. Os dois processos verificam a conectividade e o checksum
+de cada migration expand necessária antes de abrir a porta ou iniciar o
+consumo das filas. `DATABASE_SCHEMA_NOT_READY` indica expansão ausente ou
+incompatível. Confira a revisão e o histórico no banco, aplique a expansão
+aprovada pelo runner dedicado e confira a nova tentativa de deploy. Divergência
+de checksum exige investigação. A inicialização não aplica migrations.
+Depois do rollout confira SHA, live, ready, operação e recorrência na central.
+Rollback usa somente uma revisão compatível com o schema aplicado.
+
+O histórico continha seis grupos, dois já resolvidos. As visões do worker e
+do n8n mostravam oito pendências cada, entre 11/11 às 16h11 e 17/11 às 18h02.
+Os grupos podem projetar as mesmas operações. Saúde verde e a trava de
+inicialização não comprovam o resultado de nenhum envio. O encerramento
+individual exige o vínculo e a prova de OPS-ERR-10/11. Preserve a trilha
+original e não execute replay nem reenvio como parte da triagem.
+
 ### Referências nginx — OPS-ERR-04/05
 
 A coleta anterior descartava IDs nginx de 32 hex ao exigir versão/variant

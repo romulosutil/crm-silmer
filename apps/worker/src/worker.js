@@ -809,6 +809,7 @@ export async function startWorkerFromEnvironment(options = {}) {
       }),
   });
   try {
+    await database.assertReady();
     const commandStore = await loadN8nCommandStore(
       database,
       environment,

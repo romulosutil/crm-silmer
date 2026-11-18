@@ -1222,6 +1222,15 @@ transporte n8n, confirmação comercial, ACL de escrita ou infraestrutura.
       unsupported no workflow. Operação e rollback no
       [runbook](../../../docs/runbooks/inbox-prioridades.md).
 
+## OPS-ERR-BOOT-01 — Impedir inicialização sobre schema incompatível (18/11/2026)
+
+Requisitos OPS-ERR-03/04/08 e OPSH-01/02. A API e o worker verificam todas as
+migrations expand e seus checksums antes de atender HTTP e consumir filas.
+O teste PostgreSQL executa os dois entrypoints contra um schema atrasado e
+verifica a falha de inicialização com código controlado. Evidência operacional,
+ordem de implantação e limites da triagem no
+[runbook Saúde e erros](../../../docs/runbooks/saude-erros.md#inicialização-com-schema-compatível--ops-err-boot-01).
+
 ## OPS-ERR-DIAG-01 — códigos de banco nos logs seguros (12/11/2026)
 
 OPS-ERR-04/06, PRV-01 e investigação dos API_5XX históricos.

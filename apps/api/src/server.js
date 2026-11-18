@@ -741,11 +741,14 @@ if (
   const port = Number.parseInt(process.env.PORT ?? '3000', 10);
   const host = process.env.HOST ?? '0.0.0.0';
 
+  let database;
+  let api;
   try {
-    const database = createDatabase({
+    database = createDatabase({
       connectionString: process.env.DATABASE_URL ?? '',
     });
-    const api = createServerApi({
+    await database.assertReady();
+    api = createServerApi({
       database,
       identity: createIdentityApiRuntime(database),
       logger,
@@ -763,5 +766,6 @@ if (
           : 'API_START_FAILED',
     });
     process.exitCode = 1;
+    await (api?.close() ?? database?.close())?.catch(() => undefined);
   }
 }

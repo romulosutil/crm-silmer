@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import test from 'node:test';
+import { promisify } from 'node:util';
 
 import { Pool } from 'pg';
 
@@ -178,7 +180,26 @@ if (connectionString) {
       );
       assert.equal(await checkDatabaseReadiness(pool, newImage), false);
 
-      // One instance through the recovery: the runbook migrates without restart.
+      // Neither executable should start while its required expand schema is absent.
+      for (const entrypoint of [
+        'apps/api/src/server.js',
+        'apps/worker/src/worker.js',
+      ]) {
+        await assert.rejects(
+          promisify(execFile)(process.execPath, [entrypoint], {
+            env: {
+              DATABASE_URL: connectionString,
+              HOST: '127.0.0.1',
+              PORT: '0',
+            },
+            timeout: 10_000,
+          }),
+          { code: 1, stdout: /"error_code":"DATABASE_SCHEMA_NOT_READY"/u },
+          entrypoint,
+        );
+      }
+
+      // The probe on a running instance also sees migrations without a restart.
       const api = createServerApi({
         logger: createSafeLogger({ service: 'crm-silmer-api', sink: () => {} }),
         readiness: () => checkDatabaseReadiness(pool, newImage),

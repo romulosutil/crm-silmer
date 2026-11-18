@@ -82,7 +82,21 @@ function gate() {
  */
 async function setup(page, options = {}) {
   await installMocks(page, {}, { fixedClock: false });
+  await page.addInitScript(() => {
+    const add = globalThis.EventTarget.prototype.addEventListener;
+    globalThis.EventTarget.prototype.addEventListener = function (
+      type,
+      listener,
+      options,
+    ) {
+      if (type === 'identity.user.changed')
+        /** @type {any} */ (globalThis).__wapEventSource = this;
+      return add.call(this, type, listener, options);
+    };
+  });
   const state = {
+    /** Contacts whose access was lost (the API answers 404). */
+    gone: new Set(),
     /** @type {string[]} */ previews: [],
     /** @type {Write[]} */ writes: [],
     /** @type {Promise<unknown>[]} */ settled: [],
@@ -108,6 +122,8 @@ async function setup(page, options = {}) {
     if (path === '/api/v1/orders')
       return route.fulfill({ json: { items: [], nextCursor: null } });
     const detail = /^\/api\/v1\/contacts\/([^/]+)$/u.exec(path);
+    if (detail && state.gone.has(detail[1]))
+      return route.fulfill({ status: 404, json: { code: 'NOT_FOUND' } });
     if (detail && [ANA.id, SECOND.id].includes(detail[1]))
       return route.fulfill({
         json: {
@@ -368,22 +384,45 @@ test('WAP-24: destino inválido recusa e mantém o rascunho', async ({
   expect(state.writes).toHaveLength(1);
 });
 
-test('WAP-24: tentativa incerta perdida ao recarregar não duplica o envio', async ({
+const PENDING =
+  'Há uma mensagem sua neste atendimento ainda sem confirmação. Abra a conversa para conferir o envio antes de mandar outra.';
+
+/** @param {import('@playwright/test').Page} page @param {string} path */
+async function navigateInApp(page, path) {
+  await page.evaluate((target) => {
+    globalThis.history.pushState({}, '', target);
+    globalThis.dispatchEvent(new globalThis.PopStateEvent('popstate'));
+  }, path);
+}
+
+/** @param {import('@playwright/test').Page} page @param {string} userId */
+async function userChanged(page, userId) {
+  await page.evaluate((id) => {
+    /** @type {any} */ (globalThis).__wapEventSource.dispatchEvent(
+      new globalThis.MessageEvent('identity.user.changed', {
+        data: JSON.stringify({ userId: id }),
+      }),
+    );
+  }, userId);
+}
+
+test('WAP-24: tentativa incerta perdida ao recarregar exige conferir a conversa', async ({
   page,
 }) => {
-  const server = sharedServer();
-  let pending = false;
+  let landed = false;
   const state = await setup(page, {
-    preview: server.preview,
-    respond: (write, index) => {
-      if (index === 0) {
-        // Accepted by the server, but the answer never reaches the browser.
-        pending = true;
-        return 'timedout';
-      }
-      // The first attempt commits before this one is processed.
-      if (pending) server.committed = true;
-      return server.respond(write);
+    preview: (contactId) => ({
+      json: {
+        preview: previewOf(contactId, {
+          conversation: landed ? { id: 'r-ana', version: 4 } : null,
+          pendingSend: landed,
+        }),
+      },
+    }),
+    respond: () => {
+      // Accepted and queued, but the answer never reaches the browser.
+      landed = true;
+      return 'timedout';
     },
   });
   await page.goto('/meus-clientes/contact-r-ana');
@@ -397,19 +436,20 @@ test('WAP-24: tentativa incerta perdida ao recarregar não duplica o envio', asy
   ui = composer(page);
   await ui.start.click();
   await expect(ui.field).toHaveValue('');
-  await expect(ui.region.getByText('Abre um novo atendimento')).toBeVisible();
-  await ui.field.fill('Mensagem talvez enviada');
-  await ui.send.click();
-  await expect(ui.alert).toContainText(CONVERSATION_CHANGED);
-  await expect(ui.field).toHaveValue('Mensagem talvez enviada');
-  await expect(page).toHaveURL(/\/meus-clientes\/contact-r-ana$/u);
-  await ui.region.getByRole('button', { name: 'Conferir de novo' }).click();
   await expect(
     ui.region.getByText('Continua o atendimento ativo'),
   ).toBeVisible();
-  expect(state.writes).toHaveLength(2);
-  expect(state.writes[1].key).not.toBe(state.writes[0].key);
-  expect(state.writes[1].body.expectedConversation).toBeNull();
+  await expect(ui.send).toHaveAttribute('aria-disabled', 'true');
+  await expect(ui.send).toHaveAccessibleDescription(/ainda sem confirmação/u);
+  await expect(ui.region.getByText(PENDING)).toBeVisible();
+  await expect(
+    ui.region.getByRole('link', { name: 'Abrir conversa' }),
+  ).toHaveAttribute('href', '/inbox/r-ana');
+  await ui.field.fill('Mensagem talvez enviada');
+  await ui.send.click({ force: true });
+  await ui.field.press('Control+Enter');
+  expect(state.writes).toHaveLength(1);
+  await expect(page).toHaveURL(/\/meus-clientes\/contact-r-ana$/u);
   expect(
     await page.evaluate(() =>
       [globalThis.localStorage, globalThis.sessionStorage].some((store) =>
@@ -419,6 +459,106 @@ test('WAP-24: tentativa incerta perdida ao recarregar não duplica o envio', asy
       ),
     ),
   ).toBe(false);
+  await ui.region.getByRole('link', { name: 'Abrir conversa' }).click();
+  await expect(page).toHaveURL(/\/inbox\/r-ana$/u);
+});
+
+test('WAP-24: envio ainda sem confirmação no servidor recusa e pede conferência', async ({
+  page,
+}) => {
+  const state = await setup(page, {
+    respond: (_write, index) =>
+      index === 0
+        ? { status: 409, json: { code: 'WHATSAPP_OPERATION_UNCERTAIN' } }
+        : accepted(true),
+  });
+  await page.goto('/meus-clientes/contact-r-ana');
+  const ui = composer(page);
+  await ui.start.click();
+  await expect(ui.region.getByText('••••0000')).toBeVisible();
+  await ui.field.fill('Mensagem conferida');
+  await ui.send.click();
+  await expect(ui.alert).toContainText(PENDING);
+  await expect(ui.field).toHaveValue('Mensagem conferida');
+  await expect(page).toHaveURL(/\/meus-clientes\/contact-r-ana$/u);
+  const recheck = ui.region.getByRole('button', { name: 'Conferir de novo' });
+  await expect(recheck).toBeFocused();
+  await expect(ui.send).toHaveAttribute('aria-disabled', 'true');
+  await recheck.press('Enter');
+  await expect(ui.field).toBeFocused();
+  expect(state.previews).toEqual([ANA.id, ANA.id]);
+  await ui.send.click();
+  await expect(page).toHaveURL(/\/inbox\/r-ana$/u);
+  expect(state.writes).toHaveLength(2);
+  expect(state.writes[1].key).not.toBe(state.writes[0].key);
+});
+
+test('WAP-T02-07: perder o acesso ao cliente descarta o rascunho', async ({
+  page,
+}) => {
+  const state = await setup(page);
+  await page.goto('/meus-clientes/contact-r-ana');
+  const ui = composer(page);
+  await ui.start.click();
+  await ui.field.fill('Rascunho que não pode sobrar');
+  await page.getByRole('link', { name: 'Cliente sintético B' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Cliente sintético B' }),
+  ).toBeVisible();
+  state.gone.add(ANA.id);
+  await navigateInApp(page, '/meus-clientes/contact-r-ana');
+  await expect(
+    page.getByText('Este cliente não está disponível para seu acesso.'),
+  ).toBeVisible();
+  state.gone.delete(ANA.id);
+  await navigateInApp(page, '/meus-clientes/contact-second');
+  await expect(
+    page.getByRole('heading', { name: 'Cliente sintético B' }),
+  ).toBeVisible();
+  await navigateInApp(page, '/meus-clientes/contact-r-ana');
+  await expect(
+    page.getByRole('heading', { name: 'Cliente Ana T.' }),
+  ).toBeVisible();
+  await ui.start.click();
+  await expect(ui.field).toHaveValue('');
+  expect(state.writes).toEqual([]);
+});
+
+test('WAP-T02-07: mudança de outro usuário não fecha nem aborta o envio', async ({
+  page,
+}) => {
+  const hold = gate();
+  const state = await setup(page, {
+    respond: async () => {
+      await hold.promise;
+      return accepted();
+    },
+  });
+  await page.goto('/meus-clientes/contact-r-ana');
+  const ui = composer(page);
+  await ui.start.click();
+  await expect(ui.region.getByText('••••0000')).toBeVisible();
+  await ui.field.fill('Olá, Ana!');
+  await ui.send.click();
+  await expect.poll(() => state.writes.length).toBe(1);
+  await userChanged(page, 'seller-carlos');
+  await expect(ui.field).toHaveValue('Olá, Ana!');
+  hold.release();
+  await expect(page).toHaveURL(/\/inbox\/r-ana$/u);
+  expect(state.writes).toHaveLength(1);
+});
+
+test('WAP-T02-07: mudança do próprio usuário fecha o compositor', async ({
+  page,
+}) => {
+  await setup(page);
+  await page.goto('/meus-clientes/contact-r-ana');
+  const ui = composer(page);
+  await ui.start.click();
+  await ui.field.fill('Olá, Ana!');
+  await userChanged(page, 'seller-bia');
+  await expect(ui.field).toHaveCount(0);
+  await expect(ui.start).toBeVisible();
 });
 
 test('WAP-24: linha offline recusa sem criar nada e mantém o rascunho', async ({

@@ -557,6 +557,36 @@ auditorias completa e de runtime sem vulnerabilidades;
 sem evidência live: CI verde da PR, imagens com digest, spike do provedor
 (E01), pareamento e tráfego reais, restore remoto e aprovações (WAP-E12).
 
+### Evidência local de WAP-E12 (parcial)
+
+Preparação e ensaio local em 18/11/2026 sobre E11 `e627c508`
+([registro](validation-piloto.md),
+[roteiro](../../../docs/runbooks/seller-whatsapp.md#roteiro-do-piloto-wap-e12)).
+**WAP-T05-05/06/07 e WAP-E12 seguem abertos.** Nenhuma autorização operacional
+vigente cobre publicar, parear, enviar a cliente ou cobrar. Por isso, não houve
+efeito real, e o gate live fica pendente nesta mesma PR.
+
+O roteiro único (P1–P5) traz go/no-go, congelamento, reconciliação sem
+reenvio e regras de evidência minimizada. `seller-whatsapp-pilot-rehearsal`
+executa esse roteiro com A e B na allowlist e C negado: pareamento pela cadeia
+real de controle (QR e código), Pedido passivo no Assunto alvo, tráfego,
+Contact compartilhado, conflito por campo, primeiro envio de B e ficha pela
+linha de A. O resultado foi 11/11 em três execuções, sem skips, com 789
+colunas e logs sem marcadores. O ensaio entra no job PostgreSQL do CI.
+
+O ensaio e a revisão de QA acharam quatro P2, corrigidos nas fronteiras donas
+com teste vermelho antes: `cc01938c` (códigos públicos de restrição e linha
+indisponível), `f18225ff` e `d5384387` (ordem de lock da ficha em PDF e `503`
+genérico). E12-5, erro bruto do banco no corpo `500` das rotas de conversa e de
+operação, é anterior ao branch e fica aberto para decisão antes do piloto.
+
+Gates do código acumulado E05–E12: suítes PostgreSQL do CI 824/824, integração
+E07/E08/E10/E11 sem falhas nem skips, `npm run validate` com 2.893 aprovados e
+61 skips live sem URL, e `npm run test:e2e -- --workers=2` com 1.114 aprovados.
+O único caso instável foi o BCS-07, que passou 5/5 isolado. Pendente: CI da
+PR, merge, imagens com digest, E01 (código no mesmo celular), F3/F4/E12-5,
+restore remoto e as autorizações do PO, da Operação, da Privacidade e Financeira.
+
 ## Cobertura por requisito
 
 Esta matriz aponta tarefas que implementam/verificam cada contrato; os aceites

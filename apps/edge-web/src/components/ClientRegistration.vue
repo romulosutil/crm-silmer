@@ -8,6 +8,7 @@
  */
 import {
   computed,
+  inject,
   nextTick,
   onBeforeUnmount,
   reactive,
@@ -37,6 +38,14 @@ const props = defineProps({
   contact: { type: Object, required: true },
 });
 const emit = defineEmits(['saved', 'loaded', 'unavailable']);
+const sessionUser = inject('sessionUser', ref({}));
+const reviewReason = ref('');
+const reviewConfirmed = ref(false);
+const canReview = computed(
+  () =>
+    props.contact.shared &&
+    (sessionUser.value?.capabilities ?? []).includes('COMMERCIAL_ADMIN'),
+);
 
 /** Form order; also the order of the error summary. */
 const FIELD_ORDER = [...REGISTRATION_FIELDS, 'phone', 'email'];
@@ -285,6 +294,8 @@ function text(value) {
 async function open() {
   const contact = props.contact;
   const data = contact.registration ?? {};
+  reviewReason.value = '';
+  reviewConfirmed.value = false;
   const exempt = data.stateRegistration === 'ISENTO';
   draft.personType = text(data.personType);
   draft.document = data.document
@@ -592,6 +603,11 @@ async function save() {
       const body = {
         expectedVersion: current.version,
         registration: result.value,
+        ...(canReview.value &&
+        reviewConfirmed.value &&
+        reviewReason.value.trim()
+          ? { review: { confirmed: true, reason: reviewReason.value.trim() } }
+          : {}),
       };
       const response = await request(
         `/api/v1/contacts/${contactId}/registration`,
@@ -633,6 +649,15 @@ async function handleSaveError(cause, partial = false) {
   generalError.value = partial ? `${PARTIAL_SAVE} Tente de novo.` : '';
   const status = Number(cause?.status);
   const code = String(cause?.code ?? '');
+  if (
+    code === 'CONTACT_FIELD_RESTRICTED' ||
+    code === 'CONTACT_REVIEW_REQUIRED'
+  ) {
+    await showGeneralError(
+      `${prefix}A alteração deste campo compartilhado exige conferência por um administrador. Seu rascunho foi mantido.`,
+    );
+    return;
+  }
   if ([403, 404].includes(status)) {
     emit('unavailable');
     return;
@@ -1231,6 +1256,24 @@ onBeforeUnmount(() => {
           {{ errorText('email') }}
         </p>
       </div>
+
+      <fieldset v-if="canReview">
+        <legend>Conferência de alteração fiscal</legend>
+        <p>
+          Para alterar um CPF, CNPJ ou tipo de pessoa já preenchido, confirme a
+          conferência e informe o motivo.
+        </p>
+        <label
+          ><input v-model="reviewConfirmed" type="checkbox" /> Conferi a
+          alteração</label
+        >
+        <label :for="fieldId('review-reason')">Motivo da alteração</label>
+        <input
+          :id="fieldId('review-reason')"
+          v-model="reviewReason"
+          maxlength="500"
+        />
+      </fieldset>
 
       <div class="inline-actions">
         <button

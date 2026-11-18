@@ -1,6 +1,7 @@
 <script setup>
 import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { request } from '../lib/api-client.js';
+import MyWhatsApp from '../components/MyWhatsApp.vue';
 
 const props = defineProps({
   session: { type: Object, required: true },
@@ -87,5 +88,6 @@ onBeforeUnmount(() => {
         </div>
       </dl>
     </section>
+    <MyWhatsApp v-if="user.functionName === 'Vendedor'" />
   </div>
 </template>

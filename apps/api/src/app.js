@@ -19,6 +19,7 @@ import { registerChatMediaStatusRoutes } from './chat-media-status-routes.js';
 import { registerChatMediaContentRoutes } from './chat-media-content-routes.js';
 import { registerIdentityRoutes } from './identity-routes.js';
 import { registerSellerWhatsAppRoutes } from './seller-whatsapp-routes.js';
+import { registerSellerWhatsAppFirstSendRoutes } from './seller-whatsapp-first-send-routes.js';
 import { registerFinanceRoutes } from './finance-routes.js';
 import { registerDashboardRoutes } from './dashboard-routes.js';
 import { registerDashboardCheckpointRoutes } from './dashboard-checkpoint-routes.js';
@@ -60,6 +61,7 @@ export const WEBHOOK_REQUESTS_PER_SECOND = 20;
  *   commercial?: Record<string, any>,
  *   identity?: Record<string, any>,
  *   sellerWhatsApp?: any,
+ *   sellerWhatsAppFirstSend?: any,
  *   n8n?: any,
  *   conversations?: any,
  *   chatMedia?: any,
@@ -98,6 +100,15 @@ export function createApi(options = {}, runtime = {}) {
   registerSellerWhatsAppRoutes(
     api,
     runtime.sellerWhatsApp,
+    (/** @type {object} */ request) => {
+      const context = requests.get(request);
+      if (!context) throw new Error('Request context unavailable');
+      return context;
+    },
+  );
+  registerSellerWhatsAppFirstSendRoutes(
+    api,
+    runtime.sellerWhatsAppFirstSend,
     (/** @type {object} */ request) => {
       const context = requests.get(request);
       if (!context) throw new Error('Request context unavailable');

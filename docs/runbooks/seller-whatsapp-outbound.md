@@ -77,6 +77,61 @@ O nó Evolution de mídia envia o documento pela instância reservada.
 O retorno HTTP 202 indica registro na fila. A conversa exibe o estado do envio.
 O download e o compartilhamento nativo do PDF continuam disponíveis no Pedido.
 
+## Primeiro envio individual (WAP-E10)
+
+WAP-T04-03, requisitos WAP-22/23/24/32. O primeiro envio é opcional e
+individual: abrir, salvar ou vincular Cliente não envia, e o atendimento
+passivo e o Pedido não dependem dele. Não exige migração nova.
+
+- `GET /contacts/{contactId}/whatsapp/first-message-preview` não cria
+  identidade, conversa, mensagem nem outbox. Devolve versões de Contact,
+  vínculo e linha, geração, finais mascarados e `restriction`.
+- `POST /contacts/{contactId}/whatsapp/conversations` recebe só texto e as
+  quatro versões esperadas, com `Idempotency-Key`, CSRF e Origin. Conta,
+  instância e destino `+E164` vêm do servidor, a partir do telefone do
+  Contact. O corpo recusa `to`, `userId`, `instanceName`, `accountId` e URLs.
+  Responde 201, ou 200 no replay, depois de revalidar sessão, guardas,
+  titular e vínculo ativo.
+
+A guarda própria é `SELLER_WHATSAPP_FIRST_SEND_ENABLED`, com default `false`,
+e `SELLER_WHATSAPP_FIRST_SEND_SELLER_IDS`, com default `[]`. Com a flag ativa,
+a allowlist JSON é obrigatória. Configuração inválida derruba a API na
+partida. O vendedor também precisa constar em `SELLER_WHATSAPP_SEND_*` e
+`SELLER_CLIENTS_*`. Só o Vendedor ativo titular da linha, com vínculo ativo
+próprio, pode usar a rota. Vínculo cadastral não dá acesso à conversa de
+outra linha.
+
+A transação única não faz HTTP e segue a ordem do inbound pessoal:
+
+1. usuário/função e linha com binding atual, todos `FOR SHARE`;
+2. advisory `n8n-conversation:evolution:{conta}:{destino}`;
+3. recibo idempotente com chave `sha256([ator, chave])`;
+4. advisory `identity:{hash}`;
+5. Contact, identidade, vínculo e conversa, nessa ordem, com `FOR UPDATE`;
+6. mensagem, comando n8n e outbox, conversa, evento e auditoria.
+
+O teste concorrente com resposta inbound prova a ordem sem deadlock. Se a
+identidade já pertencer a outro Contact, a rota responde 409
+`WHATSAPP_IDENTITY_CONFLICT` genérico, sem reassociação. Uma conversa ativa
+só é reutilizada quando é humana e do titular; caso contrário, responde 409
+`CONVERSATION_UNAVAILABLE`. Uma conversa encerrada fica intacta e o envio
+abre novo ciclo. A identidade nasce `confirmed`, a única opção do schema
+para WhatsApp. O índice de busca por telefone só é preenchido pelo inbound.
+
+Os erros são 400 `INVALID_REQUEST`/`IDEMPOTENCY_KEY`, 403, 404,
+409 `CONTACT_VERSION_CONFLICT`/`WHATSAPP_GENERATION_STALE`/
+`IDEMPOTENCY_CONFLICT`, 422 `WHATSAPP_DESTINATION_INVALID`, 429 e 503
+`WHATSAPP_SEND_UNAVAILABLE`/`SELLER_WHATSAPP_FIRST_SEND_DISABLED`. Linha
+offline antes da reserva desfaz tudo. Depois da reserva, a mensagem usa o
+caminho E08 sem alteração. Timeout fica `outcome_unknown` com item de
+reconciliação. Não repita o envio às cegas: reconcilie pelo ledger.
+
+Para rollback, desligue `SELLER_WHATSAPP_FIRST_SEND_ENABLED`. Isso impede
+novos primeiros envios e preserva identidades, conversas, mensagens,
+comandos e incertezas. O ensaio usa o banco `crm_silmer_test_wap_e10` e
+`node --test test/integration/seller-whatsapp-first-send.test.js`. A
+evidência local não homologa o provedor nem o pareamento real.
+
 ## Ensaio local e rollback
 
 Use PostgreSQL dedicado em loopback com banco `crm_silmer_test_wap_e08`.

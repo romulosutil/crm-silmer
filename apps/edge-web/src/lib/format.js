@@ -42,6 +42,55 @@ export const CHANNEL_LABELS = Object.freeze({
   whatsapp: 'WhatsApp',
 });
 
+/** @param {unknown} value the first word of a person's name, or ''. */
+function holderFirstName(value) {
+  if (typeof value !== 'string') return '';
+  const name = value.trim().split(/\s+/u)[0] ?? '';
+  return name.length <= 40 && !/[\p{Cc}<>]/u.test(name) ? name : '';
+}
+
+/**
+ * WAP-09: which WhatsApp a conversation belongs to and which one a reply
+ * leaves by, in words (never color alone). A personal line belongs to the
+ * seller who holds it, who is always the conversation's owner (it cannot be
+ * transferred): its row carries a badge and its header says so. Any other
+ * WhatsApp conversation is the company's general line, which keeps the row
+ * and the header as they were (`badge` empty, `identity` the channel) and
+ * only says where a reply leaves. Only the holder sends from a personal line
+ * (WHATSAPP_SEND_UNAVAILABLE for anyone else), so the others read that
+ * instead of an exit. Other channels have no line.
+ *
+ * @param {{channel?: unknown, personalLine?: unknown, assignedUser?: {id?: unknown, name?: unknown}|null}|null|undefined} conversation
+ * @param {{actorId?: string, holderName?: string|null}} [context]
+ *   `holderName` names the holder when the conversation does not.
+ * @returns {{badge: string, identity: string, sendHint: string}|null}
+ */
+export function conversationLine(conversation, context = {}) {
+  if (conversation?.channel !== 'whatsapp') return null;
+  const company = brand.companyName;
+  if (conversation.personalLine !== true) {
+    return {
+      badge: '',
+      identity: CHANNEL_LABELS.whatsapp,
+      sendHint: `Sai pela linha ${company}`,
+    };
+  }
+  const holder = conversation.assignedUser ?? null;
+  if (holder?.id && holder.id === context.actorId) {
+    return {
+      badge: 'Seu WhatsApp',
+      identity: 'WhatsApp pessoal',
+      sendHint: 'Sai pelo seu WhatsApp',
+    };
+  }
+  const name = holderFirstName(holder?.name ?? context.holderName);
+  return {
+    badge: name ? `WhatsApp de ${name}` : 'WhatsApp pessoal',
+    identity: name ? `WhatsApp pessoal de ${name}` : 'WhatsApp pessoal',
+    sendHint: 'Envio só pelo titular da linha',
+  };
+}
+
 /** @param {unknown} value */
 export function formatPhoneNumber(value) {
   const digits = String(value ?? '').replace(/\D/gu, '');

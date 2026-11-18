@@ -41,6 +41,8 @@ const environment = {
   SELLER_WHATSAPP_SEND_SELLER_IDS: ids,
   SELLER_CLIENTS_ENABLED: 'true',
   SELLER_CLIENTS_SELLER_IDS: ids,
+  SELLER_WHATSAPP_INBOUND_ENABLED: 'true',
+  SELLER_WHATSAPP_INBOUND_SELLER_IDS: ids,
   CONTACT_IDENTITY_ENVELOPE_KEY: key.toString('base64'),
   CONTACT_IDENTITY_LOOKUP_KEY: key.toString('base64'),
   INBOX_MESSAGE_ENVELOPE_KEY: key.toString('base64'),
@@ -151,6 +153,18 @@ test('WAP-E10 guard is default off, explicit and validated at startup', () => {
       environment: { ...environment, SELLER_WHATSAPP_SEND_SELLER_IDS: '1' },
     }),
   );
+  for (const inbound of [
+    { SELLER_WHATSAPP_INBOUND_ENABLED: 'yes' },
+    { SELLER_WHATSAPP_INBOUND_SELLER_IDS: 'not-json' },
+    { SELLER_WHATSAPP_INBOUND_SELLER_IDS: '[]' },
+  ])
+    assert.throws(() =>
+      createSellerWhatsAppFirstSendRuntime(untouched, {
+        access: access(),
+        outbox,
+        environment: { ...environment, ...inbound },
+      }),
+    );
   authorize(
     { id: seller, functionName: 'Vendedor', capabilities: [] },
     'contact.whatsapp.first_send',
@@ -225,6 +239,19 @@ test('WAP-E10 flag, allowlists and roles fail closed before any database use', a
     },
     {
       env: { SELLER_WHATSAPP_SEND_ENABLED: 'false' },
+      status: 503,
+      code: 'SELLER_WHATSAPP_FIRST_SEND_DISABLED',
+      session: true,
+    },
+    // Without the personal inbound guard the reply would be refused.
+    {
+      env: { SELLER_WHATSAPP_INBOUND_ENABLED: 'false' },
+      status: 503,
+      code: 'SELLER_WHATSAPP_FIRST_SEND_DISABLED',
+      session: true,
+    },
+    {
+      env: { SELLER_WHATSAPP_INBOUND_SELLER_IDS: '["someone-else"]' },
       status: 503,
       code: 'SELLER_WHATSAPP_FIRST_SEND_DISABLED',
       session: true,
@@ -474,6 +501,7 @@ test('WAP-E10 maps every domain refusal to its public code and 201/200', async (
     ['WHATSAPP_IDENTITY_CONFLICT', 409],
     ['CONVERSATION_UNAVAILABLE', 409],
     ['CONVERSATION_VERSION_CONFLICT', 409],
+    ['WHATSAPP_OPERATION_UNCERTAIN', 409],
     ['IDEMPOTENCY_KEY_REUSED', 409, 'IDEMPOTENCY_CONFLICT'],
     ['IDEMPOTENCY_RECORD_PENDING', 500, 'IDEMPOTENCY_CONFLICT'],
     ['WHATSAPP_DESTINATION_INVALID', 422],
@@ -554,11 +582,12 @@ test('WAP-E10 preview is read-only and never reveals another Contact', async () 
   const accountId = randomUUID();
   /** @type {string[]} */
   const statements = [];
-  /** @type {{identityContact: string|null, conversation: any, phone: string}} */
+  /** @type {{identityContact: string|null, conversation: any, phone: string, pending: boolean}} */
   const world = {
     identityContact: null,
     conversation: null,
     phone: '(11) 90000-4321',
+    pending: false,
   };
   /** @param {string} sql */
   const answer = (sql) => {
@@ -601,6 +630,7 @@ test('WAP-E10 preview is read-only and never reveals another Contact', async () 
       return world.identityContact
         ? [{ id: 'identity-1', current_contact_id: world.identityContact }]
         : [];
+    if (/FROM crm\.messages/u.test(sql)) return world.pending ? [{}] : [];
     if (/FROM crm\.conversations/u.test(sql))
       return world.conversation ? [world.conversation] : [];
     return [];
@@ -643,6 +673,7 @@ test('WAP-E10 preview is read-only and never reveals another Contact', async () 
     conversation: null,
     available: true,
     restriction: null,
+    pendingSend: false,
   });
   world.identityContact = 'contact-of-someone-else';
   const conflict = await read();
@@ -661,10 +692,16 @@ test('WAP-E10 preview is read-only and never reveals another Contact', async () 
   assert.equal(foreign.restriction, 'conversation_unavailable');
   assert.equal(foreign.conversation, null);
   world.conversation.assigned_user_id = seller;
-  assert.deepEqual((await read()).conversation, {
+  const reusable = await read();
+  assert.deepEqual(reusable.conversation, {
     id: 'conversation-1',
     version: 7,
   });
+  assert.equal(reusable.pendingSend, false);
+  // WAP-24: an unsettled send of the titular must be reconciled first.
+  world.pending = true;
+  assert.equal((await read()).pendingSend, true);
+  world.pending = false;
   // The titular's own confirmed number is never a customer destination.
   world.phone = '11000001234';
   const own = await read();
@@ -673,7 +710,7 @@ test('WAP-E10 preview is read-only and never reveals another Contact', async () 
   assert.equal(own.conversation, null);
   assert.equal(
     statements.filter((s) => s === 'SET TRANSACTION READ ONLY').length,
-    5,
+    6,
   );
   for (const sql of statements) {
     assert.doesNotMatch(

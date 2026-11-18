@@ -53,6 +53,33 @@ export function sellerWhatsAppFirstSendConfiguration(environment) {
   });
 }
 
+/** Same rules as the personal inbound guard parsed by n8n-runtime.js.
+ * @param {Record<string, unknown>} environment */
+export function sellerWhatsAppInboundSellers(environment) {
+  const flag = environment.SELLER_WHATSAPP_INBOUND_ENABLED;
+  if (flag !== undefined && !['true', 'false'].includes(String(flag)))
+    throw new Error('Invalid SELLER_WHATSAPP_INBOUND_ENABLED');
+  /** @type {unknown} */
+  let ids;
+  try {
+    ids = JSON.parse(
+      String(environment.SELLER_WHATSAPP_INBOUND_SELLER_IDS ?? '[]'),
+    );
+  } catch {
+    throw new Error('Invalid SELLER_WHATSAPP_INBOUND_SELLER_IDS');
+  }
+  if (
+    !Array.isArray(ids) ||
+    ids.some(
+      (id) => typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/u.test(id),
+    ) ||
+    new Set(ids).size !== ids.length ||
+    (flag === 'true' && !ids.length)
+  )
+    throw new Error('Personal inbound requires explicit seller IDs');
+  return new Set(/** @type {string[]} */ (flag === 'true' ? ids : []));
+}
+
 /** @param {unknown} value @param {string} name */
 function readKey(value, name) {
   if (typeof value !== 'string' || !/^[A-Za-z0-9+/_-]+={0,2}$/u.test(value))
@@ -82,6 +109,8 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
   const configuration = sellerWhatsAppFirstSendConfiguration(environment);
   const sendSellers = sellerWhatsAppSendConfiguration(environment);
   const clients = sellerClientsConfiguration(environment);
+  // Without the personal inbound guard the customer's reply would be refused.
+  const inboundSellers = sellerWhatsAppInboundSellers(environment);
   if (
     !options.access ||
     typeof options.access.authorizeRead !== 'function' ||
@@ -123,6 +152,24 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
     if (!clients.enabled) throw refusal(503, FIRST_SEND_DISABLED);
     if (!clients.sellerIds.includes(actorId)) throw refusal(403, 'FORBIDDEN');
     if (!sendSellers.has(actorId)) throw refusal(503, FIRST_SEND_DISABLED);
+    if (!inboundSellers.has(actorId)) throw refusal(503, FIRST_SEND_DISABLED);
+  }
+
+  /** WAP-24: an earlier send of this titular that is not settled (queued,
+   * dispatching or uncertain) must be reconciled before another message.
+   * @param {any} client @param {any} conversation @param {string} actorId */
+  async function pendingSend(client, conversation, actorId) {
+    if (!conversation) return false;
+    return Boolean(
+      (
+        await client.query(
+          `SELECT 1 FROM crm.messages WHERE conversation_id=$1 AND direction='outbound'
+             AND author_id=$2 AND (status IN ('queued','sending','outcome_unknown')
+               OR delivery_status='outcome_unknown') LIMIT 1`,
+          [conversation.id, actorId],
+        )
+      ).rows[0],
+    );
   }
 
   /** @param {any} auth @param {boolean} write */
@@ -334,6 +381,8 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
     let conversation = await activeConversation(client, line, to, true);
     if (conversation && !reusable(conversation, identity, actorId))
       throw refusal(409, 'CONVERSATION_UNAVAILABLE');
+    if (await pendingSend(client, conversation, actorId))
+      throw refusal(409, 'WHATSAPP_OPERATION_UNCERTAIN');
     // Checked under the conversation lock: another tab or an inbound reply
     // that opened/changed the conversation since the preview wins.
     if (!sameConversation(input.expectedConversation, conversation))
@@ -541,6 +590,7 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
               : null,
             available: restriction === null,
             restriction,
+            pendingSend: await pendingSend(client, conversation, actorId),
           },
         };
       });
@@ -594,7 +644,7 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
         async (/** @type {any} */ client) => {
           await bounds(client);
           const line = await titular(client, actorId, true);
-          if (!line) throw refusal(403, 'FORBIDDEN');
+          if (!line) throw refusal(503, 'WHATSAPP_SEND_UNAVAILABLE');
           const contact = await linkedContact(client, actorId, input.contactId);
           const to = destination(contact);
           // Same key as inbound/external sends: serializes tabs and replies.

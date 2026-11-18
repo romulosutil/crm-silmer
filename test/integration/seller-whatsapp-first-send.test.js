@@ -40,6 +40,8 @@ const environment = {
   SELLER_WHATSAPP_SEND_SELLER_IDS: allowlist,
   SELLER_CLIENTS_ENABLED: 'true',
   SELLER_CLIENTS_SELLER_IDS: allowlist,
+  SELLER_WHATSAPP_INBOUND_ENABLED: 'true',
+  SELLER_WHATSAPP_INBOUND_SELLER_IDS: allowlist,
   CONTACT_IDENTITY_ENVELOPE_KEY: key.toString('base64'),
   CONTACT_IDENTITY_LOOKUP_KEY: key.toString('base64'),
   INBOX_MESSAGE_ENVELOPE_KEY: key.toString('base64'),
@@ -314,7 +316,18 @@ test(
         delivery.payload.whatsapp_target.source.accountId,
         line.source.accountId,
       );
-      assert.equal(delivery.payload.source_revision, 0);
+      // No fabricated inbound: the revision is the real inbound count.
+      assert.equal(
+        delivery.payload.source_revision,
+        Number(
+          (
+            await pool.query(
+              'SELECT inbound_revision FROM crm.conversations WHERE id=$1',
+              [delivery.payload.conversation_id],
+            )
+          ).rows[0].inbound_revision,
+        ),
+      );
       const executionId = randomUUID();
       assert.equal(
         await store.markProcessing(commandId, {
@@ -385,6 +398,42 @@ test(
           messageId,
         ])
       ).rows[0].command_id;
+    /** Settle a queued first send through the real E08 path.
+     * @param {string} messageId @param {any} line @param {string} phone
+     * @param {string} externalId @param {'echo-first'|'http-first'|'none'} [order] */
+    async function settle(messageId, line, phone, externalId, order = 'none') {
+      const reservation = await dispatch(
+        await commandOf(messageId),
+        line,
+        phone,
+      );
+      if (order === 'echo-first')
+        await service.recordEvent(echo(line, externalId, phone));
+      await service.recordEvent(sent(reservation, externalId));
+      if (order === 'http-first')
+        await Promise.all([
+          service.recordEvent(echo(line, externalId, phone)),
+          service.recordEvent(echo(line, externalId, phone)),
+        ]);
+      assert.equal(
+        await store.markDelivered(reservation.commandId, {
+          attemptId: reservation.executionId,
+          now,
+        }),
+        true,
+      );
+      const rows = (
+        await pool.query(
+          'SELECT * FROM crm.messages WHERE provider_account_id=$1 AND external_message_id=$2',
+          [line.source.accountId, externalId],
+        )
+      ).rows;
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].id, messageId);
+      assert.equal(rows[0].status, 'sent');
+      assert.equal(rows[0].author_kind, 'human');
+      assert.equal(rows[0].author_id, line.sellerId);
+    }
 
     const P1 = '5511900000101';
     const c1 = await database.transaction((/** @type {any} */ c) =>
@@ -530,6 +579,15 @@ test(
           },
         );
         t.after(() => http.close());
+        // WAP-24: a queued first message blocks another send until settled.
+        const pending = (
+          await firstSend.preview({ actor: { id: A }, contactId: c1 })
+        ).preview;
+        assert.equal(pending.pendingSend, true);
+        await assert.rejects(firstSend.send(await request(a, c1)), {
+          code: 'WHATSAPP_OPERATION_UNCERTAIN',
+        });
+        await settle(first.result.body.message.id, a, P1, 'settle-p1-first');
         const payload = {
           text: first.input.text,
           expectedContactVersion: first.input.expectedContactVersion,
@@ -595,9 +653,11 @@ test(
         const lost = results.filter((r) => r.status === 'rejected');
         assert.equal(won.length, 1);
         assert.equal(lost.length, 1);
+        // The loser waited on the conversation lock and found the queued
+        // message of the winner: reconcile-before-repeat answers first.
         assert.equal(
           /** @type {any} */ (lost[0]).reason.code,
-          'CONVERSATION_VERSION_CONFLICT',
+          'WHATSAPP_OPERATION_UNCERTAIN',
         );
         const created = /** @type {any} */ (won[0]).value;
         assert.equal(created.created, true);
@@ -613,23 +673,59 @@ test(
           audits: before.audits + 1,
         });
         assert.equal((await active(a, P2)).length, 1);
+        const pending = (
+          await firstSend.preview({ actor: { id: A }, contactId: c2 })
+        ).preview;
+        assert.equal(pending.pendingSend, true);
+        assert.deepEqual(pending.conversation, {
+          id: created.body.conversation.id,
+          version: created.body.conversation.version,
+        });
+        // A re-previewed tab still waits while the first message is queued.
+        await assert.rejects(firstSend.send(await request(a, c2)), {
+          code: 'WHATSAPP_OPERATION_UNCERTAIN',
+        });
+        assert.deepEqual(await effects(), {
+          ...before,
+          identities: before.identities + 1,
+          conversations: before.conversations + 1,
+          messages: before.messages + 1,
+          commands: before.commands + 1,
+          jobs: before.jobs + 1,
+          receipts: before.receipts + 1,
+          audits: before.audits + 1,
+        });
+        // E08 settles it with the device echo arriving before the HTTP result.
+        await settle(
+          created.body.message.id,
+          a,
+          P2,
+          'first-echo-first',
+          'echo-first',
+        );
+        assert.equal(
+          (await firstSend.preview({ actor: { id: A }, contactId: c2 })).preview
+            .pendingSend,
+          false,
+        );
         const loser = results[0].status === 'rejected' ? one : two;
-        // The losing key was rolled back: replaying it still conflicts.
+        // The losing key was rolled back; its null expectation is now stale.
         await assert.rejects(firstSend.send(loser), {
           code: 'CONVERSATION_VERSION_CONFLICT',
         });
-        // A stale previewed version also conflicts.
+        const settled = await request(a, c2);
         await assert.rejects(
           firstSend.send({
-            ...(await request(a, c2)),
+            ...settled,
+            idempotencyKey: randomUUID(),
             expectedConversation: {
-              id: created.body.conversation.id,
-              version: created.body.conversation.version - 1,
+              id: settled.expectedConversation.id,
+              version: settled.expectedConversation.version - 1,
             },
           }),
           { code: 'CONVERSATION_VERSION_CONFLICT' },
         );
-        const deliberate = await firstSend.send(await request(a, c2));
+        const deliberate = await firstSend.send(settled);
         assert.equal(deliberate.created, true);
         assert.equal(deliberate.body.conversation.reused, true);
         assert.equal(
@@ -851,6 +947,10 @@ test(
       },
     );
 
+    /** @type {string} */
+    let cycleTwo = '';
+    /** @type {string} */
+    let reused = '';
     await t.test(
       'a closed conversation opens a new cycle and keeps its history',
       async () => {
@@ -868,6 +968,7 @@ test(
           closed.id,
         ]);
         const result = await firstSend.send(await request(a, c1));
+        cycleTwo = result.body.message.id;
         assert.equal(result.body.conversation.reused, false);
         assert.equal(result.body.conversation.cycleNumber, 2);
         const opened = (
@@ -895,6 +996,9 @@ test(
     await t.test(
       'the reply on the same line lands in the same Contact and conversation',
       async () => {
+        // Settle the cycle-two send before the reply: E08 fences a command
+        // whose source revision a later inbound has superseded.
+        await settle(cycleTwo, a, P1, 'settle-p1-cycle-two', 'http-first');
         const [current] = await active(a, P1);
         const contacts = await count('crm.contacts');
         await service.receiveInbound(inbound(a, 'reply-after-first-send', P1));
@@ -918,8 +1022,8 @@ test(
           ).rows[0].current_contact_id,
           c1,
         );
-        // A further first message reuses the now replied conversation.
         const reuse = await firstSend.send(await request(a, c1));
+        reused = reuse.body.message.id;
         assert.equal(reuse.body.conversation.id, current.id);
         assert.equal(reuse.body.conversation.reused, true);
       },
@@ -953,7 +1057,7 @@ test(
             ...(await request(a, shared)),
             actor: { id: S, kind: 'human' },
           }),
-          { code: 'FORBIDDEN' },
+          { code: 'WHATSAPP_SEND_UNAVAILABLE' },
         );
         // A's conversation on the shared Contact is untouched by B or S.
         assert.equal(
@@ -962,6 +1066,7 @@ test(
           ]),
           1,
         );
+        await settle(reused, a, P1, 'settle-p1-reused');
         const before = await effects();
         const fromA = await firstSend.send(await request(a, c1));
         assert.notEqual(fromA.body.conversation.id, foreign.id);
@@ -996,49 +1101,27 @@ test(
     await t.test(
       'echo before and after the HTTP result keeps one message',
       async () => {
-        const [echoFirst, httpFirst] = await Promise.all(
-          tabs.map(async (tab) => ({
-            messageId: tab.body.message.id,
-            commandId: await commandOf(tab.body.message.id),
-          })),
+        // The first P2 message settled echo-first above; this one HTTP-first.
+        await settle(
+          tabs[1].body.message.id,
+          a,
+          P2,
+          'first-http-first',
+          'http-first',
         );
-        const one = await dispatch(echoFirst.commandId, a, P2);
-        await service.recordEvent(echo(a, 'first-echo-first', P2));
-        await service.recordEvent(sent(one, 'first-echo-first'));
-        assert.equal(
-          await store.markDelivered(one.commandId, {
-            attemptId: one.executionId,
-            now,
-          }),
-          true,
-        );
-        const two = await dispatch(httpFirst.commandId, a, P2);
-        await service.recordEvent(sent(two, 'first-http-first'));
-        await Promise.all([
-          service.recordEvent(echo(a, 'first-http-first', P2)),
-          service.recordEvent(echo(a, 'first-http-first', P2)),
-        ]);
-        for (const [id, messageId] of [
-          ['first-echo-first', echoFirst.messageId],
-          ['first-http-first', httpFirst.messageId],
-        ]) {
-          const rows = (
-            await pool.query(
-              'SELECT * FROM crm.messages WHERE provider_account_id=$1 AND external_message_id=$2',
-              [a.source.accountId, id],
-            )
-          ).rows;
-          assert.equal(rows.length, 1);
-          assert.equal(rows[0].id, messageId);
-          assert.equal(rows[0].author_kind, 'human');
-          assert.equal(rows[0].author_id, A);
-        }
         const [conversation] = await active(a, P2);
         assert.equal(conversation.inbound_revision, '0');
         assert.equal(
           await count('crm.messages WHERE conversation_id=$1', [
             conversation.id,
           ]),
+          2,
+        );
+        assert.equal(
+          await count(
+            "crm.messages WHERE conversation_id=$1 AND status='sent' AND author_kind='human'",
+            [conversation.id],
+          ),
           2,
         );
       },
@@ -1088,7 +1171,22 @@ test(
         const replay = await firstSend.send(sameKey.input);
         assert.equal(replay.created, false);
         assert.deepEqual(replay.body, sameKey.body);
+        // Reconcile before repeating: an uncertain send blocks a new key.
+        assert.equal(
+          (await firstSend.preview({ actor: { id: A }, contactId: c3 })).preview
+            .pendingSend,
+          true,
+        );
+        await assert.rejects(firstSend.send(await request(a, c3)), {
+          code: 'WHATSAPP_OPERATION_UNCERTAIN',
+        });
         assert.equal(await count('crm.n8n_commands'), commands);
+        assert.equal(
+          await count('crm.messages WHERE conversation_id=$1', [
+            sameKey.body.conversation.id,
+          ]),
+          1,
+        );
       },
     );
 

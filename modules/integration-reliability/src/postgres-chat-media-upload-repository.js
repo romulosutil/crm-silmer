@@ -76,6 +76,61 @@ export class PostgresChatMediaUploadRepository {
       }
     });
   }
+
+  /** Reserve quota durably before writing a renderer-generated PDF. @param {any} input @param {Function} write */
+  async writeGeneratedPdf(input, write) {
+    await this.#database.transaction(async (/** @type {any} */ client) => {
+      await client.query(
+        `INSERT INTO crm.chat_media_quotas(bucket_alias,limit_bytes)
+        VALUES($1,$2) ON CONFLICT(bucket_alias) DO NOTHING`,
+        [this.#bucketAlias, this.#limitBytes],
+      );
+      const admitted = await client.query(
+        `UPDATE crm.chat_media_quotas
+        SET reserved_bytes=reserved_bytes+$2,version=version+1,updated_at=now()
+        WHERE bucket_alias=$1 AND used_bytes+reserved_bytes+$2<=limit_bytes RETURNING bucket_alias`,
+        [this.#bucketAlias, input.size],
+      );
+      if (!admitted.rows.length) throw error(429);
+      await client.query(
+        `INSERT INTO crm.chat_media(id,conversation_id,uploaded_by,upload_command_id,request_fingerprint,
+        kind,origin,filename_envelope,state,object_key,spool_key,storage_bucket_alias,input_size_bytes,reservation_bytes,
+        original_sha256,declared_mime_type,detected_mime_type,processing_guard_until)
+        VALUES($1,$2,$3,$1::uuid::text,$4,'document','order_pdf',$5,'processing',$1,$1,$6,$7,$7,$4,
+        'application/pdf','application/pdf',now()+interval '3 minutes')`,
+        [
+          input.id,
+          input.conversationId,
+          input.actorId,
+          input.sha256,
+          input.filenameEnvelope,
+          this.#bucketAlias,
+          input.size,
+        ],
+      );
+    });
+    // Hold the same writer fence as cleanup until the bounded scanner and PUT
+    // finish. The committed row tracks orphan bytes on failure or process loss.
+    await this.#database.transaction(async (/** @type {any} */ client) => {
+      await client.query(
+        'SELECT pg_advisory_xact_lock(hashtextextended($1,0))',
+        [`media-writer:${input.id}`],
+      );
+      const active = await client.query(
+        `SELECT id FROM crm.chat_media WHERE id=$1 AND origin='order_pdf'
+        AND state='processing' AND cleanup_started_at IS NULL AND processing_guard_until>now()`,
+        [input.id],
+      );
+      if (!active.rows.length) throw error(409);
+      await write();
+      await client.query(
+        `UPDATE crm.chat_media SET state='ready',validation_status='clean',
+        size_bytes=input_size_bytes,content_sha256=original_sha256,processed_at=now(),spool_key=NULL,
+        processing_guard_until=NULL,version=version+1 WHERE id=$1`,
+        [input.id],
+      );
+    });
+  }
   /** @param {any} client @param {any} input */
   async #conversation(client, input, checkState = true) {
     const actor = await requireSellerClientActor(client, input.actor.id);

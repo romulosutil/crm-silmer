@@ -132,6 +132,7 @@ export class RustfsMediaStore {
         'audio/ogg',
         'audio/mp4',
         'video/mp4',
+        'application/pdf',
       ].includes(mimeType)
     )
       throw new TypeError('Invalid validated media metadata');

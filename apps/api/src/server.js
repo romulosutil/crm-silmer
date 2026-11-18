@@ -441,6 +441,7 @@ export function createServerApi(runtime = {}) {
       n8n,
       operations,
       orders,
+      orderWhatsAppPdf: n8n?.orderWhatsAppPdf?.(chatMedia),
       orderAssistance,
       readiness,
       storeOrders,

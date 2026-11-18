@@ -1,7 +1,7 @@
 const RESERVE = 'Preparar reserva de envio humano (MVP)';
 const TEXT = 'WhatsApp - Enviar texto humano (MVP)';
 const MEDIA = 'Evolution - Enviar midia humana (MVP)';
-const PREPARE_MEDIA = 'Preparar mensagem Evolution de midia';
+const PREPARE_MEDIA = 'Preparar mensagem Evolution de midia (MVP)';
 const FAILURE = 'Falha de preflight da midia (MVP)';
 const COMMAND = `$('${RESERVE}').item.json.command`;
 
@@ -22,11 +22,27 @@ export function configurePersonalSend(workflow, lineIds) {
     return node;
   };
   const normalize = find('Normalizar comando do painel (MVP)');
-  normalize.parameters.jsCode = normalize.parameters.jsCode.replace(
-    'const siteChat = ',
-    `const target=payload.whatsapp_target;if(target&&(!${JSON.stringify(lineIds)}.includes(target.source?.lineId)||!/^\\d{8,15}$/.test(String(payload.to??'').replace(/^\\+/,''))||!/^[A-Za-z0-9_-]{1,64}$/.test(target.source?.instance??'')))return {json:{payload:{},kind:'invalid'}};\nconst siteChat = !target && `,
-  );
+  normalize.parameters.jsCode = normalize.parameters.jsCode
+    .replace(
+      'const siteChat = ',
+      `const target=payload.whatsapp_target;if(target&&(!${JSON.stringify(lineIds)}.includes(target.source?.lineId)||!/^\\d{8,15}$/.test(String(payload.to??'').replace(/^\\+/,''))||!/^[A-Za-z0-9_-]{1,64}$/.test(target.source?.instance??'')))return {json:{payload:{},kind:'invalid'}};\nconst ficha=Boolean(target&&payload.order_pdf&&payload.message?.type==='document'&&payload.message.mime_type==='application/pdf');\nconst siteChat = !target && `,
+    )
+    .replace(
+      "['text', 'image', 'audio', 'video'].includes(payload.message?.type)",
+      "(['text', 'image', 'audio', 'video'].includes(payload.message?.type)||ficha)",
+    );
   if (!lineIds.length) return workflow;
+
+  const bytes = find('Evolution - Preparar bytes humanos (MVP)');
+  bytes.parameters.jsCode = bytes.parameters.jsCode.replace(
+    "video: 'mp4'",
+    "video: 'mp4', document: 'pdf'",
+  );
+  const prepareMedia = find(PREPARE_MEDIA);
+  prepareMedia.parameters.jsCode = prepareMedia.parameters.jsCode.replace(
+    "!['image','audio','video'].includes(expected.type)",
+    "!['image','audio','video'].includes(expected.type)&&!(command.whatsapp_target&&command.order_pdf&&expected.type==='document'&&expected.mime_type==='application/pdf')",
+  );
 
   for (const node of workflow.nodes) {
     const code = node.parameters?.jsCode;

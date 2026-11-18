@@ -4,12 +4,16 @@ import {
   randomBytes,
   randomUUID,
 } from 'node:crypto';
-import { createWriteStream } from 'node:fs';
-import { mkdir, rm } from 'node:fs/promises';
+import { createReadStream, createWriteStream } from 'node:fs';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { Transform, Writable } from 'node:stream';
 import { pipeline, finished } from 'node:stream/promises';
-import { validateMediaDeclaration } from '@crm-silmer/integration-reliability';
+import {
+  ChatMediaValidator,
+  validateMediaDeclaration,
+} from '@crm-silmer/integration-reliability';
+import { encryptJson } from '@crm-silmer/n8n-integration';
 import { readChatMediaContent } from './chat-media-content-runtime.js';
 
 /** @param {number} statusCode */
@@ -19,7 +23,7 @@ export function mediaError(statusCode) {
     code: 'CHAT_MEDIA_REQUEST_FAILED',
   });
 }
-/** @param {{repository:any,access:any,spoolRoot:string,envelopeKey:Buffer,removeFile?:Function,store?:any,bucketAlias?:string,admissionEnabled?:boolean,uploadTimeoutMs?:number}} options */
+/** @param {{repository:any,access:any,spoolRoot:string,envelopeKey:Buffer,removeFile?:Function,store?:any,bucketAlias?:string,admissionEnabled?:boolean,uploadTimeoutMs?:number,orderPdfValidator?:Pick<ChatMediaValidator,'validate'>}} options */
 export function createChatMediaApiRuntime({
   repository,
   access,
@@ -29,6 +33,7 @@ export function createChatMediaApiRuntime({
   bucketAlias = 'chat-dev',
   admissionEnabled = true,
   uploadTimeoutMs = 120_000,
+  orderPdfValidator = new ChatMediaValidator(),
   removeFile = (/** @type {string} */ path) => rm(path, { force: true }),
 }) {
   if (!Buffer.isBuffer(envelopeKey) || envelopeKey.length !== 32)
@@ -42,6 +47,70 @@ export function createChatMediaApiRuntime({
     throw new TypeError('Invalid upload deadline');
   return {
     admissionEnabled,
+    ...(admissionEnabled &&
+    store &&
+    typeof repository.writeGeneratedPdf === 'function'
+      ? {
+          /** @param {{pdf:Buffer,filename:string,conversationId:string,actorId:string}} input */
+          async storeOrderPdf({ pdf, filename, conversationId, actorId }) {
+            if (
+              !Buffer.isBuffer(pdf) ||
+              pdf.length > 16 * 1024 * 1024 ||
+              !pdf.subarray(0, 5).equals(Buffer.from('%PDF-'))
+            )
+              throw mediaError(422);
+            const id = randomUUID();
+            const path = join(root, id);
+            const sha256 = createHash('sha256').update(pdf).digest('hex');
+            const mimeType = 'application/pdf';
+            await repository.writeGeneratedPdf(
+              {
+                id,
+                conversationId,
+                actorId,
+                size: pdf.length,
+                sha256,
+                filenameEnvelope: encryptJson(
+                  { filename },
+                  `chat-media:${id}:filename`,
+                  envelopeKey,
+                ),
+              },
+              async () => {
+                const signal = AbortSignal.timeout(uploadTimeoutMs);
+                await mkdir(root, { recursive: true });
+                await writeFile(path, pdf, { flag: 'wx', mode: 0o600, signal });
+                try {
+                  const validated = await orderPdfValidator.validate({
+                    path,
+                    kind: 'document',
+                    origin: 'order_pdf',
+                    declaredMimeType: mimeType,
+                    signal,
+                  });
+                  if (
+                    validated.mimeType !== mimeType ||
+                    validated.sizeBytes !== pdf.length ||
+                    validated.sha256 !== sha256
+                  )
+                    throw mediaError(422);
+                  await store.putValidated({
+                    key: id,
+                    stream: createReadStream(path),
+                    sizeBytes: pdf.length,
+                    sha256,
+                    mimeType,
+                    signal,
+                  });
+                } finally {
+                  await removeFile(path);
+                }
+              },
+            );
+            return id;
+          },
+        }
+      : {}),
     authorize: access.authorize,
     authorizeRead: access.authorizeRead,
     /** @param {any} input */

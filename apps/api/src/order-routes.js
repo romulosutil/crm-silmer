@@ -66,6 +66,7 @@ const PUBLIC_CODES = new Set([
   'ORDER_NOT_FOUND',
   'ORDER_STATUS_CONFLICT',
   'PRINT_FINANCIAL_TEXT_REVIEW_REQUIRED',
+  'WHATSAPP_SEND_UNAVAILABLE',
   'VERSION_CONFLICT',
   'ORDER_TARGET_REQUIRED',
   'ORDER_PENDING_EXISTS',
@@ -92,6 +93,9 @@ class OrderRequestError extends Error {
  * @param {import('fastify').FastifyInstance} api
  * @param {Record<string, any>} orders
  * @param {(request: object) => {correlationId: string, requestId: string}} contextFor
+ * @param {typeof renderOrderPdf} [pdfRenderer]
+ * @param {typeof renderOrderFicha} [fichaRenderer]
+ * @param {ReturnType<typeof import('./order-whatsapp-pdf-runtime.js').createOrderWhatsAppPdfRuntime>} [whatsappPdf]
  */
 export function registerOrderRoutes(
   api,
@@ -99,6 +103,7 @@ export function registerOrderRoutes(
   contextFor,
   pdfRenderer = renderOrderPdf,
   fichaRenderer = renderOrderFicha,
+  whatsappPdf,
 ) {
   registerOrderReceiptRoutes(api, orders, contextFor, pdfRenderer);
   api.get('/api/v1/orders/summary', async (request, reply) =>
@@ -200,7 +205,13 @@ export function registerOrderRoutes(
       const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
       const access = await authorizeRead(request, orders);
       privateReadHeaders(reply);
-      return reply.code(200).send(await orders.get(orderId, access.actor));
+      const detail = await orders.get(orderId, access.actor);
+      if (await whatsappPdf?.canOffer(detail.order, access.actor))
+        return reply.code(200).send({
+          ...detail,
+          order: { ...detail.order, pdfWhatsAppAvailable: true },
+        });
+      return reply.code(200).send(detail);
     }),
   );
 
@@ -259,6 +270,88 @@ export function registerOrderRoutes(
   /** PIM-13: an authenticated, shareable PDF of the approved ficha. */
   api.register(async (pdfScope) => {
     await pdfScope.register(rateLimit, { global: false });
+    if (whatsappPdf) {
+      pdfScope.get(
+        '/api/v1/orders/:orderId/pdf/whatsapp',
+        {
+          exposeHeadRoute: false,
+          config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+        },
+        async (request, reply) =>
+          respond(reply, async () => {
+            privateReadHeaders(reply);
+            reply.header('cache-control', 'private, no-store');
+            const orderId = requireIdentifier(
+              requireObject(request.params).orderId,
+              'ORDER_ID',
+            );
+            const query = requireObject(request.query);
+            rejectUnknownKeys(query, ['expectedVersion']);
+            const expectedVersion = requireVersion(
+              typeof query.expectedVersion === 'string' &&
+                /^[1-9][0-9]*$/u.test(query.expectedVersion)
+                ? Number(query.expectedVersion)
+                : null,
+            );
+            const { actor } = await authorizeRead(
+              request,
+              orders,
+              'order.print',
+            );
+            return reply.send(
+              await whatsappPdf.preview({ orderId, expectedVersion, actor }),
+            );
+          }),
+      );
+      pdfScope.post(
+        '/api/v1/orders/:orderId/pdf/whatsapp',
+        { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+        async (request, reply) =>
+          respond(reply, async () => {
+            privateReadHeaders(reply);
+            reply.header('cache-control', 'private, no-store');
+            const orderId = requireIdentifier(
+              requireObject(request.params).orderId,
+              'ORDER_ID',
+            );
+            rejectUnknownKeys(requireObject(request.query ?? {}), []);
+            const body = requireObject(request.body);
+            rejectUnknownKeys(body, ['expectedVersion', 'preparation']);
+            const expectedVersion = requireVersion(body.expectedVersion);
+            if (
+              typeof body.preparation !== 'string' ||
+              !/^[a-f0-9]{64}$/u.test(body.preparation)
+            )
+              throw new OrderRequestError(400, 'INVALID_PREPARATION');
+            const command = await authorizeCommand(
+              request,
+              orders,
+              contextFor,
+              'order.print',
+            );
+            const result = await whatsappPdf.send(
+              {
+                ...command,
+                orderId,
+                expectedVersion,
+                preparation: body.preparation,
+              },
+              async () => {
+                const { order } = await orders.get(orderId, command.actor);
+                if (
+                  order.status !== 'confirmado' ||
+                  Number(order.version) !== expectedVersion
+                )
+                  throw new OrderRequestError(409, 'VERSION_CONFLICT');
+                return pdfRenderer(
+                  fichaRenderer(order, undefined, { printedAt: new Date() }),
+                );
+              },
+            );
+            return reply.code(202).send(result);
+          }),
+      );
+    }
     pdfScope.get(
       '/api/v1/orders/:orderId/pdf',
       { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },

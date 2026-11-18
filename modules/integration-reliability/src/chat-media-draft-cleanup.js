@@ -79,24 +79,25 @@ export class PostgresChatMediaDraftCleanup {
               [draft.id],
             )
           ).rows[0];
-          if (!job || job.status === 'processing') return;
+          if (job?.status === 'processing') return;
           const row = (
             await client.query(
               `SELECT * FROM crm.chat_media WHERE id=$1 AND message_id IS NULL AND reservation_bytes>0 AND created_at<now()-interval '24 hours' AND storage_bucket_alias=$2 AND (processing_guard_until IS NULL OR processing_guard_until<=now()) FOR UPDATE SKIP LOCKED`,
               [draft.id, this.bucketAlias],
             )
           ).rows[0];
-          if (!row) return;
+          if (!row || (!job && row.origin !== 'order_pdf')) return;
           // Commit non-bindable intent before external DELETE. A later SQL or
           // COMMIT failure must never restore ready after bytes were removed.
           await client.query(
             `UPDATE crm.chat_media SET cleanup_started_at=COALESCE(cleanup_started_at,now()),state='unavailable',sanitized_reason='processing_failed',version=version+1 WHERE id=$1`,
             [row.id],
           );
-          await client.query(
-            `UPDATE crm.outbox_jobs SET status='completed',completed_at=now(),updated_at=now() WHERE id=$1`,
-            [job.id],
-          );
+          if (job)
+            await client.query(
+              `UPDATE crm.outbox_jobs SET status='completed',completed_at=now(),updated_at=now() WHERE id=$1`,
+              [job.id],
+            );
         });
         await this.database.transaction(async (/** @type {any} */ client) => {
           await client.query("SET LOCAL lock_timeout='2s'");
@@ -113,14 +114,13 @@ export class PostgresChatMediaDraftCleanup {
               [draft.id],
             )
           ).rows[0];
-          if (!job) return;
           const row = (
             await client.query(
               `SELECT * FROM crm.chat_media WHERE id=$1 AND message_id IS NULL AND reservation_bytes>0 AND cleanup_started_at IS NOT NULL AND state='unavailable' AND storage_bucket_alias=$2 AND (processing_guard_until IS NULL OR processing_guard_until<=now()) FOR UPDATE SKIP LOCKED`,
               [draft.id, this.bucketAlias],
             )
           ).rows[0];
-          if (!row) return;
+          if (!row || (!job && row.origin !== 'order_pdf')) return;
           await client.query(
             'SELECT bucket_alias FROM crm.chat_media_quotas WHERE bucket_alias=$1 FOR UPDATE',
             [row.storage_bucket_alias],

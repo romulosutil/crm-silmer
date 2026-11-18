@@ -415,7 +415,7 @@ function ack(extra = {}) {
   });
 }
 
-test('WAP-E08 defaults personal transport off and reserves one dispatch through the original send nodes', () => {
+test('WAP-E08 defaults personal transport off and reserves one dispatch through the original send nodes', async () => {
   const source = {
     bindingId: '00000001-0000-4000-8000-000000000001',
     lineId: '00000001-0000-4000-8000-000000000002',
@@ -498,7 +498,7 @@ test('WAP-E08 defaults personal transport off and reserves one dispatch through 
       {
         [reserve]: { json: reservation },
         [validate]: { json: route },
-        'Preparar mensagem Evolution de midia': {
+        'Preparar mensagem Evolution de midia (MVP)': {
           json: { evolution_endpoint: 'sendMedia' },
         },
       },
@@ -519,6 +519,73 @@ test('WAP-E08 defaults personal transport off and reserves one dispatch through 
       { [reserve]: reservation },
     ),
   );
+  const bytes = Buffer.from('%PDF-1.4 synthetic');
+  const document = {
+    type: 'document',
+    media_id: '00000001-0000-4000-8000-000000000004',
+    sha256: createHash('sha256').update(bytes).digest('hex'),
+    size_bytes: bytes.length,
+    mime_type: 'application/pdf',
+    caption: 'Ficha do pedido',
+  };
+  const orderPdf = {
+    ...command,
+    message: document,
+    order_pdf: { id: 'order-synthetic', version: 3 },
+  };
+  const docCommand = run(candidate, 'Normalizar comando do painel (MVP)', {
+    ...payload,
+    body: orderPdf,
+  }).json;
+  assert.equal(docCommand.kind, 'send');
+  for (const invalid of [
+    { ...orderPdf, order_pdf: undefined },
+    { ...orderPdf, whatsapp_target: undefined },
+    { ...orderPdf, message: { ...document, mime_type: 'image/png' } },
+  ]) {
+    assert.notEqual(
+      run(candidate, 'Normalizar comando do painel (MVP)', {
+        ...payload,
+        body: invalid,
+      }).json.kind,
+      'send',
+    );
+  }
+  const docReservation = run(candidate, reserve, docCommand).json;
+  const bytesNode = candidate.nodes.find(
+    (/** @type {any} */ node) =>
+      node.name === 'Evolution - Preparar bytes humanos (MVP)',
+  );
+  const prepared = await vm.runInNewContext(
+    `(async function(){${bytesNode.parameters.jsCode}}).call(environment)`,
+    {
+      environment: { helpers: { getBinaryDataBuffer: async () => bytes } },
+      $itemIndex: 0,
+      $: () => ({ item: { json: docReservation } }),
+      require: (/** @type {string} */ name) => {
+        assert.equal(name, 'crypto');
+        return { createHash };
+      },
+    },
+  );
+  const media = run(
+    candidate,
+    'Preparar mensagem Evolution de midia (MVP)',
+    {
+      valid: true,
+      ...document,
+    },
+    {
+      [reserve]: docReservation,
+      'Evolution - Preparar bytes humanos (MVP)': prepared.json,
+    },
+  ).json;
+  assert.equal(media.evolution_endpoint, 'sendMedia');
+  assert.equal(media.evolution_message.mediatype, 'document');
+  assert.equal(media.evolution_message.mimetype, 'application/pdf');
+  assert.equal(media.evolution_message.number, command.to.slice(1));
+  assert.match(media.evolution_message.fileName, /\.pdf$/u);
+  assert.equal(media.evolution_message.media, bytes.toString('base64'));
 });
 
 test('WAP-E08 personal fromMe upsert projects an external fact and no inbound', () => {

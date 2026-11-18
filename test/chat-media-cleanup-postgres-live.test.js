@@ -62,11 +62,16 @@ if (connectionString) {
     await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
     await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');
     await migrate(pool, { migrations: await loadMigrations() });
-    for (const id of ['bind-seller', 'bind-other'])
+    for (const id of ['bind-seller', 'bind-other']) {
       await pool.query(
         `INSERT INTO crm.users(id,email,password_hash,name) VALUES($1,$2,'$argon2id$synthetic','Synthetic')`,
         [id, `${id}@example.test`],
       );
+      await pool.query(
+        "INSERT INTO crm.user_functions(user_id,function_name) VALUES($1,'Vendedor')",
+        [id],
+      );
+    }
     await pool.query(
       `INSERT INTO crm.contacts(id,created_at,updated_at) VALUES('bind-contact',now(),now())`,
     );

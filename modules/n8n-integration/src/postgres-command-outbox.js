@@ -36,7 +36,7 @@ export class PostgresN8nCommandOutbox {
     this.supportsPersonalSend = personalSendSellers.size > 0;
   }
 
-  /** @param {{id: string, idempotencyKey: string, messageId: string, availableAt: string|Date,billingSend?:boolean}} input @param {{transaction?: any}} context */
+  /** @param {{id: string, idempotencyKey: string, messageId: string, availableAt: string|Date,billingSend?:boolean,orderPdf?:{id:string,version:number,preparation:string,to:string}}} input @param {{transaction?: any}} context */
   async enqueueChannelMessage(input, context = {}) {
     const client = queryable(context);
     const row = (
@@ -83,8 +83,19 @@ export class PostgresN8nCommandOutbox {
       ]),
       this.contactEnvelopeKey,
     );
+    if (
+      row.message_type === 'document' &&
+      (!input.orderPdf ||
+        !target ||
+        identity.externalIdentityId !== input.orderPdf.to)
+    )
+      throw new N8nIntegrationError(
+        'Invalid order PDF reservation',
+        'VERSION_CONFLICT',
+        409,
+      );
     let mediaReference = {};
-    if (['image', 'audio', 'video'].includes(row.message_type)) {
+    if (['image', 'audio', 'video', 'document'].includes(row.message_type)) {
       const bound = (
         await client.query(
           'SELECT * FROM crm.chat_media WHERE message_id=$1 AND conversation_id=$2 FOR UPDATE',
@@ -101,10 +112,19 @@ export class PostgresN8nCommandOutbox {
     }
     const payload = {
       ...(input.billingSend === true ? { billing_send: true } : {}),
+      ...(input.orderPdf
+        ? {
+            order_pdf: {
+              id: input.orderPdf.id,
+              version: input.orderPdf.version,
+              preparation: input.orderPdf.preparation,
+            },
+          }
+        : {}),
       ...(target
         ? {
             whatsapp_target: snapshotWhatsAppTarget(target, {
-              commercial: input.billingSend === true,
+              commercial: input.billingSend === true || Boolean(input.orderPdf),
             }),
           }
         : {}),

@@ -511,6 +511,76 @@ test('offers the generated PDF to the phone share sheet', async ({ page }) => {
     .toEqual(['pedido-05-CRM.pdf']);
 });
 
+for (const width of [390, 1366]) {
+  test(`confirms the ficha WhatsApp destination at ${width}px (WAP-E08)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await mockOrders(page, {
+      orders: [{ ...ownConfirmedOrder, pdfWhatsAppAvailable: true }],
+    });
+    let previews = 0;
+    /** @type {{body:unknown,key:string|null}[]} */
+    const sends = [];
+    const preparation = 'a'.repeat(64);
+    await page.route('**/api/v1/orders/*/pdf/whatsapp*', async (route) => {
+      const request = route.request();
+      if (request.method() === 'GET') {
+        previews += 1;
+        expect(new URL(request.url()).searchParams.get('expectedVersion')).toBe(
+          String(ownConfirmedOrder.version),
+        );
+        return route.fulfill({
+          json: { preparation, sender: '••••0188', recipient: '••••0088' },
+        });
+      }
+      sends.push({
+        body: request.postDataJSON(),
+        key: await request.headerValue('idempotency-key'),
+      });
+      return sends.length === 1
+        ? route.fulfill({ status: 503, json: { error: 'SERVICE_UNAVAILABLE' } })
+        : route.fulfill({
+            status: 202,
+            json: { messageId: 'synthetic-message', status: 'pending' },
+          });
+    });
+    await page.goto(`/pedidos/${ownConfirmedOrder.id}`);
+    const open = page.getByRole('button', {
+      name: 'Enviar ficha pelo WhatsApp',
+    });
+    await open.press('Enter');
+    const dialog = page.getByRole('dialog', {
+      name: 'Enviar ficha pelo WhatsApp',
+    });
+    await expect(dialog.getByText('••••0188')).toBeVisible();
+    await expect(dialog.getByText('••••0088')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Voltar' })).toBeFocused();
+    expect(sends).toHaveLength(0);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(open).toBeFocused();
+    await open.press('Enter');
+    const confirm = dialog.getByRole('button', { name: 'Confirmar envio' });
+    await confirm.press('Enter');
+    await expect(dialog.getByRole('alert')).toContainText('mesma solicitação');
+    await confirm.press('Enter');
+    await expect(dialog).toBeHidden();
+    await expect(open).toBeFocused();
+    await expect(
+      page.getByText('Solicitação registrada. Acompanhe o envio na conversa.'),
+    ).toBeVisible();
+    expect(previews).toBeGreaterThanOrEqual(1);
+    expect(sends).toHaveLength(2);
+    expect(sends[0]).toEqual({
+      body: { expectedVersion: ownConfirmedOrder.version, preparation },
+      key: expect.any(String),
+    });
+    expect(sends[1]).toEqual(sends[0]);
+  });
+}
+
 test('shows the order read-only to whoever does not own the conversation (PAU-01)', async ({
   page,
 }) => {

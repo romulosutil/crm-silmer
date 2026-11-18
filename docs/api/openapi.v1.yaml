@@ -2565,6 +2565,7 @@ paths:
         Requires integration.n8n.command.media.read and the original workflow key,
         version and execution. Command processing, message sending, bound clean
         variant and current human/nonterminal epoch/revision are revalidated.
+        Order ficha documents require an active personal target and unchanged order.
         preflight=true returns safe JSON without storage reads, reservation or
         renewal. Neither representation grants a new send authorization. HEAD is
         not exposed; foreign selectors and redirects are prohibited.
@@ -2595,7 +2596,7 @@ paths:
                 properties:
                   valid: { const: true }
                   media_id: { type: string, format: uuid }
-                  type: { enum: [image, audio, video] }
+                  type: { enum: [image, audio, video, document] }
                   sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
                   mime_type: { type: string }
                   size_bytes: { type: integer, minimum: 1, maximum: 16777216 }
@@ -2738,8 +2739,8 @@ paths:
         Cache-Control private,no-store, X-Content-Type-Options nosniff e Accept-Ranges bytes.
         Indisponibilidade transitória não altera estado durable ou quota.
         Anexo inbound media-UUID segue o TTL transitório e fica indisponível após
-        encerramento; PDF validado usa Content-Disposition attachment com nome
-        sintético documento.pdf e limite de 16 MiB.
+        encerramento. PDF validado usa Content-Disposition attachment e limite
+        de 16 MiB. A ficha gerada pelo CRM segue a retenção da mídia vinculada.
       parameters:
         - $ref: '#/components/parameters/ConversationId'
         - name: mediaId
@@ -3983,6 +3984,83 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/OrderNotFound' }
         '409': { $ref: '#/components/responses/OrderConflict' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /orders/{orderId}/pdf/whatsapp:
+    get:
+      operationId: prepareOrderPdfWhatsApp
+      summary: Prepara a confirmação da ficha pela linha pessoal
+      description: >-
+        WAP-T02-09. Requer order.print, titular ativo habilitado, Pedido de
+        atendimento confirmado e identidade WhatsApp vinculada à conversa.
+        Retorna os finais da linha e do destinatário e uma preparação vinculada
+        à versão do Pedido e à origem. Cache privado no-store.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/HumanReadOrigin'
+        - name: expectedVersion
+          in: query
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: Confirmação da origem e do destino vinculados
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [preparation, sender, recipient]
+                properties:
+                  preparation: { type: string, pattern: '^[a-f0-9]{64}$' }
+                  sender: { type: string, example: '••••0188' }
+                  recipient: { type: string, example: '••••0088' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '409': { $ref: '#/components/responses/OrderConflict' }
+    post:
+      operationId: queueOrderPdfWhatsApp
+      summary: Enfileira a ficha em PDF com o destino confirmado
+      description: >-
+        WAP-T02-09. Revalida order.print, versão e preparação, gera o PDF
+        canônico e vincula a mídia privada à saída humana na conversa.
+        O n8n usa a conta e o destinatário reservados e revalida o Pedido no
+        despacho. A resposta confirma o registro da solicitação.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [expectedVersion, preparation]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                preparation: { type: string, pattern: '^[a-f0-9]{64}$' }
+      responses:
+        '202':
+          description: Ficha enfileirada ou recibo idempotente da solicitação
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [messageId, conversationId, status]
+                properties:
+                  messageId: { type: string }
+                  conversationId: { type: string }
+                  status: { type: string }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '409': { $ref: '#/components/responses/OrderConflict' }
+        '422': { $ref: '#/components/responses/OrderUnprocessable' }
+        '429': { description: Limite de solicitações ou quota de mídia atingido }
         '503': { $ref: '#/components/responses/Unavailable' }
   /orders/{orderId}/files:
     get:
@@ -7599,6 +7677,9 @@ components:
         originSubjectId:
           type: [string, 'null']
           description: Origem persistida quando disponível; nula ou omitida sem acesso à conversa. Não concede acesso comercial ou ao chat.
+        pdfWhatsAppAvailable:
+          const: true
+          description: Ação disponível no detalhe para o titular habilitado da linha pessoal. O preparo revalida a autorização e o destino.
         contactId:
           type: [string, 'null']
           format: uuid

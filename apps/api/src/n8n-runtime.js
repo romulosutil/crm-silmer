@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { createOrderWhatsAppPdfRuntime } from './order-whatsapp-pdf-runtime.js';
 
 import {
   createN8nIntegrationService,
@@ -130,6 +131,19 @@ export function createN8nApiRuntime(database, options = {}) {
 
   return Object.freeze({
     commandOutbox,
+    /** @param {any} media */
+    orderWhatsAppPdf: (media) =>
+      personalSendSellers.size && typeof media?.storeOrderPdf === 'function'
+        ? createOrderWhatsAppPdfRuntime(database, {
+            envelopeKey,
+            contactKey: contactEnvelopeKey,
+            messageKey: messageEnvelopeKey,
+            allowed: personalSendSellers,
+            media,
+            outbox: commandOutbox,
+            clock,
+          })
+        : undefined,
     mediaVolume,
     receiveInbound: service.receiveInbound,
     async recordEvent(/** @type {any} */ input) {

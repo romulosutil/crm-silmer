@@ -1,3 +1,5 @@
+import { lockSellerWhatsAppLines } from './seller-whatsapp-send.js';
+
 /** Shared lock order for billing callbacks, transport and command recovery.
  * No locks for ordinary Inbox commands. Never acquire these after a message lock.
  * @param {any} client @param {{chargeId?:string,commandId?:string,externalMessageId?:string,conversationId?:string,orderId?:string}} selector
@@ -71,6 +73,7 @@ export async function lockBillingSend(client, selector) {
         .filter(Boolean),
     ),
   ].sort();
+  await lockSellerWhatsAppLines(client, conversations);
   await client.query(
     'SELECT id FROM crm.conversations WHERE id=ANY($1::text[]) ORDER BY id FOR UPDATE',
     [conversations],

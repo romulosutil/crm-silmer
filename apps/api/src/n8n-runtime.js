@@ -4,6 +4,7 @@ import {
   createN8nIntegrationService,
   PostgresN8nCommandOutbox,
   PostgresN8nIntegrationRepository,
+  sellerWhatsAppSendConfiguration,
 } from '@crm-silmer/n8n-integration';
 import {
   ClamAvMediaScanner,
@@ -52,6 +53,7 @@ export function createN8nApiRuntime(database, options = {}) {
     'INBOX_MESSAGE_ENVELOPE_KEY',
   );
   const clock = options.clock ?? (() => new Date());
+  const personalSendSellers = sellerWhatsAppSendConfiguration(environment);
   const inboundFlag = environment.SELLER_WHATSAPP_INBOUND_ENABLED;
   if (inboundFlag !== undefined && !['true', 'false'].includes(inboundFlag))
     throw new Error('Invalid SELLER_WHATSAPP_INBOUND_ENABLED');
@@ -82,6 +84,7 @@ export function createN8nApiRuntime(database, options = {}) {
     requireHumanOrderCreation: true,
     personalInboundEnabled: inboundFlag === 'true',
     personalInboundSellerIds: inboundSellers,
+    personalSendSellers,
     billingSendEnabled:
       environment.ORDER_BILLING_ENABLED === 'true' &&
       environment.ORDER_BILLING_CHAT_SEND_ENABLED === 'true',
@@ -116,6 +119,7 @@ export function createN8nApiRuntime(database, options = {}) {
     contactEnvelopeKey,
     envelopeKey,
     messageEnvelopeKey,
+    personalSendSellers,
   });
   // The approved pilot has one API process. Keep state discovery, storage and
   // binding in one per-message critical section; the volume queue alone starts
@@ -217,7 +221,12 @@ export function createN8nApiRuntime(database, options = {}) {
         attachmentWrites,
         JSON.stringify([input.conversationId, input.externalId]),
         async () => {
-          const media = await prepareTransientMedia(database, input, clock());
+          const media = await prepareTransientMedia(
+            database,
+            repository,
+            input,
+            clock(),
+          );
           if (media.availabilityStatus === 'available') {
             if (
               media.contentSha256 !== input.contentSha256 ||
@@ -313,9 +322,11 @@ function isRetryableAttachment(media) {
   );
 }
 
-/** @param {any} database @param {any} input @param {Date} now */
-async function prepareTransientMedia(database, input, now) {
+/** @param {any} database @param {PostgresN8nIntegrationRepository} repository @param {any} input @param {Date} now */
+async function prepareTransientMedia(database, repository, input, now) {
   return database.transaction(async (/** @type {any} */ transaction) => {
+    if (input.externalBindingId)
+      await repository.assertExternalAttachment(transaction, input);
     const message = (
       await transaction.query(
         `SELECT message.id, message.message_type, message.created_at,
@@ -325,8 +336,13 @@ async function prepareTransientMedia(database, input, now) {
          JOIN crm.conversations AS conversation
            ON conversation.id = message.conversation_id
          WHERE conversation.id = $1 AND message.external_message_id = $2
+           AND ($3::boolean OR NOT (message.author_kind='system' AND coalesce(message.command_id,'') LIKE 'external:%'))
          FOR UPDATE OF message, conversation`,
-        [input.conversationId, input.externalId],
+        [
+          input.conversationId,
+          input.externalId,
+          Boolean(input.externalBindingId),
+        ],
       )
     ).rows[0];
     if (!message) throw new N8nMediaIngressError(404, 'MESSAGE_NOT_FOUND');

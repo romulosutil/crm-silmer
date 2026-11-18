@@ -1,6 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { decryptJson } from './crypto.js';
 import {
+  commandWhatsAppTarget,
+  lockSellerWhatsAppLines,
+  matchesWhatsAppTarget,
+  personalSendAllowed,
+  sellerWhatsAppSendConfiguration,
+  sellerWhatsAppTarget,
+} from './seller-whatsapp-send.js';
+import {
   lockBillingSend,
   billingSendBlockReason,
   blockBillingSend,
@@ -9,8 +17,13 @@ import {
 const DEFAULT_LEASE_MS = 300_000;
 
 export class PostgresN8nCommandStore {
-  /** @param {{database: any, envelopeKey: Buffer, billingSendEnabled?: boolean}} options */
-  constructor({ database, envelopeKey, billingSendEnabled = false }) {
+  /** @param {{database: any, envelopeKey: Buffer, billingSendEnabled?: boolean, personalSendSellers?:Set<string>}} options */
+  constructor({
+    database,
+    envelopeKey,
+    billingSendEnabled = false,
+    personalSendSellers = new Set(),
+  }) {
     if (
       !database ||
       typeof database.query !== 'function' ||
@@ -24,6 +37,7 @@ export class PostgresN8nCommandStore {
     this.database = database;
     this.envelopeKey = Buffer.from(envelopeKey);
     this.billingSendEnabled = billingSendEnabled === true;
+    this.personalSendSellers = personalSendSellers;
   }
 
   /** @param {string} commandId @param {Record<string, any>} [context] */
@@ -43,7 +57,7 @@ export class PostgresN8nCommandStore {
       const row = (
         await client.query(
           `SELECT command_id, fingerprint, payload_envelope, status,
-                  retryable, retry_safe
+                  retryable, retry_safe, conversation_id, action, actor_id, actor_kind
            FROM crm.n8n_commands WHERE command_id = $1`,
           [commandId],
         )
@@ -57,6 +71,7 @@ export class PostgresN8nCommandStore {
       ) {
         return null;
       }
+      if (!(await this.#allowPersonalDelivery(client, row, now))) return null;
       return Object.freeze({
         commandId: row.command_id,
         payload: decryptJson(
@@ -94,7 +109,8 @@ export class PostgresN8nCommandStore {
       const row = (
         await client.query(
           `SELECT command.command_id, command.action, command.actor_kind,
-                  command.automation_epoch, command.fingerprint,
+                  command.automation_epoch, command.fingerprint, command.payload_envelope,
+                  command.conversation_id, command.actor_id,
                   command.status, command.retryable, command.retry_safe,
                   conversation.automation_state, conversation.automation_epoch
                     AS current_epoch,
@@ -108,6 +124,7 @@ export class PostgresN8nCommandStore {
         )
       ).rows[0];
       if (!row || !isDeliverable(row) || !fenceAllows(row)) return false;
+      if (!(await this.#allowPersonalDelivery(client, row, now))) return false;
       if (context.payloadHash && context.payloadHash !== row.fingerprint) {
         return false;
       }
@@ -122,6 +139,43 @@ export class PostgresN8nCommandStore {
       );
       return updated.rows.length === 1;
     });
+  }
+
+  /** @param {any} client @param {any} command @param {Date} now */
+  async #allowPersonalDelivery(client, command, now) {
+    if (command.action !== 'send_message') return true;
+    const target = await sellerWhatsAppTarget(client, command.conversation_id);
+    const reserved = commandWhatsAppTarget(command, this.envelopeKey);
+    if (!target && !reserved) return true;
+    if (
+      target &&
+      matchesWhatsAppTarget(target, reserved) &&
+      command.actor_kind === 'human' &&
+      personalSendAllowed(target, command.actor_id, this.personalSendSellers)
+    )
+      return true;
+    const blocked = await client.query(
+      `UPDATE crm.n8n_commands SET status='failed',retryable=false,retry_safe=false,
+        last_error_code='WHATSAPP_SEND_UNAVAILABLE',updated_at=$2,completed_at=$2
+       WHERE command_id=$1 AND whatsapp_dispatched_at IS NULL AND status IN ('pending','failed')
+       RETURNING message_id`,
+      [command.command_id, now],
+    );
+    if (blocked.rows.length) {
+      await client.query(
+        `UPDATE crm.messages SET status='failed',delivery_status='failed',
+        delivery_status_at=$2,delivery_failure_code='WHATSAPP_SEND_UNAVAILABLE'
+        WHERE id=$1 AND status IN ('queued','sending')`,
+        [blocked.rows[0].message_id, now],
+      );
+      await appendMessageDeliveryEvent(
+        client,
+        command.conversation_id,
+        command.command_id,
+        now,
+      );
+    }
+    return false;
   }
 
   /** @param {string} commandId @param {Record<string, any>} context */
@@ -153,17 +207,22 @@ export class PostgresN8nCommandStore {
       await lockCommandConversation(client, commandId);
       const row = (
         await client.query(
-          `SELECT command_id, conversation_id, message_id, status, locked_by
+          `SELECT command_id, conversation_id, message_id, status, locked_by, payload_envelope, whatsapp_dispatched_at
            FROM crm.n8n_commands WHERE command_id = $1 FOR UPDATE`,
           [commandId],
         )
       ).rows[0];
       if (!row) return false;
       if (row.status === status) return true;
+      if (status === 'sent' && commandWhatsAppTarget(row, this.envelopeKey))
+        return false;
       const allowed = manual
         ? row.status === 'outcome_unknown'
         : row.status === 'processing' && row.locked_by === owner;
       if (!allowed) return false;
+      // A worker transport error cannot prove failure once Evolution may have run.
+      if (row.whatsapp_dispatched_at && status === 'failed' && !manual)
+        status = 'outcome_unknown';
       const externalMessageId = nullableTechnicalId(
         context.providerExternalId,
         'providerExternalId',
@@ -243,6 +302,9 @@ export function createPostgresN8nCommandStore(options) {
   return new PostgresN8nCommandStore({
     database: options?.database,
     envelopeKey,
+    personalSendSellers: sellerWhatsAppSendConfiguration(
+      options?.environment ?? {},
+    ),
     billingSendEnabled:
       options?.environment?.ORDER_BILLING_ENABLED === 'true' &&
       options?.environment?.ORDER_BILLING_CHAT_SEND_ENABLED === 'true',
@@ -361,6 +423,13 @@ async function appendMessageDeliveryEvent(
 /** @param {any} client @param {string} commandId */
 async function lockCommandConversation(client, commandId) {
   await lockBillingSend(client, { commandId });
+  const command = (
+    await client.query(
+      'SELECT conversation_id FROM crm.n8n_commands WHERE command_id=$1',
+      [commandId],
+    )
+  ).rows[0];
+  if (command) await lockSellerWhatsAppLines(client, [command.conversation_id]);
   await client.query(
     `SELECT conversation.id
      FROM crm.conversations AS conversation

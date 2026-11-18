@@ -266,9 +266,24 @@ export function registerOrderRoutes(
         respond(reply, async () => {
           const params = requireObject(request.params);
           const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
-          rejectUnknownKeys(requireObject(request.query ?? {}), []);
+          const query = requireObject(request.query ?? {});
+          rejectUnknownKeys(query, ['expectedVersion']);
+          const expectedVersion =
+            query.expectedVersion === undefined
+              ? null
+              : requireVersion(
+                  typeof query.expectedVersion === 'string' &&
+                    /^[1-9][0-9]*$/u.test(query.expectedVersion)
+                    ? Number(query.expectedVersion)
+                    : null,
+                );
           const principal = await authorizeRead(request, orders, 'order.print');
           const { order } = await orders.get(orderId);
+          if (
+            expectedVersion !== null &&
+            Number(order.version) !== expectedVersion
+          )
+            throw new OrderRequestError(409, 'VERSION_CONFLICT');
           if (order.status !== 'confirmado') {
             throw new OrderRequestError(409, 'ORDER_NOT_CONFIRMED');
           }
@@ -283,14 +298,24 @@ export function registerOrderRoutes(
             'content-security-policy',
             "default-src 'none'; sandbox",
           );
-          reply.header(
-            'content-disposition',
-            attachment(`pedido-${order.number}.pdf`),
-          );
+          const disposition = attachment(`pedido-${order.number}.pdf`);
           if (request.method === 'HEAD') {
-            return reply.code(200).type('application/pdf').send();
+            return reply
+              .header('content-disposition', disposition)
+              .code(200)
+              .type('application/pdf')
+              .send();
           }
           const pdf = await pdfRenderer(html);
+          if (expectedVersion !== null) {
+            await authorizeRead(request, orders, 'order.print');
+            const { order: current } = await orders.get(orderId);
+            if (
+              Number(current.version) !== expectedVersion ||
+              current.status !== 'confirmado'
+            )
+              throw new OrderRequestError(409, 'VERSION_CONFLICT');
+          }
           if (order.origin === 'loja' && !order.fichaFirstPrintedAt) {
             await orders.recordFirstPrint({
               actor: principal.actor,
@@ -298,7 +323,11 @@ export function registerOrderRoutes(
               orderId,
             });
           }
-          return reply.code(200).type('application/pdf').send(pdf);
+          return reply
+            .header('content-disposition', disposition)
+            .code(200)
+            .type('application/pdf')
+            .send(pdf);
         }),
     );
   });

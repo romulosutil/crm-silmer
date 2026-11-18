@@ -38,9 +38,18 @@ function fixture(overrides = {}) {
         ) {
           if (
             sql.includes('SELECT order_id FROM crm.order_billing_charges') ||
-            sql.includes('FROM crm.order_billing_send_intents')
+            sql.includes('FROM crm.order_billing_send_intents') ||
+            sql.includes('FROM crm.seller_whatsapp_lines')
           ) {
             return { rows: [] };
+          }
+          if (
+            sql ===
+            'SELECT conversation_id FROM crm.n8n_commands WHERE command_id=$1'
+          ) {
+            return {
+              rows: [{ conversation_id: state.command.conversation_id }],
+            };
           }
           if (
             sql.includes(

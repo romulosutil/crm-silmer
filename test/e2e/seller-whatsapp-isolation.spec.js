@@ -299,3 +299,66 @@ test('WAP-T02-07: recusa de Assuntos remove histórico, rascunho e diálogo de c
     }),
   ).toBeFocused();
 });
+
+for (const width of [390, 1366]) {
+  test(`WAP-E08 ${width}px mostra saída da linha e mídia indisponível sem ação de envio`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const mock = await installMocks(page, {}, { fixedClock: false });
+    const item = /** @type {Record<string, any>|undefined} */ (
+      mock.items.find(({ id }) => id === 'r-joao')
+    );
+    if (!item) throw new Error('Missing synthetic personal conversation');
+    item.personalLine = true;
+    item.lastMessage = {
+      ...item.lastMessage,
+      id: 'device-observed',
+      direction: 'outbound',
+      authorKind: 'system',
+      origin: 'device',
+      type: 'image',
+      status: 'outcome_unknown',
+      deliveryStatus: 'outcome_unknown',
+      text: null,
+      preview: 'Imagem',
+      media: {
+        mediaId: null,
+        kind: 'image',
+        state: 'unavailable',
+        contentUrl: null,
+      },
+    };
+    await page.goto('/inbox/r-joao');
+    const row = page.getByText('WhatsApp da linha', { exact: true });
+    await expect(row).toBeVisible();
+    await expect(
+      page.getByText('Entrega ainda sem confirmação', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Arquivo indisponível no momento.', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Verificar envio' }),
+    ).toHaveCount(0);
+    const details = page
+      .locator('summary')
+      .filter({ hasText: 'Detalhes para suporte' });
+    await details.focus();
+    await page.keyboard.press('Enter');
+    await expect(details).toBeFocused();
+    await expect(
+      page.getByText('device-observed', { exact: true }),
+    ).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            globalThis.document.documentElement.scrollWidth <=
+            globalThis.innerWidth,
+        ),
+      )
+      .toBe(true);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  });
+}

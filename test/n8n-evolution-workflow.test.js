@@ -25,6 +25,11 @@ import {
   validatePersonalEvolutionEvent,
   convertPersonalEvolutionEvent,
 } from '../ops/n8n/workflows/create-evolution-workflow.mjs';
+import {
+  convertObservedEvolutionEvent,
+  createSellerWhatsAppEvolutionWorkflow,
+  validateObservedEvolutionEvent,
+} from '../ops/n8n/workflows/create-seller-whatsapp-evolution-workflow.mjs';
 
 const source = JSON.parse(
   await readFile(
@@ -409,6 +414,156 @@ function ack(extra = {}) {
     },
   });
 }
+
+test('WAP-E08 defaults personal transport off and reserves one dispatch through the original send nodes', () => {
+  const source = {
+    bindingId: '00000001-0000-4000-8000-000000000001',
+    lineId: '00000001-0000-4000-8000-000000000002',
+    accountId: '00000001-0000-4000-8000-000000000003',
+    generation: 1,
+    instance: 'wap_synthetic',
+  };
+  const command = {
+    schema_version: '1.0',
+    command_id: 'synthetic-command',
+    action: 'send_message',
+    to: '+5511000000001',
+    message: { type: 'text', text: 'Sintético' },
+    whatsapp_target: { source },
+  };
+  const candidate = createSellerWhatsAppEvolutionWorkflow(JSON.parse(before), {
+    ...config,
+    personalSendLineIds: [source.lineId],
+  });
+  /** @param {any} selected @param {string} name @param {any} json @param {any} [upstream] */
+  function run(selected, name, json, upstream = {}) {
+    const node = selected.nodes.find((/** @type {any} */ n) => n.name === name);
+    return vm.runInNewContext(`(function(){${node.parameters.jsCode}})()`, {
+      $json: json,
+      $execution: { id: 'test' },
+      $: (/** @type {string} */ key) => ({ item: { json: upstream[key] } }),
+    });
+  }
+  const payload = {
+    body: command,
+    headers: { 'idempotency-key': command.command_id },
+  };
+  assert.equal(
+    run(
+      createSellerWhatsAppEvolutionWorkflow(JSON.parse(before), config),
+      'Normalizar comando do painel (MVP)',
+      payload,
+    ).json.kind,
+    'invalid',
+  );
+  const normalized = run(
+    candidate,
+    'Normalizar comando do painel (MVP)',
+    payload,
+  ).json;
+  assert.equal(normalized.kind, 'send');
+  const reserve = 'Preparar reserva de envio humano (MVP)';
+  const reservation = run(candidate, reserve, normalized).json;
+  assert.equal(reservation.payload.source.generation, 1);
+  assert.equal(reservation.payload.source.instance, undefined);
+  for (const kind of ['text', 'media']) {
+    const name = `CRM - Autorizar despacho de ${kind} (WAP)`;
+    const node = candidate.nodes.find(
+      (/** @type {any} */ n) => n.name === name,
+    );
+    assert.equal(node.parameters.method, 'POST');
+    assert.equal(node.retryOnFail, false);
+    const validate = `Validar despacho de ${kind} (WAP)`;
+    const sendName = candidate.connections[validate].main[0][0].node;
+    const send = candidate.nodes.find(
+      (/** @type {any} */ n) => n.name === sendName,
+    );
+    const response = { valid: true, to: command.to, instance: source.instance };
+    assert.throws(
+      () =>
+        run(
+          candidate,
+          validate,
+          { ...response, instance: 'general' },
+          { [reserve]: reservation },
+        ),
+      /WHATSAPP_SEND_UNAVAILABLE/u,
+    );
+    const route = run(candidate, validate, response, {
+      [reserve]: reservation,
+    }).json;
+    const endpoint = evaluate(
+      send.parameters.url,
+      {},
+      {
+        [reserve]: { json: reservation },
+        [validate]: { json: route },
+        'Preparar mensagem Evolution de midia': {
+          json: { evolution_endpoint: 'sendMedia' },
+        },
+      },
+    );
+    assert.ok(endpoint.endsWith(`/wap_synthetic`));
+  }
+  assert.throws(() =>
+    run(
+      candidate,
+      'Evolution - Validar envio texto humano (MVP)',
+      {
+        key: {
+          id: 'proof',
+          fromMe: true,
+          remoteJid: '5511000000002@s.whatsapp.net',
+        },
+      },
+      { [reserve]: reservation },
+    ),
+  );
+});
+
+test('WAP-E08 personal fromMe upsert projects an external fact and no inbound', () => {
+  const source = {
+    bindingId: '00000001-0000-4000-8000-000000000001',
+    lineId: '00000001-0000-4000-8000-000000000002',
+    accountId: '00000001-0000-4000-8000-000000000003',
+    generation: 1,
+  };
+  const raw = event({ source });
+  raw.data.key.fromMe = true;
+  const options = {
+    ...config,
+    personalInbound: true,
+    personalLineIds: [source.lineId],
+  };
+  assert.equal(validateEvolutionEvent(raw, config), null);
+  const result = convertObservedEvolutionEvent(
+    validateObservedEvolutionEvent(raw, options),
+    null,
+    options,
+  );
+  assert.equal(result.external.from_me, true);
+  assert.equal(result.external.origin, 'device');
+  assert.equal(result.external.event_type, 'message.external.sent');
+  assert.deepEqual(result.external.source, source);
+  assert.equal(result.messages, undefined);
+  assert.equal(result.external.command_id, undefined);
+  const candidate = createSellerWhatsAppEvolutionWorkflow(JSON.parse(before), {
+    ...options,
+    webhookPath: 'silmer/seller-whatsapp/messages',
+  });
+  const observed =
+    candidate.connections['Preparar saída observada (WAP)'].main[0];
+  assert.deepEqual(
+    observed.map((/** @type {any} */ edge) => edge.node),
+    ['CRM - Registrar saída observada (WAP)'],
+  );
+  const attachment = candidate.nodes.find(
+    (/** @type {any} */ node) =>
+      node.name === 'CRM - Anexar mídia observada (WAP)',
+  );
+  assert.ok(attachment.parameters.url.includes('/attachments'));
+  assert.equal(attachment.retryOnFail, false);
+});
 /** @param {string} name @param {number} [output] */
 const targets = (name, output = 0) =>
   (workflow.connections[name]?.main?.[output] ?? []).map(

@@ -35,7 +35,12 @@ const recipientFailure = computed(() =>
   props.message.deliveryStatus === 'failed' ? technicalCode.value : null,
 );
 const fromAssistant = computed(() => props.message.authorKind === 'assistant');
+const fromDevice = computed(() => props.message.origin === 'device');
 const title = computed(() => {
+  if (fromDevice.value)
+    return uncertain.value
+      ? 'Entrega ainda sem confirmação'
+      : 'Falha de entrega no WhatsApp';
   if (uncertain.value) return 'Ainda não conseguimos confirmar o envio';
   if (recipientFailure.value === 'EVOLUTION_RECIPIENT_NOT_FOUND')
     return 'WhatsApp não reconheceu este número';
@@ -46,6 +51,7 @@ const title = computed(() => {
     : 'O envio encontrou um problema';
 });
 const description = computed(() => {
+  if (fromDevice.value) return '';
   if (recipientFailure.value === 'EVOLUTION_RECIPIENT_NOT_FOUND')
     return 'A mensagem não foi enviada. Confira o telefone do cliente antes de enviar outra mensagem.';
   if (recipientFailure.value === 'EVOLUTION_RECIPIENT_CHECK_UNAVAILABLE')
@@ -70,8 +76,9 @@ function check() {
     <p class="message-delivery-notice__title">
       <strong>{{ title }}</strong>
     </p>
-    <p :id="descriptionId">{{ description }}</p>
+    <p v-if="description" :id="descriptionId">{{ description }}</p>
     <button
+      v-if="!fromDevice"
       type="button"
       :aria-describedby="descriptionId"
       :aria-disabled="checking || undefined"

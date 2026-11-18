@@ -28,14 +28,27 @@ export async function cancelOrder(pool, orderId) {
 export async function seed(pool, options = {}) {
   const id = `billing-order-${randomUUID()}`;
   const store = options.origin === 'loja';
-  const contact = store ? null : `contact-${id}`;
-  if (contact)
+  const existingConversation = options.conversationId
+    ? (
+        await pool.query(
+          `SELECT c.id,i.current_contact_id FROM crm.conversations c
+        JOIN crm.contact_identities i ON i.id=c.contact_identity_id WHERE c.id=$1`,
+          [options.conversationId],
+        )
+      ).rows[0]
+    : null;
+  const contact = store
+    ? null
+    : (existingConversation?.current_contact_id ?? `contact-${id}`);
+  if (contact && !existingConversation)
     await pool.query(
       'INSERT INTO crm.contacts(id,created_at,updated_at) VALUES ($1,$2,$2)',
       [contact, current],
     );
-  const conversationId = options.conversation ? `conversation-${id}` : null;
-  if (conversationId) {
+  const conversationId =
+    existingConversation?.id ??
+    (options.conversation ? `conversation-${id}` : null);
+  if (conversationId && !existingConversation) {
     const identityId = `identity-${id}`;
     const lookupHash = randomUUID().replaceAll('-', '').padEnd(64, '0');
     await pool.query(
@@ -91,7 +104,7 @@ export async function seed(pool, options = {}) {
       ),
       options.amount ?? 10000,
       current,
-      SELLER.id,
+      options.owner ?? SELLER.id,
       store ? '2026-11-05' : (options.paidOn ?? null),
       store ? 'LJ-A1B2C3D4' : null,
       store ? 10 : null,

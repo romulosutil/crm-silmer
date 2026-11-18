@@ -92,7 +92,7 @@ const receiptError = ref('');
 const pendingSectionWrites = ref(0);
 const pendingOrderCommands = ref(0);
 const failedSectionWrites = ref(new Set());
-let receiptDisposed = false;
+let viewDisposed = false;
 function receiptFocusFallback() {
   return heading.value;
 }
@@ -132,7 +132,7 @@ async function openReceipt(event) {
       // A seller may continue typing while an earlier save is slow. Blur that
       // field too, then drain the save it starts before opening the modal.
     } while (waiting !== sectionWrites || blurReceiptDraft());
-    if (receiptDisposed || props.orderId !== id) return;
+    if (viewDisposed || props.orderId !== id) return;
     if (
       editingSection.value !== '' ||
       pendingOrderCommands.value > 0 ||
@@ -177,8 +177,8 @@ let revealOnLoad = false;
 let controller;
 let forcedLoadInFlight = false;
 let refreshTimer = 0;
+/** @type {{id:string,version:number,file:File}|null} */
 let readyPdf = null;
-let readyPdfVersion = null;
 let pendingLiveRefresh = false;
 let headingAnnounced = false;
 
@@ -546,21 +546,34 @@ async function confirmDelivery(context) {
 /** PIM-13: download the approved ficha as a PDF, or offer the mobile share sheet. */
 async function generatePdf(share = false) {
   if (pdfBusy.value || isPending.value || !order.value) return;
+  const id = props.orderId;
+  const { version, number } = order.value;
+  const current = () =>
+    !viewDisposed &&
+    props.orderId === id &&
+    order.value?.id === id &&
+    order.value.version === version &&
+    !isPending.value;
+  if (!current()) return;
   pdfBusy.value = true;
   pdfError.value = '';
   const firstStorePdf = storeFichaPending(order.value);
   try {
-    const fromCache =
-      share && readyPdf && readyPdfVersion === order.value.version;
-    const file = fromCache
-      ? readyPdf
-      : pdfFile(await getOrderPdf(props.orderId), order.value.number);
+    const cached =
+      share && readyPdf?.id === id && readyPdf.version === version
+        ? readyPdf.file
+        : null;
+    const fromCache = Boolean(cached);
+    const file =
+      cached ??
+      pdfFile(await getOrderPdf(id, share ? version : undefined), number);
+    if (!current()) return;
     if (!fromCache) {
-      readyPdf = file;
-      readyPdfVersion = order.value.version;
+      readyPdf = share ? { id, version, file } : null;
       if (firstStorePdf && editingSection.value === '') await load(true);
     }
     if (share) {
+      if (!current()) return;
       // Rendering may outlast the browser's gesture; a second tap shares the prepared file.
       if (
         !fromCache &&
@@ -571,7 +584,7 @@ async function generatePdf(share = false) {
         return;
       }
       try {
-        await sharePdf(file, order.value.number);
+        await sharePdf(file, number);
       } catch (cause) {
         if (cause?.name === 'AbortError') return;
         if (cause?.name === 'NotAllowedError' && !fromCache) {
@@ -579,18 +592,22 @@ async function generatePdf(share = false) {
             'PDF pronto. Toque em Compartilhar PDF novamente para escolher o WhatsApp.';
           return;
         }
+        if (!current()) return;
         downloadPdf(file);
         pdfError.value =
           'O compartilhamento não abriu. O PDF foi baixado para você encaminhar pelo WhatsApp.';
       }
     } else downloadPdf(file);
   } catch (cause) {
+    if (viewDisposed || props.orderId !== id) return;
     pdfError.value =
       cause?.code === 'PRINT_FINANCIAL_TEXT_REVIEW_REQUIRED'
         ? 'Revise as informações financeiras nos textos do pedido antes de gerar a ficha da fábrica.'
-        : Number(cause?.status) === 409
-          ? 'Este pedido foi reaberto. Atualize a página antes de gerar o PDF.'
-          : 'Não foi possível gerar o PDF. Tente novamente.';
+        : cause?.code === 'VERSION_CONFLICT'
+          ? 'O pedido mudou enquanto a ficha era preparada. Atualize o pedido e gere o PDF novamente.'
+          : Number(cause?.status) === 409
+            ? 'Este pedido foi reaberto. Atualize a página antes de gerar o PDF.'
+            : 'Não foi possível gerar o PDF. Tente novamente.';
   } finally {
     pdfBusy.value = false;
   }
@@ -943,7 +960,7 @@ onMounted(() => {
   void load();
 });
 onBeforeUnmount(() => {
-  receiptDisposed = true;
+  viewDisposed = true;
   controller?.abort();
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
 });

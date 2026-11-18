@@ -11,6 +11,7 @@ import { fingerprint } from './crypto.js';
 const EVENT_TYPES = new Set([
   'handoff.requested',
   'message.delivered',
+  'message.external.sent',
   'message.failed',
   'message.read',
   'message.send.requested',
@@ -232,6 +233,9 @@ export function createN8nIntegrationService({
         correlationId: technical.correlationId,
         eventFingerprint: fingerprint({
           contentSha256,
+          ...(input.externalBindingId
+            ? { externalBindingId: input.externalBindingId }
+            : {}),
           externalId: input?.externalId ?? input?.external_id,
           filename: input?.filename,
           mimeType: input?.mimeType ?? input?.mime_type,
@@ -243,6 +247,7 @@ export function createN8nIntegrationService({
           'externalId',
           512,
         ),
+        externalBindingId: optionalString(input.externalBindingId, 36),
         filename: safeFilename(input?.filename),
         mimeType: identifier(
           input?.mimeType ?? input?.mime_type,
@@ -268,6 +273,10 @@ export function createN8nIntegrationService({
         'event_type',
       );
       const occurredAt = instant(input?.occurred_at, 'occurred_at');
+      if (eventType === 'message.external.sent') {
+        const fact = normalizeExternalSend(input, technical, occurredAt);
+        return translateConflict(() => repository.recordEvent(fact, runtime));
+      }
       const conversationId =
         (input?.conversation_id === null ||
           input?.conversation_id === undefined) &&
@@ -298,7 +307,9 @@ export function createN8nIntegrationService({
         sourceRevision:
           input?.source_revision === undefined
             ? null
-            : positiveInteger(input.source_revision, 'source_revision'),
+            : input.source && input.command_id
+              ? nonNegativeInteger(input.source_revision, 'source_revision')
+              : positiveInteger(input.source_revision, 'source_revision'),
         subjectId: optionalString(input?.subject_id, 512),
         orderId: optionalString(input?.order_id, 512),
         targetContract:
@@ -319,6 +330,82 @@ export function createN8nIntegrationService({
       );
     },
   });
+}
+
+/** @param {any} input @param {any} technical @param {string} occurredAt */
+function normalizeExternalSend(input, technical, occurredAt) {
+  const fields = [
+    'schema_version',
+    'event_type',
+    'event_id',
+    'occurred_at',
+    'source',
+    'instance',
+    'origin',
+    'from_me',
+    'to',
+    'external_message_id',
+    'message',
+    'technical',
+  ];
+  const source = normalizePersonalSource(input.source);
+  if (
+    Object.keys(input).some((key) => !fields.includes(key)) ||
+    !source ||
+    input.origin !== 'device' ||
+    input.from_me !== true ||
+    typeof input.instance !== 'string' ||
+    !/^[A-Za-z0-9_-]{1,64}$/u.test(input.instance) ||
+    typeof input.external_message_id !== 'string' ||
+    !/^[A-Za-z0-9_-]{1,512}$/u.test(input.external_message_id)
+  )
+    throw new N8nValidationError('Invalid external WhatsApp send');
+  const type = oneOf(
+    input.message?.type,
+    ['text', 'image', 'audio', 'video', 'document'],
+    'message.type',
+  );
+  if (
+    Object.keys(input.message).some((key) => !['type', 'text'].includes(key)) ||
+    typeof input.message.text !== 'string' ||
+    input.message.text.length > 16_000 ||
+    (type === 'text' && !input.message.text.trim())
+  )
+    throw new N8nValidationError('Invalid external WhatsApp content');
+  const externalIdentityId = normalizeWhatsAppIdentity(input.to);
+  const content =
+    type === 'text'
+      ? { text: input.message.text }
+      : {
+          attachmentId: input.external_message_id,
+          caption: input.message.text || null,
+        };
+  return {
+    eventType: input.event_type,
+    eventId: identifier(input.event_id, 'event_id', 512),
+    eventFingerprint: fingerprint({
+      source,
+      occurredAt,
+      externalIdentityId,
+      type,
+      content,
+    }),
+    source,
+    instance: input.instance,
+    externalIdentityId,
+    externalConversationId: externalIdentityId,
+    externalMessageId: input.external_message_id,
+    occurredAt,
+    technical,
+    correlationId: technical.correlationId,
+    channel: 'whatsapp',
+    provider: 'evolution',
+    providerAccountId: source.accountId,
+    identityKind: 'phone',
+    phoneStatus: 'confirmed',
+    displayHandle: null,
+    message: { type, content },
+  };
 }
 
 /** The n8n pre-persistence verifier supplies immutable, non-secret origin.

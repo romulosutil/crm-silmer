@@ -101,3 +101,39 @@ test('BAPI-07: missing credentials, forged identity, query selectors and HEAD ca
   );
   assert.equal(calls.length, 0);
 });
+
+test('WAP-E08 final dispatch is bodyless, private and bound to the reserved execution', async (t) => {
+  const { api, calls } = await harness(t, {
+    valid: true,
+    instance: 'synthetic',
+    to: '+5511000000001',
+    internal: 'private',
+  });
+  const response = await api.inject({ method: 'POST', url, headers });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json(), {
+    valid: true,
+    instance: 'synthetic',
+    to: '+5511000000001',
+  });
+  assert.equal(response.headers['cache-control'], 'private, no-store');
+  assert.equal(calls[0].dispatch, true);
+  assert.equal(calls[0].technical.executionId, 'execution');
+  assert.equal(
+    (
+      await api.inject({
+        method: 'POST',
+        url,
+        headers,
+        payload: { to: '+5511000000002' },
+      })
+    ).statusCode,
+    400,
+  );
+  const anonymous = { ...headers, authorization: '' };
+  assert.equal(
+    (await api.inject({ method: 'POST', url, headers: anonymous })).statusCode,
+    401,
+  );
+  assert.equal(calls.length, 1);
+});

@@ -443,9 +443,9 @@ inicial de sessões/PRs por T.
 | [x] WAP-T02a-03 | Criar ou reutilizar Pedido no alvo transacional          | [WAP-E05](PROMPTS.md#wap-e05) | WAP-17/31/33; OA-05/07            |
 | [x] WAP-T02a-04 | Entregar fluxo passivo de Pedido em Meus clientes        | [WAP-E06](PROMPTS.md#wap-e06) | WAP-01/17/31/32/33                |
 | [x] WAP-T02a-05 | Verificar gate prioritário ponta a ponta                 | [WAP-E07](PROMPTS.md#wap-e07) | WAP-17/19/31/32/33                |
-| [ ] WAP-T02-08  | Revalidar linha na reserva e no despacho humano          | [WAP-E08](PROMPTS.md#wap-e08) | WAP-06/10/11/12/19                |
-| [ ] WAP-T03-01  | Normalizar fato externo enviado pelo aparelho            | [WAP-E08](PROMPTS.md#wap-e08) | WAP-09/10/12                      |
-| [ ] WAP-T03-02  | Persistir saída externa e reconciliar eco                | [WAP-E08](PROMPTS.md#wap-e08) | WAP-06/09/10/11                   |
+| [x] WAP-T02-08  | Revalidar linha na reserva e no despacho humano          | [WAP-E08](PROMPTS.md#wap-e08) | WAP-06/10/11/12/19                |
+| [x] WAP-T03-01  | Normalizar fato externo enviado pelo aparelho            | [WAP-E08](PROMPTS.md#wap-e08) | WAP-09/10/12                      |
+| [x] WAP-T03-02  | Persistir saída externa e reconciliar eco                | [WAP-E08](PROMPTS.md#wap-e08) | WAP-06/09/10/11                   |
 | [ ] WAP-T04-01  | Completar cadastro e vínculo na carteira                 | [WAP-E09](PROMPTS.md#wap-e09) | WAP-01/17/18/20/21/24/25/26/27/29 |
 | [ ] WAP-T04-02  | Entregar Meu WhatsApp e onboarding dispensável           | [WAP-E09](PROMPTS.md#wap-e09) | WAP-01/02/03/04/11/12             |
 | [ ] WAP-T04-03  | Compor primeiro envio individual no servidor             | [WAP-E10](PROMPTS.md#wap-e10) | WAP-22/23/24/32                   |
@@ -455,6 +455,22 @@ inicial de sessões/PRs por T.
 | [ ] WAP-T05-01  | Consolidar flags, allowlist e limites sem ativação       | [WAP-E11](PROMPTS.md#wap-e11) | WAP-12/16                         |
 | [ ] WAP-T05-02  | Auditar regressão funcional, a11y e privacidade          | [WAP-E11](PROMPTS.md#wap-e11) | WAP-01–12/17–33                   |
 | [ ] WAP-T05-03  | Ensaiar rollback e recovery sem reativar efeitos         | [WAP-E11](PROMPTS.md#wap-e11) | WAP-10/11/12/16/29/33             |
+
+### Evidência local de WAP-E08
+
+A expansão `0082` e o ensaio `test/integration/seller-whatsapp-outbound.test.js`
+cobrem a reserva concorrente com desconexão, preflight com carteira revogada,
+resultado após desconexão, duas contas com o mesmo ID do provedor, eco/HTTP em
+ambas as ordens, recibos adiantados e mídia privada ou indisponível. O workflow
+sintético usa o transporte humano existente e mantém o gerador histórico.
+Teclado, foco, mídia e atribuição foram verificados na Inbox em 390 e 1366 px.
+
+WAP-T02-09 tem prova de ACL comercial, preparo de cobrança obsoleto, replay
+financeiro após disconnect e versão da ficha. O envio de ficha com conta e
+destinatário fixados pelo CRM segue pendente. O compartilhamento de PDF
+vigente delega essa escolha à folha nativa do telefone. WAP-E08 permanece
+parcial por essa pendência. O [runbook](../../../docs/runbooks/seller-whatsapp-outbound.md)
+registra o contrato, o ensaio e o rollback.
 | [ ] WAP-T05-04  | Consolidar roteiro operacional e evidências              | [WAP-E11](PROMPTS.md#wap-e11) | WAP-12/16; WAP-T05                |
 | [ ] WAP-T05-05  | Homologar fluxo passivo real de Pedido                   | [WAP-E12](PROMPTS.md#wap-e12) | WAP-04/05/07/17/31/32/33          |
 | [ ] WAP-T05-06  | Homologar pareamento mobile e sincronização reais        | [WAP-E12](PROMPTS.md#wap-e12) | WAP-01/02/03/04/09/10/11/12       |

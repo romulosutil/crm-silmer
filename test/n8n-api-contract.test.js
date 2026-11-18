@@ -108,6 +108,22 @@ test('site chat is the active pilot while WhatsApp stays supported for rollout',
   );
 });
 
+test('WAP-E08 external send is a fact with a closed, versioned payload', async () => {
+  const contract = await fixture('contract-v1.json');
+  const fact = await fixture('message-external-sent.json');
+  assert.equal(validateEvent(fact, contract), true);
+  for (const fields of [
+    { from_me: false },
+    { origin: 'human' },
+    { command_id: 'crafted' },
+    { source: undefined },
+    { occurred_at: 'yesterday' },
+    { instance: '../other' },
+    { message: { ...fact.message, media_url: 'https://synthetic.invalid' } },
+  ])
+    assert.throws(() => validateEvent({ ...fact, ...fields }, contract));
+});
+
 test('requires Basic credentials and all trace/workflow headers', async () => {
   const contract = await fixture('contract-v1.json');
   const valid = basicHeaders();

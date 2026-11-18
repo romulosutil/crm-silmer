@@ -6,6 +6,12 @@ import {
   lockBillingSend,
   billingSendBlockReason,
   blockBillingSend,
+  lockSellerWhatsAppLines,
+  matchesWhatsAppTarget,
+  personalSendAllowed,
+  sellerWhatsAppSendConfiguration,
+  sellerWhatsAppTarget,
+  snapshotWhatsAppTarget,
 } from '@crm-silmer/n8n-integration';
 import {
   fingerprintCommand,
@@ -67,6 +73,7 @@ function present(row) {
  */
 export function createOrderBillingChatRuntime(database, options) {
   const env = options.environment ?? process.env;
+  const personalSendSellers = sellerWhatsAppSendConfiguration(env);
   const financialEnabled = env.ORDER_BILLING_ENABLED === 'true';
   const enabled =
     financialEnabled && env.ORDER_BILLING_CHAT_SEND_ENABLED === 'true';
@@ -110,6 +117,22 @@ export function createOrderBillingChatRuntime(database, options) {
       )
     ).rows[0];
     if (charge.status !== 'waiting' || !charge.checkout_envelope) return intent;
+    const target = await sellerWhatsAppTarget(client, intent.conversation_id);
+    if (target || intent.whatsapp_target) {
+      const valid =
+        target &&
+        matchesWhatsAppTarget(target, intent.whatsapp_target) &&
+        personalSendAllowed(target, intent.actor_id, personalSendSellers);
+      if (!valid) {
+        await blockBillingSend(client, intent.id, 'SENDING_DISABLED', now);
+        return (
+          await client.query(
+            'SELECT * FROM crm.order_billing_send_intents WHERE id=$1',
+            [intent.id],
+          )
+        ).rows[0];
+      }
+    }
     const url = billingUrl(
       decryptOrderPrivateJson(
         charge.checkout_envelope,
@@ -261,6 +284,7 @@ export function createOrderBillingChatRuntime(database, options) {
     const ids = [
       ...new Set([before.conversation_id, targetId].filter(Boolean)),
     ].sort();
+    if (targetId) await lockSellerWhatsAppLines(client, ids);
     const conversations = (
       await client.query(
         'SELECT * FROM crm.conversations WHERE id=ANY($1::text[]) ORDER BY id FOR UPDATE',
@@ -564,10 +588,14 @@ export function createOrderBillingChatRuntime(database, options) {
     }
     if (prior || command.action === 'send_existing')
       c.plan = await savePlan(client, c, c.plan.percent);
+    const whatsappTarget = snapshotWhatsAppTarget(
+      await sellerWhatsAppTarget(client, c.target.id),
+      { commercial: true },
+    );
     const intent = (
       await client.query(
-        `INSERT INTO crm.order_billing_send_intents(id,order_id,charge_id,conversation_id,actor_id,action,retry_of_intent_id,supersedes_charge_id,amount_cents,order_version,billing_version,conversation_version,owner_id,order_owner_id,cycle_number,automation_epoch,inbound_revision,confirmed_at,order_amount_cents,payment_condition,created_at,updated_at)
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$21) RETURNING *`,
+        `INSERT INTO crm.order_billing_send_intents(id,order_id,charge_id,conversation_id,actor_id,action,retry_of_intent_id,supersedes_charge_id,amount_cents,order_version,billing_version,conversation_version,owner_id,order_owner_id,cycle_number,automation_epoch,inbound_revision,confirmed_at,order_amount_cents,payment_condition,created_at,updated_at,whatsapp_target)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$21,$22) RETURNING *`,
         [
           uuid(idFactory()),
           c.order.id,
@@ -590,6 +618,7 @@ export function createOrderBillingChatRuntime(database, options) {
           charge.order_amount_cents,
           charge.payment_condition,
           clock(),
+          whatsappTarget,
         ],
       )
     ).rows[0];

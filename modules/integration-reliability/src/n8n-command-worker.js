@@ -41,6 +41,7 @@ export function createN8nCommandJobHandler({ client, commandStore }) {
       jobId: technicalIdentifier(job.id, 'jobId'),
     });
     let effectStarted = false;
+    let personalSend = false;
 
     try {
       const stored = await commandStore.loadForDelivery(
@@ -48,6 +49,7 @@ export function createN8nCommandJobHandler({ client, commandStore }) {
         attemptContext,
       );
       const command = immutableCommand(stored, commandId);
+      personalSend = Boolean(command.payload?.whatsapp_target);
       const delivery = client.prepareDelivery(command);
       const processing = await commandStore.markProcessing(commandId, {
         ...attemptContext,
@@ -61,20 +63,31 @@ export function createN8nCommandJobHandler({ client, commandStore }) {
       await workerContext.markEffectStarted({ provider: 'n8n' });
       effectStarted = true;
       const acknowledgement = await delivery.execute();
-      await commandStore.markDelivered(commandId, {
+      const delivered = await commandStore.markDelivered(commandId, {
         ...attemptContext,
         duplicate: acknowledgement.duplicate === true,
         providerExternalId: acknowledgement.providerExternalId,
         statusCode: acknowledgement.statusCode,
       });
+      if (delivered === false) {
+        throw new N8nCommandDeliveryError('N8N_COMMAND_ACK_UNCONFIRMED');
+      }
       return /** @type {const} */ ({
         outcome: 'sent',
         providerExternalId: acknowledgement.providerExternalId,
       });
     } catch (error) {
-      const failure = classifyN8nCommandDeliveryFailure(error, {
+      let failure = classifyN8nCommandDeliveryFailure(error, {
         effectStarted,
       });
+      if (effectStarted && personalSend && failure.retrySafe) {
+        failure = Object.freeze({
+          ...failure,
+          outcome: 'outcome_unknown',
+          retryable: false,
+          retrySafe: false,
+        });
+      }
       if (failure.outcome === 'outcome_unknown') {
         await commandStore.markOutcomeUnknown(commandId, {
           ...attemptContext,

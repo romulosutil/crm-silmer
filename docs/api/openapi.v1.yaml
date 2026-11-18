@@ -2385,8 +2385,12 @@ paths:
         ciclo quando a anterior encerrou, mensagem, comando n8n e auditoria.
         Linha offline antes da reserva não cria nada. Timeout depois da
         reserva fica outcome_unknown e exige reconciliação, sem nova tentativa
-        cega. Replay revalida sessão, guardas, titular e vínculo antes de
-        devolver o mesmo corpo. Corpo máximo 8 KiB; no-store.
+        cega. expectedConversation repete a conversa da prévia: duas abas da
+        mesma prévia produzem um 201 e um 409 CONVERSATION_VERSION_CONFLICT;
+        só uma nova prévia permite enviar outra mensagem. Destino igual ao
+        número da própria linha responde 422. Replay revalida sessão,
+        guardas, titular e vínculo antes de devolver o mesmo corpo. Corpo
+        máximo 8 KiB; no-store.
       security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
       parameters:
         - $ref: '#/components/parameters/ContactId'
@@ -4134,7 +4138,8 @@ paths:
         '404': { $ref: '#/components/responses/OrderNotFound' }
         '409': { $ref: '#/components/responses/OrderConflict' }
         '422': { $ref: '#/components/responses/OrderUnprocessable' }
-        '429': { description: Limite de solicitações ou quota de mídia atingido }
+        '429':
+          { description: Limite de solicitações ou quota de mídia atingido }
         '503': { $ref: '#/components/responses/Unavailable' }
   /orders/{orderId}/files:
     get:
@@ -9030,6 +9035,7 @@ components:
           expectedLinkVersion,
           expectedLineVersion,
           expectedGeneration,
+          expectedConversation,
         ]
       properties:
         text:
@@ -9041,6 +9047,20 @@ components:
         expectedLinkVersion: { type: integer, minimum: 1 }
         expectedLineVersion: { type: integer, minimum: 1 }
         expectedGeneration: { type: integer, minimum: 1 }
+        expectedConversation:
+          description: >-
+            Exatamente preview.conversation. null exige que não haja conversa
+            ativa; {id, version} exige essa conversa ativa nessa versão.
+            Conferido sob lock; divergência responde 409
+            CONVERSATION_VERSION_CONFLICT.
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required: [id, version]
+              properties:
+                id: { type: string, minLength: 1, maxLength: 128 }
+                version: { type: integer, minimum: 1 }
     SellerWhatsAppFirstSendResponse:
       type: object
       additionalProperties: false
@@ -9079,8 +9099,10 @@ components:
         application/problem+json com code público: INVALID_REQUEST,
         IDEMPOTENCY_KEY, FORBIDDEN, NOT_FOUND, CONTACT_VERSION_CONFLICT,
         WHATSAPP_GENERATION_STALE, WHATSAPP_IDENTITY_CONFLICT (genérico, sem
-        IDs ou nomes), CONVERSATION_UNAVAILABLE, IDEMPOTENCY_CONFLICT,
-        WHATSAPP_DESTINATION_INVALID, RATE_LIMITED (60 por minuto),
+        IDs ou nomes), CONVERSATION_UNAVAILABLE,
+        CONVERSATION_VERSION_CONFLICT (conversa ativa diferente da prévia),
+        IDEMPOTENCY_CONFLICT, WHATSAPP_DESTINATION_INVALID (sem telefone
+        válido ou igual ao número da própria linha), RATE_LIMITED (60 por minuto),
         WHATSAPP_SEND_UNAVAILABLE (linha fora de conexão antes da reserva),
         SELLER_WHATSAPP_FIRST_SEND_DISABLED ou SERVICE_UNAVAILABLE, sem eco
         do corpo, telefone ou texto

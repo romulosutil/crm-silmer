@@ -258,6 +258,11 @@ test(
           [line.source.lineId],
         )
       ).rows[0];
+      // The UI sends back exactly what the side-effect free preview showed.
+      const { preview } = await firstSend.preview({
+        actor: { id: line.sellerId },
+        contactId,
+      });
       return {
         actor: { id: line.sellerId, kind: 'human' },
         contactId,
@@ -266,6 +271,7 @@ test(
         expectedLinkVersion: Number(link.version),
         expectedLineVersion: Number(current.version),
         expectedGeneration: Number(current.generation),
+        expectedConversation: preview.conversation,
         idempotencyKey: randomUUID(),
         correlationId: randomUUID(),
         ...extra,
@@ -530,7 +536,14 @@ test(
           expectedLinkVersion: first.input.expectedLinkVersion,
           expectedLineVersion: first.input.expectedLineVersion,
           expectedGeneration: first.input.expectedGeneration,
+          expectedConversation: (
+            await firstSend.preview({ actor: { id: A }, contactId: c1 })
+          ).preview.conversation,
         };
+        assert.equal(
+          payload.expectedConversation.id,
+          first.result.body.conversation.id,
+        );
         const idempotencyKey = randomUUID();
         const path = `/api/v1/contacts/${c1}/whatsapp/conversations`;
         const headers = {
@@ -568,34 +581,73 @@ test(
     /** @type {any[]} */
     let tabs = [];
     await t.test(
-      'two tabs with different keys share one active conversation',
+      'two tabs from the same preview commit one message; a re-previewed tab reuses it',
       async () => {
         const [one, two] = await Promise.all([request(a, c2), request(a, c2)]);
-        tabs = await Promise.all([firstSend.send(one), firstSend.send(two)]);
-        assert.deepEqual(
-          tabs.map((r) => r.created),
-          [true, true],
-        );
-        assert.equal(
-          tabs[0].body.conversation.id,
-          tabs[1].body.conversation.id,
-        );
-        assert.deepEqual(tabs.map((r) => r.body.conversation.reused).sort(), [
-          false,
-          true,
+        assert.equal(one.expectedConversation, null);
+        assert.equal(two.expectedConversation, null);
+        const before = await effects();
+        const results = await Promise.allSettled([
+          firstSend.send(one),
+          firstSend.send(two),
         ]);
+        const won = results.filter((r) => r.status === 'fulfilled');
+        const lost = results.filter((r) => r.status === 'rejected');
+        assert.equal(won.length, 1);
+        assert.equal(lost.length, 1);
+        assert.equal(
+          /** @type {any} */ (lost[0]).reason.code,
+          'CONVERSATION_VERSION_CONFLICT',
+        );
+        const created = /** @type {any} */ (won[0]).value;
+        assert.equal(created.created, true);
+        assert.equal(created.body.conversation.reused, false);
+        assert.deepEqual(await effects(), {
+          ...before,
+          identities: before.identities + 1,
+          conversations: before.conversations + 1,
+          messages: before.messages + 1,
+          commands: before.commands + 1,
+          jobs: before.jobs + 1,
+          receipts: before.receipts + 1,
+          audits: before.audits + 1,
+        });
         assert.equal((await active(a, P2)).length, 1);
+        const loser = results[0].status === 'rejected' ? one : two;
+        // The losing key was rolled back: replaying it still conflicts.
+        await assert.rejects(firstSend.send(loser), {
+          code: 'CONVERSATION_VERSION_CONFLICT',
+        });
+        // A stale previewed version also conflicts.
+        await assert.rejects(
+          firstSend.send({
+            ...(await request(a, c2)),
+            expectedConversation: {
+              id: created.body.conversation.id,
+              version: created.body.conversation.version - 1,
+            },
+          }),
+          { code: 'CONVERSATION_VERSION_CONFLICT' },
+        );
+        const deliberate = await firstSend.send(await request(a, c2));
+        assert.equal(deliberate.created, true);
+        assert.equal(deliberate.body.conversation.reused, true);
+        assert.equal(
+          deliberate.body.conversation.id,
+          created.body.conversation.id,
+        );
+        tabs = [created, deliberate];
+        assert.equal(
+          await count('crm.messages WHERE conversation_id=$1', [
+            created.body.conversation.id,
+          ]),
+          2,
+        );
         assert.equal(
           await count('crm.contact_identities WHERE current_contact_id=$1', [
             c2,
           ]),
           1,
-        );
-        assert.equal(
-          await count('crm.messages WHERE conversation_id=$1', [
-            tabs[0].body.conversation.id,
-          ]),
-          2,
         );
       },
     );
@@ -680,6 +732,10 @@ test(
         const legacy = await database.transaction((/** @type {any} */ c) =>
           seedContact(c, null, [D]),
         );
+        // The seller's own confirmed line number is never a destination.
+        const own = await database.transaction((/** @type {any} */ c) =>
+          seedContact(c, '5511000000410', [D]),
+        );
         const before = await effects();
         const valid = await request(d, c5);
         for (const [change, code] of /** @type {const} */ ([
@@ -687,6 +743,10 @@ test(
           [{ expectedLinkVersion: 2 }, 'CONTACT_VERSION_CONFLICT'],
           [{ expectedLineVersion: 2 }, 'WHATSAPP_GENERATION_STALE'],
           [{ expectedGeneration: 2 }, 'WHATSAPP_GENERATION_STALE'],
+          [
+            { expectedConversation: { id: 'conversation-x', version: 1 } },
+            'CONVERSATION_VERSION_CONFLICT',
+          ],
         ]))
           await assert.rejects(
             firstSend.send({
@@ -697,6 +757,15 @@ test(
             { code },
           );
         await assert.rejects(firstSend.send(await request(d, legacy)), {
+          code: 'WHATSAPP_DESTINATION_INVALID',
+        });
+        const ownPreview = (
+          await firstSend.preview({ actor: { id: D }, contactId: own })
+        ).preview;
+        assert.equal(ownPreview.restriction, 'destination_invalid');
+        assert.equal(ownPreview.available, false);
+        assert.equal(ownPreview.conversation, null);
+        await assert.rejects(firstSend.send(await request(d, own)), {
           code: 'WHATSAPP_DESTINATION_INVALID',
         });
         assert.equal(

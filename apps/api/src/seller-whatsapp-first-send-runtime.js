@@ -254,16 +254,30 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
     conversation.assigned_user_id === actorId &&
     conversation.automation_state === 'human';
 
-  /** @param {any} line */
-  function maskedLineNumber(line) {
-    if (!line.confirmed_number_envelope) return null;
+  /** The titular's confirmed number as +E164, or null. @param {any} line */
+  function ownNumber(line) {
+    if (!line?.confirmed_number_envelope) return null;
     const { number } = decryptJson(
       line.confirmed_number_envelope,
       `seller-whatsapp-confirmed:${line.id}`,
       contactKey,
     );
-    return typeof number === 'string' ? mask(number) : null;
+    return typeof number === 'string' && /^[1-9][0-9]{7,14}$/u.test(number)
+      ? `+${number}`
+      : null;
   }
+
+  /** A send to the seller's own line is never a customer destination.
+   * @param {any} line @param {string|null} to */
+  const validDestination = (line, to) => Boolean(to) && to !== ownNumber(line);
+
+  /** @param {any} expected @param {any} conversation */
+  const sameConversation = (expected, conversation) =>
+    expected === null
+      ? !conversation
+      : Boolean(conversation) &&
+        conversation.id === expected.id &&
+        Number(conversation.version) === expected.version;
 
   /** @param {any} client @param {string} key */
   const advisory = (client, key) =>
@@ -285,7 +299,8 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
       Number(line.generation) !== input.expectedGeneration
     )
       throw refusal(409, 'WHATSAPP_GENERATION_STALE');
-    if (!to) throw refusal(422, 'WHATSAPP_DESTINATION_INVALID');
+    if (!to || !validDestination(line, to))
+      throw refusal(422, 'WHATSAPP_DESTINATION_INVALID');
     const hash = lookupHashFor(line, to);
     await advisory(client, `identity:${hash}`);
     let identity = await identityFor(client, line, hash, false);
@@ -319,6 +334,10 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
     let conversation = await activeConversation(client, line, to, true);
     if (conversation && !reusable(conversation, identity, actorId))
       throw refusal(409, 'CONVERSATION_UNAVAILABLE');
+    // Checked under the conversation lock: another tab or an inbound reply
+    // that opened/changed the conversation since the preview wins.
+    if (!sameConversation(input.expectedConversation, conversation))
+      throw refusal(409, 'CONVERSATION_VERSION_CONFLICT');
     const now = clock();
     if (!identity) {
       const id = `identity-${randomUUID()}`;
@@ -480,8 +499,9 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
         let conversation = null;
         if (!line) restriction = 'line_not_configured';
         else if (!lineUsable(line)) restriction = 'line_unavailable';
-        else if (!to) restriction = 'destination_invalid';
-        if (line && to) {
+        else if (!to || !validDestination(line, to))
+          restriction = 'destination_invalid';
+        if (line && to && validDestination(line, to)) {
           const identity = await identityFor(
             client,
             line,
@@ -512,7 +532,7 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
                   version: Number(line.version),
                   generation: Number(line.generation),
                   state: line.state,
-                  maskedNumber: maskedLineNumber(line),
+                  maskedNumber: mask(ownNumber(line)),
                 }
               : null,
             recipient: to ? { maskedNumber: mask(to) } : null,
@@ -526,7 +546,7 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
       });
     },
 
-    /** @param {{actor:{id:string},contactId:string,text:string,expectedContactVersion:number,expectedLinkVersion:number,expectedLineVersion:number,expectedGeneration:number,idempotencyKey:string,correlationId:string}} input */
+    /** @param {{actor:{id:string},contactId:string,text:string,expectedContactVersion:number,expectedLinkVersion:number,expectedLineVersion:number,expectedGeneration:number,expectedConversation:null|{id:string,version:number},idempotencyKey:string,correlationId:string}} input */
     async send(input) {
       guard(input.actor?.id);
       const actorId = input.actor.id;
@@ -546,6 +566,7 @@ export function createSellerWhatsAppFirstSendRuntime(database, options) {
             input.expectedLinkVersion,
             input.expectedLineVersion,
             input.expectedGeneration,
+            input.expectedConversation,
           ]),
         )
         .digest('hex');

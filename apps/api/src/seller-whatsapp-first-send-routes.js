@@ -11,6 +11,7 @@ const CODES = new Map([
   ['WHATSAPP_GENERATION_STALE', 409],
   ['WHATSAPP_IDENTITY_CONFLICT', 409],
   ['CONVERSATION_UNAVAILABLE', 409],
+  ['CONVERSATION_VERSION_CONFLICT', 409],
   ['IDEMPOTENCY_CONFLICT', 409],
   ['WHATSAPP_DESTINATION_INVALID', 422],
   ['RATE_LIMITED', 429],
@@ -30,6 +31,7 @@ const BODY = [
   'expectedLinkVersion',
   'expectedLineVersion',
   'expectedGeneration',
+  'expectedConversation',
 ];
 
 /** @param {string} [code] @param {number} [statusCode] */
@@ -47,6 +49,25 @@ function contactId(value) {
 function version(value) {
   if (!Number.isSafeInteger(value) || Number(value) < 1) throw invalid();
   return Number(value);
+}
+
+/** Required: null (no active conversation) or the previewed id/version.
+ * @param {unknown} value */
+function conversation(value) {
+  if (value === null) return null;
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    Object.keys(value).some((key) => !['id', 'version'].includes(key))
+  )
+    throw invalid();
+  const { id, version: current } = /** @type {Record<string, unknown>} */ (
+    value
+  );
+  if (typeof id !== 'string' || !/^[A-Za-z0-9_:-]{1,128}$/u.test(id))
+    throw invalid();
+  return { id, version: version(current) };
 }
 
 /** Strict body: destination, account, user or URL fields are refused.
@@ -70,6 +91,7 @@ export function readFirstSendBody(body) {
     expectedLinkVersion: version(value.expectedLinkVersion),
     expectedLineVersion: version(value.expectedLineVersion),
     expectedGeneration: version(value.expectedGeneration),
+    expectedConversation: conversation(value.expectedConversation),
   };
 }
 

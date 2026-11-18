@@ -1,0 +1,1198 @@
+{
+  "schema": "wap-capacity-evidence/1",
+  "task": "WAP-T05-01",
+  "requirements": ["WAP-12", "WAP-16"],
+  "label": "Local synthetic rehearsal on a Windows development host. Does not prove production capacity.",
+  "generatedAt": "2026-11-18T16:27:35.350Z",
+  "commit": "aad6f17163c0e07f7993cd3d54f208c3b576c271",
+  "worktreeDirty": true,
+  "host": {
+    "os": "Windows_NT 10.0.26300 x64",
+    "cpuModel": "11th Gen Intel(R) Core(TM) i5-11400F @ 2.60GHz",
+    "logicalCpus": 12,
+    "memoryGiB": 31.9,
+    "node": "v24.20.0",
+    "postgres": "17.10",
+    "postgresMaxConnections": 300,
+    "postgresSharedBuffers": "128MB",
+    "postgresOnSameHost": true,
+    "docker": false
+  },
+  "boundaries": {
+    "database": "dedicated synthetic loopback database (name checked)",
+    "externalTransport": "none: worker n8n transport is an in-process stub; no Evolution, Meta or n8n call",
+    "clientAddresses": "each synthetic seller uses its own loopback alias; n8n ingress uses another",
+    "data": "synthetic users, lines and contacts; phones +55 11 000xxxxxx (unassignable)"
+  },
+  "params": {
+    "sellerCounts": [2, 10],
+    "portfolioSizes": [500, 2000],
+    "customersPerSeller": 10,
+    "messagesPerCustomer": 4,
+    "inboundConcurrency": 16,
+    "sameConversationBurst": 20,
+    "sseStreamsPerSeller": 2,
+    "listRequestsPerSeller": 20,
+    "ordersPerSeller": 3,
+    "firstSendsPerSeller": 3,
+    "personalSendsPerSeller": 3,
+    "personalSendBurst": 5,
+    "rateLimitProbeRequests": 70,
+    "apiPoolMax": 10,
+    "workerPoolMax": 10
+  },
+  "scenarios": [
+    {
+      "sellers": 2,
+      "lines": 2,
+      "migrationMs": 1667,
+      "inboundIngest": {
+        "messages": 80,
+        "concurrency": 16,
+        "throughputPerSecond": 131.5,
+        "latencyMs": {
+          "n": 80,
+          "p50": 60.5,
+          "p95": 255.7,
+          "p99": 350.8,
+          "max": 350.8,
+          "mean": 93.4
+        },
+        "firstContactLatencyMs": {
+          "n": 20,
+          "p50": 210.3,
+          "p95": 340.9,
+          "p99": 350.8,
+          "max": 350.8,
+          "mean": 211.4
+        },
+        "followUpLatencyMs": {
+          "n": 60,
+          "p50": 50.5,
+          "p95": 79.7,
+          "p99": 85.4,
+          "max": 85.4,
+          "mean": 54
+        },
+        "statuses": {
+          "200": 80
+        },
+        "sameConversationBurst": {
+          "requests": 20,
+          "wallMs": 150,
+          "latencyMs": {
+            "n": 20,
+            "p50": 85.5,
+            "p95": 141.6,
+            "p99": 147.7,
+            "max": 147.7,
+            "mean": 87.6
+          },
+          "statuses": {
+            "200": 20
+          }
+        },
+        "wallMs": 759,
+        "apiPool": {
+          "acquireMs": {
+            "n": 100,
+            "p50": 15.7,
+            "p95": 89.7,
+            "p99": 146.3,
+            "max": 161.1,
+            "mean": 27.8
+          },
+          "waitingMax": 10,
+          "waitingSampleShare": 0.304,
+          "errors": {}
+        },
+        "postgres": {
+          "lockWaitersMax": 9,
+          "lockWaitSampleShare": 0.655,
+          "deadlocks": 0,
+          "conflicts": 0,
+          "rollbacks": 0,
+          "commits": 96
+        }
+      },
+      "sseFanOut": {
+        "streamsOpened": 4,
+        "streamsPerSeller": 2,
+        "events": 4,
+        "ownerDeliveries": 8,
+        "ownerMissed": 0,
+        "ingestPlusFanOutMs": {
+          "n": 8,
+          "p50": 489.5,
+          "p95": 507.9,
+          "p99": 507.9,
+          "max": 507.9,
+          "mean": 491
+        },
+        "fanOutAfterCommitMs": {
+          "n": 8,
+          "p50": 472.1,
+          "p95": 488.8,
+          "p99": 488.8,
+          "max": 488.8,
+          "mean": 473.9
+        },
+        "resetsToNonOwners": 8,
+        "nonOwnerStreamEventPairs": 8,
+        "foreignConversationIdsLeaked": 0,
+        "globalCap": {
+          "totalAcceptedBeforeRefusal": 30,
+          "refusal": {
+            "status": 429,
+            "code": "SSE_CAPACITY_EXCEEDED",
+            "afterExtra": 26
+          },
+          "otherSellerAfterCap": {
+            "status": 429,
+            "code": "SSE_CAPACITY_EXCEEDED"
+          }
+        },
+        "wallMs": 5964,
+        "apiPool": {
+          "acquireMs": {
+            "n": 199,
+            "p50": 0,
+            "p95": 0.1,
+            "p99": 0.1,
+            "max": 0.2,
+            "mean": 0
+          },
+          "waitingMax": 0,
+          "waitingSampleShare": 0,
+          "errors": {}
+        },
+        "postgres": {
+          "lockWaitersMax": 1,
+          "lockWaitSampleShare": 0.041,
+          "deadlocks": 0,
+          "conflicts": 0,
+          "rollbacks": 0,
+          "commits": 286
+        }
+      },
+      "clientsList500": {
+        "portfolioPerSeller": 500,
+        "seedMs": 375,
+        "requests": 40,
+        "statuses": {
+          "200": 40
+        },
+        "latencyMs": {
+          "n": 40,
+          "p50": 22.7,
+          "p95": 36.6,
+          "p99": 36.8,
+          "max": 36.8,
+          "mean": 25.9
+        },
+        "byKindLatencyMs": {
+          "firstPage": {
+            "n": 20,
+            "p50": 23,
+            "p95": 35.9,
+            "p99": 36.8,
+            "max": 36.8,
+            "mean": 25.9
+          },
+          "limit100": {
+            "n": 8,
+            "p50": 34.5,
+            "p95": 36.8,
+            "p99": 36.8,
+            "max": 36.8,
+            "mean": 34.9
+          },
+          "nextPage": {
+            "n": 8,
+            "p50": 20.7,
+            "p95": 22.2,
+            "p99": 22.2,
+            "max": 22.2,
+            "mean": 20.7
+          },
+          "search": {
+            "n": 4,
+            "p50": 17.9,
+            "p95": 19.7,
+            "p99": 19.7,
+            "max": 19.7,
+            "mean": 18.1
+          }
+        },
+        "firstPageItems": 50,
+        "totalCountReported": 500,
+        "responseBytes": {
+          "n": 40,
+          "p50": 25250,
+          "p95": 50150,
+          "p99": 50150,
+          "max": 50150,
+          "mean": 24177.7
+        },
+        "wallMs": 521,
+        "apiPool": {
+          "acquireMs": {
+            "n": 160,
+            "p50": 0,
+            "p95": 0,
+            "p99": 0.1,
+            "max": 0.1,
+            "mean": 0
+          },
+          "waitingMax": 0,
+          "waitingSampleShare": 0,
+          "errors": {}
+        },
+        "postgres": {
+          "lockWaitersMax": 0,
+          "lockWaitSampleShare": 0,
+          "deadlocks": 0,
+          "conflicts": 0,
+          "rollbacks": 0,
+          "commits": 120
+        }
+      },
+      "clientsList2000": {
+        "portfolioPerSeller": 2000,
+        "seedMs": 975,
+        "requests": 40,
+        "statuses": {
+          "200": 40
+        },
+        "latencyMs": {
+          "n": 40,
+          "p50": 31.6,
+          "p95": 44.1,
+          "p99": 45.4,
+          "max": 45.4,
+          "mean": 32.9
+        },
+        "byKindLatencyMs": {
+          "firstPage": {
+            "n": 20,
+            "p50": 31.2,
+            "p95": 37.6,
+            "p99": 37.9,
+            "max": 37.9,
+            "mean": 31.5
+          },
+          "limit100": {
+            "n": 8,
+            "p50": 42.8,
+            "p95": 45.4,
+            "p99": 45.4,
+            "max": 45.4,
+            "mean": 41.4
+          },
+          "nextPage": {
+            "n": 8,
+            "p50": 30.4,
+            "p95": 40.2,
+            "p99": 40.2,
+            "max": 40.2,
+            "mean": 32
+          },
+          "search": {
+            "n": 4,
+            "p50": 24.8,
+            "p95": 25.5,
+            "p99": 25.5,
+            "max": 25.5,
+            "mean": 24.5
+          }
+        },
+        "firstPageItems": 50,
+        "totalCountReported": 2000,
+        "responseBytes": {
+          "n": 40,
+          "p50": 25251,
+          "p95": 50151,
+          "p99": 50151,
+          "max": 50151,
+          "mean": 27959.4
+        },
+        "wallMs": 660,
+        "apiPool": {
+          "acquireMs": {
+            "n": 160,
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "max": 0.1,
+            "mean": 0
+          },
+          "waitingMax": 0,
+          "waitingSampleShare": 0,
+          "errors": {}
+        },
+        "postgres": {
+          "lockWaitersMax": 0,
+          "lockWaitSampleShare": 0,
+          "deadlocks": 0,
+          "conflicts": 0,
+          "rollbacks": 0,
+          "commits": 271
+        }
+      },
+      "ordersBySubject": {
+        "subjects": {
+          "statuses": {
+            "201": 7
+          },
+          "latencyMs": {
+            "n": 7,
+            "p50": 131,
+            "p95": 178.1,
+            "p99": 178.1,
+            "max": 178.1,
+            "mean": 98.2
+          }
+        },
+        "orders": {
+          "statuses": {
+            "201": 6
+          },
+          "latencyMs": {
+            "n": 6,
+            "p50": 104.7,
+            "p95": 177.5,
+            "p99": 177.5,
+            "max": 177.5,
+            "mean": 122.8
+          }
+        },
+        "sameSubjectRace": {
+          "statuses": {
+            "201": 1,
+            "409": 1
+          },
+          "codes": [null, "VERSION_CONFLICT"]
+        },
+        "ledger": {
+          "orders": 7,
+          "numbers": 7
+        },
+        "wallMs": 386,
+        "apiPool": {
+          "acquireMs": {
+            "n": 30,
+            "p50": 0,
+            "p95": 55.9,
+            "p99": 62.3,
+            "max": 62.3,
+            "mean": 7.1
+          },
+          "waitingMax": 0,
+          "waitingSampleShare": 0,
+          "errors": {}
+        },
+        "postgres": {
+          "lockWaitersMax": 3,
+          "lockWaitSampleShare": 0.533,
+          "deadlocks": 0,
+          "conflicts": 0,
+          "rollbacks": 0,
+          "commits": 206
+        }
+      },
+      "sendReservations": {
+        "firstSendPreview": {
+          "statuses": {
+            "200": 6
+          },
+          "latencyMs": {
+            "n": 6,
+            "p50": 18.2,
+            "p95": 24.6,
+            "p99": 24.6,
+            "max": 24.6,
+            "mean": 19.6
+          }
+        },
+        "firstSend": {
+          "statuses": {
+            "201": 6
+          },
+          "latencyMs": {
+            "n": 6,
+            "p50": 36.5,
+            "p95": 43.2,
+            "p99": 43.2,
+            "max": 43.2,
+            "mean": 38
+          }
+        },
+        "repeatBeforeSettlement": {
+          "statuses": {
+            "409": 2
+          },
+          "codes": ["WHATSAPP_OPERATION_UNCERTAIN"]
+        },
+        "personalSend": {
+          "statuses": {
+            "202": 6
+          },
+          "latencyMs": {
+            "n": 6,
+            "p50": 39.2,
+            "p95": 58.2,
+            "p99": 58.2,
+            "max": 58.2,
+            "mean": 40.2
+          }
+        },
+        "personalSameConversationBurst": {
+          "statuses": {
+            "202": 1,
+            "409": 4
+          },
+          "codes": ["INBOX_CONFLICT", null],
+          "latencyMs": {
+            "n": 5,
+            "p50": 25.4,
+            "p95": 32.1,
+            "p99": 32.1,
+            "max": 32.1,
+            "mean": 25.4
+          }
+        },
+        "outbox": {
+          "commands": 13,
+          "jobs": 13
+        },
+        "wallMs": 216,
+        "apiPool": {
+          "acquireMs": {
+            "n": 54,
+            "p50": 0,
+            "p95": 0,
+            "p99": 0.1,
+            "max": 0.1,
+            "mean": 0
+          },
+          "waitingMax": 0,
+          "waitingSampleShare": 0,
+          "errors": {}
+        },
+        "postgres": {
+          "lockWaitersMax": 4,
+          "lockWaitSampleShare": 0.25,
+          "deadlocks": 0,
+          "conflicts": 0,
+          "rollbacks": 1,
+          "commits": 107
+        }
+      },
+      "workerDrain": {
+        "commandsAtStart": 13,
+        "drainMs": 12224,
+        "throughputPerSecond": 1.06,
+        "queuedToSettledMs": {
+          "n": 13,
+          "p50": 8412,
+          "p95": 14399,
+          "p99": 14399,
+          "max": 14399,
+          "mean": 8433.3
+        },
+        "commandOutcomes": {
+          "sent": 13
+        },
+        "outboundMessageStatuses": {
+          "sent": 13
+        },
+        "stubTransportCalls": 13,
+        "stubEmulationFailures": 0,
+        "workerPool": {
+          "acquireMs": {
+            "n": 130,
+            "p50": 0,
+            "p95": 0.1,
+            "p99": 0.1,
+            "max": 29.1,
+            "mean": 0.3
+          },
+          "waitingMax": 0,
+          "waitingSampleShare": 0,
+          "errors": {}
+        },
+        "wallMs": 12238,
+        "apiPool": {
+          "acquireMs": {
+            "n": 0
+          },
+          "waitingMax": 0,
+          "waitingSampleShare": 0,
+          "errors": {}
+        },
+        "postgres": {
+          "lockWaitersMax": 0,
+          "lockWaitSampleShare": 0,
+          "deadlocks": 0,
+          "conflicts": 0,
+          "rollbacks": 6,
+          "commits": 604
+        }
+      },
+      "rateLimitKeying": {
+        "firstSendPreviewSharedAddress": {
+          "sellers": 2,
+          "requests": 70,
+          "statuses": {
+            "200": 60,
+            "429": 10
+          }
+        },
+        "firstSendPreviewDistinctAddresses": {
+          "sellers": 2,
+          "requests": 70,
+          "statuses": {
+            "200": 70
+          }
+        },
+        "meClientsOneAddress": {
+          "requests": 120,
+          "statuses": {
+            "200": 120
+          }
+        },
+        "wallMs": 1072,
+        "apiPool": {
+          "acquireMs": {
+            "n": 740,
+            "p50": 0,
+            "p95": 0,
+            "p99": 47.4,
+            "max": 106.9,
+            "mean": 1
+          },
+          "waitingMax": 0,
+          "waitingSampleShare": 0,
+          "errors": {}
+        },
+        "postgres": {
+          "lockWaitersMax": 9,
+          "lockWaitSampleShare": 0.875,
+          "deadlocks": 0,
+          "conflicts": 0,
+          "rollbacks": 0,
+          "commits": 209
+        }
+      },
+      "finalVolume": {
+        "contacts": 4000,
+        "links": 4000,
+        "conversations": 26,
+        "messages": 117,
+        "domain_events": 177,
+        "database_bytes": 31291059
+      }
+    },
+    {
+      "sellers": 10,
+      "lines": 10,
+      "migrationMs": 1879,
+      "inboundIngest": {
+        "messages": 400,
+        "concurrency": 16,
+        "throughputPerSecond": 206,
+        "latencyMs": {
+          "n": 400,
+          "p50": 58.5,
+          "p95": 176.9,
+          "p99": 275.2,
+          "max": 363.1,
+          "mean": 74.5
+        },
+        "firstContactLatencyMs": {
+          "n": 100,
+          "p50": 117.5,
+          "p95": 240.1,
+          "p99": 357.2,
+          "max": 363.1,
+          "mean": 134.7
+        },
+        "followUpLatencyMs": {
+          "n": 300,
+          "p50": 55.4,
+          "p95": 64.9,
+          "p99": 72.6,
+          "max": 76.2,
+          "mean": 54.4
+        },
+        "statuses": {
+          "200": 400
+        },
+        "sameConversationBurst": {
+          "requests": 20,
+          "wallMs": 150,
+          "latencyMs": {
+            "n": 20,
+            "p50": 85.5,
+            "p95": 142.2,
+            "p99": 148,
+            "max": 148,
+            "mean": 88.4
+          },
+          "statuses": {
+            "200": 20
+          }
+        },
+        "wallMs": 2092,
+        "apiPool": {
+          "acquireMs": {
+            "n": 420,
+            "p50": 20,
+            "p95": 68.5,
+            "p99": 102.5,
+            "max": 153.3,
+            "mean": 25.8
+          },
+          "waitingMax": 10,
+          "waitingSampleShare": 0.669,
+          "errors": {}
+        },
+        "postgres": {
+          "lockWaitersMax": 9,
+          "lockWaitSampleShare": 0.911,
+          "deadlocks": 0,
+          "conflicts": 0,
+          "rollbacks": 0,
+          "commits": 421
+        }
+      },
+      "sseFanOut": {
+        "streamsOpened": 20,
+        "streamsPerSeller": 2,
+        "events": 20,
+        "ownerDeliveries": 40,
+        "ownerMissed": 0,
+        "ingestPlusFanOutMs": {
+          "n": 40,
+          "p50": 623.1,
+          "p95": 926.2,
+          "p99": 941,
+          "max": 941,
+          "mean": 653.8
+        },
+        "fanOutAfterCommitMs": {
+          "n": 40,
+          "p50": 546.5,
+          "p95": 834.2,
+          "p99": 847.8,
+          "max": 847.8,
+          "mean": 578.7
+        },
+        "resetsToNonOwners": 360,
+        "nonOwnerStreamEventPairs": 360,
+        "foreignConversationIdsLeaked": 0,
+        "globalCap": {
+          "totalAcceptedBeforeRefusal": 30,
+          "refusal": {
+            "status": 429,
+            "code": "SSE_CAPACITY_EXCEEDED",
+            "afterExtra": 10
+          },
+          "otherSellerAfterCap": {
+            "status": 429,
+            "code": "SSE_CAPACITY_EXCEEDED"
+          }
+        },
+        "wallMs": 6375,
+        "apiPool": {
+          "acquireMs": {
+            "n": 1753,
+            "p50": 3.4,
+            "p95": 5.8,
+            "p99": 14.8,
+            "max": 69.3,
+            "mean": 3.8
+          },
+          "waitingMax": 10,
+          "waitingSampleShare": 0.2,
+          "errors": {}
+        },
+        "postgres": {
+          "lockWaitersMax": 3,
+          "lockWaitSampleShare": 0.085,
+          "deadlocks": 0,
+          "conflicts": 0,
+          "rollbacks": 0,
+          "commits": 967
+        }
+      },
+      "clientsList500": {
+        "portfolioPerSeller": 500,
+        "seedMs": 1418,
+        "requests": 200,
+        "statuses": {
+          "200": 200
+        },
+        "latencyMs": {
+          "n": 200,
+          "p50": 67.1,
+          "p95": 113.3,
+          "p99": 115.6,
+          "max": 117.1,
+          "mean": 66.1
+        },
+        "byKindLatencyMs": {
+          "firstPage": {
+            "n": 100,
+            "p50": 68.3,
+            "p95": 78.5,
+            "p99": 79.9,
+            "max": 95.2,
+            "mean": 69.5
+          },
+          "limit100": {
+            "n": 40,
+            "p50": 108.5,
+            "p95": 115.6,
+            "p99": 117.1,
+            "max": 117.1,
+            "mean": 108.2
+          },
+          "nextPage": {
+            "n": 40,
+            "p50": 35.4,
+            "p95": 39.9,
+            "p99": 40.6,
+            "max": 40.6,
+            "mean": 35.8
+          },
+          "search": {
+            "n": 20,
+            "p50": 25.4,
+            "p95": 28.4,
+            "p99": 31.2,
+            "max": 31.2,
+            "mean": 25.9
+          }
+        },
+        "firstPageItems": 50,
+        "totalCountReported": 500,
+        "responseBytes": {
+          "n": 200,
+          "p50": 25250,
+          "p95": 50150,
+          "p99": 50150,
+          "max": 50150,
+          "mean": 23978.5
+        },
+        "wallMs": 1325,
+        "apiPool": {
+          "acquireMs": {
+            "n": 800,
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "max": 0.1,
+            "mean": 0
+          },
+          "waitingMax": 0,
+          "waitingSampleShare": 0,
+          "errors": {}
+        },
+        "postgres": {
+          "lockWaitersMax": 0,
+          "lockWaitSampleShare": 0,
+          "deadlocks": 0,
+          "conflicts": 0,
+          "rollbacks": 0,
+          "commits": 1779
+        }
+      },
+      "clientsList2000": {
+        "portfolioPerSeller": 2000,
+        "seedMs": 4593,
+        "requests": 200,
+        "statuses": {
+          "200": 200
+        },
+        "latencyMs": {
+          "n": 200,
+          "p50": 86.3,
+          "p95": 148.4,
+          "p99": 159.6,
+          "max": 161.2,
+          "mean": 90.2
+        },
+        "byKindLatencyMs": {
+          "firstPage": {
+            "n": 100,
+            "p50": 86.8,
+            "p95": 93.9,
+            "p99": 95.2,
+            "max": 96,
+            "mean": 84.7
+          },
+          "limit100": {
+            "n": 40,
+            "p50": 120.7,
+            "p95": 159.6,
+            "p99": 161.2,
+            "max": 161.2,
+            "mean": 132.5
+          },
+          "nextPage": {
+            "n": 40,
+            "p50": 84.4,
+            "p95": 89.2,
+            "p99": 89.6,
+            "max": 89.6,
+            "mean": 83.8
+          },
+          "search": {
+            "n": 20,
+            "p50": 46.2,
+            "p95": 48.1,
+            "p99": 48.9,
+            "max": 48.9,
+            "mean": 45.6
+          }
+        },
+        "firstPageItems": 50,
+        "totalCountReported": 2000,
+        "responseBytes": {
+          "n": 200,
+          "p50": 25251,
+          "p95": 50151,
+          "p99": 50151,
+          "max": 50151,
+          "mean": 27760.2
+        },
+        "wallMs": 1805,
+        "apiPool": {
+          "acquireMs": {
+            "n": 800,
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "max": 0.1,
+            "mean": 0
+          },
+          "waitingMax": 0,
+          "waitingSampleShare": 0,
+          "errors": {}
+        },
+        "postgres": {
+          "lockWaitersMax": 0,
+          "lockWaitSampleShare": 0,
+          "deadlocks": 0,
+          "conflicts": 0,
+          "rollbacks": 0,
+          "commits": 671
+        }
+      },
+      "ordersBySubject": {
+        "subjects": {
+          "statuses": {
+            "201": 31
+          },
+          "latencyMs": {
+            "n": 31,
+            "p50": 92.4,
+            "p95": 139.7,
+            "p99": 141.9,
+            "max": 141.9,
+            "mean": 95.2
+          }
+        },
+        "orders": {
+          "statuses": {
+            "201": 30
+          },
+          "latencyMs": {
+            "n": 30,
+            "p50": 370.2,
+            "p95": 428.5,
+            "p99": 436.5,
+            "max": 436.5,
+            "mean": 347.9
+          }
+        },
+        "sameSubjectRace": {
+          "statuses": {
+            "201": 1,
+            "409": 1
+          },
+          "codes": [null, "VERSION_CONFLICT"]
+        },
+        "ledger": {
+          "orders": 31,
+          "numbers": 31
+        },
+        "wallMs": 617,
+        "apiPool": {
+          "acquireMs": {
+            "n": 126,
+            "p50": 19,
+            "p95": 306.8,
+            "p99": 331.4,
+            "max": 335.8,
+            "mean": 59.8
+          },
+          "waitingMax": 20,
+          "waitingSampleShare": 0.345,
+          "errors": {}
+        },
+        "postgres": {
+          "lockWaitersMax": 9,
+          "lockWaitSampleShare": 0.783,
+          "deadlocks": 0,
+          "conflicts": 0,
+          "rollbacks": 0,
+          "commits": 333
+        }
+      },
+      "sendReservations": {
+        "firstSendPreview": {
+          "statuses": {
+            "200": 30
+          },
+          "latencyMs": {
+            "n": 30,
+            "p50": 56.8,
+            "p95": 82.3,
+            "p99": 89.4,
+            "max": 89.4,
+            "mean": 56.1
+          }
+        },
+        "firstSend": {
+          "statuses": {
+            "201": 30
+          },
+          "latencyMs": {
+            "n": 30,
+            "p50": 127.2,
+            "p95": 157.7,
+            "p99": 157.8,
+            "max": 157.8,
+            "mean": 130.2
+          }
+        },
+        "repeatBeforeSettlement": {
+          "statuses": {
+            "409": 10
+          },
+          "codes": ["WHATSAPP_OPERATION_UNCERTAIN"]
+        },
+        "personalSend": {
+          "statuses": {
+            "202": 30
+          },
+          "latencyMs": {
+            "n": 30,
+            "p50": 89.2,
+            "p95": 121.7,
+            "p99": 132.1,
+            "max": 132.1,
+            "mean": 85.5
+          }
+        },
+        "personalSameConversationBurst": {
+          "statuses": {
+            "202": 1,
+            "409": 4
+          },
+          "codes": [null, "INBOX_CONFLICT"],
+          "latencyMs": {
+            "n": 5,
+            "p50": 26,
+            "p95": 32.6,
+            "p99": 32.6,
+            "max": 32.6,
+            "mean": 26
+          }
+        },
+        "outbox": {
+          "commands": 61,
+          "jobs": 61
+        },
+        "wallMs": 481,
+        "apiPool": {
+          "acquireMs": {
+            "n": 230,
+            "p50": 15.3,
+            "p95": 69.2,
+            "p99": 76.1,
+            "max": 80.1,
+            "mean": 21.4
+          },
+          "waitingMax": 20,
+          "waitingSampleShare": 0.277,
+          "errors": {}
+        },
+        "postgres": {
+          "lockWaitersMax": 4,
+          "lockWaitSampleShare": 0.667,
+          "deadlocks": 0,
+          "conflicts": 0,
+          "rollbacks": 1,
+          "commits": 172
+        }
+      },
+      "workerDrain": {
+        "commandsAtStart": 61,
+        "drainMs": 60642,
+        "throughputPerSecond": 1.01,
+        "queuedToSettledMs": {
+          "n": 61,
+          "p50": 32861,
+          "p95": 59744,
+          "p99": 62742,
+          "max": 62742,
+          "mean": 32726.9
+        },
+        "commandOutcomes": {
+          "sent": 61
+        },
+        "outboundMessageStatuses": {
+          "sent": 61
+        },
+        "stubTransportCalls": 61,
+        "stubEmulationFailures": 0,
+        "workerPool": {
+          "acquireMs": {
+            "n": 610,
+            "p50": 0,
+            "p95": 0.1,
+            "p99": 0.1,
+            "max": 32.6,
+            "mean": 0.1
+          },
+          "waitingMax": 0,
+          "waitingSampleShare": 0,
+          "errors": {}
+        },
+        "wallMs": 60657,
+        "apiPool": {
+          "acquireMs": {
+            "n": 1,
+            "p50": 57.6,
+            "p95": 57.6,
+            "p99": 57.6,
+            "max": 57.6,
+            "mean": 57.6
+          },
+          "waitingMax": 0,
+          "waitingSampleShare": 0,
+          "errors": {}
+        },
+        "postgres": {
+          "lockWaitersMax": 0,
+          "lockWaitSampleShare": 0,
+          "deadlocks": 0,
+          "conflicts": 0,
+          "rollbacks": 14,
+          "commits": 3087
+        }
+      },
+      "rateLimitKeying": {
+        "firstSendPreviewSharedAddress": {
+          "sellers": 2,
+          "requests": 70,
+          "statuses": {
+            "200": 60,
+            "429": 10
+          }
+        },
+        "firstSendPreviewDistinctAddresses": {
+          "sellers": 2,
+          "requests": 70,
+          "statuses": {
+            "200": 70
+          }
+        },
+        "meClientsOneAddress": {
+          "requests": 120,
+          "statuses": {
+            "200": 120
+          }
+        },
+        "wallMs": 963,
+        "apiPool": {
+          "acquireMs": {
+            "n": 740,
+            "p50": 0,
+            "p95": 0,
+            "p99": 47.7,
+            "max": 108.2,
+            "mean": 1
+          },
+          "waitingMax": 0,
+          "waitingSampleShare": 0,
+          "errors": {}
+        },
+        "postgres": {
+          "lockWaitersMax": 8,
+          "lockWaitSampleShare": 0.784,
+          "deadlocks": 0,
+          "conflicts": 0,
+          "rollbacks": 0,
+          "commits": 30
+        }
+      },
+      "finalVolume": {
+        "contacts": 20000,
+        "links": 20000,
+        "conversations": 130,
+        "messages": 501,
+        "domain_events": 785,
+        "database_bytes": 63362739
+      }
+    }
+  ],
+  "proposal": {
+    "label": "PROPOSED for the pilot only. Local synthetic, Windows dev host; does not prove production capacity.",
+    "basis": {
+      "testedSellerCounts": [2, 10],
+      "noDeadlockOrPoolTimeoutAcrossScenarios": true,
+      "workerDrainPerSecondAtLargest": 1.01,
+      "inboundP95MsAtLargest": 176.9,
+      "clientsListP95MsAtLargestPortfolio": 148.4,
+      "sseFanOutP95MsAtLargest": 926.2,
+      "ordersP95MsAtLargest": 428.5
+    },
+    "perService": {
+      "pilotAllowlistMaxSellers": 2,
+      "linesPerSeller": 1,
+      "outboundSendsPerMinuteHardCeiling": 60,
+      "outboundSendsPerMinutePilotBudget": 20,
+      "sseStreamsPerProcess": 30,
+      "apiPoolMax": 10,
+      "workerPoolMax": 10,
+      "apiProcesses": 1,
+      "n8nCommandWorkerProcesses": 1
+    },
+    "perUser": {
+      "activePortfolioLinksMax": 2000,
+      "clientsPageSizeDefault": 50,
+      "clientsPageSizeMax": 100,
+      "outboundSendsPerMinute": 10,
+      "unsettledSendsPerConversation": 1,
+      "sseStreamsMax": 3,
+      "inboundMessagesPerLineSustainedPerSecond": 2,
+      "inboundSameConversationBurst": 20
+    },
+    "enforcedToday": {
+      "outboundSendsPerMinuteHardCeiling": "yes, implicitly (worker claims 1 job per 1 s poll)",
+      "unsettledSendsPerConversation": "yes (WAP-24 pendingSend)",
+      "clientsPageSizeMax": "yes (parseListQuery 1..100)",
+      "sseStreamsPerProcess": "yes (activeStreams >= 30)",
+      "linesPerSeller": "yes (seller_whatsapp_lines.seller_id UNIQUE)",
+      "pilotAllowlistMaxSellers": "operational only (allowlist content)",
+      "activePortfolioLinksMax": "no",
+      "outboundSendsPerMinute": "no per-user limiter",
+      "sseStreamsMax": "no per-user limiter",
+      "inboundMessagesPerLineSustainedPerSecond": "no limiter on n8n ingress"
+    }
+  }
+}

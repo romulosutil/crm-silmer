@@ -2355,7 +2355,9 @@ paths:
         identity_conflict não revela o outro Contact. Default off por
         SELLER_WHATSAPP_FIRST_SEND_ENABLED e allowlist
         SELLER_WHATSAPP_FIRST_SEND_SELLER_IDS, além das guardas de envio
-        pessoal e carteira; no-store.
+        pessoal, ingresso pessoal e carteira. pendingSend indica envio
+        anterior do titular ainda na fila, em despacho ou incerto nessa
+        conversa; reconciliar antes de repetir. no-store.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/ContactId'
@@ -2385,10 +2387,13 @@ paths:
         ciclo quando a anterior encerrou, mensagem, comando n8n e auditoria.
         Linha offline antes da reserva não cria nada. Timeout depois da
         reserva fica outcome_unknown e exige reconciliação, sem nova tentativa
-        cega. expectedConversation repete a conversa da prévia: duas abas da
-        mesma prévia produzem um 201 e um 409 CONVERSATION_VERSION_CONFLICT;
-        só uma nova prévia permite enviar outra mensagem. Destino igual ao
-        número da própria linha responde 422. Replay revalida sessão,
+        cega. Enquanto houver envio anterior do titular na fila, em despacho
+        ou incerto na conversa ativa, responde 409 WHATSAPP_OPERATION_UNCERTAIN
+        sem gravar nada. expectedConversation repete a conversa da prévia e é
+        conferido sob lock: duas abas da mesma prévia produzem um 201 e um
+        409; só uma nova prévia depois da conclusão permite outra mensagem.
+        Destino igual ao número da própria linha responde 422. Vendedor sem
+        linha recebe 503 WHATSAPP_SEND_UNAVAILABLE. Replay revalida sessão,
         guardas, titular e vínculo antes de devolver o mesmo corpo. Corpo
         máximo 8 KiB; no-store.
       security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
@@ -8973,6 +8978,7 @@ components:
               conversation,
               available,
               restriction,
+              pendingSend,
             ]
           properties:
             contact:
@@ -9025,6 +9031,12 @@ components:
                   identity_conflict,
                   conversation_unavailable,
                 ]
+            pendingSend:
+              type: boolean
+              description: >-
+                Envio anterior do titular na conversa reutilizável ainda em
+                fila, despacho ou outcome_unknown; o POST responde 409
+                WHATSAPP_OPERATION_UNCERTAIN até a reconciliação.
     SellerWhatsAppFirstSendRequest:
       type: object
       additionalProperties: false
@@ -9101,9 +9113,11 @@ components:
         WHATSAPP_GENERATION_STALE, WHATSAPP_IDENTITY_CONFLICT (genérico, sem
         IDs ou nomes), CONVERSATION_UNAVAILABLE,
         CONVERSATION_VERSION_CONFLICT (conversa ativa diferente da prévia),
+        WHATSAPP_OPERATION_UNCERTAIN (envio anterior não concluído),
         IDEMPOTENCY_CONFLICT, WHATSAPP_DESTINATION_INVALID (sem telefone
         válido ou igual ao número da própria linha), RATE_LIMITED (60 por minuto),
-        WHATSAPP_SEND_UNAVAILABLE (linha fora de conexão antes da reserva),
+        WHATSAPP_SEND_UNAVAILABLE (sem linha ou linha fora de conexão antes da
+        reserva),
         SELLER_WHATSAPP_FIRST_SEND_DISABLED ou SERVICE_UNAVAILABLE, sem eco
         do corpo, telefone ou texto
       content:

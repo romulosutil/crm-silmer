@@ -83,12 +83,20 @@ WAP-T04-03, requisitos WAP-22/23/24/32. O primeiro envio é opcional e
 individual: abrir, salvar ou vincular Cliente não envia, e o atendimento
 passivo e o Pedido não dependem dele. Não exige migração nova.
 
+**Gate de liberação:** mantenha `SELLER_WHATSAPP_FIRST_SEND_ENABLED` desligada
+em qualquer ambiente real até a homologação E12 provar que o JID da resposta
+coincide com o `+E164` gravado. O `wa_id` brasileiro sem o nono dígito criaria
+outro Contact e outra conversa. Não corrija isso por fusão de telefone: o
+ADR 090 e a seção 6 do desenho proíbem unir Clientes pelo número.
+
 - `GET /contacts/{contactId}/whatsapp/first-message-preview` não cria
   identidade, conversa, mensagem nem outbox. Devolve versões de Contact,
-  vínculo e linha, geração, finais mascarados e `restriction`.
-- `POST /contacts/{contactId}/whatsapp/conversations` recebe só texto e as
-  quatro versões esperadas, com `Idempotency-Key`, CSRF e Origin. Recebe
-  também `expectedConversation`, igual a `preview.conversation`: `null` ou
+  vínculo e linha, geração, finais mascarados, `restriction` e `pendingSend`.
+  `pendingSend` é verdadeiro quando a conversa reutilizável tem envio do
+  titular em `queued`, `sending` ou `outcome_unknown`.
+- `POST /contacts/{contactId}/whatsapp/conversations` recebe texto, as quatro
+  versões esperadas e `expectedConversation`, com `Idempotency-Key`, CSRF e
+  Origin. `expectedConversation` repete `preview.conversation`: `null` ou
   `{id, version}`. Conta, instância e destino `+E164` vêm do servidor, a
   partir do telefone do Contact. O destino não pode ser o número confirmado
   da própria linha. O corpo recusa `to`, `userId`, `instanceName`,
@@ -98,10 +106,18 @@ passivo e o Pedido não dependem dele. Não exige migração nova.
 A guarda própria é `SELLER_WHATSAPP_FIRST_SEND_ENABLED`, com default `false`,
 e `SELLER_WHATSAPP_FIRST_SEND_SELLER_IDS`, com default `[]`. Com a flag ativa,
 a allowlist JSON é obrigatória. Configuração inválida derruba a API na
-partida. O vendedor também precisa constar em `SELLER_WHATSAPP_SEND_*` e
-`SELLER_CLIENTS_*`. Só o Vendedor ativo titular da linha, com vínculo ativo
-próprio, pode usar a rota. Vínculo cadastral não dá acesso à conversa de
-outra linha.
+partida. O vendedor também precisa constar nestas guardas:
+
+- `SELLER_WHATSAPP_SEND_*`, para o envio pessoal;
+- `SELLER_WHATSAPP_INBOUND_*`, para que a resposta do cliente seja aceita;
+- `SELLER_CLIENTS_*`, para a carteira.
+
+Uma guarda que nega responde 503 `SELLER_WHATSAPP_FIRST_SEND_DISABLED`, ou
+403 fora das allowlists de primeiro envio e carteira. Só o Vendedor ativo,
+titular da linha e com vínculo ativo próprio, usa a rota. Vendedor sem linha
+recebe 503 `WHATSAPP_SEND_UNAVAILABLE`. Admin, Financeiro e usuário inativo
+recebem 403 `FORBIDDEN`. Vínculo cadastral não dá acesso à conversa de outra
+linha.
 
 A transação única não faz HTTP e segue a ordem do inbound pessoal:
 
@@ -116,28 +132,41 @@ O teste concorrente com resposta inbound prova a ordem sem deadlock. Se a
 identidade já pertencer a outro Contact, a rota responde 409
 `WHATSAPP_IDENTITY_CONFLICT` genérico, sem reassociação. Uma conversa ativa
 só é reutilizada quando é humana e do titular; caso contrário, responde 409
-`CONVERSATION_UNAVAILABLE`. Sob o lock da conversa, a conversa ativa deve
-coincidir com `expectedConversation`. Assim, duas abas da mesma prévia
-geram um 201 e um 409 `CONVERSATION_VERSION_CONFLICT`, com uma mensagem e um
-outbox. Uma segunda mensagem exige nova prévia e reutiliza a conversa. Uma
-conversa encerrada fica intacta e o envio abre novo ciclo. A identidade nasce `confirmed`, a única opção do schema
-para WhatsApp. O índice de busca por telefone só é preenchido pelo inbound.
+`CONVERSATION_UNAVAILABLE`. Uma conversa encerrada fica intacta e o envio
+abre novo ciclo. A identidade nasce `confirmed`, a única opção do schema para
+WhatsApp. O índice de busca por telefone só é preenchido pelo inbound.
 
-Os erros são 400 `INVALID_REQUEST`/`IDEMPOTENCY_KEY`, 403, 404,
-409 `CONTACT_VERSION_CONFLICT`/`WHATSAPP_GENERATION_STALE`/
-`WHATSAPP_IDENTITY_CONFLICT`/`CONVERSATION_UNAVAILABLE`/
-`CONVERSATION_VERSION_CONFLICT`/`IDEMPOTENCY_CONFLICT`, 422 `WHATSAPP_DESTINATION_INVALID`, 429 e 503
-`WHATSAPP_SEND_UNAVAILABLE`/`SELLER_WHATSAPP_FIRST_SEND_DISABLED`. Linha
-offline antes da reserva desfaz tudo. Depois da reserva, a mensagem usa o
-caminho E08 sem alteração. Timeout fica `outcome_unknown` com item de
+Sob o lock da conversa, a rota confere primeiro a reconciliação. Um envio
+anterior do titular em fila, despacho ou `outcome_unknown` responde 409
+`WHATSAPP_OPERATION_UNCERTAIN` sem gravar nada. Depois, a conversa ativa deve
+coincidir com `expectedConversation`, ou a rota responde 409
+`CONVERSATION_VERSION_CONFLICT`. Duas abas da mesma prévia geram um 201 e
+um 409, com uma mensagem e um outbox. Uma segunda mensagem exige o envio
+anterior concluído e nova prévia, e reutiliza a conversa. O replay da mesma
+chave responde 200 antes dessas conferências.
+
+Os erros são:
+
+- 400 `INVALID_REQUEST` ou `IDEMPOTENCY_KEY`;
+- 403 e 404;
+- 409 `CONTACT_VERSION_CONFLICT`, `WHATSAPP_GENERATION_STALE`,
+  `WHATSAPP_IDENTITY_CONFLICT`, `CONVERSATION_UNAVAILABLE`,
+  `CONVERSATION_VERSION_CONFLICT`, `WHATSAPP_OPERATION_UNCERTAIN` ou
+  `IDEMPOTENCY_CONFLICT`;
+- 422 `WHATSAPP_DESTINATION_INVALID`;
+- 429;
+- 503 `WHATSAPP_SEND_UNAVAILABLE` ou `SELLER_WHATSAPP_FIRST_SEND_DISABLED`.
+
+Linha offline antes da reserva desfaz tudo. Depois da reserva, a mensagem usa
+o caminho E08 sem alteração. Timeout fica `outcome_unknown` com item de
 reconciliação. Não repita o envio às cegas: reconcilie pelo ledger.
 
 Riscos residuais:
 
-- O `wa_id` brasileiro pode omitir o nono dígito. Nesse caso, a resposta do
-  cliente cria outra identidade e outro Contact. Conferir na homologação E12.
+- O `wa_id` brasileiro pode omitir o nono dígito, e a resposta criaria outra
+  identidade e outro Contact. Esse risco motiva o gate de liberação acima.
 - Se um inbound de número novo vencer a corrida, a rota responde 409
-  `WHATSAPP_IDENTITY_CONFLICT`. A interface trata esse retorno como nova
+  `WHATSAPP_IDENTITY_CONFLICT`. A interface trata o retorno como nova
   conferência; não há deadlock.
 - Bloqueio ou outro erro do banco responde 503 `SERVICE_UNAVAILABLE`
   genérico, sem efeito gravado.

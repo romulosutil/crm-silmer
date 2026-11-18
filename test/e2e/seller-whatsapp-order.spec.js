@@ -4,8 +4,17 @@ import { installMocks } from './support/inbox-vez-mock.js';
 import { ownConfirmedOrder, pendingOrder } from './support/orders-mock.js';
 
 // Browser projections are synthetic; server isolation is covered by E05/E07.
-/** @param {import('@playwright/test').Page} page @param {{delayed?: boolean, existing?: boolean}} [options] */
-async function setup(page, { delayed = false, existing = false } = {}) {
+/**
+ * `targeting` is the server's answer on whether this conversation creates by
+ * Subject now (WAP-E11): available, off (general line as master), several
+ * pending targets (409) or an unreadable answer.
+ * @param {import('@playwright/test').Page} page
+ * @param {{delayed?: boolean, existing?: boolean, targeting?: 'available'|'off'|'ambiguous'|'failed'}} [options]
+ */
+async function setup(
+  page,
+  { delayed = false, existing = false, targeting = 'available' } = {},
+) {
   await installMocks(page, {}, { fixedClock: false });
   await page.addInitScript(() => {
     const add = globalThis.EventTarget.prototype.addEventListener;
@@ -82,6 +91,24 @@ async function setup(page, { delayed = false, existing = false } = {}) {
           currentSubjectId: null,
         },
       });
+    if (path === '/api/v1/conversations/r-ana/order') {
+      if (targeting === 'ambiguous')
+        return route.fulfill({
+          status: 409,
+          json: { error: { code: 'ORDER_TARGET_REQUIRED' } },
+        });
+      if (targeting === 'failed')
+        return route.fulfill({
+          status: 503,
+          json: { error: { code: 'UNAVAILABLE' } },
+        });
+      return route.fulfill({
+        json: {
+          order: null,
+          subjectCreationAvailable: targeting === 'available',
+        },
+      });
+    }
     if (
       path === '/api/v1/conversations/r-ana/orders' &&
       request.method() === 'POST'
@@ -167,6 +194,107 @@ for (const width of [1366, 390]) {
     );
   });
 }
+
+for (const width of [1366, 390]) {
+  test(`WAP-E11: linha geral com criação por alvo desligada cria como antes em ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const { writes } = await setup(page, { targeting: 'off' });
+    await page.goto('/inbox/r-ana');
+    const create = page.getByRole('button', {
+      name: 'Criar pedido',
+      exact: true,
+    });
+    await create.focus();
+    await page.keyboard.press('Enter');
+    const dialog = page.getByRole('dialog', {
+      name: 'O cliente confirmou a compra?',
+    });
+    await expect(dialog).toBeVisible();
+    // Subjects exist, but no target is asked for and nothing is a dead end.
+    await expect(dialog.getByLabel('Assunto desta compra')).toHaveCount(0);
+    await expect(
+      dialog.getByText('Selecione o assunto desta compra.'),
+    ).toHaveCount(0);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    const submit = dialog.getByRole('button', {
+      name: 'Cliente confirmou, criar pedido',
+    });
+    await expect(submit).toBeEnabled();
+    await submit.focus();
+    await expect(submit).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/pedidos\/wap-order\?conversa=r-ana/u);
+    await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
+    expect(writes).toHaveLength(1);
+    expect(writes[0].body).toEqual({ expectedVersion: 3 });
+  });
+}
+
+test('WAP-E11: cancelar a confirmação sem alvo devolve o foco ao acionador', async ({
+  page,
+}) => {
+  const { writes } = await setup(page, { targeting: 'off' });
+  await page.goto('/inbox/r-ana');
+  const create = page.getByRole('button', {
+    name: 'Criar pedido',
+    exact: true,
+  });
+  await create.focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', {
+    name: 'O cliente confirmou a compra?',
+  });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect(create).toBeFocused();
+  expect(writes).toHaveLength(0);
+});
+
+test('WAP-E11: resposta ilegível mantém a criação da linha geral', async ({
+  page,
+}) => {
+  const { writes } = await setup(page, { targeting: 'failed' });
+  await page.goto('/inbox/r-ana');
+  await page.getByRole('button', { name: 'Criar pedido', exact: true }).click();
+  const dialog = page.getByRole('dialog', {
+    name: 'O cliente confirmou a compra?',
+  });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel('Assunto desta compra')).toHaveCount(0);
+  await dialog
+    .getByRole('button', { name: 'Cliente confirmou, criar pedido' })
+    .click();
+  await expect(page).toHaveURL(/\/pedidos\/wap-order/u);
+  expect(writes[0].body).toEqual({ expectedVersion: 3 });
+});
+
+test('WAP-E11: vários pendentes por alvo continuam exigindo o assunto', async ({
+  page,
+}) => {
+  const { writes } = await setup(page, { targeting: 'ambiguous' });
+  await page.goto('/inbox/r-ana');
+  await page.getByRole('button', { name: 'Criar pedido', exact: true }).click();
+  const dialog = page.getByRole('dialog', {
+    name: 'O cliente confirmou a compra?',
+  });
+  const select = dialog.getByLabel('Assunto desta compra');
+  await expect(select).toBeFocused();
+  const submit = dialog.getByRole('button', {
+    name: 'Cliente confirmou, criar pedido',
+  });
+  await expect(submit).toBeDisabled();
+  await select.selectOption('subject-1');
+  await submit.click();
+  await expect(page).toHaveURL(/\/pedidos\/wap-order/u);
+  expect(writes[0].body).toEqual({
+    expectedVersion: 3,
+    subjectId: 'subject-1',
+    expectedSubjectVersion: 4,
+  });
+});
 
 test('WAP-E06: troca de conversa invalida resposta atrasada', async ({
   page,

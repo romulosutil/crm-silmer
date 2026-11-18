@@ -8169,6 +8169,13 @@ components:
           oneOf:
             - { $ref: '#/components/schemas/Order' }
             - { type: 'null' }
+        subjectCreationAvailable:
+          type: boolean
+          description: >-
+            WAP-E11, consultivo. True somente quando a criação por Assunto
+            está liberada para o responsável desta conversa (flags, allowlist
+            e índices de 0081). Com false, a Inbox cria o pedido legado sem
+            Assunto. A transação de criação revalida.
     OrderPage:
       type: object
       additionalProperties: false

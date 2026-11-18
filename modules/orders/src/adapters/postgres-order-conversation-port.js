@@ -237,6 +237,8 @@ export class PostgresOrderConversationPort {
   }
 
   /** WAP-33: absence of an explicit target is safe only with zero/one subject.
+   * WAP-E11: consulted only by creation, and without a pair only while
+   * creation by Subject is available; readers do not count Subjects.
    * Callers that mutate bind this port to the command transaction and already
    * hold conversation/Contact authority locks.
    * @param {string} conversationId @param {string|undefined} subjectId

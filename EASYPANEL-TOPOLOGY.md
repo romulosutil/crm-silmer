@@ -546,6 +546,14 @@ Regras:
   deve preservar a separação dos segredos de runtime e ser conferida no painel;
 - alterações de segredo geram registro operacional e smoke test.
 
+WhatsApp pessoal por vendedor (etapa 1): todas as flags `SELLER_WHATSAPP_*`,
+`SELLER_CLIENTS_*`, `ORDER_SUBJECT_*` e `SILMER_WAP_*` ficam ausentes ou
+`false` por padrão em `silmer-api`, worker, n8n e Evolution. Allowlists são
+privadas, explícitas e nunca vazias quando a flag está ligada. Uma allowlist
+JSON preenchida com texto vazio impede o boot. Por isso, omita a variável ou
+use `[]`. O inventário, a ordem de ativação e os limites medidos estão no
+[runbook de prontidão](docs/runbooks/seller-whatsapp.md).
+
 ## 7. Health checks
 
 | Serviço            | Endpoint/check          | Critério                                            |
@@ -755,6 +763,10 @@ banco, mas não a recuperação de uma perda do host.
 5. Excluir objetos que já haviam sido removidos.
 6. Validar login, contagens, constraints e leitura/escrita.
 7. Executar smoke com adapters externos em modo mock.
+   Com WhatsApp pessoal em uso, manter todas as flags pessoais desligadas e
+   cumprir a [reconciliação pós-restore](docs/runbooks/seller-whatsapp-recovery.md#restore)
+   antes do passo 9. O banco restaurado volta a autorizar linha, vínculo e
+   envio antigos.
 8. Registrar evidências do restore.
 9. Liberar tráfego somente após aprovação do Administrador Técnico.
 
@@ -822,6 +834,9 @@ Audit trail comercial não depende de logs do EasyPanel.
       endereçável para rollback.
 - [ ] Monitor externo detecta parada da VPS.
 - [ ] Responsável de Privacidade aprova storage, IA e observabilidade.
+- [ ] WhatsApp pessoal: o [checklist de publicação e piloto](docs/runbooks/seller-whatsapp.md#checklist-de-publicação-e-piloto)
+      foi cumprido com evidência live (WAP-E12). Os ensaios locais do WAP-E11
+      não substituem essa evidência.
 
 ## 13. Riscos aceitos e evolução
 

@@ -70,6 +70,7 @@ export const router = createRouter({
       component: OrderView,
       props: (route) => ({
         fromConversationId: String(route.query.conversa ?? ''),
+        fromClientId: String(route.query.cliente ?? ''),
         orderId: String(route.params.orderId ?? ''),
       }),
       meta: { title: 'Pedido' },

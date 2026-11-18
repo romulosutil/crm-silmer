@@ -48,7 +48,7 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 | [x] WAP-E06 | [Entregar a interface mínima de Pedido pela conversa](PROMPTS.md#wap-e06)        | Terra/Sonnet | WAP-E05         | WAP-T02a-04                                    |
 | [x] WAP-E07 | [Aceitar o fluxo passivo integrado de Pedido](PROMPTS.md#wap-e07)                | Sol/Opus     | WAP-E06         | WAP-T02a-05                                    |
 | [x] WAP-E08 | [Completar mensagens correntes e efeitos pela linha correta](PROMPTS.md#wap-e08) | Sol/Opus     | WAP-E07         | WAP-T02-08, WAP-T03-01, WAP-T03-02, WAP-T02-09 |
-| [ ] WAP-E09 | [Completar Meus clientes e Meu WhatsApp na interface](PROMPTS.md#wap-e09)        | Terra/Sonnet | WAP-E08         | WAP-T04-01, WAP-T04-02, WAP-T04-05             |
+| [x] WAP-E09 | [Completar Meus clientes e Meu WhatsApp na interface](PROMPTS.md#wap-e09)        | Terra/Sonnet | WAP-E08         | WAP-T04-01, WAP-T04-02, WAP-T04-05             |
 | [ ] WAP-E10 | [Entregar primeiro envio humano individual](PROMPTS.md#wap-e10)                  | Sol/Opus     | WAP-E09         | WAP-T04-03, WAP-T04-04                         |
 | [ ] WAP-E11 | [Concluir verificação e prontidão operacional](PROMPTS.md#wap-e11)               | Sol/Opus     | WAP-E10         | WAP-T05-01, WAP-T05-02, WAP-T05-03, WAP-T05-04 |
 | [ ] WAP-E12 | [Homologar o piloto real da etapa 1](PROMPTS.md#wap-e12)                         | Sol/Opus     | WAP-E11         | WAP-T05-05, WAP-T05-06, WAP-T05-07             |
@@ -446,12 +446,12 @@ inicial de sessões/PRs por T.
 | [x] WAP-T02-08  | Revalidar linha na reserva e no despacho humano          | [WAP-E08](PROMPTS.md#wap-e08) | WAP-06/10/11/12/19                |
 | [x] WAP-T03-01  | Normalizar fato externo enviado pelo aparelho            | [WAP-E08](PROMPTS.md#wap-e08) | WAP-09/10/12                      |
 | [x] WAP-T03-02  | Persistir saída externa e reconciliar eco                | [WAP-E08](PROMPTS.md#wap-e08) | WAP-06/09/10/11                   |
-| [ ] WAP-T04-01  | Completar cadastro e vínculo na carteira                 | [WAP-E09](PROMPTS.md#wap-e09) | WAP-01/17/18/20/21/24/25/26/27/29 |
-| [ ] WAP-T04-02  | Entregar Meu WhatsApp e onboarding dispensável           | [WAP-E09](PROMPTS.md#wap-e09) | WAP-01/02/03/04/11/12             |
+| [x] WAP-T04-01  | Completar cadastro e vínculo na carteira                 | [WAP-E09](PROMPTS.md#wap-e09) | WAP-01/17/18/20/21/24/25/26/27/29 |
+| [x] WAP-T04-02  | Entregar Meu WhatsApp e onboarding dispensável           | [WAP-E09](PROMPTS.md#wap-e09) | WAP-01/02/03/04/11/12             |
 | [ ] WAP-T04-03  | Compor primeiro envio individual no servidor             | [WAP-E10](PROMPTS.md#wap-e10) | WAP-22/23/24/32                   |
 | [ ] WAP-T04-04  | Expor compositor do primeiro envio opcional              | [WAP-E10](PROMPTS.md#wap-e10) | WAP-22/23/24/32                   |
 | [x] WAP-T02-09  | Preservar cobrança e preparo pela linha correta          | [WAP-E08](PROMPTS.md#wap-e08) | WAP-17/19/27/28/30                |
-| [ ] WAP-T04-05  | Conservar contexto das ações comerciais na carteira      | [WAP-E09](PROMPTS.md#wap-e09) | WAP-17/19/25/28/30                |
+| [x] WAP-T04-05  | Conservar contexto das ações comerciais na carteira      | [WAP-E09](PROMPTS.md#wap-e09) | WAP-17/19/25/28/30                |
 | [ ] WAP-T05-01  | Consolidar flags, allowlist e limites sem ativação       | [WAP-E11](PROMPTS.md#wap-e11) | WAP-12/16                         |
 | [ ] WAP-T05-02  | Auditar regressão funcional, a11y e privacidade          | [WAP-E11](PROMPTS.md#wap-e11) | WAP-01–12/17–33                   |
 | [ ] WAP-T05-03  | Ensaiar rollback e recovery sem reativar efeitos         | [WAP-E11](PROMPTS.md#wap-e11) | WAP-10/11/12/16/29/33             |
@@ -478,6 +478,26 @@ contrato, o ensaio e o rollback.
 | [ ] WAP-T05-05  | Homologar fluxo passivo real de Pedido                   | [WAP-E12](PROMPTS.md#wap-e12) | WAP-04/05/07/17/31/32/33          |
 | [ ] WAP-T05-06  | Homologar pareamento mobile e sincronização reais        | [WAP-E12](PROMPTS.md#wap-e12) | WAP-01/02/03/04/09/10/11/12       |
 | [ ] WAP-T05-07  | Homologar ações comerciais e primeiro envio do piloto    | [WAP-E12](PROMPTS.md#wap-e12) | WAP-17–30/32                      |
+
+### Evidência local de WAP-E09
+
+`seller-whatsapp-interface.spec.js` cobre cadastro sem pareamento, vínculo,
+restrições, conflito sem candidato privado, desafio explícito, expiração,
+fechamento, revogação, duas abas e reconexão sintéticos, sem screenshot,
+vídeo ou trace do desafio. `seller-whatsapp-order.spec.js` cobre carteira →
+Pedido → cobrança simulada e volta, canal indisponível, ACL e troca de alvo;
+os percursos principais foram verificados por teclado e axe em 390 e 1366 px.
+O [runbook](../../../docs/runbooks/seller-clients.md) registra a fronteira.
+
+Com Node 24.20.0/npm 11.19.0, `npm run validate` passou (2.870 testes,
+61 skips gerais sem configuração); `npm run test:e2e -- --workers=2`
+passou (1.091 testes e 7 skips existentes), seguido de dois cenários focados
+após ajuste. Auditorias npm completa e de runtime não apontaram vulnerabilidades.
+Os ensaios PostgreSQL dedicados de E02–E04 e Assunto passaram 80 testes sem
+skip; E07 passou 1 e E08 7, também sem skip. Um cluster portátil local usou
+somente dados sintéticos; a prova não homologa provedor, código no mesmo
+celular, recuperação remota ou produção. As expectativas de upgrade das
+suítes E02/E03 foram atualizadas para incluir 0080/0082/0083.
 
 ## Cobertura por requisito
 

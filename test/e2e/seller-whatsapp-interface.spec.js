@@ -374,3 +374,169 @@ test('duas abas não restauram desafio após mudança de geração', async ({
   ).toHaveCount(0);
   await other.close();
 });
+
+test('reconexão exige comando explícito e falha de desafio não repete efeito', async ({
+  page,
+}) => {
+  await installMocks(page, {}, { fixedClock: false });
+  const line = {
+    id: 'line-synthetic',
+    state: 'disconnected',
+    version: 5,
+    generation: 2,
+    maskedNumber: '••••0000',
+  };
+  const operation = { id: 'operation-next' };
+  /** @type {any[]} */
+  const commands = [];
+  await page.route('**/api/v1/me/whatsapp', (route) =>
+    route.fulfill({ json: { line, operation, available: true } }),
+  );
+  await page.route('**/api/v1/me/whatsapp/connect', (route) => {
+    commands.push({
+      path: 'connect',
+      body: route.request().postDataJSON(),
+      key: route.request().headers()['idempotency-key'],
+    });
+    line.state = 'awaiting_pairing';
+    line.version = 6;
+    line.generation = 3;
+    return route.fulfill({ status: 202, json: {} });
+  });
+  await page.route('**/api/v1/me/whatsapp/pairing-challenge', (route) => {
+    commands.push({ path: 'challenge', body: route.request().postDataJSON() });
+    return route.fulfill({
+      status: 409,
+      json: { code: 'WHATSAPP_OPERATION_UNCERTAIN' },
+    });
+  });
+  await page.goto('/conta');
+  await page.getByLabel('Número com código do país').fill('5511999990000');
+  await page.getByRole('button', { name: 'Conectar WhatsApp' }).click();
+  await expect(
+    page.getByRole('button', { name: 'Mostrar código' }),
+  ).toBeVisible();
+  expect(commands).toHaveLength(1);
+  expect(commands[0].body).toEqual({
+    expectedNumber: '5511999990000',
+    expectedVersion: 5,
+  });
+  expect(commands[0].key).toMatch(/^[a-f0-9-]{36}$/u);
+  await page.getByRole('button', { name: 'Mostrar código' }).click();
+  await expect(page.getByRole('alert')).toContainText(
+    'Não foi possível confirmar o desafio',
+  );
+  await expect(
+    page.getByRole('button', { name: 'Mostrar código' }),
+  ).toBeDisabled();
+  expect(commands).toHaveLength(2);
+  expect(commands[1].body).toMatchObject({
+    operationId: operation.id,
+    expectedVersion: 6,
+    generation: 3,
+    mode: 'code',
+  });
+});
+
+test('QR sintético só aparece sob comando e é removido ao fechar', async ({
+  page,
+}) => {
+  await installMocks(page, {}, { fixedClock: false });
+  const line = {
+    id: 'line-synthetic',
+    state: 'awaiting_pairing',
+    version: 2,
+    generation: 1,
+    maskedNumber: '••••0000',
+  };
+  const operation = { id: 'operation-synthetic' };
+  let count = 0;
+  await page.route('**/api/v1/me/whatsapp', (route) =>
+    route.fulfill({ json: { line, operation, available: true } }),
+  );
+  await page.route('**/api/v1/me/whatsapp/pairing-challenge', (route) => {
+    count++;
+    return route.fulfill({
+      json: {
+        operationId: operation.id,
+        generation: 1,
+        challengeId: 'challenge-synthetic',
+        mode: 'qr',
+        value:
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
+        expiresAt: new Date(Date.now() + 30000).toISOString(),
+      },
+    });
+  });
+  await page.goto('/conta');
+  await expect(page.getByRole('button', { name: 'Mostrar QR' })).toBeVisible();
+  expect(count).toBe(0);
+  await page.getByRole('button', { name: 'Mostrar QR' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(
+    page.getByRole('img', { name: 'QR para conectar seu WhatsApp' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Fechar desafio' }).click();
+  await expect(
+    page.getByRole('img', { name: 'QR para conectar seu WhatsApp' }),
+  ).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Mostrar QR' })).toBeFocused();
+  expect(
+    await page.evaluate(() =>
+      Object.keys(globalThis.localStorage).some((key) =>
+        globalThis.localStorage.getItem(key)?.includes('iVBORw0KGgo'),
+      ),
+    ),
+  ).toBe(false);
+  expect(count).toBe(1);
+});
+
+test('revogação remove código que já estava visível', async ({ page }) => {
+  await installMocks(page, {}, { fixedClock: false });
+  await page.addInitScript(() => {
+    const add = globalThis.EventTarget.prototype.addEventListener;
+    globalThis.EventTarget.prototype.addEventListener = function (
+      type,
+      listener,
+      options,
+    ) {
+      if (type === 'identity.user.changed')
+        /** @type {any} */ (globalThis).__wapEventSource = this;
+      return add.call(this, type, listener, options);
+    };
+  });
+  const line = {
+    id: 'line-synthetic',
+    state: 'awaiting_pairing',
+    version: 2,
+    generation: 1,
+    maskedNumber: '••••0000',
+  };
+  const operation = { id: 'operation-synthetic' };
+  await page.route('**/api/v1/me/whatsapp', (route) =>
+    route.fulfill({ json: { line, operation, available: true } }),
+  );
+  await page.route('**/api/v1/me/whatsapp/pairing-challenge', (route) =>
+    route.fulfill({
+      json: {
+        operationId: operation.id,
+        generation: 1,
+        challengeId: 'challenge-synthetic',
+        mode: 'code',
+        value: 'TEST-CODE',
+        expiresAt: new Date(Date.now() + 30000).toISOString(),
+      },
+    }),
+  );
+  await page.goto('/conta');
+  await page.getByRole('button', { name: 'Mostrar código' }).click();
+  await expect(page.getByText('TEST-CODE')).toBeVisible();
+  await page.evaluate(() =>
+    /** @type {any} */ (globalThis).__wapEventSource.dispatchEvent(
+      new globalThis.MessageEvent('identity.user.changed', {
+        data: JSON.stringify({ userId: 'seller-bia' }),
+      }),
+    ),
+  );
+  await expect(page.getByText('TEST-CODE')).toHaveCount(0);
+});

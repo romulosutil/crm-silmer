@@ -1,7 +1,7 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { installMocks } from './support/inbox-vez-mock.js';
-import { pendingOrder } from './support/orders-mock.js';
+import { ownConfirmedOrder, pendingOrder } from './support/orders-mock.js';
 
 // Browser projections are synthetic; server isolation is covered by E05/E07.
 /** @param {import('@playwright/test').Page} page @param {{delayed?: boolean, existing?: boolean}} [options] */
@@ -250,4 +250,241 @@ test('WAP-E06: alteração de usuário invalida comando em andamento', async ({
   release();
   await finished;
   await expect(page).toHaveURL(/\/inbox\/r-ana/u);
+});
+
+for (const width of [390, 1366]) {
+  test(`WAP-E09: carteira conserva cliente e pedido até cobrança em ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await setup(page);
+    const order = {
+      ...ownConfirmedOrder,
+      id: 'order-client',
+      number: '22-CRM',
+      contactId: 'contact-r-ana',
+      conversationId: null,
+      seller: { id: 'seller-bia', name: 'Bia Souza' },
+    };
+    /** @type {any[]} */
+    const billingWrites = [];
+    await page.route('**/api/v1/orders?**', (route) => {
+      const query = new URL(route.request().url()).searchParams;
+      expect(query.get('owner')).toBe('me');
+      expect(query.get('cancellation')).toBe('all');
+      return route.fulfill({
+        json: {
+          items: [
+            order,
+            {
+              ...order,
+              id: 'other-client-order',
+              contactId: 'other-contact',
+              number: '99-CRM',
+            },
+          ],
+          nextCursor: null,
+          counts: {},
+        },
+      });
+    });
+    await page.route('**/api/v1/orders/order-client', (route) =>
+      route.fulfill({ json: { order } }),
+    );
+    await page.route('**/api/v1/orders/order-client/billing', (route) =>
+      route.fulfill({
+        json: {
+          billing: {
+            version: 1,
+            orderVersion: order.version,
+            canManage: true,
+            enabled: true,
+            managed: false,
+            totalAmountCents: 10000,
+            receivedAmountCents: 0,
+            balanceAmountCents: 10000,
+            charges: [],
+            timelineEvents: [],
+          },
+        },
+      }),
+    );
+    await page.route(
+      '**/api/v1/orders/order-client/billing/charges',
+      (route) => {
+        billingWrites.push(route.request().postDataJSON());
+        return route.fulfill({
+          json: {
+            billing: {
+              version: 2,
+              orderVersion: order.version,
+              percent: 30,
+              canManage: true,
+              enabled: true,
+              managed: true,
+              totalAmountCents: 10000,
+              receivedAmountCents: 0,
+              balanceAmountCents: 10000,
+              charges: [
+                { id: 'charge-synthetic', status: 'queued', amountCents: 3000 },
+              ],
+              timelineEvents: [],
+            },
+          },
+        });
+      },
+    );
+    await page.goto('/meus-clientes/contact-r-ana');
+    const list = page.getByRole('region', {
+      name: 'Meus pedidos deste cliente',
+    });
+    await expect(
+      list.getByRole('link', { name: 'Pedido 22-CRM' }),
+    ).toBeVisible();
+    await expect(list.getByText('99-CRM')).toHaveCount(0);
+    await list.getByRole('link', { name: 'Pedido 22-CRM' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(
+      /pedidos\/order-client\?cliente=contact-r-ana/u,
+    );
+    await page.getByRole('button', { name: 'Ver cobranças' }).click();
+    await expect(page.getByRole('region', { name: 'Cobranças' })).toBeVisible();
+    await expect(page.getByText('A receber').first()).toBeVisible();
+    await page.getByRole('button', { name: 'Revisar cobrança' }).click();
+    const billingDialog = page.getByRole('dialog', {
+      name: 'Gerar link de pagamento',
+    });
+    await expect(billingDialog).toBeVisible();
+    await billingDialog
+      .getByRole('button', { name: 'Gerar link de pagamento' })
+      .click();
+    await expect.poll(() => billingWrites.length).toBe(1);
+    expect(billingWrites[0]).toMatchObject({
+      expectedVersion: order.version,
+      expectedBillingVersion: 1,
+      percent: 30,
+    });
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await page.getByRole('link', { name: '← Meus clientes' }).click();
+    await expect(page).toHaveURL(/meus-clientes\/contact-r-ana/u);
+    await expect(
+      page.getByRole('heading', { name: 'Cliente Ana T.' }),
+    ).toBeVisible();
+  });
+}
+
+test('WAP-E09: recusa da leitura comercial não expõe pedidos do contato compartilhado', async ({
+  page,
+}) => {
+  await setup(page);
+  await page.route('**/api/v1/orders?**', (route) =>
+    route.fulfill({ status: 403, json: { code: 'FORBIDDEN' } }),
+  );
+  await page.goto('/meus-clientes/contact-r-ana');
+  const list = page.getByRole('region', { name: 'Meus pedidos deste cliente' });
+  await expect(list.getByRole('alert')).toContainText(
+    'Não foi possível consultar seus pedidos',
+  );
+  await expect(list.getByRole('link', { name: /Pedido/u })).toHaveCount(0);
+  await expect(
+    page.getByRole('link', { name: 'WhatsApp', exact: true }),
+  ).toBeVisible();
+});
+
+test('WAP-E09: canal indisponível preserva rascunho e não bloqueia pedido local', async ({
+  page,
+}) => {
+  const { writes } = await setup(page);
+  await page.route('**/api/v1/conversations/r-ana/messages', (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    return route.fulfill({
+      status: 503,
+      json: { code: 'WHATSAPP_SEND_UNAVAILABLE' },
+    });
+  });
+  await page.goto('/meus-clientes/contact-r-ana');
+  await page.getByRole('link', { name: 'WhatsApp', exact: true }).click();
+  const draft = page.locator('textarea').first();
+  await draft.fill('Mensagem sintética preservada');
+  await page.getByRole('button', { name: /Enviar resposta/u }).click();
+  await expect(
+    page.getByText('O WhatsApp desta linha está indisponível.', {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(draft).toHaveValue('Mensagem sintética preservada');
+  await page.getByRole('button', { name: 'Criar pedido', exact: true }).click();
+  const dialog = page.getByRole('dialog', {
+    name: 'O cliente confirmou a compra?',
+  });
+  await dialog.getByLabel('Assunto desta compra').selectOption('subject-2');
+  await dialog
+    .getByRole('button', { name: 'Cliente confirmou, criar pedido' })
+    .click();
+  await expect(page).toHaveURL(/\/pedidos\/wap-order\?conversa=r-ana/u);
+  expect(writes).toHaveLength(1);
+  await page.goBack();
+  await expect(draft).toHaveValue('Mensagem sintética preservada');
+});
+
+test('WAP-E09: troca de cliente descarta a leitura comercial atrasada', async ({
+  page,
+}) => {
+  await setup(page);
+  const second = {
+    id: 'contact-second',
+    label: 'Cliente sintético B',
+    displayName: 'Cliente sintético B',
+    identities: [],
+    provisional: false,
+    version: 1,
+    registration: null,
+  };
+  let release = () => {};
+  const gate = new Promise((resolve) => {
+    release = () => resolve(undefined);
+  });
+  let reads = 0;
+  await page.route('**/api/v1/contacts/contact-second', (route) =>
+    route.fulfill({
+      json: { contact: second, identities: [], conversations: [] },
+    }),
+  );
+  await page.route('**/api/v1/orders?**', async (route) => {
+    reads++;
+    if (reads === 1) {
+      await gate;
+      return route
+        .fulfill({
+          json: {
+            items: [
+              {
+                ...pendingOrder,
+                id: 'late-order',
+                number: '77-CRM',
+                contactId: 'contact-r-ana',
+              },
+            ],
+            nextCursor: null,
+          },
+        })
+        .catch(() => {});
+    }
+    return route.fulfill({ json: { items: [], nextCursor: null } });
+  });
+  await page.goto('/meus-clientes/contact-r-ana');
+  await expect.poll(() => reads).toBe(1);
+  await page.evaluate(() =>
+    globalThis.history.pushState({}, '', '/meus-clientes/contact-second'),
+  );
+  await page.evaluate(() =>
+    globalThis.dispatchEvent(new globalThis.PopStateEvent('popstate')),
+  );
+  await expect(
+    page.getByRole('heading', { name: 'Cliente sintético B' }),
+  ).toBeVisible();
+  release();
+  await expect(page.getByRole('link', { name: 'Pedido 77-CRM' })).toHaveCount(
+    0,
+  );
 });

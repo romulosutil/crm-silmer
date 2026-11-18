@@ -186,7 +186,14 @@ async function challenge(mode) {
         line: { ...state.value.line, version: value.version },
       };
     secret.value = { mode, value: value.value };
-    expiryTimer = setTimeout(clearSecret, Math.max(0, expires - Date.now()));
+    // Bound the in-memory lifetime even if the device clock is behind. A
+    // canonical server Date, when available, also avoids trusting that clock.
+    const referenceTime =
+      response.serverTime === null ? Date.now() : response.serverTime + 1000;
+    expiryTimer = setTimeout(
+      clearSecret,
+      Math.min(120_000, Math.max(0, expires - referenceTime)),
+    );
   } catch (cause) {
     if (currentEpoch !== epoch || cause?.name === 'AbortError') return;
     uncertain.value = true;

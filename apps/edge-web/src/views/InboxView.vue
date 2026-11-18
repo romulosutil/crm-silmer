@@ -1704,6 +1704,8 @@ function describeError(cause, path = '') {
   const code = String(/** @type {any} */ (cause)?.code ?? '');
   if (code === 'NON_PRODUCTION_CONVERSATION')
     return 'Esta conversa é de teste e não envia mensagens pelo WhatsApp.';
+  if (code === 'WHATSAPP_SEND_UNAVAILABLE')
+    return 'O WhatsApp desta linha está indisponível. A mensagem não foi enviada; seu rascunho foi mantido.';
   // RFC 052: the loss and reminder commands refuse with a code of their own.
   const known = turnCommandError(code);
   if (known) return `${known}${suffix}`;

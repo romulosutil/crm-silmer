@@ -10,6 +10,7 @@ import {
 } from 'vue';
 import { useRouter } from 'vue-router';
 import ClientRegistration from '../components/ClientRegistration.vue';
+import ClientOrders from '../components/ClientOrders.vue';
 import PortfolioCreate from '../components/PortfolioCreate.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import {
@@ -526,7 +527,7 @@ onBeforeUnmount(() => {
         v-if="mine || sessionUser?.functionName === 'Vendedor'"
         :to="mine ? '/clientes' : '/meus-clientes'"
       >
-        {{ mine ? 'Ver todos os clientes' : 'Meus clientes' }}
+        {{ mine ? 'Vincular cliente existente' : 'Meus clientes' }}
       </RouterLink>
     </header>
 
@@ -792,6 +793,8 @@ onBeforeUnmount(() => {
             @loaded="onRegistrationLoaded"
             @unavailable="contactUnavailable"
           />
+
+          <ClientOrders v-if="mine" :key="selected.id" :contact="selected" />
 
           <div class="panel-head subsection-heading">
             <h3>Canais de contato</h3>

@@ -56,6 +56,21 @@ destino originais e nunca são redirecionados pelo telefone cadastral.
 
 ## Leitura e reconciliação
 
+WAP-E09: Meus clientes permite cadastrar antes de parear, vincular um Contact
+acessível e editar cadastro compartilhado com revisão administrativa dos
+campos protegidos. A ficha mostra somente pedidos retornados pela lista
+comercial `owner=me` com histórico cancelado, filtrados pelo Contact selecionado; mais páginas são
+carregadas explicitamente. Cada Pedido mantém suas próprias autorizações. A
+volta pelo rastro usa o Contact de origem somente quando coincide com o do
+Pedido. Pedido de uma conversa continua exigindo o Assunto escolhido.
+
+Conta → Meu WhatsApp usa os comandos versionados existentes. QR e código
+vivem somente em memória durante o desafio, são removidos ao fechar, expirar,
+ocultar a aba ou perder a sessão e não são registrados em storage ou captura
+dos testes. Resultado incerto não é repetido automaticamente. A conexão por
+código no mesmo celular permanece sem homologação real. Falha da linha não
+impede operações locais; a Caixa informa o bloqueio e conserva o rascunho.
+
 Carteira exige vínculo ativo. Clientes geral conserva o universo legado: linha
 geral e contatos manuais comuns continuam autorizados após vínculo explícito.
 Novos contatos pessoais usam `wallet_created`; remover o último vínculo ou

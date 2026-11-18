@@ -72,6 +72,7 @@ const LIVE_REFRESH_DELAY_MS = 250;
 
 const props = defineProps({
   fromConversationId: { type: String, default: '' },
+  fromClientId: { type: String, default: '' },
   orderId: { type: String, required: true },
 });
 
@@ -993,6 +994,12 @@ onBeforeUnmount(() => {
 
     <template v-else-if="order">
       <nav class="order-trail" aria-label="Rastro">
+        <template v-if="fromClientId && order.contactId === fromClientId">
+          <RouterLink :to="`/meus-clientes/${encodeURIComponent(fromClientId)}`"
+            >← Meus clientes</RouterLink
+          >
+          <span aria-hidden="true">/</span>
+        </template>
         <RouterLink to="/pedidos">← Pedidos</RouterLink>
         <span aria-hidden="true">/</span>
         <span>{{ order.number }}</span>

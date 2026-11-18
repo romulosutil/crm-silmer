@@ -12,6 +12,8 @@ const TEXT = {
   disabled:
     'O primeiro envio pelo CRM não está habilitado para você. O atendimento continua quando o cliente procurar seu WhatsApp.',
   stale: 'O cadastro, o vínculo ou sua linha mudaram. Confira de novo.',
+  conversation:
+    'Este atendimento mudou desde que você abriu a mensagem (outra aba ou o cliente respondeu). Confira de novo antes de enviar.',
   unavailable: 'Este cliente não está disponível para o primeiro envio.',
   offline:
     'Seu WhatsApp não está disponível agora. Nada foi enviado e o rascunho foi mantido.',
@@ -238,8 +240,16 @@ function newAttempt(p, contactId, message) {
     expectedLinkVersion: p.link.version,
     expectedLineVersion: p.line.version,
     expectedGeneration: p.line.generation,
+    // The conversation seen at open: a send from another tab, or a reply,
+    // makes the server refuse instead of adding a second first message.
+    expectedConversation: p.conversation
+      ? { id: p.conversation.id, version: p.conversation.version }
+      : null,
   };
-  const fingerprint = `${contactId}:${body.expectedContactVersion}:${body.expectedLinkVersion}:${body.expectedLineVersion}:${body.expectedGeneration}:${message}`;
+  const conversation = body.expectedConversation
+    ? `${body.expectedConversation.id}@${body.expectedConversation.version}`
+    : 'none';
+  const fingerprint = `${contactId}:${body.expectedContactVersion}:${body.expectedLinkVersion}:${body.expectedLineVersion}:${body.expectedGeneration}:${conversation}:${message}`;
   const saved = entry().attempt;
   return saved?.fingerprint === fingerprint
     ? saved
@@ -323,7 +333,12 @@ function fail(cause, contactId) {
   if ([403, 404, 409].includes(status)) {
     dropAttempt(contactId);
     recheck.value = true;
-    error.value = status === 409 ? TEXT.stale : TEXT.unavailable;
+    error.value =
+      status !== 409
+        ? TEXT.unavailable
+        : code === 'CONVERSATION_VERSION_CONFLICT'
+          ? TEXT.conversation
+          : TEXT.stale;
     void nextTick(() => recheckButton.value?.focus());
     return;
   }

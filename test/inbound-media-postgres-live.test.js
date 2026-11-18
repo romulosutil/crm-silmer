@@ -313,6 +313,59 @@ if (connectionString) {
       ).lastMessage.media,
       missingDocumentDetail.messages[0].media,
     );
+    const oversized = await image('120', false, {
+      type: 'document',
+      mime: 'image/png',
+    });
+    const sizeFailure = {
+      schema_version: '1.0',
+      event_id: 'synthetic-oversized',
+      event_type: 'workflow.failed',
+      occurred_at: currentTime.toISOString(),
+      conversation_id: oversized.received.conversation_id,
+      external_message_id: oversized.input.externalId,
+      failure: { code: 'INBOUND_MEDIA_TOO_LARGE' },
+      technical: technical('synthetic-oversized'),
+    };
+    await assert.rejects(
+      integration.recordEvent({
+        ...sizeFailure,
+        external_message_id: null,
+      }),
+      /requires its message and conversation/u,
+    );
+    await assert.rejects(
+      integration.recordEvent({
+        ...sizeFailure,
+        conversation_id: missingDocument.received.conversation_id,
+      }),
+      /attachment message was not found/u,
+    );
+    assert.equal((await integration.recordEvent(sizeFailure)).accepted, true);
+    assert.equal((await integration.recordEvent(sizeFailure)).duplicate, true);
+    const oversizedDetail = await inbox.get(oversized.received.conversation_id);
+    assert.equal(oversizedDetail.messages[0].media.state, 'too_large');
+    assert.equal(oversizedDetail.messages[0].media.contentUrl, null);
+    assert.equal(
+      (await inbox.get(missingDocument.received.conversation_id)).messages[0]
+        .media.state,
+      'unavailable',
+    );
+    const oversizedList = await inbox.list({ limit: 20 });
+    assert.deepEqual(
+      oversizedList.items.find(
+        (/** @type {any} */ item) =>
+          item.id === oversized.received.conversation_id,
+      ).lastMessage.media,
+      oversizedDetail.messages[0].media,
+    );
+    await integration.storeAttachment(oversized.input);
+    assert.equal(
+      (await inbox.get(oversized.received.conversation_id)).messages[0].media
+        .state,
+      'attached',
+    );
+
     // A claimed MIME only explains unavailable content. It never provides a URL
     // or bypasses scanning, even when the submitted bytes are a different type.
     detectedMimeType = 'text/html';

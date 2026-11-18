@@ -260,13 +260,18 @@ const documentFormat = computed(() =>
 const unavailable = computed(
   () => failed.value || !contentUrl.value || props.media.state !== 'attached',
 );
-const notice = computed(() =>
-  props.media.state === 'lost'
-    ? 'Arquivo perdido. O histórico da mensagem foi preservado.'
-    : props.media.state === 'missing'
-      ? 'Imagem recebida sem arquivo disponível. O histórico foi preservado.'
-      : 'Arquivo indisponível no momento.',
-);
+const notice = computed(() => {
+  switch (props.media.state) {
+    case 'too_large':
+      return 'O arquivo não chegou ao CRM porque passou do limite de tamanho. Peça ao cliente para enviar uma versão menor.';
+    case 'lost':
+      return 'Arquivo perdido. O histórico da mensagem foi preservado.';
+    case 'missing':
+      return 'Imagem recebida sem arquivo disponível. O histórico foi preservado.';
+    default:
+      return 'Arquivo indisponível no momento.';
+  }
+});
 watch(unavailable, async (value) => {
   if (!value) return;
   const moveFocus =

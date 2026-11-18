@@ -338,3 +338,27 @@ Restaurar a revisão anterior do workflow, sem replay de eventos ou envios.
 Preservar os anexos já vinculados e seus prazos de retenção. O rollback da
 interface/API pode voltar a mostrar a descrição textual; não apagar registros
 nem restaurar o banco para desfazer uma mudança de exibição.
+
+## Aviso de arquivo acima do limite
+
+O cartão da conversa explica ao vendedor que o arquivo passou do limite de
+tamanho quando o ramo da Inbox registra essa causa para a mensagem original.
+O aviso usa o limite de 5 MiB para imagens raster, inclusive como documento,
+e de 16 MiB para áudio e documentos PDF ou CorelDRAW admitidos pelo ramo.
+Falhas sem bytes medidos mantêm o comportamento de indisponibilidade anterior.
+
+Depois de publicar a API e a interface, exporte o workflow Evolution em uso
+para um local privado e aplique o delta sobre a cópia:
+
+```sh
+node ops/n8n/patch-evolution-inbound-size-notice.mjs <atual.json> <revisao.json>
+```
+
+Confira que só o nó **Inbox - Imagem recebida - Preparar falha** foi alterado.
+O patch não publica o workflow. Após publicar pelo procedimento existente,
+envie um PNG sintético de mais de 5 MiB como documento e confira o aviso no
+cartão. Use também um PNG abaixo do limite e um anexo indisponível por outra
+causa. O primeiro deve renderizar e o segundo não deve mencionar tamanho.
+Se um anexo válido for posteriormente vinculado à mensagem, a mídia tem
+precedência sobre o aviso. Eventos anteriores sem motivo associado não são
+reclassificados. Para rollback, restaure a revisão privada anterior do workflow.

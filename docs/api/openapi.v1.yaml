@@ -6048,7 +6048,9 @@ components:
           type: [string, 'null']
           description: UUID da mídia persistente ou media-UUID transitório; null sem bytes observados.
         kind: { type: string, enum: [image, audio, video, document] }
-        state: { type: string }
+        state:
+          type: string
+          description: too_large indica que o recebimento falhou pelo limite de tamanho confirmado para a mensagem.
         mimeType: { type: [string, 'null'] }
         sizeBytes: { type: [integer, 'null'], minimum: 0 }
         durationMs: { type: [integer, 'null'], minimum: 0 }

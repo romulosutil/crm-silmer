@@ -47,7 +47,6 @@ O go/no-go está no [roteiro](../../../docs/runbooks/seller-whatsapp.md#gono-go-
 | Decisões F3 (trava pós-restore) e F4 (limite por usuário)             | pendente | Tech Lead/PO, [validation-etapa1](validation-etapa1.md#findings) |
 | Restore remoto, RPO/RTO e banco do n8n                                | pendente | DevOps, [recovery](../../../ops/recovery/RUNBOOK.md)             |
 | SHA de rollback, varredura de base dos logs, allowlist só no ambiente | pendente | DevOps/Privacidade, itens 7–9 do go/no-go                        |
-| Decisão sobre E12-5 (erro bruto do banco no corpo `500`)              | pendente | Tech Lead/Backend, antes do piloto ou como risco aceito          |
 | Números dedicados, cliente sintético e janela                         | pendente | Operação                                                         |
 | Autorizações do PO, da Operação, da Privacidade e Financeira          | pendente | PO, Operação, Privacidade e Financeiro; cada uma por escrito     |
 
@@ -124,15 +123,24 @@ Reexecução focal, zero falhas e zero skips: ensaio 11/11 três vezes;
 `chat-media-upload` 22/22 duas vezes; `inbox` 10/10, `order-billing-send`
 18/18, `chat-media-bind` 102/102 e integração E08 7/7.
 
+Depois de E12-5, foram reexecutados: suítes PostgreSQL do CI 825/825;
+integração E07, E08, E10 e E11 com 1, 7, 17 e 7; ensaio 11/11 três vezes;
+`npm run validate` com 2.898 aprovados, zero falhas e 61 skips live sem URL.
+Todas as respostas 4xx capturadas antes da mudança seguem idênticas, inclusive
+nos headers.
+
+`npm run test:e2e -- --workers=2`, sem carga paralela: 1.115 aprovados e os
+7 skips existentes, inclusive o BCS-07.
+
 ## Findings do ensaio
 
-| ID    | Sev. | Achado                                                                                                                                                                                                    | Estado                                                                                                                                                  |
-| ----- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| E12-1 | P2   | Edição recusada de campo compartilhado restrito chegava como `403 INVALID_REQUEST`. `ClientRegistration.vue` só mantém o rascunho e orienta a revisão com o código próprio                                | corrigido no E03/E09, `cc01938c`                                                                                                                        |
-| E12-2 | P2   | Envio pela Inbox com linha indisponível chegava como `SERVICE_UNAVAILABLE`. A Inbox não dizia que a linha caiu e que o rascunho foi mantido. Com flags off, `/me/clients` também mascarava o código       | corrigido no E04/E08, `cc01938c`                                                                                                                        |
-| E12-3 | P2   | Dois envios concorrentes da ficha em PDF com a mesma chave travavam (`40P01`) por ordem de lock invertida entre conversa e quota. Nunca houve comando duplicado                                           | corrigido no E08, `f18225ff`                                                                                                                            |
-| E12-4 | P2   | Revisão de QA: o gravador da ficha ainda fechava ciclo pelo FK `uploaded_by` → `crm.users` com um envio de mídia da Inbox do mesmo vendedor, em outra aba                                                 | corrigido no E08, `d5384387`                                                                                                                            |
-| E12-5 | P2   | Anterior a este branch: erro sem `statusCode` (por exemplo, erro bruto do PostgreSQL) nas rotas de conversa e de operação cai no handler padrão do Fastify e devolve `500` com código e mensagem do banco | aberto: Backend; exige handler raiz e muda contratos fixados em teste (`store-order-reads`). As rotas da ficha via WhatsApp já respondem `503` genérico |
+| ID    | Sev. | Achado                                                                                                                                                                                                      | Estado                                                                |
+| ----- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| E12-1 | P2   | Edição recusada de campo compartilhado restrito chegava como `403 INVALID_REQUEST`. `ClientRegistration.vue` só mantém o rascunho e orienta a revisão com o código próprio                                  | corrigido no E03/E09, `cc01938c`                                      |
+| E12-2 | P2   | Envio pela Inbox com linha indisponível chegava como `SERVICE_UNAVAILABLE`. A Inbox não dizia que a linha caiu e que o rascunho foi mantido. Com flags off, `/me/clients` também mascarava o código         | corrigido no E04/E08, `cc01938c`                                      |
+| E12-3 | P2   | Dois envios concorrentes da ficha em PDF com a mesma chave travavam (`40P01`) por ordem de lock invertida entre conversa e quota. Nunca houve comando duplicado                                             | corrigido no E08, `f18225ff`                                          |
+| E12-4 | P2   | Revisão de QA: o gravador da ficha ainda fechava ciclo pelo FK `uploaded_by` → `crm.users` com um envio de mídia da Inbox do mesmo vendedor, em outra aba                                                   | corrigido no E08, `d5384387`                                          |
+| E12-5 | P2   | Anterior a este branch: erro sem `statusCode` (por exemplo, erro bruto do PostgreSQL) nas rotas de conversa e de operação caía no handler padrão do Fastify e devolvia `500` com código e mensagem do banco | corrigido, `354a31d3`: handler raiz com corpo genérico; 4xx idênticos |
 
 ## Resultado live
 
@@ -173,3 +181,4 @@ live minimizada.
 | `f18225ff` | E08       | E12-3: conversa antes da quota da ficha; 503 genérico nas rotas |
 | `d5384387` | E08       | E12-4: usuário, conversa e quota, nessa ordem                   |
 | `932f9c7a` | E12       | ensaio local do piloto e passo no job PostgreSQL do CI          |
+| `354a31d3` | E12       | E12-5: corpo genérico para 5xx e falhas sem `statusCode`        |

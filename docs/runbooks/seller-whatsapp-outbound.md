@@ -92,8 +92,9 @@ ADR 090 e a seção 6 do desenho proíbem unir Clientes pelo número.
 - `GET /contacts/{contactId}/whatsapp/first-message-preview` não cria
   identidade, conversa, mensagem nem outbox. Devolve versões de Contact,
   vínculo e linha, geração, finais mascarados, `restriction` e `pendingSend`.
-  `pendingSend` é verdadeiro quando a conversa reutilizável tem envio do
-  titular em `queued`, `sending` ou `outcome_unknown`.
+  `pendingSend` é verdadeiro quando algum ciclo da mesma linha e destino,
+  ativo ou encerrado, tem envio do titular em `queued`, `sending` ou
+  `outcome_unknown`.
 - `POST /contacts/{contactId}/whatsapp/conversations` recebe texto, as quatro
   versões esperadas e `expectedConversation`, com `Idempotency-Key`, CSRF e
   Origin. `expectedConversation` repete `preview.conversation`: `null` ou
@@ -138,7 +139,10 @@ WhatsApp. O índice de busca por telefone só é preenchido pelo inbound.
 
 Sob o lock da conversa, a rota confere primeiro a reconciliação. Um envio
 anterior do titular em fila, despacho ou `outcome_unknown` responde 409
-`WHATSAPP_OPERATION_UNCERTAIN` sem gravar nada. Depois, a conversa ativa deve
+`WHATSAPP_OPERATION_UNCERTAIN` sem gravar nada. A conferência cobre todos os
+ciclos da mesma conta e destino: encerrar a conversa não conclui um efeito
+incerto, e o novo ciclo só abre depois da reconciliação. Ela lê apenas
+mensagens do próprio titular. Depois, a conversa ativa deve
 coincidir com `expectedConversation`, ou a rota responde 409
 `CONVERSATION_VERSION_CONFLICT`. Duas abas da mesma prévia geram um 201 e
 um 409, com uma mensagem e um outbox. Uma segunda mensagem exige o envio

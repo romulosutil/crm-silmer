@@ -955,6 +955,14 @@ test(
       'a closed conversation opens a new cycle and keeps its history',
       async () => {
         const [closed] = await active(a, P1);
+        // WAP-10/22/23: an unsettled send would block the next cycle too, so
+        // the reused cycle-one message is settled before the owner closes it.
+        const queued = await pool.query(
+          "SELECT id FROM crm.messages WHERE conversation_id=$1 AND status='queued'",
+          [closed.id],
+        );
+        assert.equal(queued.rows.length, 1);
+        await settle(queued.rows[0].id, a, P1, 'settle-p1-cycle-one');
         await pool.query(
           "UPDATE crm.conversations SET state='sem_lead',terminal_at=$2 WHERE id=$1",
           [closed.id, now],
@@ -1189,6 +1197,86 @@ test(
         );
       },
     );
+
+    // WAP-10/22/23: closing the cycle does not settle an uncertain send.
+    const P8 = '5511900000131';
+    const c8 = await database.transaction((/** @type {any} */ c) =>
+      seedContact(c, P8, [A, D]),
+    );
+    /** @type {any} */
+    let unknownCycle;
+    await t.test(
+      'outcome_unknown on a closed cycle still blocks a new first send until reconciled',
+      async () => {
+        const sent8 = await firstSend.send(await request(a, c8));
+        const commandId = await commandOf(sent8.body.message.id);
+        const reservation = await dispatch(commandId, a, P8);
+        assert.equal(
+          await store.markOutcomeUnknown(commandId, {
+            attemptId: reservation.executionId,
+            now,
+            errorCode: 'TIMEOUT',
+          }),
+          true,
+        );
+        unknownCycle = { sent: sent8, reservation };
+        // The line owner closes the cycle while the effect is still uncertain.
+        await pool.query(
+          "UPDATE crm.conversations SET state='sem_lead',terminal_at=$2 WHERE id=$1",
+          [sent8.body.conversation.id, now],
+        );
+        assert.equal((await active(a, P8)).length, 0);
+        const { preview } = await firstSend.preview({
+          actor: { id: A },
+          contactId: c8,
+        });
+        assert.equal(preview.conversation, null);
+        assert.equal(preview.restriction, null);
+        assert.equal(preview.pendingSend, true);
+        const before = await effects();
+        const input = await request(a, c8);
+        assert.equal(input.expectedConversation, null);
+        await assert.rejects(firstSend.send(input), {
+          code: 'WHATSAPP_OPERATION_UNCERTAIN',
+        });
+        assert.deepEqual(await effects(), before);
+        assert.equal((await active(a, P8)).length, 0);
+        // Another seller linked to the same Contact uses its own line and
+        // never sees the titular's uncertain send.
+        assert.equal(
+          (await firstSend.preview({ actor: { id: D }, contactId: c8 })).preview
+            .pendingSend,
+          false,
+        );
+      },
+    );
+
+    await t.test('after reconciliation a new cycle is allowed', async () => {
+      const { sent: sent8, reservation } = unknownCycle;
+      // OPS-INBOX-ACK-02: the late authenticated message.sent settles it.
+      await service.recordEvent(sent(reservation, 'late-sent-p8'));
+      const message = (
+        await pool.query(
+          'SELECT status,delivery_status FROM crm.messages WHERE id=$1',
+          [sent8.body.message.id],
+        )
+      ).rows[0];
+      assert.equal(message.status, 'sent');
+      assert.notEqual(message.delivery_status, 'outcome_unknown');
+      const { preview } = await firstSend.preview({
+        actor: { id: A },
+        contactId: c8,
+      });
+      assert.equal(preview.pendingSend, false);
+      assert.equal(preview.conversation, null);
+      const result = await firstSend.send(await request(a, c8));
+      assert.equal(result.created, true);
+      assert.equal(result.body.conversation.reused, false);
+      assert.equal(result.body.conversation.cycleNumber, 2);
+      const [opened] = await active(a, P8);
+      assert.equal(opened.id, result.body.conversation.id);
+      assert.equal(opened.previous_conversation_id, sent8.body.conversation.id);
+    });
 
     await t.test(
       'first send racing an inbound reply does not deadlock',

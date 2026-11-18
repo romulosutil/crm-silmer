@@ -701,6 +701,12 @@ test('WAP-E10 preview is read-only and never reveals another Contact', async () 
   // WAP-24: an unsettled send of the titular must be reconciled first.
   world.pending = true;
   assert.equal((await read()).pendingSend, true);
+  // WAP-10/22/23: closing the cycle does not settle an uncertain send.
+  world.conversation = null;
+  const closed = await read();
+  assert.equal(closed.conversation, null);
+  assert.equal(closed.available, true);
+  assert.equal(closed.pendingSend, true);
   world.pending = false;
   // The titular's own confirmed number is never a customer destination.
   world.phone = '11000001234';
@@ -710,7 +716,7 @@ test('WAP-E10 preview is read-only and never reveals another Contact', async () 
   assert.equal(own.conversation, null);
   assert.equal(
     statements.filter((s) => s === 'SET TRANSACTION READ ONLY').length,
-    6,
+    7,
   );
   for (const sql of statements) {
     assert.doesNotMatch(

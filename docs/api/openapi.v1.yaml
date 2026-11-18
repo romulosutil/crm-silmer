@@ -4152,6 +4152,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/OrderNotFound' }
         '409': { $ref: '#/components/responses/OrderConflict' }
+        '503': { $ref: '#/components/responses/Unavailable' }
     post:
       operationId: queueOrderPdfWhatsApp
       summary: Enfileira a ficha em PDF com o destino confirmado

@@ -87,7 +87,7 @@ function orderKeys(order) {
   ].sort();
 }
 
-/** @param {{readActor?: any, writeActor?: any, pdfRenderer?: (html: string) => Promise<Buffer>, fichaRenderer?: (order: any) => string}} [options] */
+/** @param {{readActor?: any, writeActor?: any, pdfRenderer?: (html: string) => Promise<Buffer>, fichaRenderer?: (order: any) => string, whatsappPdf?: any}} [options] */
 function orderHarness(options = {}) {
   /** @type {Record<string, string|null>} */
   const assignments = {
@@ -181,6 +181,7 @@ function orderHarness(options = {}) {
     {
       orderFichaRenderer: options.fichaRenderer,
       orderPdfRenderer: options.pdfRenderer,
+      orderWhatsAppPdf: options.whatsappPdf,
       orders: runtime,
     },
   );
@@ -1709,6 +1710,61 @@ test('PIM-14: PDF generation is limited to ten requests per minute', async (t) =
   }
   assert.equal((await request()).statusCode, 429);
   assert.equal(calls, 10);
+});
+
+test('WAP-E08: an unknown failure on the WhatsApp ficha routes answers a generic 503, never the database error', async (t) => {
+  const raw = () =>
+    Object.assign(new Error('deadlock detected private-detail-canary'), {
+      code: '40P01',
+    });
+  const { api, runtime } = orderHarness({
+    whatsappPdf: {
+      canOffer: async () => true,
+      preview: async () => {
+        throw raw();
+      },
+      send: async () => {
+        throw raw();
+      },
+    },
+  });
+  t.after(() => api.close());
+  const confirmed = await createConfirmed(runtime, 'conversation-1');
+  for (const request of [
+    {
+      headers: readHeaders,
+      method: 'GET',
+      url: `/api/v1/orders/${confirmed.id}/pdf/whatsapp?expectedVersion=${confirmed.version}`,
+    },
+    {
+      headers: writeHeaders,
+      method: 'POST',
+      url: `/api/v1/orders/${confirmed.id}/pdf/whatsapp`,
+      payload: {
+        expectedVersion: confirmed.version,
+        preparation: 'a'.repeat(64),
+      },
+    },
+  ]) {
+    const response = await api.inject(/** @type {any} */ (request));
+    assert.equal(response.statusCode, 503, request.url);
+    assert.deepEqual(response.json(), {
+      error: { code: 'SERVICE_UNAVAILABLE' },
+    });
+    assert.doesNotMatch(response.body, /40P01|deadlock|private-detail-canary/u);
+    assert.equal(response.headers['content-disposition'], undefined);
+  }
+  // Public 4xx keep their own status and code.
+  const invalid = await api.inject({
+    headers: writeHeaders,
+    method: 'POST',
+    url: `/api/v1/orders/${confirmed.id}/pdf/whatsapp`,
+    payload: { expectedVersion: confirmed.version, preparation: 'x' },
+  });
+  assert.equal(invalid.statusCode, 400);
+  assert.deepEqual(invalid.json(), {
+    error: { code: 'INVALID_PREPARATION' },
+  });
 });
 
 test('the client follows a renamed contact while pending and stays on the generated order and its paper (ADR 018)', async (t) => {

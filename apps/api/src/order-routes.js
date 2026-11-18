@@ -276,6 +276,7 @@ export function registerOrderRoutes(
         {
           exposeHeadRoute: false,
           config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+          errorHandler: genericUnavailable,
         },
         async (request, reply) =>
           respond(reply, async () => {
@@ -305,7 +306,10 @@ export function registerOrderRoutes(
       );
       pdfScope.post(
         '/api/v1/orders/:orderId/pdf/whatsapp',
-        { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+        {
+          config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+          errorHandler: genericUnavailable,
+        },
         async (request, reply) =>
           respond(reply, async () => {
             privateReadHeaders(reply);
@@ -1215,6 +1219,19 @@ function rejectUnknownKeys(value, allowed) {
 function privateReadHeaders(reply) {
   reply.header('cache-control', 'private, no-cache');
   reply.header('vary', 'Origin, Cookie');
+}
+
+/**
+ * WAP-E08: an unknown failure (database, 40P01, renderer) never reaches the
+ * body; 4xx such as the rate limit keep the parent handler.
+ * @param {any} error @param {import('fastify').FastifyRequest} _request
+ * @param {import('fastify').FastifyReply} reply
+ */
+function genericUnavailable(error, _request, reply) {
+  const status = Number(error?.statusCode);
+  if (Number.isSafeInteger(status) && status >= 400 && status < 500)
+    throw error;
+  return reply.code(503).send({ error: { code: 'SERVICE_UNAVAILABLE' } });
 }
 
 /**

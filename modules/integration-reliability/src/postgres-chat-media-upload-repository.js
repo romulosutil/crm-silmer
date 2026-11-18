@@ -80,6 +80,12 @@ export class PostgresChatMediaUploadRepository {
   /** Reserve quota durably before writing a renderer-generated PDF. @param {any} input @param {Function} write */
   async writeGeneratedPdf(input, write) {
     await this.#database.transaction(async (/** @type {any} */ client) => {
+      // Conversation before quota, like every send/attach path: the chat_media
+      // FK would otherwise take this KEY SHARE after the quota row (40P01).
+      await client.query(
+        'SELECT 1 FROM crm.conversations WHERE id=$1 FOR KEY SHARE',
+        [input.conversationId],
+      );
       await client.query(
         `INSERT INTO crm.chat_media_quotas(bucket_alias,limit_bytes)
         VALUES($1,$2) ON CONFLICT(bucket_alias) DO NOTHING`,

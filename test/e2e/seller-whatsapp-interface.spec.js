@@ -143,6 +143,89 @@ test('desafio expira e linha conectada não oferece novo QR', async ({
   await expect(page.getByRole('button', { name: 'Mostrar QR' })).toHaveCount(0);
 });
 
+test('versão nova sem mudança de estado mantém o desafio até expirar', async ({
+  page,
+}) => {
+  await installMocks(page, {}, { fixedClock: false });
+  const line = {
+    id: 'line-synthetic',
+    state: 'awaiting_pairing',
+    version: 2,
+    generation: 1,
+    maskedNumber: '••••0000',
+  };
+  const operation = { id: 'operation-synthetic' };
+  let ttl = 30000;
+  await page.route('**/api/v1/me/whatsapp', (route) =>
+    route.fulfill({ json: { line, operation, available: true } }),
+  );
+  await page.route('**/api/v1/me/whatsapp/pairing-challenge', (route) => {
+    line.version += 1;
+    return route.fulfill({
+      json: {
+        operationId: operation.id,
+        generation: line.generation,
+        challengeId: `challenge-${line.version}`,
+        mode: 'code',
+        value: 'TEST-CODE',
+        version: line.version,
+        expiresAt: new Date(Date.now() + ttl).toISOString(),
+      },
+    });
+  });
+  const refresh = async () => {
+    const read = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === '/api/v1/me/whatsapp' &&
+        response.request().method() === 'GET',
+    );
+    await page.getByRole('button', { name: 'Atualizar estado' }).click();
+    await read;
+  };
+  const show = async () => {
+    await page.getByRole('button', { name: 'Mostrar código' }).click();
+    await expect(page.getByText('TEST-CODE')).toBeVisible();
+  };
+  await page.goto('/conta');
+
+  // A read that only bumps the version keeps the challenge within its TTL.
+  ttl = 4000;
+  await show();
+  line.version += 1;
+  await refresh();
+  await expect(page.getByText('TEST-CODE')).toBeVisible();
+  line.version += 1;
+  await refresh();
+  await expect(page.getByText('TEST-CODE')).toBeVisible();
+  // Expiry still removes it.
+  await expect(page.getByText('TEST-CODE')).toHaveCount(0, { timeout: 6000 });
+
+  // A new generation removes it even while still awaiting pairing.
+  ttl = 30000;
+  await show();
+  line.generation = 2;
+  line.version += 1;
+  await refresh();
+  await expect(page.getByText('TEST-CODE')).toHaveCount(0);
+
+  // A replaced operation removes it.
+  await show();
+  operation.id = 'operation-replaced';
+  line.version += 1;
+  await refresh();
+  await expect(page.getByText('TEST-CODE')).toHaveCount(0);
+
+  // Leaving awaiting_pairing removes it.
+  await show();
+  line.state = 'unknown';
+  line.version += 1;
+  await refresh();
+  await expect(page.getByText('TEST-CODE')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Mostrar código' }),
+  ).toHaveCount(0);
+});
+
 test('conflito de telefone preserva rascunho sem revelar candidato privado', async ({
   page,
 }) => {

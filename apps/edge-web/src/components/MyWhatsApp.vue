@@ -73,7 +73,12 @@ async function refresh() {
     });
     if (readController !== controller) return;
     const previous = line.value;
+    const previousOperation = operation.value?.id;
     const next = result.data?.line;
+    const nextOperation = (result.data?.operation ?? next?.operation)?.id;
+    // A version bump alone (e.g. a read that saw the line still pairing) does
+    // not invalidate the challenge: only a new line/generation/operation, a
+    // state change, hiding the tab or the TTL timer does.
     if (
       !next ||
       result.data?.available !== true ||
@@ -81,7 +86,7 @@ async function refresh() {
       (previous &&
         (previous.generation !== next.generation ||
           previous.id !== next.id ||
-          (secret.value && previous.version !== next.version)))
+          previousOperation !== nextOperation))
     )
       clearSecret();
     state.value = result.data;

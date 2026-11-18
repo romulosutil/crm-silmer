@@ -701,6 +701,123 @@ if (!url) {
       );
 
       await t.test(
+        'a reconcile observing no change keeps the line version and the shown challenge; real changes still bump',
+        async () => {
+          await reset();
+          /** @param {string} challengeId */
+          const challengeRow = async (challengeId) =>
+            (
+              await pool.query(
+                'SELECT state,expires_at FROM crm.seller_whatsapp_challenges WHERE id=$1',
+                [challengeId],
+              )
+            ).rows[0];
+          const current = await prepared();
+          const pending = await challenge(current);
+          await repository.reserveChallenge(pending);
+          const finished = await repository.finishChallenge({
+            ...pending,
+            delivered: true,
+          });
+          assert.equal(finished.deliverable, true);
+          const shown = await repository.get({ actorId: A });
+          assert.equal(shown.line.state, 'awaiting_pairing');
+          assert.equal(shown.line.version, pending.version);
+          const before = await challengeRow(pending.challengeId);
+          // finishChallenge queues a read at once; the provider still pairs.
+          const first = await reserve(current.operation, {
+            action: 'reconcile',
+          });
+          await result(first, { providerState: 'connecting' });
+          const afterFirst = await repository.get({ actorId: A });
+          assert.equal(afterFirst.line.state, 'awaiting_pairing');
+          assert.equal(afterFirst.line.version, shown.line.version);
+          assert.equal(afterFirst.line.generation, shown.line.generation);
+          const resolved = await challengeRow(pending.challengeId);
+          assert.equal(resolved.state, 'resolved');
+          assert.equal(
+            new Date(resolved.expires_at).getTime(),
+            new Date(before.expires_at).getTime(),
+          );
+          // A later sweep read observing the same pairing is also a no-op.
+          await pool.query(
+            "UPDATE crm.outbox_jobs SET status='completed',completed_at=now() WHERE whatsapp_operation_id=$1",
+            [current.operation.id],
+          );
+          now = new Date(now.getTime() + 31_000);
+          assert.equal(
+            (await repository.scheduleReconciliations()).scheduled,
+            1,
+          );
+          const swept = await reserve(current.operation, {
+            action: 'reconcile',
+          });
+          await result(swept, { providerState: 'connecting' });
+          const afterSweep = await repository.get({ actorId: A });
+          assert.equal(afterSweep.line.state, 'awaiting_pairing');
+          assert.equal(afterSweep.line.version, shown.line.version);
+          assert.equal(
+            (await challengeRow(pending.challengeId)).state,
+            'resolved',
+          );
+          // The unchanged version is still the one a renewal must present.
+          const renewed = await challenge(afterSweep, {
+            renewChallengeId: pending.challengeId,
+          });
+          assert.equal(renewed.version, shown.line.version + 1);
+          await repository.reserveChallenge(renewed);
+          await repository.finishChallenge({ ...renewed, delivered: true });
+          // Connected is a real change and bumps.
+          const open = await reserve(current.operation, {
+            action: 'reconcile',
+          });
+          await result(open, {
+            providerState: 'open',
+            confirmedNumber: NUMBER,
+            bindingVerified: true,
+          });
+          const connected = await repository.get({ actorId: A });
+          assert.equal(connected.line.state, 'connected');
+          assert.equal(connected.line.version, renewed.version + 1);
+
+          // A wrong number observed while pairing blocks and bumps.
+          await reset();
+          const wrong = await armed();
+          await result(wrong.dispatch, {
+            providerState: 'open',
+            confirmedNumber: '5511990000002',
+            bindingVerified: true,
+          });
+          const blocked = await repository.get({ actorId: A });
+          assert.equal(blocked.line.state, 'blocked');
+          assert.equal(blocked.line.version, wrong.current.line.version + 1);
+
+          // A provider that dropped the pairing disconnects and bumps.
+          await reset();
+          const dropped = await armed();
+          await result(dropped.dispatch, { providerState: 'close' });
+          const lost = await repository.get({ actorId: A });
+          assert.equal(lost.line.state, 'disconnected');
+          assert.equal(lost.line.version, dropped.current.line.version + 1);
+
+          // A seller disconnect while pairing still bumps through submit.
+          await reset();
+          const paired = await armed();
+          await result(paired.dispatch, { providerState: 'connecting' });
+          const still = await repository.get({ actorId: A });
+          assert.equal(still.line.version, paired.current.line.version);
+          const leaving = await repository.submit({
+            actorId: A,
+            action: 'disconnect',
+            expectedVersion: still.line.version,
+            idempotencyKey: randomUUID(),
+            correlationId: randomUUID(),
+          });
+          assert.equal(leaving.line.version, still.line.version + 1);
+        },
+      );
+
+      await t.test(
         'disconnect cancels an unreserved connect before its effect fence',
         async () => {
           await reset();

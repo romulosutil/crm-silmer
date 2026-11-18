@@ -1056,27 +1056,34 @@ export class PostgresSellerWhatsAppRepository {
         'UPDATE crm.seller_whatsapp_operations SET state=$2,updated_at=$3 WHERE id=$1',
         [op.id, operationState, this.#clock()],
       );
-      const updated = (
-        await client.query(
-          `UPDATE crm.seller_whatsapp_lines SET state=$2,version=version+1,updated_at=$3,
+      // A read that observes the line exactly as it is (e.g. still pairing) is
+      // not a change: bumping the version would make clients drop a challenge
+      // that is still valid. Connected always refreshes its proof and bumps.
+      const unchanged =
+        state === line.state && state !== 'connected' && !line.verified_at;
+      const updated = unchanged
+        ? line
+        : (
+            await client.query(
+              `UPDATE crm.seller_whatsapp_lines SET state=$2,version=version+1,updated_at=$3,
         confirmed_number_envelope=CASE WHEN $4::jsonb IS NULL THEN confirmed_number_envelope ELSE $4::jsonb END,
         verified_at=CASE WHEN $2::text='connected' THEN $3::timestamptz ELSE NULL END WHERE id=$1 RETURNING *`,
-          [
-            line.id,
-            state,
-            this.#clock(),
-            state === 'connected'
-              ? JSON.stringify(
-                  encrypt(
-                    { number: confirmed },
-                    `seller-whatsapp-confirmed:${line.id}`,
-                    this.#key,
-                  ),
-                )
-              : null,
-          ],
-        )
-      ).rows[0];
+              [
+                line.id,
+                state,
+                this.#clock(),
+                state === 'connected'
+                  ? JSON.stringify(
+                      encrypt(
+                        { number: confirmed },
+                        `seller-whatsapp-confirmed:${line.id}`,
+                        this.#key,
+                      ),
+                    )
+                  : null,
+              ],
+            )
+          ).rows[0];
       if (input.effect === 'reconcile' && operationState !== 'unknown')
         await client.query(
           "UPDATE crm.seller_whatsapp_challenges SET state='resolved',updated_at=$2 WHERE line_id=$1 AND generation=$3 AND state IN ('delivered','unknown')",

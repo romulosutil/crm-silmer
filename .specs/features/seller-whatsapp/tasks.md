@@ -49,7 +49,7 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 | [x] WAP-E07 | [Aceitar o fluxo passivo integrado de Pedido](PROMPTS.md#wap-e07)                | Sol/Opus     | WAP-E06         | WAP-T02a-05                                    |
 | [x] WAP-E08 | [Completar mensagens correntes e efeitos pela linha correta](PROMPTS.md#wap-e08) | Sol/Opus     | WAP-E07         | WAP-T02-08, WAP-T03-01, WAP-T03-02, WAP-T02-09 |
 | [x] WAP-E09 | [Completar Meus clientes e Meu WhatsApp na interface](PROMPTS.md#wap-e09)        | Terra/Sonnet | WAP-E08         | WAP-T04-01, WAP-T04-02, WAP-T04-05             |
-| [ ] WAP-E10 | [Entregar primeiro envio humano individual](PROMPTS.md#wap-e10)                  | Sol/Opus     | WAP-E09         | WAP-T04-03, WAP-T04-04                         |
+| [x] WAP-E10 | [Entregar primeiro envio humano individual](PROMPTS.md#wap-e10)                  | Sol/Opus     | WAP-E09         | WAP-T04-03, WAP-T04-04                         |
 | [ ] WAP-E11 | [Concluir verificação e prontidão operacional](PROMPTS.md#wap-e11)               | Sol/Opus     | WAP-E10         | WAP-T05-01, WAP-T05-02, WAP-T05-03, WAP-T05-04 |
 | [ ] WAP-E12 | [Homologar o piloto real da etapa 1](PROMPTS.md#wap-e12)                         | Sol/Opus     | WAP-E11         | WAP-T05-05, WAP-T05-06, WAP-T05-07             |
 
@@ -448,8 +448,8 @@ inicial de sessões/PRs por T.
 | [x] WAP-T03-02  | Persistir saída externa e reconciliar eco                | [WAP-E08](PROMPTS.md#wap-e08) | WAP-06/09/10/11                   |
 | [x] WAP-T04-01  | Completar cadastro e vínculo na carteira                 | [WAP-E09](PROMPTS.md#wap-e09) | WAP-01/17/18/20/21/24/25/26/27/29 |
 | [x] WAP-T04-02  | Entregar Meu WhatsApp e onboarding dispensável           | [WAP-E09](PROMPTS.md#wap-e09) | WAP-01/02/03/04/11/12             |
-| [ ] WAP-T04-03  | Compor primeiro envio individual no servidor             | [WAP-E10](PROMPTS.md#wap-e10) | WAP-22/23/24/32                   |
-| [ ] WAP-T04-04  | Expor compositor do primeiro envio opcional              | [WAP-E10](PROMPTS.md#wap-e10) | WAP-22/23/24/32                   |
+| [x] WAP-T04-03  | Compor primeiro envio individual no servidor             | [WAP-E10](PROMPTS.md#wap-e10) | WAP-22/23/24/32                   |
+| [x] WAP-T04-04  | Expor compositor do primeiro envio opcional              | [WAP-E10](PROMPTS.md#wap-e10) | WAP-22/23/24/32                   |
 | [x] WAP-T02-09  | Preservar cobrança e preparo pela linha correta          | [WAP-E08](PROMPTS.md#wap-e08) | WAP-17/19/27/28/30                |
 | [x] WAP-T04-05  | Conservar contexto das ações comerciais na carteira      | [WAP-E09](PROMPTS.md#wap-e09) | WAP-17/19/25/28/30                |
 | [ ] WAP-T05-01  | Consolidar flags, allowlist e limites sem ativação       | [WAP-E11](PROMPTS.md#wap-e11) | WAP-12/16                         |
@@ -498,6 +498,31 @@ skip; E07 passou 1 e E08 7, também sem skip. Um cluster portátil local usou
 somente dados sintéticos; a prova não homologa provedor, código no mesmo
 celular, recuperação remota ou produção. As expectativas de upgrade das
 suítes E02/E03 foram atualizadas para incluir 0080/0082/0083.
+
+### Evidência local de WAP-E10
+
+`POST /contacts/:contactId/whatsapp/conversations` e a prévia sem efeito
+`GET …/whatsapp/first-message-preview` compõem identidade, conversa humana,
+mensagem, outbox E08 e auditoria numa transação, na ordem de locks do inbound
+pessoal. Guarda própria `SELLER_WHATSAPP_FIRST_SEND_*` default off, somada às
+guardas de envio, inbound e carteira. `test/integration/seller-whatsapp-first-send.test.js`
+(PostgreSQL 17 sintético, 15/15 em três execuções, sem skip) cobre rollback,
+duas abas (um 201 e um 409), replay, identidade de outro Contact, encerrada →
+novo ciclo, linha offline antes da reserva, eco antes/depois do HTTP, timeout
+`outcome_unknown` sem novo comando, envio pendente que exige reconciliação e
+resposta posterior no mesmo Contact/conversa. Regressão E08 7/7 e suítes live
+E02–E04/carteira 76/76.
+
+`seller-whatsapp-first-message.spec.js` (18 cenários) cobre abrir sem efeito,
+dupla aba, offline, timeout/reenvio com a mesma chave, recarga com envio
+pendente, troca de Cliente, perda de acesso, teclado/foco e axe em 390 e
+1366 px. `npm run validate` passou (2.936 testes, 61 skips sem URL live);
+`npm run test:e2e -- --workers=2` passou (1.110 e 7 skips existentes);
+auditorias npm completa e de runtime sem vulnerabilidades. O [runbook](../../../docs/runbooks/seller-whatsapp-outbound.md)
+registra contrato, códigos e rollback. Gate de liberação: a flag segue
+desligada em ambiente real até E12 provar que o JID da resposta coincide com
+o `+E164` gravado (nono dígito); não corrigir por fusão por telefone. A prova
+local não homologa provedor, n8n real ou produção.
 
 ## Cobertura por requisito
 

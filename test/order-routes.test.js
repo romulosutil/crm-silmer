@@ -1657,6 +1657,15 @@ test('PIM-13: PDF download uses the approved ficha and the same print permission
   assert.equal(refused.statusCode, 409);
   assert.deepEqual(refused.json(), { error: { code: 'ORDER_NOT_CONFIRMED' } });
   assert.equal(rendered.length, 1);
+  const stale = await api.inject({
+    headers: readHeaders,
+    method: 'GET',
+    url: `/api/v1/orders/${confirmed.id}/pdf?expectedVersion=${confirmed.version + 1}`,
+  });
+  assert.equal(stale.statusCode, 409);
+  assert.equal(stale.json().error.code, 'VERSION_CONFLICT');
+  assert.equal(stale.headers['content-disposition'], undefined);
+  assert.equal(rendered.length, 1);
 });
 
 test('PIM-13: denied PDF read never reaches the renderer', async (t) => {

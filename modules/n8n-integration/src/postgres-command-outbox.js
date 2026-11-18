@@ -1,5 +1,11 @@
 import { decryptJson, encryptJson, fingerprint } from './crypto.js';
 import { retainedMediaReference } from './retained-media-reference.js';
+import { N8nIntegrationError } from './errors.js';
+import {
+  personalSendAllowed,
+  sellerWhatsAppTarget,
+  snapshotWhatsAppTarget,
+} from './seller-whatsapp-send.js';
 
 /**
  * Drop-in replacement for PostgresOutboundMessageOutbox. It is called by the
@@ -7,11 +13,12 @@ import { retainedMediaReference } from './retained-media-reference.js';
  * human message and conversation takeover.
  */
 export class PostgresN8nCommandOutbox {
-  /** @param {{envelopeKey: Buffer, messageEnvelopeKey?: Buffer, contactEnvelopeKey?: Buffer}} options */
+  /** @param {{envelopeKey: Buffer, messageEnvelopeKey?: Buffer, contactEnvelopeKey?: Buffer, personalSendSellers?: Set<string>}} options */
   constructor({
     envelopeKey,
     messageEnvelopeKey = envelopeKey,
     contactEnvelopeKey = envelopeKey,
+    personalSendSellers = new Set(),
   }) {
     for (const [key, name] of [
       [envelopeKey, 'envelopeKey'],
@@ -25,6 +32,8 @@ export class PostgresN8nCommandOutbox {
     this.envelopeKey = Buffer.from(envelopeKey);
     this.messageEnvelopeKey = Buffer.from(messageEnvelopeKey);
     this.contactEnvelopeKey = Buffer.from(contactEnvelopeKey);
+    this.personalSendSellers = personalSendSellers;
+    this.supportsPersonalSend = personalSendSellers.size > 0;
   }
 
   /** @param {{id: string, idempotencyKey: string, messageId: string, availableAt: string|Date,billingSend?:boolean}} input @param {{transaction?: any}} context */
@@ -43,13 +52,23 @@ export class PostgresN8nCommandOutbox {
          JOIN crm.contact_identities AS identity
            ON identity.id = conversation.contact_identity_id
          WHERE message.id = $1
-         FOR UPDATE OF message, conversation`,
+         FOR UPDATE OF message, conversation FOR SHARE OF identity`,
         [input.messageId],
       )
     ).rows[0];
     if (!row || row.command_id !== input.idempotencyKey) {
       throw new Error('Outbound message reservation is inconsistent');
     }
+    const target = await sellerWhatsAppTarget(client, row.conversation_id);
+    if (
+      target &&
+      !personalSendAllowed(target, row.author_id, this.personalSendSellers)
+    )
+      throw new N8nIntegrationError(
+        'Personal WhatsApp sending is unavailable',
+        'WHATSAPP_SEND_UNAVAILABLE',
+        503,
+      );
     const message = decryptJson(
       row.content_envelope,
       `message:${row.id}`,
@@ -82,6 +101,13 @@ export class PostgresN8nCommandOutbox {
     }
     const payload = {
       ...(input.billingSend === true ? { billing_send: true } : {}),
+      ...(target
+        ? {
+            whatsapp_target: snapshotWhatsAppTarget(target, {
+              commercial: input.billingSend === true,
+            }),
+          }
+        : {}),
       action: 'send_message',
       actor: { id: row.author_id },
       automation_epoch: Number(row.automation_epoch),

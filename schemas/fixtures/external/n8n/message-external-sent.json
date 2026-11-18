@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "event_type": "message.external.sent",
+  "event_id": "00000001-0000-4000-8000-000000000003:external:SYNTHETIC_DEVICE",
+  "external_message_id": "SYNTHETIC_DEVICE",
+  "occurred_at": "2026-11-17T12:00:02.000Z",
+  "source": {
+    "bindingId": "00000001-0000-4000-8000-000000000001",
+    "lineId": "00000001-0000-4000-8000-000000000002",
+    "accountId": "00000001-0000-4000-8000-000000000003",
+    "generation": 1
+  },
+  "instance": "wap_synthetic",
+  "origin": "device",
+  "from_me": true,
+  "to": "+12345678",
+  "message": { "type": "image", "text": "Imagem sintética" }
+}

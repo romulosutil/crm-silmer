@@ -53,7 +53,9 @@ export function createInboundMediaRuntime({
              AND (($3::boolean AND EXISTS (SELECT 1 FROM crm.user_capabilities
                WHERE user_id=$4 AND capability='COMMERCIAL_ADMIN'))
                OR ${contactConversationVisible('conversation', '$4')})
-             AND message.direction='inbound' AND media.media_type=message.message_type
+             AND (message.direction='inbound' OR (message.author_kind='system' AND message.command_id LIKE 'external:%'))
+             AND media.provider=message.provider AND media.provider_account_id=message.provider_account_id
+             AND media.media_type=message.message_type
              AND (message.message_type IN ('image','audio','video')
                OR (message.message_type='document' AND media.detected_mime_type
                  IN ('image/jpeg','image/png','image/webp','image/gif','application/pdf','application/vnd.corel-draw','application/x-vnd.corel.draw.document+zip')))`,

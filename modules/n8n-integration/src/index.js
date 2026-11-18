@@ -18,6 +18,14 @@ export {
 } from './postgres-command-store.js';
 export { PostgresN8nCommandOutbox } from './postgres-command-outbox.js';
 export {
+  lockSellerWhatsAppLines,
+  matchesWhatsAppTarget,
+  personalSendAllowed,
+  sellerWhatsAppSendConfiguration,
+  sellerWhatsAppTarget,
+  snapshotWhatsAppTarget,
+} from './seller-whatsapp-send.js';
+export {
   lockBillingSend,
   billingSendBlockReason,
   blockBillingSend,

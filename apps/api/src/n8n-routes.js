@@ -10,6 +10,7 @@ const EVENT_ACTIONS = Object.freeze({
   'order.assistance.observed': 'integration.n8n.event.create',
   'handoff.requested': 'handoff.create',
   'message.delivered': 'integration.n8n.event.create',
+  'message.external.sent': 'integration.n8n.event.create',
   'message.failed': 'integration.n8n.event.create',
   'message.read': 'integration.n8n.event.create',
   'message.send.requested': 'integration.n8n.event.create',
@@ -114,6 +115,13 @@ export function registerN8nRoutes(api, integration, contextFor) {
         const contentSha256 = requireSha256(
           request.headers['x-silmer-content-sha256'],
         );
+        const externalBindingId = request.headers['x-silmer-whatsapp-binding'];
+        if (
+          externalBindingId !== undefined &&
+          (typeof externalBindingId !== 'string' ||
+            !/^[a-f0-9-]{36}$/iu.test(externalBindingId))
+        )
+          throw new N8nRouteError(400, 'INVALID_WHATSAPP_BINDING');
         const saved = await request.saveRequestFiles();
         const files = saved.files;
         if (files.length !== 1) {
@@ -140,6 +148,7 @@ export function registerN8nRoutes(api, integration, contextFor) {
           contentSha256,
           conversationId,
           externalId,
+          ...(externalBindingId ? { externalBindingId } : {}),
           filename,
           mimeType,
           size,
@@ -164,16 +173,20 @@ export function registerN8nRoutes(api, integration, contextFor) {
           'event_type',
           'external_message_id',
           'failure',
+          'from_me',
           'handoff',
+          'instance',
           'message',
           'observation',
           'occurred_at',
           'open_order',
           'order_id',
+          'origin',
           'schema_version',
           'source_revision',
           'subject_id',
           'target_contract',
+          'to',
           'transcript',
           'source',
           // AGENTE-OBS-01: optional turn telemetry (codes and counts only).
@@ -184,6 +197,11 @@ export function registerN8nRoutes(api, integration, contextFor) {
           body.event_type,
           'INVALID_EVENT_TYPE',
         );
+        if (
+          eventType !== 'message.external.sent' &&
+          ['from_me', 'instance', 'origin', 'to'].some((key) => key in body)
+        )
+          throw new N8nRouteError(400, 'INVALID_EVENT_FIELDS');
         const action = /** @type {Record<string, string>} */ (EVENT_ACTIONS)[
           eventType
         ];

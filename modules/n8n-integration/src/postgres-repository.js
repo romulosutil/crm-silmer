@@ -19,6 +19,14 @@ import {
 } from './errors.js';
 import { retainedMediaReference } from './retained-media-reference.js';
 import {
+  commandWhatsAppTarget,
+  lockSellerWhatsAppLines,
+  matchesWhatsAppTarget,
+  personalSendAllowed,
+  sameWhatsAppSource,
+  sellerWhatsAppTarget,
+} from './seller-whatsapp-send.js';
+import {
   lockBillingSend,
   billingSendBlockReason,
   blockBillingSend,
@@ -98,6 +106,7 @@ export class PostgresN8nIntegrationRepository {
    *   billingSendEnabled?: boolean,
    *   personalInboundEnabled?: boolean,
    *   personalInboundSellerIds?: string[],
+   *   personalSendSellers?: Set<string>,
    * }} options
    */
   constructor({
@@ -112,6 +121,7 @@ export class PostgresN8nIntegrationRepository {
     billingSendEnabled = false,
     personalInboundEnabled = false,
     personalInboundSellerIds = [],
+    personalSendSellers = new Set(),
   }) {
     if (
       !database ||
@@ -147,6 +157,7 @@ export class PostgresN8nIntegrationRepository {
       throw new TypeError('Invalid personal inbound seller allowlist');
     this.personalInboundEnabled = personalInboundEnabled === true;
     this.personalInboundSellerIds = new Set(personalInboundSellerIds);
+    this.personalSendSellers = personalSendSellers;
     if (!Number.isInteger(automationMessageCap) || automationMessageCap < 2) {
       throw new TypeError(
         'automationMessageCap must be an integer of at least 2',
@@ -226,9 +237,29 @@ export class PostgresN8nIntegrationRepository {
 
   /** @param {any} input @param {any} runtime */
   async receiveInbound(input, runtime) {
+    return this.#receiveChannelMessage(input, runtime, false);
+  }
+
+  /** @param {any} input @param {any} runtime @param {boolean} external */
+  async #receiveChannelMessage(input, runtime, external) {
     return this.database.transaction(async (client) => {
       await transactionBounds(client);
+      if (external)
+        await lockExternalSend(
+          client,
+          input.providerAccountId,
+          input.externalMessageId,
+        );
       const personal = await this.#personalInbound(client, input);
+      if (external) {
+        if (!personal || personal.pending) throw new N8nForbiddenError();
+        const duplicate = await findExternalSend(
+          client,
+          input,
+          this.envelopeKey,
+        );
+        if (duplicate) return duplicate;
+      }
       // Serialize identity/cycle discovery, including different events arriving
       // together. A replay cannot increment the revision or change ownership.
       await advisoryLock(
@@ -239,30 +270,33 @@ export class PostgresN8nIntegrationRepository {
         client,
         `n8n-inbound:${input.provider}:${input.providerAccountId}:${input.externalEventId}`,
       );
-      const replay = await selectReceipt(
-        client,
-        'n8n.messages.inbound',
-        input.technical.idempotencyKey,
-      );
+      const replay = external
+        ? null
+        : await selectReceipt(
+            client,
+            'n8n.messages.inbound',
+            input.technical.idempotencyKey,
+          );
       if (replay) {
         assertFingerprint(replay, input.eventFingerprint);
         return this.#inboundResponse(client, replay.conversation_id, true);
       }
 
-      const duplicateMessage = personal
-        ? (
-            await client.query(
-              `SELECT message.conversation_id,receipt.fingerprint FROM crm.messages message
+      const duplicateMessage =
+        personal && !external
+          ? (
+              await client.query(
+                `SELECT message.conversation_id,receipt.fingerprint FROM crm.messages message
            LEFT JOIN crm.n8n_events receipt ON receipt.message_id=message.id AND receipt.event_type='message.inbound'
            WHERE message.provider=$1 AND message.provider_account_id=$2 AND message.external_message_id=$3`,
-              [
-                input.provider,
-                input.providerAccountId,
-                input.externalMessageId,
-              ],
-            )
-          ).rows[0]
-        : null;
+                [
+                  input.provider,
+                  input.providerAccountId,
+                  input.externalMessageId,
+                ],
+              )
+            ).rows[0]
+          : null;
       if (duplicateMessage) {
         if (duplicateMessage.fingerprint)
           assertFingerprint(duplicateMessage, input.eventFingerprint);
@@ -371,7 +405,7 @@ export class PostgresN8nIntegrationRepository {
             {
               actor: { id: personal.sellerId, isAdmin: false },
               contactId: identity.current_contact_id,
-              provenance: 'personal_inbound',
+              provenance: external ? 'personal_outbound' : 'personal_inbound',
               sourceId: personal.lineId,
               now,
               correlationId: input.correlationId,
@@ -448,7 +482,7 @@ export class PostgresN8nIntegrationRepository {
                 last_message_at, terminal_at, inbound_revision,
                 claimed_revision, briefing_version, last_inbound_event_id,assigned_user_id)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $10, $11, 0, 1,
-                     $8, $8, NULL, 1, 0, 0, $9,$12)
+                     $8, $8, NULL, $13, 0, 0, $9,$12)
              RETURNING *`,
             [
               runtime.idFactory('conversation'),
@@ -459,7 +493,7 @@ export class PostgresN8nIntegrationRepository {
               Number(previous?.cycle_number ?? 0) + 1,
               previous?.id ?? null,
               input.occurredAt,
-              input.externalEventId,
+              external ? null : input.externalEventId,
               personal
                 ? personal.pending
                   ? 'requer_atencao'
@@ -467,6 +501,7 @@ export class PostgresN8nIntegrationRepository {
                 : 'nova',
               personal ? 'human' : 'assistant',
               personal?.sellerId ?? null,
+              external ? 0 : 1,
             ],
           )
         ).rows[0];
@@ -480,8 +515,8 @@ export class PostgresN8nIntegrationRepository {
         conversation = (
           await client.query(
             `UPDATE crm.conversations
-             SET inbound_revision = inbound_revision + 1,
-                 last_inbound_event_id = $2,
+             SET inbound_revision = inbound_revision + CASE WHEN $5 THEN 0 ELSE 1 END,
+                 last_inbound_event_id = CASE WHEN $5 THEN last_inbound_event_id ELSE $2 END,
                  last_message_at = GREATEST(last_message_at, $3),
                  archived_at = NULL,
                  state = CASE WHEN $4 THEN 'requer_atencao' ELSE state END,
@@ -493,9 +528,60 @@ export class PostgresN8nIntegrationRepository {
               input.externalEventId,
               input.occurredAt,
               personal?.pending === true,
+              external,
             ],
           )
         ).rows[0];
+      }
+
+      if (external) {
+        if (!personal) throw new N8nForbiddenError();
+        if (Date.parse(input.occurredAt) > Date.parse(now))
+          throw new N8nValidationError('Future external WhatsApp send');
+        const messageId = runtime.idFactory('message');
+        await client.query(
+          `INSERT INTO crm.messages (id,conversation_id,provider,provider_account_id,
+            external_message_id,command_id,direction,author_kind,author_id,message_type,
+            content_envelope,status,delivery_status,delivery_status_at,occurred_at,created_at)
+           VALUES ($1,$2,'evolution',$3,$4,$5,'outbound','system',$6,$7,$8::jsonb,
+            'outcome_unknown','outcome_unknown',$9,$9,$10)`,
+          [
+            messageId,
+            conversation.id,
+            input.providerAccountId,
+            input.externalMessageId,
+            `external:${messageId}`,
+            personal.lineId,
+            input.message.type,
+            JSON.stringify(
+              encryptJson(
+                input.message.content,
+                `message:${messageId}`,
+                this.messageEnvelopeKey,
+              ),
+            ),
+            input.occurredAt,
+            now,
+          ],
+        );
+        const response = await insertExternalSend(
+          client,
+          input,
+          conversation.id,
+        );
+        await applyPendingDelivery(client, {
+          ...input,
+          conversationId: conversation.id,
+        });
+        await appendConversationStreamEvent(client, runtime, {
+          conversationId: conversation.id,
+          correlationId: input.correlationId,
+          occurredAt: now,
+          type: 'conversation.n8n.message.external.sent',
+        });
+        return input.message.type === 'text'
+          ? response
+          : { ...response, attachment_conversation_id: conversation.id };
       }
 
       if (input.channel === 'site_chat') {
@@ -613,19 +699,19 @@ export class PostgresN8nIntegrationRepository {
       throw new N8nForbiddenError();
     const user = (
       await client.query(
-        'SELECT id,disabled_at FROM crm.users WHERE id=$1 FOR UPDATE',
+        'SELECT id,disabled_at FROM crm.users WHERE id=$1 FOR SHARE',
         [discovered.seller_id],
       )
     ).rows[0];
     const role = (
       await client.query(
-        'SELECT function_name FROM crm.user_functions WHERE user_id=$1',
+        'SELECT function_name FROM crm.user_functions WHERE user_id=$1 FOR SHARE',
         [discovered.seller_id],
       )
     ).rows[0];
     const line = (
       await client.query(
-        'SELECT * FROM crm.seller_whatsapp_lines WHERE id=$1 FOR UPDATE',
+        'SELECT * FROM crm.seller_whatsapp_lines WHERE id=$1 FOR SHARE',
         [discovered.id],
       )
     ).rows[0];
@@ -645,6 +731,9 @@ export class PostgresN8nIntegrationRepository {
       binding.line_id !== line.id ||
       source.lineId !== line.id ||
       binding.account_id !== input.providerAccountId ||
+      (input.instance &&
+        (binding.instance_name !== input.instance ||
+          line.instance_name !== input.instance)) ||
       source.accountId !== input.providerAccountId ||
       Number(binding.generation) !== source.generation ||
       (pending
@@ -763,6 +852,8 @@ export class PostgresN8nIntegrationRepository {
   async storeAttachment(input, runtime) {
     return this.database.transaction(async (client) => {
       await transactionBounds(client);
+      if (input.externalBindingId)
+        await this.assertExternalAttachment(client, input);
       await advisoryLock(
         client,
         `n8n-attachment:${input.technical.idempotencyKey}`,
@@ -778,10 +869,15 @@ export class PostgresN8nIntegrationRepository {
       }
       const message = (
         await client.query(
-          `SELECT id FROM crm.messages
+          `SELECT id,provider_account_id FROM crm.messages
            WHERE conversation_id = $1 AND external_message_id = $2
+            AND ($3::boolean OR NOT (author_kind='system' AND coalesce(command_id,'') LIKE 'external:%'))
            FOR UPDATE`,
-          [input.conversationId, input.externalId],
+          [
+            input.conversationId,
+            input.externalId,
+            Boolean(input.externalBindingId),
+          ],
         )
       ).rows[0];
       if (!message) {
@@ -796,12 +892,20 @@ export class PostgresN8nIntegrationRepository {
       }
       const media = (
         await client.query(
-          `SELECT id, content_sha256, detected_mime_type, size_bytes
+          `SELECT id, provider, provider_account_id, external_media_id,
+                  content_sha256, detected_mime_type, size_bytes
            FROM crm.transient_media WHERE id = $1 FOR UPDATE`,
           [input.transientMediaId],
         )
       ).rows[0];
       if (!media) throw new N8nNotFoundError('Transient media was not found');
+      if (
+        input.externalBindingId &&
+        (media.provider !== 'evolution' ||
+          media.provider_account_id !== message.provider_account_id ||
+          media.external_media_id !== input.externalId)
+      )
+        throw new N8nForbiddenError();
       if (
         media.content_sha256 !== input.contentSha256 ||
         Number(media.size_bytes) !== input.size ||
@@ -850,7 +954,7 @@ export class PostgresN8nIntegrationRepository {
         fingerprint: input.eventFingerprint,
         idempotencyKey: input.technical.idempotencyKey,
         idempotencyScope: 'n8n.attachments.store',
-        messageId: message.id,
+        messageId: input.externalBindingId ? null : message.id,
         occurredAt: createdAt,
         outcome,
         processedAt: createdAt,
@@ -867,8 +971,64 @@ export class PostgresN8nIntegrationRepository {
         targetType: 'transient_media',
         version: 1,
       });
+      if (input.externalBindingId)
+        await appendConversationStreamEvent(client, runtime, {
+          conversationId: input.conversationId,
+          correlationId: input.correlationId,
+          occurredAt: createdAt,
+          type: 'conversation.n8n.attachment.stored',
+        });
       return attachmentResponse(outcome, false);
     });
+  }
+
+  /** Transient bytes can only be linked to the exact current external fact.
+   * @param {Queryable} client @param {any} input */
+  async assertExternalAttachment(client, input) {
+    if (!/^[a-f0-9-]{36}$/iu.test(input.externalBindingId ?? ''))
+      throw new N8nForbiddenError();
+    const read = async () =>
+      (
+        await client.query(
+          `SELECT f.account_id,f.binding_id,f.generation,f.occurred_at,b.line_id,b.instance_name
+       FROM crm.personal_whatsapp_external_sends f
+       JOIN crm.seller_whatsapp_bindings b ON b.id=f.binding_id
+       JOIN crm.messages m ON m.provider='evolution' AND m.provider_account_id=f.account_id::text
+         AND m.external_message_id=f.external_message_id AND m.conversation_id=f.conversation_id
+       WHERE f.conversation_id=$1 AND f.external_message_id=$2 AND f.binding_id::text=$3
+         AND m.direction='outbound' AND m.author_kind='system' AND m.command_id LIKE 'external:%'
+         AND m.message_type IN ('audio','document','image','video')`,
+          [input.conversationId, input.externalId, input.externalBindingId],
+        )
+      ).rows[0];
+    const found = await read();
+    if (!found) throw new N8nForbiddenError();
+    await lockExternalSend(client, found.account_id, input.externalId);
+    const row = await read();
+    if (!row) throw new N8nForbiddenError();
+    const personal = await this.#personalInbound(client, {
+      ...input,
+      channel: 'whatsapp',
+      provider: 'evolution',
+      providerAccountId: row.account_id,
+      instance: row.instance_name,
+      occurredAt: new Date(row.occurred_at).toISOString(),
+      source: {
+        accountId: row.account_id,
+        bindingId: row.binding_id,
+        lineId: row.line_id,
+        generation: Number(row.generation),
+      },
+    });
+    if (!personal || personal.pending) throw new N8nForbiddenError();
+    await lockSellerWhatsAppLines(client, [input.conversationId]);
+    await client.query(
+      'SELECT id FROM crm.conversations WHERE id=$1 FOR UPDATE',
+      [input.conversationId],
+    );
+    const target = await sellerWhatsAppTarget(client, input.conversationId);
+    if (!target?.usable || target.sellerId !== personal.sellerId)
+      throw new N8nForbiddenError();
   }
 
   /** @param {any} input @param {any} runtime */
@@ -886,6 +1046,7 @@ export class PostgresN8nIntegrationRepository {
         )
       ).rows[0];
       if (!target) throw new N8nNotFoundError('Command not found');
+      await lockSellerWhatsAppLines(client, [target.conversation_id]);
       const conversation = (
         await client.query(
           'SELECT * FROM crm.conversations WHERE id=$1 FOR UPDATE',
@@ -893,6 +1054,7 @@ export class PostgresN8nIntegrationRepository {
         )
       ).rows[0];
       const command = await selectPanelCommand(client, input.commandId);
+      await this.#assertPersonalSend(client, command, conversation);
       const lateMedia = await assertReservedExecution(
         client,
         command,
@@ -963,6 +1125,7 @@ export class PostgresN8nIntegrationRepository {
         )
       ).rows[0];
       if (!target) throw new N8nNotFoundError('Command not found');
+      await lockSellerWhatsAppLines(client, [target.conversation_id]);
       const conversation = (
         await client.query(
           'SELECT * FROM crm.conversations WHERE id=$1 FOR UPDATE',
@@ -978,6 +1141,12 @@ export class PostgresN8nIntegrationRepository {
         return { valid: false, blockedReason: blocked.blocked_reason };
       }
       await assertReservedExecution(client, command, input);
+      const personal = await this.#assertPersonalSend(
+        client,
+        command,
+        conversation,
+      );
+      if (input.dispatch === true && !personal) throw new N8nForbiddenError();
       for (const intent of intents) {
         const reason = await billingSendBlockReason(client, intent, {
           enabled: this.billingSendEnabled,
@@ -1017,12 +1186,54 @@ export class PostgresN8nIntegrationRepository {
         'sending',
         'processing',
       );
+      if (personal && input.dispatch === true) {
+        if (
+          typeof payload.to !== 'string' ||
+          !/^\+?[1-9][0-9]{7,14}$/u.test(payload.to)
+        )
+          throw new N8nConflictError(
+            'WhatsApp destination is unavailable',
+            'WHATSAPP_SEND_UNAVAILABLE',
+          );
+        await client.query(
+          'UPDATE crm.n8n_commands SET whatsapp_dispatched_at=$2 WHERE command_id=$1',
+          [command.command_id, now],
+        );
+        return {
+          valid: true,
+          instance: personal.source.instance,
+          to: payload.to,
+        };
+      }
       return { valid: true };
     });
   }
 
+  /** @param {Queryable} client @param {any} command @param {any} conversation @param {any} [source] */
+  async #assertPersonalSend(client, command, conversation, source) {
+    const target = await sellerWhatsAppTarget(client, conversation.id);
+    const reserved = commandWhatsAppTarget(command, this.envelopeKey);
+    if (!target && !reserved && !source) return null;
+    if (
+      !command ||
+      command.whatsapp_dispatched_at ||
+      !target ||
+      !matchesWhatsAppTarget(target, reserved) ||
+      (source && !sameWhatsAppSource(target.source, source)) ||
+      command.actor_kind !== 'human' ||
+      !personalSendAllowed(target, command.actor_id, this.personalSendSellers)
+    )
+      throw new N8nConflictError(
+        'Personal WhatsApp sending is unavailable',
+        'WHATSAPP_SEND_UNAVAILABLE',
+      );
+    return target;
+  }
+
   /** @param {any} input @param {any} runtime */
   async recordEvent(input, runtime) {
+    if (input.eventType === 'message.external.sent')
+      return this.#receiveChannelMessage(input, runtime, true);
     // Order projection opens its own transaction (PostgresOrderRepository
     // owns that) and both it and this transaction can insert into
     // crm.domain_events, whose BEFORE INSERT trigger takes one global
@@ -1048,11 +1259,41 @@ export class PostgresN8nIntegrationRepository {
       );
     const result = await transaction(async (client) => {
       await transactionBounds(client);
+      const personalDelivery = Boolean(
+        input.source &&
+        !input.commandId &&
+        ['message.delivered', 'message.read', 'message.failed'].includes(
+          input.eventType,
+        ),
+      );
+      if (
+        input.source &&
+        input.externalMessageId &&
+        (personalDelivery || input.eventType === 'message.sent')
+      ) {
+        if (!/^[A-Za-z0-9_-]{1,512}$/u.test(input.externalMessageId))
+          throw new N8nValidationError('Invalid WhatsApp message identifier');
+        await lockExternalSend(
+          client,
+          input.source.accountId,
+          input.externalMessageId,
+        );
+      }
       const originConversation =
         input.conversationId ??
         (input.eventType === 'workflow.failed'
           ? null
-          : await resolveEventConversation(client, input));
+          : await resolveEventConversation(client, input, personalDelivery));
+      if (personalDelivery && !originConversation) {
+        const target = await this.#personalInbound(client, {
+          ...input,
+          channel: 'whatsapp',
+          provider: 'evolution',
+          providerAccountId: input.source.accountId,
+        });
+        if (!target || target.pending) throw new N8nForbiddenError();
+        return recordPendingDelivery(client, runtime, input);
+      }
       const origin = originConversation
         ? (
             await client.query(
@@ -1061,20 +1302,34 @@ export class PostgresN8nIntegrationRepository {
             )
           ).rows[0]
         : null;
-      const personal = origin
-        ? await this.#personalInbound(client, {
-            ...input,
-            channel: 'whatsapp',
-            provider: origin.provider,
-            providerAccountId: origin.provider_account_id,
-          })
-        : null;
+      const commandEvent =
+        input.commandId &&
+        ([
+          'message.send.requested',
+          'message.sent',
+          'message.send.unknown',
+        ].includes(input.eventType) ||
+          (input.eventType === 'workflow.failed' &&
+            input.failure?.phase === 'before_message_send'));
+      const personal =
+        origin && !commandEvent
+          ? await this.#personalInbound(client, {
+              ...input,
+              channel: 'whatsapp',
+              provider: origin.provider,
+              providerAccountId: origin.provider_account_id,
+            })
+          : null;
       if (
         personal &&
         (personal.pending ||
           input.briefingPatch ||
-          input.handoff ||
-          (input.eventType === 'message.send.requested' && !input.commandId))
+          ![
+            'message.delivered',
+            'message.read',
+            'message.failed',
+            'message.transcribed',
+          ].includes(input.eventType))
       )
         throw new N8nForbiddenError();
       await advisoryLock(client, `n8n-event:${input.technical.idempotencyKey}`);
@@ -1183,6 +1438,8 @@ export class PostgresN8nIntegrationRepository {
         externalMessageId: input.externalMessageId,
         conversationId: resolvedConversationId,
       });
+      if (commandEvent && resolvedConversationId)
+        await lockSellerWhatsAppLines(client, [resolvedConversationId]);
       let conversation = null;
       if (resolvedConversationId) {
         conversation = (
@@ -1203,6 +1460,42 @@ export class PostgresN8nIntegrationRepository {
         eventInput.eventType === 'message.send.requested'
           ? await selectPanelCommand(client, eventInput.commandId)
           : null;
+      const personalCommand =
+        commandEvent && conversation
+          ? await sellerWhatsAppTarget(client, conversation.id)
+          : null;
+      if (commandEvent && Boolean(input.source) !== Boolean(personalCommand))
+        throw new N8nForbiddenError();
+      if (
+        personalCommand &&
+        (input.handoff ||
+          input.openOrder ||
+          input.briefingPatch ||
+          input.subjectId ||
+          input.turn)
+      )
+        throw new N8nForbiddenError();
+      if (
+        personalCommand &&
+        eventInput.eventType !== 'message.send.requested'
+      ) {
+        const command = await selectPanelCommand(client, eventInput.commandId);
+        const target = commandWhatsAppTarget(command, this.envelopeKey);
+        if (
+          !target ||
+          !sameWhatsAppSource(target.source, eventInput.source) ||
+          target.source.accountId !== conversation.provider_account_id ||
+          (eventInput.eventType === 'workflow.failed'
+            ? command.whatsapp_dispatched_at
+            : !command.whatsapp_dispatched_at)
+        )
+          throw new N8nConflictError(
+            'WhatsApp result does not match original dispatch',
+          );
+        await assertBillingCallbackExecution(client, command, eventInput);
+        if (eventInput.eventType === 'message.sent')
+          await mergeExternalSend(client, eventInput, command);
+      }
       // CP-14/CP-18: the legacy workflow only knows the conversation's one
       // pending order. A selected different subject makes that target unsafe.
       // Stop before reserving a reply, merging briefing or opening an order.
@@ -1350,13 +1643,17 @@ export class PostgresN8nIntegrationRepository {
         );
         messageId = sent.messageId;
         outcome.deliveryStatus = sent.status;
+        if (personalCommand) {
+          const delivery = await applyPendingDelivery(client, eventInput);
+          if (delivery) outcome.deliveryStatus = delivery.status;
+        }
       } else if (
         ['message.delivered', 'message.read', 'message.failed'].includes(
           eventInput.eventType,
         )
       ) {
         const delivery = await updateDeliveryStatus(client, eventInput);
-        messageId = delivery.messageId;
+        messageId = delivery.externalOnly ? null : delivery.messageId;
         outcome.deliveryStatus = delivery.status;
         outcome.changed = delivery.changed;
       } else if (eventInput.eventType === 'message.send.unknown') {
@@ -1548,7 +1845,10 @@ export class PostgresN8nIntegrationRepository {
         idempotencyScope: 'n8n.events',
         messageId,
         occurredAt: eventInput.occurredAt,
-        outcome: personal ? { ...outcome, source: input.source } : outcome,
+        outcome:
+          personal || personalCommand
+            ? { ...outcome, source: input.source }
+            : outcome,
         processedAt,
         sourceRevision: eventInput.sourceRevision,
         technical: eventInput.technical,
@@ -2645,6 +2945,12 @@ export class PostgresN8nIntegrationRepository {
       throw new N8nConflictError('Send reservation is incomplete');
     }
     if (panelCommand) {
+      await this.#assertPersonalSend(
+        client,
+        panelCommand,
+        conversation,
+        input.source,
+      );
       if (billingIntent) {
         const reason = await billingSendBlockReason(client, billingIntent, {
           enabled: this.billingSendEnabled,
@@ -2705,6 +3011,8 @@ export class PostgresN8nIntegrationRepository {
       return { messageId: updated.rows[0].id };
     }
 
+    if (input.source || (await sellerWhatsAppTarget(client, conversation.id)))
+      throw new N8nForbiddenError();
     assertCurrentAutomatedTurn(conversation, input);
     // The last automated slot belongs to the handoff notice (ADR 009).
     if (
@@ -2919,8 +3227,8 @@ function assertFingerprint(receipt, expected) {
   }
 }
 
-/** @param {Queryable} client @param {any} input */
-async function resolveEventConversation(client, input) {
+/** @param {Queryable} client @param {any} input @param {boolean} [allowMissing] */
+async function resolveEventConversation(client, input, allowMissing = false) {
   let rows = [];
   if (input.commandId) {
     rows = (
@@ -2944,6 +3252,7 @@ async function resolveEventConversation(client, input) {
     ).rows;
   }
   if (rows.length === 0) {
+    if (allowMissing) return null;
     throw new N8nNotFoundError('Event target was not found');
   }
   if (rows.length !== 1) {
@@ -2953,6 +3262,192 @@ async function resolveEventConversation(client, input) {
     );
   }
   return rows[0].conversation_id;
+}
+
+/** @param {Queryable} client @param {string} accountId @param {string} externalId */
+async function lockExternalSend(client, accountId, externalId) {
+  await advisoryLock(client, `evolution-send:${accountId}:${externalId}`);
+}
+
+/** @param {Queryable} client @param {any} runtime @param {any} input */
+async function recordPendingDelivery(client, runtime, input) {
+  const processedAt = validClock(runtime.clock);
+  if (Date.parse(input.occurredAt) > Date.parse(processedAt))
+    throw new N8nValidationError('Future WhatsApp receipt');
+  await advisoryLock(client, `n8n-event:${input.technical.idempotencyKey}`);
+  const replay = await selectReceipt(
+    client,
+    'n8n.events',
+    input.technical.idempotencyKey,
+  );
+  if (replay) assertFingerprint(replay, input.eventFingerprint);
+  else
+    await insertReceipt(client, runtime, {
+      automationEpoch: null,
+      conversationId: null,
+      correlationId: input.correlationId,
+      eventId: input.eventId,
+      eventType: input.eventType,
+      fingerprint: input.eventFingerprint,
+      idempotencyScope: 'n8n.events',
+      idempotencyKey: input.technical.idempotencyKey,
+      messageId: null,
+      occurredAt: input.occurredAt,
+      processedAt,
+      sourceRevision: null,
+      technical: input.technical,
+      outcome: {
+        pendingExternalId: input.externalMessageId,
+        source: input.source,
+        failureCode: input.failure?.code ?? null,
+      },
+    });
+  return {
+    accepted: true,
+    duplicate: Boolean(replay),
+    event_id: input.eventId,
+    processed_at: processedAt,
+  };
+}
+
+/** @param {Queryable} client @param {any} input */
+async function applyPendingDelivery(client, input) {
+  const receipt = (
+    await client.query(
+      `SELECT event_type,occurred_at,outcome->>'failureCode' AS failure_code
+     FROM crm.n8n_events WHERE conversation_id IS NULL AND outcome ? 'pendingExternalId'
+      AND outcome->>'pendingExternalId'=$1 AND outcome->'source'->>'accountId'=$2
+      AND outcome->'source'->>'bindingId'=$3 AND outcome->'source'->>'generation'=$4
+     ORDER BY CASE event_type WHEN 'message.read' THEN 3 WHEN 'message.delivered' THEN 2 ELSE 1 END DESC,
+      occurred_at ASC,id ASC LIMIT 1`,
+      [
+        input.externalMessageId,
+        input.source.accountId,
+        input.source.bindingId,
+        String(input.source.generation),
+      ],
+    )
+  ).rows[0];
+  if (!receipt) return null;
+  return updateDeliveryStatus(client, {
+    ...input,
+    eventType: receipt.event_type,
+    occurredAt: receipt.occurred_at,
+    failure: receipt.failure_code ? { code: receipt.failure_code } : null,
+  });
+}
+
+/** @param {Queryable} client @param {any} input @param {string} conversationId */
+async function insertExternalSend(client, input, conversationId) {
+  await client.query(
+    `INSERT INTO crm.personal_whatsapp_external_sends
+      (account_id,external_message_id,binding_id,generation,conversation_id,fingerprint,occurred_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [
+      input.providerAccountId,
+      input.externalMessageId,
+      input.source.bindingId,
+      input.source.generation,
+      conversationId,
+      input.eventFingerprint,
+      input.occurredAt,
+    ],
+  );
+  return { accepted: true, duplicate: false, event_id: input.eventId };
+}
+
+/** @param {Queryable} client @param {any} input @param {Buffer} key */
+async function findExternalSend(client, input, key) {
+  const fact = (
+    await client.query(
+      `SELECT f.fingerprint,m.conversation_id AS attachment_conversation_id
+       FROM crm.personal_whatsapp_external_sends f
+       LEFT JOIN crm.messages m ON m.provider='evolution' AND m.provider_account_id=f.account_id::text
+         AND m.external_message_id=f.external_message_id AND m.conversation_id=f.conversation_id
+         AND m.author_kind='system' AND m.command_id LIKE 'external:%' AND m.message_type<>'text'
+         AND NOT EXISTS (SELECT 1 FROM crm.attachments a WHERE a.message_id=m.id)
+       WHERE f.account_id=$1 AND f.external_message_id=$2`,
+      [input.providerAccountId, input.externalMessageId],
+    )
+  ).rows[0];
+  if (fact) {
+    assertFingerprint(fact, input.eventFingerprint);
+    return {
+      accepted: true,
+      duplicate: true,
+      event_id: input.eventId,
+      ...(fact.attachment_conversation_id
+        ? { attachment_conversation_id: fact.attachment_conversation_id }
+        : {}),
+    };
+  }
+  const message = (
+    await client.query(
+      `SELECT m.direction,m.conversation_id,c.external_conversation_id,
+            n.command_id,n.payload_envelope
+     FROM crm.messages m JOIN crm.conversations c ON c.id=m.conversation_id
+     LEFT JOIN crm.n8n_commands n ON n.message_id=m.id
+     WHERE m.provider='evolution' AND m.provider_account_id=$1 AND m.external_message_id=$2`,
+      [input.providerAccountId, input.externalMessageId],
+    )
+  ).rows[0];
+  if (!message) return null;
+  const target = commandWhatsAppTarget(message, key);
+  if (
+    message.direction !== 'outbound' ||
+    message.external_conversation_id !== input.externalConversationId ||
+    !sameWhatsAppSource(target?.source, input.source)
+  )
+    throw new N8nConflictError(
+      'External WhatsApp identity conflicts with the stored message',
+    );
+  await insertExternalSend(client, input, message.conversation_id);
+  return { accepted: true, duplicate: true, event_id: input.eventId };
+}
+
+/** The exact provider account/ID ties an observed echo to a proven CRM result.
+ * @param {Queryable} client @param {any} input @param {any} command */
+async function mergeExternalSend(client, input, command) {
+  const existing = (
+    await client.query(
+      `SELECT m.id,m.direction,m.conversation_id,m.author_kind,m.delivery_status,m.delivery_status_at,
+            m.delivery_failure_code,m.occurred_at,f.binding_id,f.generation
+     FROM crm.messages m LEFT JOIN crm.personal_whatsapp_external_sends f
+       ON f.account_id::text=m.provider_account_id AND f.external_message_id=m.external_message_id
+     WHERE m.provider='evolution' AND m.provider_account_id=$1 AND m.external_message_id=$2
+     FOR UPDATE OF m`,
+      [input.source.accountId, input.externalMessageId],
+    )
+  ).rows[0];
+  if (!existing || existing.id === command.message_id) return;
+  if (
+    existing.direction !== 'outbound' ||
+    existing.author_kind !== 'system' ||
+    existing.conversation_id !== command.conversation_id ||
+    existing.binding_id !== input.source.bindingId ||
+    Number(existing.generation) !== input.source.generation
+  )
+    throw new N8nConflictError(
+      'External WhatsApp identity conflicts with the reserved message',
+    );
+  // A proven CRM send keeps its own retained media. Transient echo bytes keep
+  // their expiry and lose their display binding; the fact survives correction.
+  await client.query('DELETE FROM crm.attachments WHERE message_id=$1', [
+    existing.id,
+  ]);
+  await client.query('DELETE FROM crm.messages WHERE id=$1', [existing.id]);
+  if (['delivered', 'read', 'failed'].includes(existing.delivery_status)) {
+    await client.query(
+      `UPDATE crm.messages SET delivery_status=$2,delivery_status_at=$3,delivery_failure_code=$4
+       WHERE id=$1`,
+      [
+        command.message_id,
+        existing.delivery_status,
+        existing.delivery_status_at,
+        existing.delivery_failure_code,
+      ],
+    );
+  }
 }
 
 /** Original reservation is authoritative; a replay cannot stamp another identity.
@@ -3305,24 +3800,27 @@ async function confirmReservedSend(
            status = 'sent',
            sent_at = COALESCE(sent_at, $3),
            delivery_status = CASE
-             WHEN delivery_status IN ('delivered', 'read') THEN delivery_status
+             WHEN delivery_status IN ('delivered', 'read') OR ($6 AND delivery_status='failed') THEN delivery_status
              ELSE 'sent'
            END,
            delivery_status_at = CASE
-             WHEN delivery_status IN ('delivered', 'read') THEN delivery_status_at
+             WHEN delivery_status IN ('delivered', 'read') OR ($6 AND delivery_status='failed') THEN delivery_status_at
              ELSE $3
            END,
-           delivery_failure_code = NULL
+           delivery_failure_code = CASE WHEN $6 AND delivery_status='failed' THEN delivery_failure_code ELSE NULL END
        WHERE command_id = $1
          AND conversation_id = $4
          AND status IN ('sending', 'sent', 'failed', 'outcome_unknown')
          AND (external_message_id IS NULL OR external_message_id = $2)
+         AND ($5::text IS NULL OR provider_account_id=$5)
        RETURNING id, delivery_status`,
       [
         input.commandId,
         input.externalMessageId,
         input.occurredAt,
         input.conversationId,
+        input.source?.accountId ?? null,
+        Boolean(input.source),
       ],
     )
   ).rows[0];
@@ -3349,13 +3847,40 @@ async function confirmReservedSend(
 async function updateDeliveryStatus(client, input) {
   const message = (
     await client.query(
-      `SELECT id, delivery_status FROM crm.messages
-       WHERE external_message_id = $1 AND conversation_id = $2
+      `SELECT id, delivery_status,author_kind,command_id FROM crm.messages
+       WHERE external_message_id = $1 AND conversation_id = $2 AND direction='outbound'
+         AND ($3::text IS NULL OR provider_account_id=$3)
        FOR UPDATE`,
-      [input.externalMessageId, input.conversationId],
+      [
+        input.externalMessageId,
+        input.conversationId,
+        input.source?.accountId ?? null,
+      ],
     )
   ).rows[0];
   if (!message) throw new N8nNotFoundError('Outbound message was not found');
+  const externalOnly =
+    message.author_kind === 'system' &&
+    message.command_id?.startsWith('external:');
+  if (input.source) {
+    const known = (
+      await client.query(
+        `SELECT 1 FROM crm.personal_whatsapp_external_sends
+       WHERE account_id=$1 AND external_message_id=$2 AND binding_id=$3 AND generation=$4
+       UNION ALL SELECT 1 FROM crm.n8n_events
+       WHERE message_id=$5 AND event_type='message.send.requested'
+         AND outcome->'source'->>'bindingId'=$3::text AND outcome->'source'->>'generation'=$4::text`,
+        [
+          input.source.accountId,
+          input.externalMessageId,
+          input.source.bindingId,
+          input.source.generation,
+          message.id,
+        ],
+      )
+    ).rows[0];
+    if (!known) throw new N8nForbiddenError();
+  }
   const requested = /** @type {Record<string, string>} */ ({
     'message.delivered': 'delivered',
     'message.failed': 'failed',
@@ -3396,6 +3921,7 @@ async function updateDeliveryStatus(client, input) {
   }
   return {
     changed,
+    externalOnly,
     messageId: message.id,
     status: changed ? requested : current,
   };

@@ -57,7 +57,8 @@ const MEDIA_JOIN = `LEFT JOIN crm.chat_media media
     FROM crm.attachments attachment
     JOIN crm.transient_media transient ON transient.id=attachment.transient_media_id
     JOIN crm.conversations inbound_conversation ON inbound_conversation.id=message.conversation_id
-    WHERE attachment.message_id=message.id AND message.direction='inbound'
+    WHERE attachment.message_id=message.id AND (message.direction='inbound' OR
+      (message.author_kind='system' AND message.command_id LIKE 'external:%'))
       AND transient.media_type=message.message_type
       AND (message.message_type IN ('image','audio','video')
         OR (message.message_type='document' AND transient.detected_mime_type
@@ -809,6 +810,7 @@ export class PostgresInboxReadRepository {
               `SELECT message.id, message.conversation_id, message.direction,
                     message.author_kind, message.author_id, message.message_type,
                     message.n8n_execution_id IS NOT NULL AS via_n8n,
+                    (message.author_kind='system' AND coalesce(message.command_id,'') LIKE 'external:%') AS external_send,
                     message.content_envelope, message.status, message.delivery_status,
                     CASE WHEN message.delivery_status NOT IN ('failed', 'outcome_unknown')
                            OR message.delivery_status IS NULL THEN NULL
@@ -1738,9 +1740,23 @@ function mapMessage(row, repository) {
           contentUrl: null,
         })
       : null;
+  const missingExternalMedia =
+    row.external_send &&
+    ['image', 'audio', 'video', 'document'].includes(row.message_type)
+      ? Object.freeze({
+          mediaId: null,
+          kind: row.message_type,
+          state: 'unavailable',
+          mimeType: null,
+          sizeBytes: null,
+          durationMs: null,
+          contentUrl: null,
+        })
+      : null;
   return Object.freeze({
     authorId: row.author_id,
     authorKind: row.author_kind,
+    ...(row.external_send ? { origin: 'device' } : {}),
     createdAt: row.created_at ? iso(row.created_at) : iso(row.occurred_at),
     deliveryErrorCode: DELIVERY_ERROR_CODES.has(row.delivery_error_code)
       ? row.delivery_error_code
@@ -1769,7 +1785,7 @@ function mapMessage(row, repository) {
               ? `/api/v1/conversations/${encodeURIComponent(row.conversation_id)}/media/${encodeURIComponent(row.media_id)}/content`
               : null,
         })
-      : (oversizedMedia ?? missingDocumentMedia),
+      : (oversizedMedia ?? missingExternalMedia ?? missingDocumentMedia),
     deliveryMode: row.reserved_workflow_version
       ? /^dev-mvp-simple-\d+$/u.test(row.reserved_workflow_version)
         ? 'dev'

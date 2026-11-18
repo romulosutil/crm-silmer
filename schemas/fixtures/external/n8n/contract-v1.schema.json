@@ -15,6 +15,49 @@
         "generation": { "type": "integer", "minimum": 1 }
       }
     },
+    "externalWhatsAppSend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "event_type",
+        "event_id",
+        "external_message_id",
+        "occurred_at",
+        "source",
+        "instance",
+        "origin",
+        "from_me",
+        "to",
+        "message"
+      ],
+      "properties": {
+        "schema_version": { "const": "1.0" },
+        "event_type": { "const": "message.external.sent" },
+        "event_id": { "$ref": "#/$defs/opaqueId" },
+        "external_message_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,512}$"
+        },
+        "occurred_at": { "type": "string", "format": "date-time" },
+        "source": { "$ref": "#/$defs/personalWhatsAppSource" },
+        "instance": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
+        "origin": { "const": "device" },
+        "from_me": { "const": true },
+        "to": { "type": "string", "pattern": "^\\+?[1-9][0-9]{7,14}$" },
+        "message": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "text"],
+          "properties": {
+            "type": { "enum": ["text", "image", "audio", "video", "document"] },
+            "text": { "type": "string", "maxLength": 16000 }
+          },
+          "if": { "properties": { "type": { "const": "text" } } },
+          "then": { "properties": { "text": { "pattern": "\\S" } } }
+        }
+      }
+    },
     "commonEnvelope": {
       "type": "object",
       "required": ["schema_version"],

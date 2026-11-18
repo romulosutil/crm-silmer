@@ -8,10 +8,12 @@ async function errorCode(response) {
   }
 }
 
-/** @param {string} orderId */
-export async function getOrderPdf(orderId) {
+/** @param {string} orderId @param {number} [expectedVersion] */
+export async function getOrderPdf(orderId, expectedVersion) {
+  const query =
+    expectedVersion === undefined ? '' : `?expectedVersion=${expectedVersion}`;
   const response = await globalThis.fetch(
-    `/api/v1/orders/${encodeURIComponent(orderId)}/pdf`,
+    `/api/v1/orders/${encodeURIComponent(orderId)}/pdf${query}`,
     { credentials: 'same-origin', headers: { Accept: 'application/pdf' } },
   );
   if (!response.ok) {

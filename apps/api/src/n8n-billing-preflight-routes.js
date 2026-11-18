@@ -8,10 +8,11 @@ export function registerN8nBillingPreflightRoutes(
   integration,
   contextFor,
 ) {
-  api.get(
-    '/api/v1/integrations/n8n/commands/:commandId/preflight',
-    { exposeHeadRoute: false },
-    async (request, reply) => {
+  api.route({
+    method: ['GET', 'POST'],
+    url: '/api/v1/integrations/n8n/commands/:commandId/preflight',
+    exposeHeadRoute: false,
+    async handler(request, reply) {
       const context = contextFor(request);
       reply
         .header('Cache-Control', 'private, no-store')
@@ -44,10 +45,29 @@ export function registerN8nBillingPreflightRoutes(
           throw new N8nRouteError(400, 'INVALID_CORRELATION_ID');
         if (Object.keys(/** @type {any} */ (request.query)).length)
           throw new N8nRouteError(400, 'INVALID_PREFLIGHT_QUERY');
+        const dispatch = request.method === 'POST';
+        if (dispatch && request.body !== undefined)
+          throw new N8nRouteError(400, 'INVALID_PREFLIGHT_BODY');
         const result = await integration.readReservedSend({
           commandId: /** @type {any} */ (request.params).commandId,
           technical,
+          ...(dispatch ? { dispatch } : {}),
         });
+        if (dispatch) {
+          if (
+            result.valid !== true ||
+            typeof result.instance !== 'string' ||
+            !/^[A-Za-z0-9_-]{1,64}$/u.test(result.instance) ||
+            typeof result.to !== 'string' ||
+            !/^\+?[1-9][0-9]{7,14}$/u.test(result.to)
+          )
+            return reply.send({ valid: false });
+          return reply.send({
+            valid: true,
+            instance: result.instance,
+            to: result.to,
+          });
+        }
         return reply.send({ valid: result.valid === true });
       } catch (error) {
         const raw = Number(/** @type {any} */ (error)?.statusCode);
@@ -65,5 +85,5 @@ export function registerN8nBillingPreflightRoutes(
         });
       }
     },
-  );
+  });
 }

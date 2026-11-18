@@ -2538,6 +2538,10 @@ paths:
         - $ref: '#/components/parameters/WorkflowVersion'
         - $ref: '#/components/parameters/ExecutionId'
         - $ref: '#/components/parameters/ContentSha256'
+        - name: X-Silmer-WhatsApp-Binding
+          in: header
+          description: Obrigatório para anexar mídia à saída observada. Referência opaca ao binding ativo da mesma conta e geração.
+          schema: { type: string, format: uuid }
       requestBody:
         required: true
         content:
@@ -2602,6 +2606,40 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '410': { description: Object lost, metadata preserved }
         '503': { description: Storage or integration unavailable }
+  /integrations/n8n/commands/{commandId}/preflight:
+    post:
+      operationId: authorizePersonalWhatsAppDispatch
+      summary: Autoriza um despacho pessoal para a reserva e execução originais
+      description: >-
+        Sem body. Revalida titular, carteira, conta, geração, flags, contexto da
+        conversa e, quando aplicável, guardas comerciais/mídia. Consome a
+        autorização de despacho uma vez. Resposta perdida exige reconciliação.
+      security: [{ automationBasic: [] }]
+      parameters:
+        - name: commandId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 512 }
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/WorkflowKey'
+        - $ref: '#/components/parameters/WorkflowVersion'
+        - $ref: '#/components/parameters/ExecutionId'
+      responses:
+        '200':
+          description: Decisão privada sobre o despacho
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [valid]
+                properties:
+                  valid: { type: boolean }
+                  instance: { type: string }
+                  to: { type: string }
+        '400': { $ref: '#/components/responses/N8nProblem' }
+        '401': { $ref: '#/components/responses/N8nProblem' }
+        '403': { $ref: '#/components/responses/N8nProblem' }
+        '409': { $ref: '#/components/responses/N8nProblem' }
   /integrations/n8n/events:
     post:
       operationId: recordN8nEvent
@@ -2616,7 +2654,10 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/N8nEventRequest' }
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/N8nEventRequest'
+                - $ref: '../../schemas/fixtures/external/n8n/contract-v1.schema.json#/$defs/externalWhatsAppSend'
       responses:
         '200':
           description: Evento aplicado, negado pelo fence ou reproduzido idempotentemente
@@ -3919,10 +3960,15 @@ paths:
         A geração bem-sucedida da primeira ficha de um pedido da loja registra
         o primeiro acesso da ADR 031; HEAD, falha e acesso negado não registram.
         O servidor não armazena o PDF nem envia ao WhatsApp.
+        A preparação para compartilhamento pode informar expectedVersion para
+        exigir a mesma versão e autorização após a renderização.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderId'
         - $ref: '#/components/parameters/HumanReadOrigin'
+        - name: expectedVersion
+          in: query
+          schema: { type: integer, minimum: 1 }
       responses:
         '200':
           description: Ficha em PDF
@@ -5721,7 +5767,10 @@ components:
                 sem preço/pagamento/status,
               }
         automation_epoch: { type: integer, minimum: 0 }
-        source_revision: { type: integer, minimum: 1 }
+        source_revision:
+          type: integer
+          minimum: 0
+          description: Zero somente para comando pessoal com origem autenticada.
         target_contract:
           type: string
           const: subject-v1
@@ -5822,6 +5871,9 @@ components:
       properties:
         accepted: { type: boolean }
         duplicate: { type: boolean }
+        attachment_conversation_id:
+          type: string
+          description: Saída observada com mídia pendente. Vincular somente pela rota privada de anexos e pelo mesmo binding.
         send_authorized: { type: boolean }
         reason: { type: string }
         handoff_id: { type: string }

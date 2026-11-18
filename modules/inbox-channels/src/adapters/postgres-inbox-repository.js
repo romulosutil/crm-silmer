@@ -103,7 +103,7 @@ const ALGORITHM = 'AES-256-GCM';
 /**
  * @typedef {{query: (sql: string, values?: unknown[]) => Promise<{rows: any[]}>}} Queryable
  * @typedef {{query: Queryable['query'], transaction: <T>(work: (transaction: Queryable) => Promise<T>) => Promise<T>}} TransactionalDatabase
- * @typedef {{enqueueChannelMessage: (input: {id: string, idempotencyKey: string, messageId: string, availableAt: string|Date}, context: {transaction: Queryable}) => Promise<void>, enqueuePanelCommand?: (input: Record<string, any>, context: {transaction: Queryable}) => Promise<unknown>}} OutboundMessageOutbox
+ * @typedef {{supportsPersonalSend?:boolean, enqueueChannelMessage: (input: {id: string, idempotencyKey: string, messageId: string, availableAt: string|Date}, context: {transaction: Queryable}) => Promise<void>, enqueuePanelCommand?: (input: Record<string, any>, context: {transaction: Queryable}) => Promise<unknown>}} OutboundMessageOutbox
  */
 
 export class PostgresInboxRepository {
@@ -339,9 +339,12 @@ export class PostgresInboxRepository {
         return this.#hydrateCommand(transaction, replay.rows[0].result);
       }
 
-      // WAP-E04 receives private human conversations only. Personal transport
-      // reservation/dispatch is a separate E08 capability and stays closed.
-      if (kind === 'send' && access.personalSellerId)
+      if (
+        kind === 'send' &&
+        access.personalSellerId &&
+        (!this.#outboundMessageOutbox.supportsPersonalSend ||
+          access.personalSellerId !== input.actor.id)
+      )
         throw new InboxError(
           'Personal WhatsApp sending is unavailable',
           'WHATSAPP_SEND_UNAVAILABLE',
@@ -530,15 +533,25 @@ export class PostgresInboxRepository {
             [media.storage_bucket_alias, Number(media.size_bytes)],
           );
         }
-        await this.#outboundMessageOutbox.enqueueChannelMessage(
-          {
-            availableAt: occurredAt,
-            id: runtime.idFactory('job'),
-            idempotencyKey: input.idempotencyKey,
-            messageId,
-          },
-          { transaction },
-        );
+        try {
+          await this.#outboundMessageOutbox.enqueueChannelMessage(
+            {
+              availableAt: occurredAt,
+              id: runtime.idFactory('job'),
+              idempotencyKey: input.idempotencyKey,
+              messageId,
+            },
+            { transaction },
+          );
+        } catch (error) {
+          if (/** @type {any} */ (error)?.code !== 'WHATSAPP_SEND_UNAVAILABLE')
+            throw error;
+          throw new InboxError(
+            'Personal WhatsApp sending is unavailable',
+            'WHATSAPP_SEND_UNAVAILABLE',
+            503,
+          );
+        }
         result = mapMessage(
           message.rows[0],
           this.#envelopeKey,

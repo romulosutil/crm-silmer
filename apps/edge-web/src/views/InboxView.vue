@@ -1521,16 +1521,18 @@ async function confirmClose() {
   }
 }
 
-/** @param {{authorKind?: unknown, direction?: unknown}} message */
+/** @param {{origin?: unknown, authorKind?: unknown, direction?: unknown}} message */
 function messageFrom(message) {
   if (message.authorKind === 'contact') return 'cliente';
   if (message.authorKind === 'assistant') return 'agente';
-  if (message.authorKind === 'human') return 'humano';
+  if (message.authorKind === 'human' || message.origin === 'device')
+    return 'humano';
   return message.direction === 'inbound' ? 'cliente' : 'agente';
 }
 
-/** @param {{authorKind?: unknown, direction?: unknown}} message */
+/** @param {{origin?: unknown, authorKind?: unknown, direction?: unknown}} message */
 function messageAuthorLabel(message) {
+  if (message.origin === 'device') return 'WhatsApp da linha';
   const from = messageFrom(message);
   if (from === 'cliente') return active.value?.contact.label ?? 'Cliente';
   if (from === 'humano') return 'Vendedor';
@@ -1541,13 +1543,13 @@ function messageAuthorLabel(message) {
  * Glossário (achado 5): one name for the assistant, from the brand, and the
  * role only where the author's name does not already say it.
  *
- * @param {{authorKind?: unknown, direction?: unknown}} message
+ * @param {{origin?: unknown, authorKind?: unknown, direction?: unknown}} message
  */
 function messageRoleLabel(message) {
   return messageFrom(message) === 'agente' ? 'IA' : '';
 }
 
-/** @param {{authorKind?: unknown, direction?: unknown}} message */
+/** @param {{origin?: unknown, authorKind?: unknown, direction?: unknown}} message */
 function messageInitials(message) {
   return String(messageAuthorLabel(message))
     .trim()

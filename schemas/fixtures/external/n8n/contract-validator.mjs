@@ -237,6 +237,48 @@ export function validateAttachmentMetadata(payload) {
 /** @param {any} payload @param {any} contract @param {{orderOpeningPolicy?: string}} [options] */
 export function validateEvent(payload, contract, options = {}) {
   object(payload, 'INVALID_EVENT');
+  if (payload.event_type === 'message.external.sent') {
+    common(payload);
+    rejectUnknown(payload, [
+      'schema_version',
+      'event_id',
+      'event_type',
+      'external_message_id',
+      'occurred_at',
+      'source',
+      'instance',
+      'origin',
+      'from_me',
+      'to',
+      'message',
+    ]);
+    nonEmpty(payload.event_id, 'INVALID_EXTERNAL_SEND');
+    personalSource(payload.source);
+    object(payload.message, 'INVALID_EXTERNAL_SEND');
+    rejectUnknown(payload.message, ['type', 'text']);
+    if (
+      !contract.eventTypes.includes(payload.event_type) ||
+      !payload.source ||
+      payload.origin !== 'device' ||
+      payload.from_me !== true ||
+      typeof payload.instance !== 'string' ||
+      !/^[A-Za-z0-9_-]{1,64}$/u.test(payload.instance) ||
+      typeof payload.external_message_id !== 'string' ||
+      !/^[A-Za-z0-9_-]{1,512}$/u.test(payload.external_message_id) ||
+      typeof payload.to !== 'string' ||
+      !/^\+?[1-9][0-9]{7,14}$/u.test(payload.to) ||
+      typeof payload.occurred_at !== 'string' ||
+      !Number.isFinite(Date.parse(payload.occurred_at)) ||
+      !['text', 'image', 'audio', 'video', 'document'].includes(
+        payload.message.type,
+      ) ||
+      typeof payload.message.text !== 'string' ||
+      payload.message.text.length > 16_000 ||
+      (payload.message.type === 'text' && !payload.message.text.trim())
+    )
+      fail('INVALID_EXTERNAL_SEND');
+    return true;
+  }
   rejectUnknown(payload, eventKeys);
   common(payload);
   personalSource(payload.source);
@@ -316,7 +358,8 @@ export function validateEvent(payload, contract, options = {}) {
   if (payload.event_type === 'message.send.requested') {
     nonEmpty(payload.command_id, 'INVALID_SEND_FENCE');
     epoch(payload.automation_epoch);
-    positive(payload.source_revision, 'INVALID_SEND_FENCE');
+    if (!payload.source || payload.source_revision !== 0)
+      positive(payload.source_revision, 'INVALID_SEND_FENCE');
     object(payload.message, 'INVALID_SEND_FENCE');
   }
   if (payload.event_type === 'handoff.requested') {

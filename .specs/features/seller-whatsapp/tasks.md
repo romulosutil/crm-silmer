@@ -47,7 +47,7 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 | [x] WAP-E05 | [Criar Pedido por Assunto com compatibilidade transacional](PROMPTS.md#wap-e05)  | Sol/Opus     | WAP-E04         | WAP-T02a-01, WAP-T02a-02, WAP-T02a-03          |
 | [x] WAP-E06 | [Entregar a interface mínima de Pedido pela conversa](PROMPTS.md#wap-e06)        | Terra/Sonnet | WAP-E05         | WAP-T02a-04                                    |
 | [x] WAP-E07 | [Aceitar o fluxo passivo integrado de Pedido](PROMPTS.md#wap-e07)                | Sol/Opus     | WAP-E06         | WAP-T02a-05                                    |
-| [ ] WAP-E08 | [Completar mensagens correntes e efeitos pela linha correta](PROMPTS.md#wap-e08) | Sol/Opus     | WAP-E07         | WAP-T02-08, WAP-T03-01, WAP-T03-02, WAP-T02-09 |
+| [x] WAP-E08 | [Completar mensagens correntes e efeitos pela linha correta](PROMPTS.md#wap-e08) | Sol/Opus     | WAP-E07         | WAP-T02-08, WAP-T03-01, WAP-T03-02, WAP-T02-09 |
 | [ ] WAP-E09 | [Completar Meus clientes e Meu WhatsApp na interface](PROMPTS.md#wap-e09)        | Terra/Sonnet | WAP-E08         | WAP-T04-01, WAP-T04-02, WAP-T04-05             |
 | [ ] WAP-E10 | [Entregar primeiro envio humano individual](PROMPTS.md#wap-e10)                  | Sol/Opus     | WAP-E09         | WAP-T04-03, WAP-T04-04                         |
 | [ ] WAP-E11 | [Concluir verificação e prontidão operacional](PROMPTS.md#wap-e11)               | Sol/Opus     | WAP-E10         | WAP-T05-01, WAP-T05-02, WAP-T05-03, WAP-T05-04 |
@@ -450,7 +450,7 @@ inicial de sessões/PRs por T.
 | [ ] WAP-T04-02  | Entregar Meu WhatsApp e onboarding dispensável           | [WAP-E09](PROMPTS.md#wap-e09) | WAP-01/02/03/04/11/12             |
 | [ ] WAP-T04-03  | Compor primeiro envio individual no servidor             | [WAP-E10](PROMPTS.md#wap-e10) | WAP-22/23/24/32                   |
 | [ ] WAP-T04-04  | Expor compositor do primeiro envio opcional              | [WAP-E10](PROMPTS.md#wap-e10) | WAP-22/23/24/32                   |
-| [ ] WAP-T02-09  | Preservar cobrança e preparo pela linha correta          | [WAP-E08](PROMPTS.md#wap-e08) | WAP-17/19/27/28/30                |
+| [x] WAP-T02-09  | Preservar cobrança e preparo pela linha correta          | [WAP-E08](PROMPTS.md#wap-e08) | WAP-17/19/27/28/30                |
 | [ ] WAP-T04-05  | Conservar contexto das ações comerciais na carteira      | [WAP-E09](PROMPTS.md#wap-e09) | WAP-17/19/25/28/30                |
 | [ ] WAP-T05-01  | Consolidar flags, allowlist e limites sem ativação       | [WAP-E11](PROMPTS.md#wap-e11) | WAP-12/16                         |
 | [ ] WAP-T05-02  | Auditar regressão funcional, a11y e privacidade          | [WAP-E11](PROMPTS.md#wap-e11) | WAP-01–12/17–33                   |
@@ -465,12 +465,15 @@ ambas as ordens, recibos adiantados e mídia privada ou indisponível. O workflo
 sintético usa o transporte humano existente e mantém o gerador histórico.
 Teclado, foco, mídia e atribuição foram verificados na Inbox em 390 e 1366 px.
 
-WAP-T02-09 tem prova de ACL comercial, preparo de cobrança obsoleto, replay
-financeiro após disconnect e versão da ficha. O envio de ficha com conta e
-destinatário fixados pelo CRM segue pendente. O compartilhamento de PDF
-vigente delega essa escolha à folha nativa do telefone. WAP-E08 permanece
-parcial por essa pendência. O [runbook](../../../docs/runbooks/seller-whatsapp-outbound.md)
-registra o contrato, o ensaio e o rollback.
+WAP-T02-09 cobre ACL comercial, preparo de cobrança obsoleto e replay
+financeiro após disconnect. A expansão `0083` e o ensaio PostgreSQL da E08
+cobrem PDF canônico, confirmação da origem e do destino, dois POSTs com um
+único comando, mídia privada com checksum, versão obsoleta antes do despacho,
+resultado tardio e liberação de quota de PDF sem vínculo. O workflow sintético
+envia o documento pelo nó de mídia existente. O Playwright verificou a
+confirmação, o foco, a repetição idempotente e o axe em 390 e 1366 px.
+O [runbook](../../../docs/runbooks/seller-whatsapp-outbound.md) registra o
+contrato, o ensaio e o rollback.
 | [ ] WAP-T05-04  | Consolidar roteiro operacional e evidências              | [WAP-E11](PROMPTS.md#wap-e11) | WAP-12/16; WAP-T05                |
 | [ ] WAP-T05-05  | Homologar fluxo passivo real de Pedido                   | [WAP-E12](PROMPTS.md#wap-e12) | WAP-04/05/07/17/31/32/33          |
 | [ ] WAP-T05-06  | Homologar pareamento mobile e sincronização reais        | [WAP-E12](PROMPTS.md#wap-e12) | WAP-01/02/03/04/09/10/11/12       |

@@ -22,6 +22,7 @@ import {
   commandWhatsAppTarget,
   lockSellerWhatsAppLines,
   matchesWhatsAppTarget,
+  orderPdfStillCurrent,
   personalSendAllowed,
   sameWhatsAppSource,
   sellerWhatsAppTarget,
@@ -1062,7 +1063,9 @@ export class PostgresN8nIntegrationRepository {
         false,
         'read',
       );
-      if (!['image', 'audio', 'video'].includes(command.message_type))
+      if (
+        !['image', 'audio', 'video', 'document'].includes(command.message_type)
+      )
         throw new N8nConflictError('Command has no retained media');
       const now = input.now ? new Date(input.now) : new Date();
       for (const intent of intents) {
@@ -1226,6 +1229,13 @@ export class PostgresN8nIntegrationRepository {
       throw new N8nConflictError(
         'Personal WhatsApp sending is unavailable',
         'WHATSAPP_SEND_UNAVAILABLE',
+      );
+    if (
+      !(await orderPdfStillCurrent(client, command, target, this.envelopeKey))
+    )
+      throw new N8nConflictError(
+        'Order PDF preparation is stale',
+        'VERSION_CONFLICT',
       );
     return target;
   }
@@ -3708,7 +3718,9 @@ export function comparableOutbound(message) {
       'Contradictory media aliases',
       'COMMAND_PAYLOAD_MISMATCH',
     );
-  const retained = ['image', 'audio', 'video'].includes(message?.type);
+  const retained = ['image', 'audio', 'video', 'document'].includes(
+    message?.type,
+  );
   if (
     retained &&
     (Object.keys(message).some(

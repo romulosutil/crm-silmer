@@ -3,17 +3,27 @@ import { createHash, randomUUID } from 'node:crypto';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { Readable } from 'node:stream';
 import test from 'node:test';
+import Fastify from 'fastify';
 import { Pool } from 'pg';
+import { createChatMediaApiRuntime } from '../../apps/api/src/chat-media-runtime.js';
 import { createOrderBillingChatRuntime } from '../../apps/api/src/order-billing-chat-runtime.js';
 import { createOrderBillingRuntime } from '../../apps/api/src/order-billing-runtime.js';
 import { createInboundMediaRuntime } from '../../apps/api/src/inbound-media-runtime.js';
 import { createN8nApiRuntime } from '../../apps/api/src/n8n-runtime.js';
+import { registerOrderRoutes } from '../../apps/api/src/order-routes.js';
 import {
+  ChatMediaValidator,
+  PostgresChatMediaDraftCleanup,
+  PostgresChatMediaUploadRepository,
   PostgresTransientMediaRepository,
   PrivateMediaVolume,
 } from '../../modules/integration-reliability/src/index.js';
-import { seed as seedOrder } from '../support/order-billing-chat-fixture.js';
+import {
+  KEY as orderKey,
+  seed as seedOrder,
+} from '../support/order-billing-chat-fixture.js';
 import { PostgresAuditTrail } from '../../modules/audit-privacy/src/index.js';
 import { contactPhoneHash } from '../../modules/contacts/src/index.js';
 import {
@@ -28,6 +38,7 @@ import {
 } from '../../modules/inbox-channels/src/index.js';
 import {
   createN8nIntegrationService,
+  decryptJson,
   encryptJson,
   PostgresN8nCommandOutbox,
   PostgresN8nCommandStore,
@@ -51,6 +62,11 @@ async function seedLine(client, sellerId, number) {
   };
   const instance = `wap_${source.lineId.replaceAll('-', '')}`;
   const sealed = encryptJson({ number }, 'synthetic', key);
+  const confirmed = encryptJson(
+    { number },
+    `seller-whatsapp-confirmed:${source.lineId}`,
+    key,
+  );
   await client.query(
     `INSERT INTO crm.users(id,email,password_hash,name)
     VALUES ($1,$2,'$argon2id$synthetic','Pessoa sintética')`,
@@ -64,8 +80,17 @@ async function seedLine(client, sellerId, number) {
   await client.query(
     `INSERT INTO crm.seller_whatsapp_lines(id,seller_id,account_id,instance_name,
     number_digest,number_envelope,confirmed_number_envelope,state,generation,version,verified_at,created_at,updated_at)
-    VALUES ($1,$2,$3,$4,$5,$6,$6,'connected',1,1,$7,$7,$7)`,
-    [source.lineId, sellerId, source.accountId, instance, digest, sealed, now],
+    VALUES ($1,$2,$3,$4,$5,$6,$8,'connected',1,1,$7,$7,$7)`,
+    [
+      source.lineId,
+      sellerId,
+      source.accountId,
+      instance,
+      digest,
+      sealed,
+      now,
+      confirmed,
+    ],
   );
   await client.query(
     `INSERT INTO crm.whatsapp_number_reservations(number_digest,kind,line_id,created_at)
@@ -529,6 +554,347 @@ test(
           { statusCode: 404 },
         );
         assert.ok(file.contentUrl.endsWith('/content'));
+      },
+    );
+
+    await t.test(
+      'sends the generated ficha once through the reserved personal source and fences a stale order',
+      async (subtest) => {
+        const spoolRoot = await mkdtemp(join(tmpdir(), 'wap-e08-ficha-'));
+        subtest.after(() => rm(spoolRoot, { recursive: true, force: true }));
+        /** @type {Map<string, {bytes:Buffer, sizeBytes:number, sha256:string, mimeType:string}>} */
+        const objects = new Map();
+        const media = createChatMediaApiRuntime({
+          repository: new PostgresChatMediaUploadRepository({ database }),
+          access: {},
+          spoolRoot,
+          envelopeKey: key,
+          orderPdfValidator: new ChatMediaValidator({
+            now: () => now,
+            scanner: {
+              async scan(/** @type {string} */ path) {
+                const bytes = await readFile(path);
+                assert.equal(bytes.subarray(0, 5).toString(), '%PDF-');
+                return {
+                  clean: true,
+                  detectedMimeType: 'application/pdf',
+                  signatureUpdatedAt: now,
+                };
+              },
+            },
+          }),
+          store: {
+            async putValidated(
+              /** @type {any} */ {
+                key: id,
+                stream,
+                sizeBytes,
+                sha256,
+                mimeType,
+              },
+            ) {
+              const chunks = [];
+              for await (const chunk of stream) chunks.push(chunk);
+              const bytes = Buffer.concat(chunks);
+              assert.equal(bytes.length, sizeBytes);
+              assert.equal(
+                createHash('sha256').update(bytes).digest('hex'),
+                sha256,
+              );
+              objects.set(id, { bytes, sizeBytes, sha256, mimeType });
+            },
+            async head(/** @type {string} */ id) {
+              return objects.get(id);
+            },
+            async read(/** @type {string} */ id) {
+              const object = objects.get(id);
+              assert.ok(object);
+              return {
+                ...object,
+                stream: Readable.from([object.bytes]),
+                contentRange: null,
+              };
+            },
+          },
+        });
+        const keyString = key.toString('base64');
+        const pdf = createN8nApiRuntime(database, {
+          mediaVolume: new PrivateMediaVolume({
+            rootDirectory: join(spoolRoot, 'transient'),
+            maxBytes: 1024,
+            maxFileBytes: 512,
+            repository: new PostgresTransientMediaRepository({ database }),
+            scanner: {
+              async scan() {
+                throw new Error(
+                  'Generated PDFs use the retained-media scanner',
+                );
+              },
+            },
+          }),
+          clock: () => now,
+          environment: {
+            N8N_INTEGRATION_ENVELOPE_KEY: keyString,
+            CONTACT_IDENTITY_ENVELOPE_KEY: keyString,
+            CONTACT_IDENTITY_LOOKUP_KEY: keyString,
+            INBOX_MESSAGE_ENVELOPE_KEY: keyString,
+            SELLER_WHATSAPP_SEND_ENABLED: 'true',
+            SELLER_WHATSAPP_SEND_SELLER_IDS: JSON.stringify([
+              ...personalSendSellers,
+            ]),
+          },
+        }).orderWhatsAppPdf(media);
+        assert.ok(pdf);
+
+        const c = await conversation(a);
+        const orderId = await seedOrder(pool, {
+          conversationId: c.id,
+          owner: sellerA,
+        });
+        const api = Fastify();
+        subtest.after(() => api.close());
+        const actor = { id: sellerA, kind: 'human' };
+        /** @param {any} input */
+        function authorizeRead({ action, cookie }) {
+          assert.ok(['order.read', 'order.print'].includes(action));
+          return {
+            actor: cookie === 'session=b' ? { ...actor, id: sellerB } : actor,
+          };
+        }
+        registerOrderRoutes(
+          api,
+          {
+            authorizeRead,
+            authorizeWrite(/** @type {any} */ input) {
+              assert.equal(input.action, 'order.print');
+              if (input.csrfToken !== 'synthetic-csrf')
+                throw Object.assign(new Error('CSRF'), {
+                  statusCode: 403,
+                  code: 'FORBIDDEN',
+                });
+              return authorizeRead(input);
+            },
+            async get(/** @type {string} */ id) {
+              const {
+                rows: [row],
+              } = await pool.query('SELECT * FROM crm.orders WHERE id=$1', [
+                id,
+              ]);
+              return {
+                order: {
+                  id,
+                  number: row.number,
+                  status: row.status,
+                  version: Number(row.version),
+                  origin: row.origin,
+                  conversationId: row.conversation_id,
+                  ficha: decryptJson(
+                    row.ficha_envelope,
+                    `order-ficha:${id}`,
+                    orderKey,
+                  ),
+                },
+              };
+            },
+          },
+          () => ({ correlationId: randomUUID(), requestId: randomUUID() }),
+          undefined,
+          undefined,
+          pdf,
+        );
+        const path = `/api/v1/orders/${orderId}/pdf/whatsapp`;
+        const detail = await api.inject(`/api/v1/orders/${orderId}`);
+        assert.equal(detail.json().order.pdfWhatsAppAvailable, true);
+        const otherDetail = await api.inject({
+          url: `/api/v1/orders/${orderId}`,
+          headers: { cookie: 'session=b' },
+        });
+        assert.equal(otherDetail.json().order.pdfWhatsAppAvailable, undefined);
+        const preview = await api.inject(`${path}?expectedVersion=1`);
+        assert.equal(preview.statusCode, 200, preview.body);
+        assert.match(
+          String(preview.headers['cache-control']),
+          /private, no-store/u,
+        );
+        const {
+          preparation,
+          sender,
+          recipient: maskedRecipient,
+        } = preview.json();
+        assert.equal(sender, '••••0188');
+        assert.equal(maskedRecipient, '••••0088');
+        const crossSeller = await api.inject({
+          url: `${path}?expectedVersion=1`,
+          headers: { cookie: 'session=b' },
+        });
+        assert.equal(crossSeller.statusCode, 403);
+        const intent = {
+          method: /** @type {const} */ ('POST'),
+          url: path,
+          headers: {
+            'idempotency-key': randomUUID(),
+            'x-csrf-token': 'synthetic-csrf',
+          },
+          payload: { expectedVersion: 1, preparation },
+        };
+        assert.equal(
+          (
+            await api.inject({
+              ...intent,
+              payload: { ...intent.payload, to: '+5511000000999' },
+            })
+          ).statusCode,
+          400,
+        );
+        assert.equal(
+          (
+            await api.inject({
+              ...intent,
+              headers: { 'idempotency-key': randomUUID() },
+            })
+          ).statusCode,
+          403,
+        );
+        const staleConfirmation = await api.inject({
+          ...intent,
+          payload: { expectedVersion: 1, preparation: '0'.repeat(64) },
+        });
+        assert.equal(staleConfirmation.statusCode, 409);
+        const results = await Promise.all([
+          api.inject(intent),
+          api.inject(intent),
+        ]);
+        for (const result of results)
+          assert.equal(result.statusCode, 202, result.body);
+        const [first, second] = results.map((result) => result.json());
+        assert.deepEqual(first, second);
+        assert.equal(first.conversationId, c.id);
+        const {
+          rows: [message],
+        } = await pool.query('SELECT * FROM crm.messages WHERE id=$1', [
+          first.messageId,
+        ]);
+        assert.equal(message.message_type, 'document');
+        assert.equal(message.author_id, sellerA);
+        assert.equal(message.provider_account_id, a.source.accountId);
+        const {
+          rows: [counts],
+        } = await pool.query(
+          `SELECT (SELECT count(*) FROM crm.messages WHERE message_type='document' AND conversation_id=$1)::int AS messages,
+          (SELECT count(*) FROM crm.n8n_commands WHERE message_id=$2)::int AS commands`,
+          [c.id, first.messageId],
+        );
+        assert.deepEqual(counts, { messages: 1, commands: 1 });
+        const command = await prepare(
+          { commandId: message.command_id, messageId: message.id },
+          a,
+        );
+        assert.equal(command.reserve.message.mime_type, 'application/pdf');
+        assert.equal(
+          (await service.recordEvent(command.reserve)).send_authorized,
+          true,
+        );
+        const retained = await repository.readReservedMedia(command.preflight);
+        const content = await media.reservedContent(retained);
+        assert.equal(content.headers['Content-Type'], 'application/pdf');
+        assert.match(
+          content.headers['Content-Disposition'] ?? '',
+          /^attachment;/u,
+        );
+        const chunks = [];
+        for await (const chunk of content.stream) chunks.push(chunk);
+        const pdfBytes = Buffer.concat(chunks);
+        assert.equal(
+          createHash('sha256').update(pdfBytes).digest('hex'),
+          command.reserve.message.sha256,
+        );
+        assert.deepEqual(await repository.readReservedSend(command.preflight), {
+          valid: true,
+          instance: a.instance,
+          to: recipient,
+        });
+        await assert.rejects(repository.readReservedSend(command.preflight), {
+          code: 'WHATSAPP_SEND_UNAVAILABLE',
+        });
+        await pool.query(
+          'UPDATE crm.orders SET version=version+1 WHERE id=$1',
+          [orderId],
+        );
+        await service.recordEvent(sent(command, 'synthetic-ficha-receipt'));
+        assert.equal(
+          (await messages(a, 'synthetic-ficha-receipt'))[0].id,
+          first.messageId,
+        );
+        assert.equal(
+          (await api.inject(`${path}?expectedVersion=1`)).statusCode,
+          409,
+        );
+
+        const nextPreview = await api.inject(`${path}?expectedVersion=2`);
+        assert.equal(nextPreview.statusCode, 200);
+        const next = await api.inject({
+          ...intent,
+          headers: { ...intent.headers, 'idempotency-key': randomUUID() },
+          payload: {
+            expectedVersion: 2,
+            preparation: nextPreview.json().preparation,
+          },
+        });
+        assert.equal(next.statusCode, 202, next.body);
+        const {
+          rows: [queued],
+        } = await pool.query(
+          'SELECT command_id FROM crm.messages WHERE id=$1',
+          [next.json().messageId],
+        );
+        const stale = await prepare(
+          { commandId: queued.command_id, messageId: next.json().messageId },
+          a,
+        );
+        assert.equal(
+          (await service.recordEvent(stale.reserve)).send_authorized,
+          true,
+        );
+        await pool.query(
+          'UPDATE crm.orders SET version=version+1 WHERE id=$1',
+          [orderId],
+        );
+        await assert.rejects(repository.readReservedMedia(stale.preflight), {
+          code: 'VERSION_CONFLICT',
+        });
+        await assert.rejects(repository.readReservedSend(stale.preflight), {
+          code: 'VERSION_CONFLICT',
+        });
+
+        assert.ok(media.storeOrderPdf);
+        const orphan = await media.storeOrderPdf({
+          pdf: pdfBytes,
+          filename: 'ficha-sintetica.pdf',
+          actorId: sellerA,
+          conversationId: c.id,
+        });
+        await pool.query(
+          "UPDATE crm.chat_media SET created_at=now()-interval '25 hours' WHERE id=$1",
+          [orphan],
+        );
+        const cleanup = new PostgresChatMediaDraftCleanup({
+          database,
+          store: {
+            async deleteDraft(/** @type {string} */ id) {
+              objects.delete(id);
+            },
+          },
+          spoolRoot,
+          bucketAlias: 'chat-dev',
+        });
+        await cleanup.runOnce();
+        const released = await pool.query(
+          "SELECT 1 FROM crm.chat_media WHERE id=$1 AND reservation_bytes=0 AND state='lost'",
+          [orphan],
+        );
+        assert.equal(released.rowCount, 1);
+        assert.equal(objects.has(orphan), false);
+        assert.equal(objects.has(retained.id), true);
       },
     );
 

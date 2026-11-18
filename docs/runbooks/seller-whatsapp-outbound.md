@@ -1,7 +1,7 @@
 # Saídas correntes do WhatsApp pessoal
 
-WAP-E08 implementa WAP-T02-08, WAP-T03-01 e WAP-T03-02 e cobre a parte de
-cobrança e versão da ficha de WAP-T02-09. Requisitos WAP-06/09/10/11/12/17/19/27/28/30.
+WAP-E08 implementa WAP-T02-08, WAP-T03-01, WAP-T03-02 e WAP-T02-09.
+Requisitos WAP-06/09/10/11/12/17/19/27/28/30.
 Ver [ADRs 090 e 091](../adr/091-contratos-da-etapa1-whatsapp-pessoal.md) e
 [contrato HTTP](../api/openapi.v1.yaml).
 
@@ -63,13 +63,19 @@ Se a preparação pessoal ficar obsoleta, a emissão autorizada da cobrança e
 os callbacks financeiros continuam pelo contrato vigente. Pagamento repetido
 registra uma vez. Reconectar não reemite nem reenfileira a cobrança anterior.
 
-A preparação para o compartilhamento móvel da ficha consulta o PDF com
-`expectedVersion`. A API confere versão e autorização após renderizar. O
-navegador mantém o PDF preparado associado ao Pedido e à versão exibidos.
-A folha nativa de compartilhamento entrega um arquivo local, e o sistema
-operacional permite que a pessoa escolha a conta e o destinatário. O envio
-de ficha com conta e destinatário vinculados pelo CRM segue pendente em
-WAP-T02-09.
+Com a expansão `0083` aplicada e a admissão de mídia privada disponível, um
+vendedor habilitado pode usar **Enviar ficha pelo WhatsApp** no Pedido de
+atendimento confirmado e ligado à sua linha pessoal ativa. A confirmação
+exibe os finais da linha e do WhatsApp do cliente daquela conversa.
+`GET /orders/{orderId}/pdf/whatsapp` admite a versão do Pedido e prepara o
+destino. O POST recebe somente a versão, a preparação e a chave de idempotência.
+
+O CRM gera a ficha canônica em PDF, passa pelo scanner e vincula a mídia
+privada à mensagem e à fila na mesma transação. A reserva, a leitura dos bytes
+e o despacho no n8n revalidam a linha, o destino e a versão do Pedido.
+O nó Evolution de mídia envia o documento pela instância reservada.
+O retorno HTTP 202 indica registro na fila. A conversa exibe o estado do envio.
+O download e o compartilhamento nativo do PDF continuam disponíveis no Pedido.
 
 ## Ensaio local e rollback
 
@@ -77,12 +83,17 @@ Use PostgreSQL dedicado em loopback com banco `crm_silmer_test_wap_e08`.
 `node --test test/integration/seller-whatsapp-outbound.test.js` exige esse
 banco e aplica as expansões. O ensaio cobre duas contas, recibo adiantado,
 eco/HTTP concorrentes, geração antiga, disputa com disconnect/revogação,
-acesso à mídia, composição comercial obsoleta e replay financeiro.
-Os testes de workflow e do contrato usam artefatos sintéticos inativos.
+acesso à mídia, composição comercial obsoleta e replay financeiro. O cenário
+da ficha usa Chromium para gerar o PDF e substitui scanner, armazenamento e
+transporte externo por dependências sintéticas. Cobre autorização, confirmação
+concorrente, integridade dos bytes, versão obsoleta, uma autorização de
+despacho e resultado tardio. Os testes de workflow usam artefatos inativos.
+O Playwright verifica teclas, foco e acessibilidade do diálogo em 390 e 1366 px.
 
 Para rollback, desative o envio pessoal na API, worker e candidato n8n.
 Se precisar suspender a observação de saídas e anexos, desligue também o
 ingresso pessoal conforme o runbook E04. Preserve a expansão, os vínculos,
 as provas e os efeitos incertos. Evite voltar a um escritor anterior que
-desconheça saídas com zero revisões inbound e provas de despacho 0082.
+desconheça saídas com zero revisões inbound, provas de despacho 0082 ou
+documentos gerados pela expansão 0083.
 Nenhum teste local valida pareamento, transporte real ou produção.

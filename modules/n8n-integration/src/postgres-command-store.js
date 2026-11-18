@@ -4,6 +4,7 @@ import {
   commandWhatsAppTarget,
   lockSellerWhatsAppLines,
   matchesWhatsAppTarget,
+  orderPdfStillCurrent,
   personalSendAllowed,
   sellerWhatsAppSendConfiguration,
   sellerWhatsAppTarget,
@@ -151,7 +152,8 @@ export class PostgresN8nCommandStore {
       target &&
       matchesWhatsAppTarget(target, reserved) &&
       command.actor_kind === 'human' &&
-      personalSendAllowed(target, command.actor_id, this.personalSendSellers)
+      personalSendAllowed(target, command.actor_id, this.personalSendSellers) &&
+      (await orderPdfStillCurrent(client, command, target, this.envelopeKey))
     )
       return true;
     const blocked = await client.query(

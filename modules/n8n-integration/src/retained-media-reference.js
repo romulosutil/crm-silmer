@@ -8,6 +8,7 @@ export function retainedMediaReference(row, message) {
     image: ['image/jpeg', 'image/png'],
     audio: ['audio/mpeg', 'audio/mp4', 'audio/ogg'],
     video: ['video/mp4'],
+    document: ['application/pdf'],
   });
   if (
     !row ||
@@ -17,6 +18,7 @@ export function retainedMediaReference(row, message) {
     row.state !== 'attached' ||
     row.validation_status !== 'clean' ||
     row.kind !== message.type ||
+    (message.type === 'document' && row.origin !== 'order_pdf') ||
     typeof content?.mediaId !== 'string' ||
     content.mediaId.toLowerCase() !== row.id ||
     !/^[a-f0-9]{64}$/u.test(row.content_sha256 ?? '') ||

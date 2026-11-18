@@ -81,6 +81,17 @@ function reject(reason = 'invalid_format') {
   throw new ChatMediaValidationError(reason);
 }
 
+/** @param {string} path */
+async function fileSha256(path) {
+  const digest = createHash('sha256');
+  try {
+    for await (const bytes of createReadStream(path)) digest.update(bytes);
+  } catch {
+    return reject();
+  }
+  return digest.digest('hex');
+}
+
 export class ChatMediaValidator {
   #scanner;
   #execute;
@@ -98,7 +109,10 @@ export class ChatMediaValidator {
 
   /** @param {{path: string,kind: string,origin: string,declaredMimeType: string,signal?:AbortSignal}} input */
   async validate({ path, kind, origin, declaredMimeType, signal }) {
-    const { maxBytes } = validateMediaDeclaration({ kind, origin });
+    const generatedPdf = kind === 'document' && origin === 'order_pdf';
+    const maxBytes = generatedPdf
+      ? 16 * 1024 * 1024
+      : validateMediaDeclaration({ kind, origin }).maxBytes;
     let stats;
     try {
       stats = await lstat(path);
@@ -128,6 +142,20 @@ export class ChatMediaValidator {
       kind,
       origin,
     );
+    if (generatedPdf) {
+      if (mimeType !== 'application/pdf' || declared !== mimeType)
+        return reject();
+      return {
+        mimeType,
+        sizeBytes: stats.size,
+        sha256: await fileSha256(path),
+        container: 'pdf',
+        audioCodec: null,
+        audioChannels: null,
+        videoCodec: null,
+        durationMs: null,
+      };
+    }
     const allowed =
       kind === 'image'
         ? ['image/jpeg', 'image/png']
@@ -291,15 +319,9 @@ export class ChatMediaValidator {
         (origin === 'recording' && duration > 300))
     )
       return reject();
-    const digest = createHash('sha256');
-    try {
-      for await (const bytes of createReadStream(path)) digest.update(bytes);
-    } catch {
-      return reject();
-    }
     return {
       sizeBytes: stats.size,
-      sha256: digest.digest('hex'),
+      sha256: await fileSha256(path),
       mimeType,
       container,
       audioCodec: audio[0]?.codec_name ?? null,

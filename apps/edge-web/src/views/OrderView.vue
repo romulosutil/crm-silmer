@@ -13,6 +13,7 @@ import { useRoute, useRouter } from 'vue-router';
 import OrderCancelAction from '../components/order/OrderCancelAction.vue';
 import OrderReceiptPreview from '../components/order/OrderReceiptPreview.vue';
 import OrderMoreActions from '../components/order/OrderMoreActions.vue';
+import OrderWhatsAppPdfAction from '../components/order/OrderWhatsAppPdfAction.vue';
 import OrderOlistPanel from '../components/order/OrderOlistPanel.vue';
 import OrderPriceBreakdown from '../components/order/OrderPriceBreakdown.vue';
 import OrderBillingSummary from '../components/order/OrderBillingSummary.vue';
@@ -1090,6 +1091,11 @@ onBeforeUnmount(() => {
             :share-disabled="pdfBusy"
             @cancel="cancelAction?.open($event)"
             @share="generatePdf(true)"
+          />
+          <OrderWhatsAppPdfAction
+            v-if="order.pdfWhatsAppAvailable === true"
+            :order="order"
+            :disabled="editingSection !== '' || pendingOrderCommands > 0"
           />
         </div>
       </header>

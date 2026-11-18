@@ -150,3 +150,32 @@ export function commandWhatsAppTarget(command, key) {
       ).whatsapp_target ?? null)
     : null;
 }
+
+/** Hold the order version through authorization of a queued document effect.
+ * @param {any} client @param {any} command @param {any} target @param {Buffer} key */
+export async function orderPdfStillCurrent(client, command, target, key) {
+  if (!command?.payload_envelope) return false;
+  const payload = decryptJson(
+    command.payload_envelope,
+    `n8n-command:${command.command_id}`,
+    key,
+  );
+  if (payload.message?.type !== 'document') return !payload.order_pdf;
+  const order = payload.order_pdf;
+  if (
+    !target ||
+    typeof order?.id !== 'string' ||
+    !Number.isSafeInteger(order.version)
+  )
+    return false;
+  return Boolean(
+    (
+      await client.query(
+        `SELECT id FROM crm.orders WHERE id=$1 AND version=$2
+    AND conversation_id=$3 AND contact_id=$4 AND origin='atendimento' AND status='confirmado'
+    AND cancelled_at IS NULL FOR SHARE`,
+        [order.id, order.version, command.conversation_id, target.contactId],
+      )
+    ).rows[0],
+  );
+}

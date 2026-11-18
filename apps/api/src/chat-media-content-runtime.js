@@ -103,6 +103,12 @@ export async function readChatMediaContent(
       'Accept-Ranges': 'bytes',
       'Content-Type': row.detected_mime_type,
       'Content-Length': String(expectedLength),
+      ...(row.kind === 'document'
+        ? {
+            'Content-Disposition': 'attachment; filename="ficha.pdf"',
+            'Content-Security-Policy': "default-src 'none'; sandbox",
+          }
+        : {}),
       ...(contentRange ? { 'Content-Range': contentRange } : {}),
     },
   };

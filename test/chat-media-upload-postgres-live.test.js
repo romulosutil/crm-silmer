@@ -890,4 +890,74 @@ if (connectionString) {
       admission.id,
     );
   });
+  test('WAP-E08: a generated ficha PDF takes the conversation before the quota row, so a concurrent send never deadlocks', async () => {
+    await pool.query(
+      `INSERT INTO crm.chat_media_quotas(bucket_alias,limit_bytes) VALUES('chat-dev',$1)`,
+      [60 * 1024 * 1024],
+    );
+    const holder = await pool.connect();
+    /** @type {any} */
+    let failure;
+    try {
+      await holder.query('BEGIN');
+      // Same order as the ficha/Inbox send transaction: conversation first.
+      await holder.query(
+        `SELECT id FROM crm.conversations WHERE id='upload-conversation' FOR UPDATE`,
+      );
+      const { pid } = (await holder.query('SELECT pg_backend_pid() AS pid'))
+        .rows[0];
+      const id = randomUUID();
+      const writing = repository
+        .writeGeneratedPdf(
+          {
+            id,
+            conversationId: 'upload-conversation',
+            actorId: 'upload-seller',
+            sha256: 'd'.repeat(64),
+            filenameEnvelope: envelope,
+            size: 100,
+          },
+          async () => {},
+        )
+        .then(
+          () => null,
+          (/** @type {any} */ error) => error,
+        );
+      // Wait until the PDF writer is blocked behind the conversation lock.
+      for (let attempt = 0; ; attempt += 1) {
+        const waiting = (
+          await pool.query(
+            'SELECT count(*)::int AS count FROM pg_stat_activity WHERE $1=ANY(pg_blocking_pids(pid))',
+            [pid],
+          )
+        ).rows[0].count;
+        if (waiting) break;
+        assert.ok(attempt < 200, 'the PDF writer never waited');
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      try {
+        await holder.query(
+          `UPDATE crm.chat_media_quotas SET version=version+1 WHERE bucket_alias='chat-dev'`,
+        );
+        await holder.query('COMMIT');
+      } catch (error) {
+        failure = error;
+        await holder.query('ROLLBACK');
+      }
+      const writerFailure = await writing;
+      assert.equal(failure?.code, undefined, 'the send side never deadlocks');
+      assert.equal(
+        writerFailure?.code,
+        undefined,
+        'the writer never deadlocks',
+      );
+      const media = (
+        await pool.query('SELECT state FROM crm.chat_media WHERE id=$1', [id])
+      ).rows[0];
+      assert.equal(media.state, 'ready');
+      assert.equal((await counts()).reserved, '100');
+    } finally {
+      holder.release();
+    }
+  });
 }

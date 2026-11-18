@@ -47,7 +47,8 @@ sobrevivem ao desligamento.
 adapters PostgreSQL, worker n8n com transporte stub) para 2 e 10 vendedores.
 O resultado está em [`capacity.evidence.json`](../../ops/seller-whatsapp/capacity.evidence.json).
 O host foi Windows de desenvolvimento (i5-11400F, 32 GiB), com PostgreSQL 17.10
-na mesma máquina e commit `aad6f171`. **A medição não prova capacidade de
+na mesma máquina e commit `d24c78c5` (`aad6f171` antes do rebase sobre a
+master de 18/11, como guardado no JSON). **A medição não prova capacidade de
 produção.**
 
 | Caminho                  | 2 vendedores          | 10 vendedores         | Observação                                    |
@@ -219,12 +220,12 @@ o relatório declara essa limitação e **não declara autonomia mobile**.
 | WAP-E02 | `ddc7a9a0`, `72b04055`                                                                      | `0077`         | [controle](seller-whatsapp-control.md)                                          |
 | WAP-E03 | `5d948169`, `a6f2cdc5`                                                                      | `0078`, `0079` | [carteira](seller-clients.md)                                                   |
 | WAP-E04 | `07ef190a`, `ad4e6695`, `f5833287`                                                          | —              | [ingresso](seller-whatsapp-inbound.md)                                          |
-| WAP-E05 | `37d4d006`                                                                                  | `0080`, `0081` | [Pedido](seller-whatsapp-orders.md)                                             |
-| WAP-E06 | `ee89502d`                                                                                  | —              | [Pedido](seller-whatsapp-orders.md)                                             |
-| WAP-E07 | `6343a51e`                                                                                  | —              | [validation-pedido](../../.specs/features/seller-whatsapp/validation-pedido.md) |
-| WAP-E08 | `5fc03cbd`, `62294117`                                                                      | `0082`, `0083` | [saídas](seller-whatsapp-outbound.md)                                           |
-| WAP-E09 | `48d38ca3` … `60f11d42`                                                                     | —              | [carteira](seller-clients.md)                                                   |
-| WAP-E10 | `23977ca5` … `aad6f171`                                                                     | —              | [saídas](seller-whatsapp-outbound.md)                                           |
+| WAP-E05 | `0d6645f8`                                                                                  | `0080`, `0081` | [Pedido](seller-whatsapp-orders.md)                                             |
+| WAP-E06 | `17e35f09`                                                                                  | —              | [Pedido](seller-whatsapp-orders.md)                                             |
+| WAP-E07 | `058f5912`                                                                                  | —              | [validation-pedido](../../.specs/features/seller-whatsapp/validation-pedido.md) |
+| WAP-E08 | `6eb5a4d3`, `936390be`                                                                      | `0082`, `0083` | [saídas](seller-whatsapp-outbound.md)                                           |
+| WAP-E09 | `82627f8b` … `ded870d7`                                                                     | —              | [carteira](seller-clients.md)                                                   |
+| WAP-E10 | `16507d09` … `d24c78c5`                                                                     | —              | [saídas](seller-whatsapp-outbound.md)                                           |
 | WAP-E11 | ver [validation-etapa1](../../.specs/features/seller-whatsapp/validation-etapa1.md#commits) | —              | este runbook e o drill                                                          |
 | WAP-E12 | ver [validation-piloto](../../.specs/features/seller-whatsapp/validation-piloto.md#commits) | —              | ensaio local; homologação real pendente                                         |
 

@@ -2,7 +2,7 @@
 
 WAP-E07 / WAP-T02a-05, requisitos WAP-17/19/31/32/33 e ADRs 090/091.
 Base revisada em 17/11/2026 no branch `codex/wap-e05`, com E05
-`37d4d006`, E06 `ee89502d` e a correção do botão no cabeçalho `d7537b3c`.
+`0d6645f8`, E06 `17e35f09` e a correção do botão no cabeçalho `d7537b3c`.
 O roteiro de reprodução fica no [runbook de Pedido por Assunto](../../../docs/runbooks/seller-whatsapp-orders.md#ensaio-integrado-wap-e07).
 
 ## Fronteira da prova

@@ -2,7 +2,7 @@
 
 WAP-T05-01 a WAP-T05-04, 18/11/2026, branch cumulativo `codex/wap-e05`
 (PR única [romulosutil/crm-silmer#398](https://github.com/romulosutil/crm-silmer/pull/398)),
-a partir do E10 `aad6f171`. [Spec](spec.md), [design](design.md),
+a partir do E10 `d24c78c5`. [Spec](spec.md), [design](design.md),
 [tasks](tasks.md), [prontidão](../../../docs/runbooks/seller-whatsapp.md) e
 [recovery](../../../docs/runbooks/seller-whatsapp-recovery.md).
 
@@ -43,7 +43,7 @@ e `npm run test:recovery:mocks` (18) foram aprovados. O ensaio
 não rodou neste host. Segue a evidência registrada no
 [runbook de controle](../../../docs/runbooks/seller-whatsapp-control.md#evidência-da-entrega).
 
-Gates únicos de CONTRIBUTING sobre `beeeb520`: `npm run validate`, com 2.889
+Gates únicos de CONTRIBUTING sobre `7cb8ed5a`: `npm run validate`, com 2.889
 aprovados, zero falhas e 61 skips live sem URL. `npm run test:e2e --
 --workers=2`, com 1.115 aprovados e sete skips existentes. `npm audit
 --audit-level=high`, completo e de runtime, sem vulnerabilidades. A cadeia do
@@ -55,11 +55,11 @@ suítes de Pedido depois de F1 (37 e 47).
 
 | ID  | Sev. | Achado                                                                                                                                                                                                            | Estado                                                                                                                                                      |
 | --- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| F1  | P1   | Linha geral, flags off: criar Pedido manual numa conversa com Assunto geral sem Pedido, ou com o único Assunto já confirmado, falhava (`409`). Na master, criava.                                                 | corrigido no E05/E06, `9c6ae568`                                                                                                                            |
-| F2  | P2   | Primeiro envio `outcome_unknown` deixava de bloquear depois de encerrar o ciclo: uma nova chave enfileirava o mesmo texto.                                                                                        | corrigido no E10, `22c95d35`                                                                                                                                |
+| F1  | P1   | Linha geral, flags off: criar Pedido manual numa conversa com Assunto geral sem Pedido, ou com o único Assunto já confirmado, falhava (`409`). Na master, criava.                                                 | corrigido no E05/E06, `31919110`                                                                                                                            |
+| F2  | P2   | Primeiro envio `outcome_unknown` deixava de bloquear depois de encerrar o ciclo: uma nova chave enfileirava o mesmo texto.                                                                                        | corrigido no E10, `097502c8`                                                                                                                                |
 | F3  | P1   | Sem trava pós-restore no código. Banco antigo restaura linha, binding e vínculo revogados; leitura revogada volta mesmo com flags off.                                                                            | aberto: procedimento obrigatório no [recovery](../../../docs/runbooks/seller-whatsapp-recovery.md#restore); decisão de trava antes do piloto (Tech Lead/PO) |
 | F4  | P1   | Sem limite de envio por usuário. O único teto é o worker serial (≈1/s), e uma sessão pode encher a fila compartilhada.                                                                                            | aberto: piloto limitado a 2 vendedores; Backend antes de ampliar                                                                                            |
-| F5  | P1   | O job PostgreSQL do CI parou no `test:olist:live` desde `37d4d006`: a fixture contava a contract `0081`, e as suítes depois dele não rodaram no CI. Depois dela, o upgrade de cobrança não listava `0082`/`0083`. | corrigido, `7eaae6d6` e `1ae5fa87`                                                                                                                          |
+| F5  | P1   | O job PostgreSQL do CI parou no `test:olist:live` desde `0d6645f8`: a fixture contava a contract `0081`, e as suítes depois dele não rodaram no CI. Depois dela, o upgrade de cobrança não listava `0082`/`0083`. | corrigido, `0f16c0f5` e `997c51b7`                                                                                                                          |
 | F6  | P2   | As suítes `test/integration/*` (E08/E10) e o drill não rodavam no CI.                                                                                                                                             | corrigido: novo passo no job PostgreSQL. E07 exige build e Chromium e segue como gate local                                                                 |
 | F7  | P2   | Rate limits por IP e por processo, não por usuário; SSE sem teto por usuário (uma aba em excesso bloqueia outro vendedor); ingresso n8n sem limite de taxa.                                                       | aberto: piloto com 1 processo e 2 vendedores; Backend                                                                                                       |
 | F8  | P2   | Comando entregue depois do backup só reconcilia como `failed`, sem caminho de operador para marcá-lo como enviado.                                                                                                | aberto: procedimento proíbe reenvio; Backend                                                                                                                |
@@ -80,7 +80,7 @@ comportamento. Confirme se ele é desejado.
 
 | SHA        | Fronteira | Conteúdo                                                |
 | ---------- | --------- | ------------------------------------------------------- |
-| `22c95d35` | E10       | F2: envio incerto bloqueia através de ciclos encerrados |
-| `7eaae6d6` | E05       | F5: fixture de upgrade Olist conta só migrações expand  |
-| `1ae5fa87` | E08       | F5: upgrade de cobrança inclui `0082`/`0083`            |
-| `9c6ae568` | E05/E06   | F1: Pedido legado na linha geral com alvo desligado     |
+| `097502c8` | E10       | F2: envio incerto bloqueia através de ciclos encerrados |
+| `0f16c0f5` | E05       | F5: fixture de upgrade Olist conta só migrações expand  |
+| `997c51b7` | E08       | F5: upgrade de cobrança inclui `0082`/`0083`            |
+| `31919110` | E05/E06   | F1: Pedido legado na linha geral com alvo desligado     |

@@ -68,7 +68,7 @@ roteiro e autorização operacional aplicáveis. Etapa 2 segue fora desta execu�
 ### Evidência WAP-E07 / WAP-T02a-05 — aceite do fluxo passivo
 
 Aceite sintético em 17/11/2026 no branch cumulativo `codex/wap-e05`, sobre
-E06 `ee89502d`. O Chromium usou a API e o PostgreSQL 17.11 reais em
+E06 `17e35f09`. O Chromium usou a API e o PostgreSQL 17.11 reais em
 loopback. Dois vendedores com o mesmo Contact criaram Pedidos em conversas
 e Assuntos próprios, inclusive após a queda da linha. O ensaio verificou
 numeração, edição, reuso, duplo clique, concorrência e recusas por ACL,
@@ -83,7 +83,7 @@ Pareamento, transporte e produção seguem nos gates operacionais.
 
 ### Evidência WAP-E06 / WAP-T02a-04 — interface mínima
 
-WAP-01/17/31/32/33, ADRs 090/091, sobre E05 `37d4d006` no branch
+WAP-01/17/31/32/33, ADRs 090/091, sobre E05 `0d6645f8` no branch
 `codex/wap-e05`. Meus clientes lê a carteira existente e abre conversa
 autorizada; confirmação captura Contact, conversa, Assunto e versões, preserva
 rascunho e cancela em mudança de contexto/acesso. Resposta 201/200 anuncia
@@ -536,7 +536,7 @@ local não homologa provedor, n8n real ou produção.
 
 ### Evidência local de WAP-E11
 
-Verificação independente e prontidão em 18/11/2026 sobre E10 `aad6f171`
+Verificação independente e prontidão em 18/11/2026 sobre E10 `d24c78c5`
 ([registro](validation-etapa1.md), [prontidão](../../../docs/runbooks/seller-whatsapp.md),
 [recovery](../../../docs/runbooks/seller-whatsapp-recovery.md)). WAP-T05-01:
 matriz fail-closed de todas as flags e allowlists de API, worker, n8n e
@@ -546,19 +546,19 @@ Os limites sem código restringem o piloto a dois vendedores e não provam
 produção. WAP-T05-02: revisão adversarial sem P0; todas as suítes PostgreSQL
 da etapa 1 e da linha geral, zero falhas e zero skips; QR/código ausentes em
 788 colunas e nos logs. Correções nas fronteiras donas, com teste vermelho
-antes: `9c6ae568`, Pedido legado na linha geral com alvo desligado (P1);
-`22c95d35`, envio incerto através de ciclos encerrados (P2); `7eaae6d6` e
-`1ae5fa87`, fixtures que paravam o job PostgreSQL do CI desde o E05.
+antes: `31919110`, Pedido legado na linha geral com alvo desligado (P1);
+`097502c8`, envio incerto através de ciclos encerrados (P2); `0f16c0f5` e
+`997c51b7`, fixtures que paravam o job PostgreSQL do CI desde o E05.
 
 WAP-T05-03: drill de desligamento, implantação em fases e restore por
 snapshot local, 7/7 em três execuções, zero skips. Preserva carteira, ACL,
 ledger, `outcome_unknown` e snapshots, sem QR restaurado. Rollback testado
-em `60f11d42` e no HEAD com primeiro envio desligado; `f5833287` não é
+em `ded870d7` e no HEAD com primeiro envio desligado; `f5833287` não é
 permitido. O código não tem trava pós-restore: o bloqueio até a
 reconciliação é procedimento obrigatório, e a trava fica como lacuna P1 para
 decisão antes do piloto. WAP-T05-04: checklist de publicação e piloto, mapa
 de versões e ordem API/migração → workflows → flags. O CI passa a rodar as
-suítes de integração E08/E10 e o drill (`beeeb520`).
+suítes de integração E08/E10 e o drill (`7cb8ed5a`).
 
 `npm run validate`: 2.889 aprovados, zero falhas, 61 skips live sem URL;
 `npm run test:e2e -- --workers=2`: 1.115 aprovados e sete skips existentes;
@@ -569,7 +569,7 @@ sem evidência live: CI verde da PR, imagens com digest, spike do provedor
 
 ### Evidência local de WAP-E12 (parcial)
 
-Preparação e ensaio local em 18/11/2026 sobre E11 `e627c508`
+Preparação e ensaio local em 18/11/2026 sobre E11 `12b4c101`
 ([registro](validation-piloto.md),
 [roteiro](../../../docs/runbooks/seller-whatsapp.md#roteiro-do-piloto-wap-e12)).
 **WAP-T05-05/06/07 e WAP-E12 seguem abertos.** Nenhuma autorização operacional
@@ -585,15 +585,27 @@ linha de A. O resultado foi 11/11 em três execuções, sem skips, com 789
 colunas e logs sem marcadores. O ensaio entra no job PostgreSQL do CI.
 
 O ensaio e a revisão de QA acharam cinco P2, corrigidos com teste vermelho
-antes: `cc01938c` (códigos públicos de restrição e linha indisponível),
-`f18225ff` e `d5384387` (ordem de lock da ficha em PDF e `503` genérico) e
-`354a31d3` (E12-5, anterior ao branch: o handler raiz deixa de expor código e
+antes: `0ee59186` (códigos públicos de restrição e linha indisponível),
+`c94b280e` e `2493cdad` (ordem de lock da ficha em PDF e `503` genérico) e
+`faf72e02` (E12-5, anterior ao branch: o handler raiz deixa de expor código e
 mensagem do banco em respostas 5xx; os 4xx seguem idênticos).
 
 Gates do código acumulado E05–E12, depois de E12-5: suítes PostgreSQL do CI
 825/825, integração E07/E08/E10/E11 sem falhas nem skips, ensaio 11/11 três
 vezes e `npm run validate` com 2.898 aprovados e 61 skips live sem URL.
 `npm run test:e2e -- --workers=2` com 1.115 aprovados e os 7 skips existentes.
+Demo local e QA exploratório (mesmo dia): um ambiente sintético com controle
+real e Evolution simulado (QR falso) serviu ao teste do proprietário. O QA
+independente achou três P1 (QR sumia antes do TTL; Pedido avulso para cliente
+privado alheio; QR perdido após `stream.reset` e recarga) e seis P2/P3, todos
+corrigidos com teste vermelho antes (E12-6 a E12-14 no registro). O reteste
+aprovou 10/10. Rodada completa antes das duas últimas correções: `validate`
+2.904 aprovados, PostgreSQL 827/829 e E2E 1.148 aprovados. As falhas
+restantes tiveram causa raiz provada e corrigida (`2dddd6f7`, `d8477e7e`),
+exceto o BCS-07, instabilidade anterior dos diálogos de cobrança no tema
+escuro. Fica para o PO a política da lista de Pedidos para clientes de linha
+pessoal (F12).
+
 Pendente: CI da PR, merge, imagens com digest, E01 (código no mesmo celular),
 F3/F4, restore remoto e as autorizações do PO, da Operação, da Privacidade e Financeira.
 

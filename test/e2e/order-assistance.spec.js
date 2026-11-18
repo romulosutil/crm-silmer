@@ -357,6 +357,9 @@ test('manual creation first requires a conscious purchase confirmation and cance
     .click();
   await expect(create).toBeFocused();
   await create.click();
+  // The dialog opens once the order read answers (WAP-E11); Escape before
+  // that would close nothing.
+  await expect(confirmation).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(confirmation).not.toBeVisible();
   await expect(create).toBeFocused();

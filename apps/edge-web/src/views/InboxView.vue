@@ -343,6 +343,15 @@ let countController;
 let detailController;
 let deliveryCheckController;
 let subjectController;
+/**
+ * The conversation and Subjects reads in flight, which "Criar pedido" waits
+ * for. A refresh of the open conversation aborts its Subjects read and reads
+ * them again only after the conversation answers.
+ * @type {Promise<void>|undefined}
+ */
+let conversationReading;
+/** @type {Promise<void>|undefined} */
+let subjectsReading;
 const subjectCommandKeys = new Map();
 /** "Separar como novo assunto" already created, while its link is retried. */
 const separatedSubjects = new Map();
@@ -1333,6 +1342,16 @@ async function createOrder() {
     !canOfferOrder.value
   )
     return;
+  // The Subjects are read right after the conversation (and again after each
+  // refresh of it): a create pressed meanwhile waits for those reads instead
+  // of being refused. The checks after the order read below run again.
+  while (
+    !orderSubjectsReady.value &&
+    (conversationReading || subjectsReading)
+  ) {
+    await Promise.allSettled([conversationReading, subjectsReading]);
+    if (active.value?.id !== conversation.id) return;
+  }
   if (!orderSubjectsReady.value) {
     actionMessage.value =
       'Aguarde a leitura dos assuntos ou atualize a conversa antes de criar o pedido.';
@@ -2146,8 +2165,23 @@ function clearPrivateConversation(id = activeId.value, forgetDraft = false) {
   }
 }
 
+/**
+ * Reads the conversation and then its Subjects; while the conversation is
+ * read, `conversationReading` holds it.
+ * @param {string} id @param {boolean} [silent]
+ */
+function selectConversation(id, silent = false) {
+  const reading = readConversation(id, silent);
+  conversationReading = reading;
+  const settle = () => {
+    if (conversationReading === reading) conversationReading = undefined;
+  };
+  reading.then(settle, settle);
+  return reading;
+}
+
 /** @param {string} id @param {boolean} [silent] */
-async function selectConversation(id, silent = false) {
+async function readConversation(id, silent = false) {
   if (!id) return;
   deliveryCheckController?.abort();
   deliveryCheckingId.value = '';
@@ -2233,8 +2267,22 @@ function emptySubjects() {
   };
 }
 
+/**
+ * Reads the conversation's Subjects; while it runs, `subjectsReading` holds it.
+ * @param {string} conversationId
+ */
+function loadSubjects(conversationId) {
+  const reading = readSubjects(conversationId);
+  subjectsReading = reading;
+  const settle = () => {
+    if (subjectsReading === reading) subjectsReading = undefined;
+  };
+  reading.then(settle, settle);
+  return reading;
+}
+
 /** @param {string} conversationId */
-async function loadSubjects(conversationId) {
+async function readSubjects(conversationId) {
   subjectController?.abort();
   const controller = new AbortController();
   subjectController = controller;

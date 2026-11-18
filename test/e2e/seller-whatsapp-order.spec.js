@@ -253,6 +253,47 @@ test('WAP-E11: cancelar a confirmação sem alvo devolve o foco ao acionador', a
   expect(writes).toHaveLength(0);
 });
 
+test('WAP-E11: Criar pedido durante a leitura dos assuntos espera por ela', async ({
+  page,
+}) => {
+  const { writes } = await setup(page, { targeting: 'off' });
+  let release = () => {};
+  const held = new Promise((resolve) => {
+    release = () => resolve(undefined);
+  });
+  let reading = () => {};
+  const asked = new Promise((resolve) => {
+    reading = () => resolve(undefined);
+  });
+  await page.route(
+    '**/api/v1/inbox/conversations/r-ana/subjects**',
+    async (route) => {
+      reading();
+      await held;
+      await route.fallback();
+    },
+  );
+  await page.goto('/inbox/r-ana');
+  const create = page.getByRole('button', {
+    name: 'Criar pedido',
+    exact: true,
+  });
+  await asked;
+  await create.focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', {
+    name: 'O cliente confirmou a compra?',
+  });
+  await expect(dialog).toHaveCount(0);
+  await expect(
+    page.getByText('Aguarde a leitura dos assuntos', { exact: false }),
+  ).toHaveCount(0);
+  release();
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator(':focus')).toHaveCount(1);
+  expect(writes).toHaveLength(0);
+});
+
 test('WAP-E11: resposta ilegível mantém a criação da linha geral', async ({
   page,
 }) => {

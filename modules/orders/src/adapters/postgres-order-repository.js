@@ -32,6 +32,7 @@ import {
   statusEventType,
 } from '../ports/contracts.js';
 import { decryptJson, encryptJson } from './envelope.js';
+import { contactReadable } from './order-contact-access.js';
 
 /**
  * @typedef {import('../ports/contracts.js').Order} Order
@@ -443,9 +444,13 @@ export class PostgresOrderRepository {
           ) {
             throw new OrderForbiddenError();
           }
+          // P1-1 (WAP-07): visibility is read again under the Contact lock
+          // that wallet link insertion/revocation also takes.
           const contact = await transaction.query(
-            'SELECT id FROM crm.contacts WHERE id = $1 FOR SHARE',
-            [input.contactId],
+            `SELECT contact.id FROM crm.contacts contact WHERE contact.id = $1
+               AND ${contactReadable('contact', '$2')}
+             FOR SHARE OF contact`,
+            [input.contactId, input.actor.id],
           );
           if (!contact.rows[0]) {
             throw new OrderNotFoundError(

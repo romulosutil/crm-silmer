@@ -57,4 +57,5 @@ export { encryptContactReview } from './domain/contact-review.js';
 export {
   personalIdentityVisible,
   contactConversationVisible,
+  contactVisible,
 } from './adapters/contact-access.js';

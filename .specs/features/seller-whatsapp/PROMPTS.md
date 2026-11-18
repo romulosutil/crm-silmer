@@ -9,9 +9,11 @@ cinco prompts completam mensagens, interface, primeiro envio e operação da
 etapa 1. Importação histórica e sucessão continuam na etapa 2.
 
 Os 32 itens T do plano inicial passam a ser passos internos rastreáveis, sem
-exigir 32 sessões, PRs ou repetições dos gates. A unidade de execução/publicação
-é E01–E12: uma fronteira coerente por prompt. Dentro dela, faça os passos na
-ordem indicada, reuse contexto e rode cada verificação apenas quando necessária.
+exigir 32 sessões, PRs ou repetições dos gates. Cada E mantém sua fronteira de
+execução. Por instrução do proprietário em 17/11/2026, **E05–E12 compartilham
+o branch `codex/wap-e05` e uma única PR**. E06–E12 continuam do código local
+da etapa anterior, sem aguardar merge. Faça os passos na ordem indicada, reuse
+contexto e rode cada verificação apenas quando necessária.
 Nada do código ou dos testes de aceite foi retirado. As estimativas de tamanho
 são relativas: uma entrega de backend com vários invariantes pede mais cuidado
 que uma alteração visual delimitada; 12 prompts não significam 12 turnos curtos.
@@ -228,12 +230,12 @@ Atualize os itens T cobertos e WAP-E05 em tasks.md somente com evidência, mais 
 
 ```text
 Execute WAP-E06: Entregar a interface mínima de Pedido pela conversa.
-Executor: Terra/Sonnet. Depende de: WAP-E05.
+Executor: Terra/Sonnet. Depende de: WAP-E05 implementado e verificado no mesmo branch; merge não é pré-requisito.
 Checklist coberto: WAP-T02a-04. Este prompt substitui a execução separada desses itens.
 
 Leia as instruções AGENTS vigentes, RTK, RULES.md e as seções relevantes de .specs/features/seller-whatsapp/{spec,design,tasks}.md e ADRs 090/091. Use rg para confirmar o código atual; se houver grafo, apenas consulte e confirme na fonte. Reutilize componentes, serviços e testes já existentes. Preserve mudanças de terceiros e a correção do botão Criar pedido de d7537b3c.
 
-Trabalhe em branch curta codex/<tarefa>, a partir da master atualizada com as dependências integradas. Um executor escreve por vez; não troque branch com alterações alheias. A unidade de entrega/PR é WAP-E06; os itens T abaixo são passos internos, não novas solicitações ao usuário. Não ampliar escopo nem criar framework, store, Redis ou infraestrutura.
+Por instrução expressa do proprietário, continue no mesmo checkout e branch codex/wap-e05 do WAP-E05. E05–E12 compõem uma única PR; esta autorização específica substitui a orientação geral de branch/PR por etapa. Confirme o branch e a implementação/testes da etapa anterior neste próprio histórico local, sem exigir merge ou presença em master. Não crie branch/PR nova, não faça switch para master, pull, rebase ou stash para começar esta etapa. Um executor escreve por vez: espere a sessão anterior concluir e preserve alterações alheias. Se o contexto não for o checkout do E05, localize-o antes de editar; não reconstrua o trabalho a partir de master. Não ampliar escopo nem criar framework, store, Redis ou infraestrutura.
 
 Fronteira prevista: apps/edge-web/src/; test/e2e/; test/order-assistance-ui.test.js. Outros arquivos somente se necessários para esta mesma entrega e com justificativa no diff; não sobrescreva trabalho de outra sessão.
 
@@ -249,7 +251,7 @@ Verificações focalizadas (consolide duplicadas):
 
 Rode testes focalizados durante o patch. Antes da publicação, execute uma vez os gates aplicáveis de CONTRIBUTING (validate, E2E e audit em runtime); não repita o gate completo a cada item interno sem mudança ou falha que justifique. Concorrência/migração exigem PostgreSQL sintético real e sem skip; UI exige teclado/foco/ARIA/mobile/axe. Para mudança só textual, bastam formatação, referências e diff. Registre bloqueios sem enfraquecer assertions.
 
-Atualize os itens T cobertos e WAP-E06 em tasks.md somente com evidência, mais contrato/runbook da fronteira. Faça git diff --check; publique uma entrega coerente em commit(s) atômico(s), um push e um PR, sem merge automático ou grafo versionado. Informe IDs/requisitos, arquivos, comandos/resultados, SHA/PR, risco/rollback e pendências. Não avance para o próximo E nesta sessão.
+Atualize os itens T cobertos e WAP-E06 em tasks.md somente com evidência, mais contrato/runbook da fronteira. Faça git diff --check e mantenha checkpoints em commits atômicos no próprio codex/wap-e05, incluindo apenas seus arquivos; não use git add indiscriminado. Teste localmente o código acumulado E05–06 antes do merge, sem exigir push ou deploy para os testes sintéticos. Quando publicar, faça push no mesmo branch e atualize a única PR do E05; se ela ainda não existir, abra-a uma única vez e reutilize-a nas próximas etapas. Não crie PR separada por E nem faça merge automático. Informe IDs/requisitos, arquivos, comandos/resultados, SHA/PR existente, risco/rollback e pendências. Preserve o branch para a etapa seguinte. Não avance para o próximo E nesta sessão.
 ```
 
 ## WAP-E07
@@ -258,12 +260,12 @@ Atualize os itens T cobertos e WAP-E06 em tasks.md somente com evidência, mais 
 
 ```text
 Execute WAP-E07: Aceitar o fluxo passivo integrado de Pedido.
-Executor: Sol/Opus. Depende de: WAP-E06.
+Executor: Sol/Opus. Depende de: WAP-E06 implementado e verificado no mesmo branch; merge não é pré-requisito.
 Checklist coberto: WAP-T02a-05. Este prompt substitui a execução separada desses itens.
 
 Leia as instruções AGENTS vigentes, RTK, RULES.md e as seções relevantes de .specs/features/seller-whatsapp/{spec,design,tasks}.md e ADRs 090/091. Use rg para confirmar o código atual; se houver grafo, apenas consulte e confirme na fonte. Reutilize componentes, serviços e testes já existentes. Preserve mudanças de terceiros e a correção do botão Criar pedido de d7537b3c.
 
-Trabalhe em branch curta codex/<tarefa>, a partir da master atualizada com as dependências integradas. Um executor escreve por vez; não troque branch com alterações alheias. A unidade de entrega/PR é WAP-E07; os itens T abaixo são passos internos, não novas solicitações ao usuário. Não ampliar escopo nem criar framework, store, Redis ou infraestrutura.
+Por instrução expressa do proprietário, continue no mesmo checkout e branch codex/wap-e05 do WAP-E05. E05–E12 compõem uma única PR; esta autorização específica substitui a orientação geral de branch/PR por etapa. Confirme o branch e a implementação/testes da etapa anterior neste próprio histórico local, sem exigir merge ou presença em master. Não crie branch/PR nova, não faça switch para master, pull, rebase ou stash para começar esta etapa. Um executor escreve por vez: espere a sessão anterior concluir e preserve alterações alheias. Se o contexto não for o checkout do E05, localize-o antes de editar; não reconstrua o trabalho a partir de master. Não ampliar escopo nem criar framework, store, Redis ou infraestrutura.
 
 Fronteira prevista: test/; .specs/features/seller-whatsapp/validation-pedido.md; docs/runbooks/. Outros arquivos somente se necessários para esta mesma entrega e com justificativa no diff; não sobrescreva trabalho de outra sessão.
 
@@ -281,7 +283,7 @@ Verificações focalizadas (consolide duplicadas):
 
 Rode testes focalizados durante o patch. Antes da publicação, execute uma vez os gates aplicáveis de CONTRIBUTING (validate, E2E e audit em runtime); não repita o gate completo a cada item interno sem mudança ou falha que justifique. Concorrência/migração exigem PostgreSQL sintético real e sem skip; UI exige teclado/foco/ARIA/mobile/axe. Para mudança só textual, bastam formatação, referências e diff. Registre bloqueios sem enfraquecer assertions.
 
-Atualize os itens T cobertos e WAP-E07 em tasks.md somente com evidência, mais contrato/runbook da fronteira. Faça git diff --check; publique uma entrega coerente em commit(s) atômico(s), um push e um PR, sem merge automático ou grafo versionado. Informe IDs/requisitos, arquivos, comandos/resultados, SHA/PR, risco/rollback e pendências. Não avance para o próximo E nesta sessão.
+Atualize os itens T cobertos e WAP-E07 em tasks.md somente com evidência, mais contrato/runbook da fronteira. Faça git diff --check e mantenha checkpoints em commits atômicos no próprio codex/wap-e05, incluindo apenas seus arquivos; não use git add indiscriminado. Teste localmente o código acumulado E05–07 antes do merge, sem exigir push ou deploy para os testes sintéticos. Quando publicar, faça push no mesmo branch e atualize a única PR do E05; se ela ainda não existir, abra-a uma única vez e reutilize-a nas próximas etapas. Não crie PR separada por E nem faça merge automático. Informe IDs/requisitos, arquivos, comandos/resultados, SHA/PR existente, risco/rollback e pendências. Preserve o branch para a etapa seguinte. Não avance para o próximo E nesta sessão.
 ```
 
 ## WAP-E08
@@ -290,12 +292,12 @@ Atualize os itens T cobertos e WAP-E07 em tasks.md somente com evidência, mais 
 
 ```text
 Execute WAP-E08: Completar mensagens correntes e efeitos pela linha correta.
-Executor: Sol/Opus. Depende de: WAP-E07.
+Executor: Sol/Opus. Depende de: WAP-E07 implementado e verificado no mesmo branch; merge não é pré-requisito.
 Checklist coberto: WAP-T02-08, WAP-T03-01, WAP-T03-02, WAP-T02-09. Este prompt substitui a execução separada desses itens.
 
 Leia as instruções AGENTS vigentes, RTK, RULES.md e as seções relevantes de .specs/features/seller-whatsapp/{spec,design,tasks}.md e ADRs 090/091. Use rg para confirmar o código atual; se houver grafo, apenas consulte e confirme na fonte. Reutilize componentes, serviços e testes já existentes. Preserve mudanças de terceiros e a correção do botão Criar pedido de d7537b3c.
 
-Trabalhe em branch curta codex/<tarefa>, a partir da master atualizada com as dependências integradas. Um executor escreve por vez; não troque branch com alterações alheias. A unidade de entrega/PR é WAP-E08; os itens T abaixo são passos internos, não novas solicitações ao usuário. Não ampliar escopo nem criar framework, store, Redis ou infraestrutura.
+Por instrução expressa do proprietário, continue no mesmo checkout e branch codex/wap-e05 do WAP-E05. E05–E12 compõem uma única PR; esta autorização específica substitui a orientação geral de branch/PR por etapa. Confirme o branch e a implementação/testes da etapa anterior neste próprio histórico local, sem exigir merge ou presença em master. Não crie branch/PR nova, não faça switch para master, pull, rebase ou stash para começar esta etapa. Um executor escreve por vez: espere a sessão anterior concluir e preserve alterações alheias. Se o contexto não for o checkout do E05, localize-o antes de editar; não reconstrua o trabalho a partir de master. Não ampliar escopo nem criar framework, store, Redis ou infraestrutura.
 
 Fronteira prevista: modules/integration-reliability/src/; modules/n8n-integration/src/; modules/inbox-channels/src/; apps/worker/src/; ops/n8n/; test/; ops/n8n/workflows/create-evolution-workflow.mjs; schemas/fixtures/external/n8n/; apps/api/src/; apps/api/src/order-billing-chat-runtime.js; apps/api/src/order-billing-runtime.js; modules/order-billing/. Outros arquivos somente se necessários para esta mesma entrega e com justificativa no diff; não sobrescreva trabalho de outra sessão.
 
@@ -320,7 +322,7 @@ Verificações focalizadas (consolide duplicadas):
 
 Rode testes focalizados durante o patch. Antes da publicação, execute uma vez os gates aplicáveis de CONTRIBUTING (validate, E2E e audit em runtime); não repita o gate completo a cada item interno sem mudança ou falha que justifique. Concorrência/migração exigem PostgreSQL sintético real e sem skip; UI exige teclado/foco/ARIA/mobile/axe. Para mudança só textual, bastam formatação, referências e diff. Registre bloqueios sem enfraquecer assertions.
 
-Atualize os itens T cobertos e WAP-E08 em tasks.md somente com evidência, mais contrato/runbook da fronteira. Faça git diff --check; publique uma entrega coerente em commit(s) atômico(s), um push e um PR, sem merge automático ou grafo versionado. Informe IDs/requisitos, arquivos, comandos/resultados, SHA/PR, risco/rollback e pendências. Não avance para o próximo E nesta sessão.
+Atualize os itens T cobertos e WAP-E08 em tasks.md somente com evidência, mais contrato/runbook da fronteira. Faça git diff --check e mantenha checkpoints em commits atômicos no próprio codex/wap-e05, incluindo apenas seus arquivos; não use git add indiscriminado. Teste localmente o código acumulado E05–08 antes do merge, sem exigir push ou deploy para os testes sintéticos. Quando publicar, faça push no mesmo branch e atualize a única PR do E05; se ela ainda não existir, abra-a uma única vez e reutilize-a nas próximas etapas. Não crie PR separada por E nem faça merge automático. Informe IDs/requisitos, arquivos, comandos/resultados, SHA/PR existente, risco/rollback e pendências. Preserve o branch para a etapa seguinte. Não avance para o próximo E nesta sessão.
 ```
 
 ## WAP-E09
@@ -329,12 +331,12 @@ Atualize os itens T cobertos e WAP-E08 em tasks.md somente com evidência, mais 
 
 ```text
 Execute WAP-E09: Completar Meus clientes e Meu WhatsApp na interface.
-Executor: Terra/Sonnet. Depende de: WAP-E08.
+Executor: Terra/Sonnet. Depende de: WAP-E08 implementado e verificado no mesmo branch; merge não é pré-requisito.
 Checklist coberto: WAP-T04-01, WAP-T04-02, WAP-T04-05. Este prompt substitui a execução separada desses itens.
 
 Leia as instruções AGENTS vigentes, RTK, RULES.md e as seções relevantes de .specs/features/seller-whatsapp/{spec,design,tasks}.md e ADRs 090/091. Use rg para confirmar o código atual; se houver grafo, apenas consulte e confirme na fonte. Reutilize componentes, serviços e testes já existentes. Preserve mudanças de terceiros e a correção do botão Criar pedido de d7537b3c.
 
-Trabalhe em branch curta codex/<tarefa>, a partir da master atualizada com as dependências integradas. Um executor escreve por vez; não troque branch com alterações alheias. A unidade de entrega/PR é WAP-E09; os itens T abaixo são passos internos, não novas solicitações ao usuário. Não ampliar escopo nem criar framework, store, Redis ou infraestrutura.
+Por instrução expressa do proprietário, continue no mesmo checkout e branch codex/wap-e05 do WAP-E05. E05–E12 compõem uma única PR; esta autorização específica substitui a orientação geral de branch/PR por etapa. Confirme o branch e a implementação/testes da etapa anterior neste próprio histórico local, sem exigir merge ou presença em master. Não crie branch/PR nova, não faça switch para master, pull, rebase ou stash para começar esta etapa. Um executor escreve por vez: espere a sessão anterior concluir e preserve alterações alheias. Se o contexto não for o checkout do E05, localize-o antes de editar; não reconstrua o trabalho a partir de master. Não ampliar escopo nem criar framework, store, Redis ou infraestrutura.
 
 Fronteira prevista: apps/edge-web/src/; test/e2e/; test/edge-contact-registration.test.js. Outros arquivos somente se necessários para esta mesma entrega e com justificativa no diff; não sobrescreva trabalho de outra sessão.
 
@@ -356,7 +358,7 @@ Verificações focalizadas (consolide duplicadas):
 
 Rode testes focalizados durante o patch. Antes da publicação, execute uma vez os gates aplicáveis de CONTRIBUTING (validate, E2E e audit em runtime); não repita o gate completo a cada item interno sem mudança ou falha que justifique. Concorrência/migração exigem PostgreSQL sintético real e sem skip; UI exige teclado/foco/ARIA/mobile/axe. Para mudança só textual, bastam formatação, referências e diff. Registre bloqueios sem enfraquecer assertions.
 
-Atualize os itens T cobertos e WAP-E09 em tasks.md somente com evidência, mais contrato/runbook da fronteira. Faça git diff --check; publique uma entrega coerente em commit(s) atômico(s), um push e um PR, sem merge automático ou grafo versionado. Informe IDs/requisitos, arquivos, comandos/resultados, SHA/PR, risco/rollback e pendências. Não avance para o próximo E nesta sessão.
+Atualize os itens T cobertos e WAP-E09 em tasks.md somente com evidência, mais contrato/runbook da fronteira. Faça git diff --check e mantenha checkpoints em commits atômicos no próprio codex/wap-e05, incluindo apenas seus arquivos; não use git add indiscriminado. Teste localmente o código acumulado E05–09 antes do merge, sem exigir push ou deploy para os testes sintéticos. Quando publicar, faça push no mesmo branch e atualize a única PR do E05; se ela ainda não existir, abra-a uma única vez e reutilize-a nas próximas etapas. Não crie PR separada por E nem faça merge automático. Informe IDs/requisitos, arquivos, comandos/resultados, SHA/PR existente, risco/rollback e pendências. Preserve o branch para a etapa seguinte. Não avance para o próximo E nesta sessão.
 ```
 
 ## WAP-E10
@@ -365,12 +367,12 @@ Atualize os itens T cobertos e WAP-E09 em tasks.md somente com evidência, mais 
 
 ```text
 Execute WAP-E10: Entregar primeiro envio humano individual.
-Executor: Sol/Opus. Depende de: WAP-E09.
+Executor: Sol/Opus. Depende de: WAP-E09 implementado e verificado no mesmo branch; merge não é pré-requisito.
 Checklist coberto: WAP-T04-03, WAP-T04-04. Este prompt substitui a execução separada desses itens.
 
 Leia as instruções AGENTS vigentes, RTK, RULES.md e as seções relevantes de .specs/features/seller-whatsapp/{spec,design,tasks}.md e ADRs 090/091. Use rg para confirmar o código atual; se houver grafo, apenas consulte e confirme na fonte. Reutilize componentes, serviços e testes já existentes. Preserve mudanças de terceiros e a correção do botão Criar pedido de d7537b3c.
 
-Trabalhe em branch curta codex/<tarefa>, a partir da master atualizada com as dependências integradas. Um executor escreve por vez; não troque branch com alterações alheias. A unidade de entrega/PR é WAP-E10; os itens T abaixo são passos internos, não novas solicitações ao usuário. Não ampliar escopo nem criar framework, store, Redis ou infraestrutura.
+Por instrução expressa do proprietário, continue no mesmo checkout e branch codex/wap-e05 do WAP-E05. E05–E12 compõem uma única PR; esta autorização específica substitui a orientação geral de branch/PR por etapa. Confirme o branch e a implementação/testes da etapa anterior neste próprio histórico local, sem exigir merge ou presença em master. Não crie branch/PR nova, não faça switch para master, pull, rebase ou stash para começar esta etapa. Um executor escreve por vez: espere a sessão anterior concluir e preserve alterações alheias. Se o contexto não for o checkout do E05, localize-o antes de editar; não reconstrua o trabalho a partir de master. Não ampliar escopo nem criar framework, store, Redis ou infraestrutura.
 
 Fronteira prevista: apps/api/src/; modules/contacts/src/; modules/inbox-channels/src/; modules/integration-reliability/src/; schemas/; test/; apps/edge-web/src/; test/e2e/. Outros arquivos somente se necessários para esta mesma entrega e com justificativa no diff; não sobrescreva trabalho de outra sessão.
 
@@ -389,7 +391,7 @@ Verificações focalizadas (consolide duplicadas):
 
 Rode testes focalizados durante o patch. Antes da publicação, execute uma vez os gates aplicáveis de CONTRIBUTING (validate, E2E e audit em runtime); não repita o gate completo a cada item interno sem mudança ou falha que justifique. Concorrência/migração exigem PostgreSQL sintético real e sem skip; UI exige teclado/foco/ARIA/mobile/axe. Para mudança só textual, bastam formatação, referências e diff. Registre bloqueios sem enfraquecer assertions.
 
-Atualize os itens T cobertos e WAP-E10 em tasks.md somente com evidência, mais contrato/runbook da fronteira. Faça git diff --check; publique uma entrega coerente em commit(s) atômico(s), um push e um PR, sem merge automático ou grafo versionado. Informe IDs/requisitos, arquivos, comandos/resultados, SHA/PR, risco/rollback e pendências. Não avance para o próximo E nesta sessão.
+Atualize os itens T cobertos e WAP-E10 em tasks.md somente com evidência, mais contrato/runbook da fronteira. Faça git diff --check e mantenha checkpoints em commits atômicos no próprio codex/wap-e05, incluindo apenas seus arquivos; não use git add indiscriminado. Teste localmente o código acumulado E05–10 antes do merge, sem exigir push ou deploy para os testes sintéticos. Quando publicar, faça push no mesmo branch e atualize a única PR do E05; se ela ainda não existir, abra-a uma única vez e reutilize-a nas próximas etapas. Não crie PR separada por E nem faça merge automático. Informe IDs/requisitos, arquivos, comandos/resultados, SHA/PR existente, risco/rollback e pendências. Preserve o branch para a etapa seguinte. Não avance para o próximo E nesta sessão.
 ```
 
 ## WAP-E11
@@ -398,12 +400,12 @@ Atualize os itens T cobertos e WAP-E10 em tasks.md somente com evidência, mais 
 
 ```text
 Execute WAP-E11: Concluir verificação e prontidão operacional.
-Executor: Sol/Opus. Depende de: WAP-E10.
+Executor: Sol/Opus. Depende de: WAP-E10 implementado e verificado no mesmo branch; merge não é pré-requisito.
 Checklist coberto: WAP-T05-01, WAP-T05-02, WAP-T05-03, WAP-T05-04. Este prompt substitui a execução separada desses itens.
 
 Leia as instruções AGENTS vigentes, RTK, RULES.md e as seções relevantes de .specs/features/seller-whatsapp/{spec,design,tasks}.md e ADRs 090/091. Use rg para confirmar o código atual; se houver grafo, apenas consulte e confirme na fonte. Reutilize componentes, serviços e testes já existentes. Preserve mudanças de terceiros e a correção do botão Criar pedido de d7537b3c.
 
-Trabalhe em branch curta codex/<tarefa>, a partir da master atualizada com as dependências integradas. Um executor escreve por vez; não troque branch com alterações alheias. A unidade de entrega/PR é WAP-E11; os itens T abaixo são passos internos, não novas solicitações ao usuário. Não ampliar escopo nem criar framework, store, Redis ou infraestrutura.
+Por instrução expressa do proprietário, continue no mesmo checkout e branch codex/wap-e05 do WAP-E05. E05–E12 compõem uma única PR; esta autorização específica substitui a orientação geral de branch/PR por etapa. Confirme o branch e a implementação/testes da etapa anterior neste próprio histórico local, sem exigir merge ou presença em master. Não crie branch/PR nova, não faça switch para master, pull, rebase ou stash para começar esta etapa. Um executor escreve por vez: espere a sessão anterior concluir e preserve alterações alheias. Se o contexto não for o checkout do E05, localize-o antes de editar; não reconstrua o trabalho a partir de master. Não ampliar escopo nem criar framework, store, Redis ou infraestrutura.
 
 Fronteira prevista: modules/shared/; apps/api/src/; apps/worker/src/; ops/evolution/; ops/n8n/; test/; EASYPANEL-TOPOLOGY.md; .specs/features/seller-whatsapp/validation-etapa1.md; ops/; docs/runbooks/seller-whatsapp-recovery.md; docs/runbooks/seller-whatsapp.md; .specs/features/seller-whatsapp/tasks.md. Outros arquivos somente se necessários para esta mesma entrega e com justificativa no diff; não sobrescreva trabalho de outra sessão.
 
@@ -430,7 +432,7 @@ Verificações focalizadas (consolide duplicadas):
 
 Rode testes focalizados durante o patch. Antes da publicação, execute uma vez os gates aplicáveis de CONTRIBUTING (validate, E2E e audit em runtime); não repita o gate completo a cada item interno sem mudança ou falha que justifique. Concorrência/migração exigem PostgreSQL sintético real e sem skip; UI exige teclado/foco/ARIA/mobile/axe. Para mudança só textual, bastam formatação, referências e diff. Registre bloqueios sem enfraquecer assertions.
 
-Atualize os itens T cobertos e WAP-E11 em tasks.md somente com evidência, mais contrato/runbook da fronteira. Faça git diff --check; publique uma entrega coerente em commit(s) atômico(s), um push e um PR, sem merge automático ou grafo versionado. Informe IDs/requisitos, arquivos, comandos/resultados, SHA/PR, risco/rollback e pendências. Não avance para o próximo E nesta sessão.
+Atualize os itens T cobertos e WAP-E11 em tasks.md somente com evidência, mais contrato/runbook da fronteira. Faça git diff --check e mantenha checkpoints em commits atômicos no próprio codex/wap-e05, incluindo apenas seus arquivos; não use git add indiscriminado. Teste localmente o código acumulado E05–11 antes do merge, sem exigir push ou deploy para os testes sintéticos. Quando publicar, faça push no mesmo branch e atualize a única PR do E05; se ela ainda não existir, abra-a uma única vez e reutilize-a nas próximas etapas. Não crie PR separada por E nem faça merge automático. Informe IDs/requisitos, arquivos, comandos/resultados, SHA/PR existente, risco/rollback e pendências. Preserve o branch para a etapa seguinte. Não avance para o próximo E nesta sessão.
 ```
 
 ## WAP-E12
@@ -439,12 +441,12 @@ Atualize os itens T cobertos e WAP-E11 em tasks.md somente com evidência, mais 
 
 ```text
 Execute WAP-E12: Homologar o piloto real da etapa 1.
-Executor: Sol/Opus. Depende de: WAP-E11.
+Executor: Sol/Opus. Depende de: WAP-E11 implementado e verificado no mesmo branch; merge não é pré-requisito.
 Checklist coberto: WAP-T05-05, WAP-T05-06, WAP-T05-07. Este prompt substitui a execução separada desses itens.
 
 Leia as instruções AGENTS vigentes, RTK, RULES.md e as seções relevantes de .specs/features/seller-whatsapp/{spec,design,tasks}.md e ADRs 090/091. Use rg para confirmar o código atual; se houver grafo, apenas consulte e confirme na fonte. Reutilize componentes, serviços e testes já existentes. Preserve mudanças de terceiros e a correção do botão Criar pedido de d7537b3c.
 
-Trabalhe em branch curta codex/<tarefa>, a partir da master atualizada com as dependências integradas. Um executor escreve por vez; não troque branch com alterações alheias. A unidade de entrega/PR é WAP-E12; os itens T abaixo são passos internos, não novas solicitações ao usuário. Não ampliar escopo nem criar framework, store, Redis ou infraestrutura.
+Por instrução expressa do proprietário, continue no mesmo checkout e branch codex/wap-e05 do WAP-E05. E05–E12 compõem uma única PR; esta autorização específica substitui a orientação geral de branch/PR por etapa. Confirme o branch e a implementação/testes da etapa anterior neste próprio histórico local, sem exigir merge ou presença em master. Não crie branch/PR nova, não faça switch para master, pull, rebase ou stash para começar esta etapa. Um executor escreve por vez: espere a sessão anterior concluir e preserve alterações alheias. Se o contexto não for o checkout do E05, localize-o antes de editar; não reconstrua o trabalho a partir de master. Não ampliar escopo nem criar framework, store, Redis ou infraestrutura.
 
 Fronteira prevista: docs/runbooks/seller-whatsapp.md; .specs/features/seller-whatsapp/validation-piloto.md; configuração operacional somente no escopo autorizado. Outros arquivos somente se necessários para esta mesma entrega e com justificativa no diff; não sobrescreva trabalho de outra sessão.
 
@@ -457,6 +459,8 @@ Fronteira prevista: docs/runbooks/seller-whatsapp.md; .specs/features/seller-wha
 
 Preserve Contact oficial, isolamento por linha/carteira, ACL comercial independente, snapshots e retenção. Cada novo endpoint/ingresso/despacho já entrega guard fail-closed, default off e allowlist pertinente; não deixar isso para E11. Vínculo cadastral não concede acesso a conversa ou negócio alheio. n8n continua obrigatório; nenhum QR/código/segredo em persistência ou log. Efeito incerto exige reconciliação, sem retry cego.
 
+Antes do merge, prepare e execute o roteiro local integrado com PostgreSQL dedicado, dados sintéticos e transporte simulado existente. Registre separadamente implementação/testes locais e homologação real. A falta de merge ou deploy em produção não bloqueia a preparação nem os testes locais desta etapa; evidência sintética não fecha o aceite live. Se a homologação real depender de implantação autorizada posterior, registre somente esse gate como pendente na mesma PR, mantendo E12 parcial sem inventar aceite ou exigir outra PR. O merge final é uma decisão única após o teste local do proprietário e os gates de CI/release aplicáveis.
+
 Prepare o roteiro concreto e confira a autorização operacional vigente antes do primeiro efeito real; não peça novamente se ela já cobrir exatamente as ações. Na ausência de autorização aplicável, conclua a preparação, reporte o gate pendente e peça somente o aceite final necessário. Não publique, pareie, envie a cliente ou gere efeito financeiro real por inferência deste prompt. Cobrança/recebimento são sintéticos ou sandbox expressamente autorizado. Os três cenários T abaixo compõem um único roteiro, sem refazer setup ou pagamentos a cada seção.
 
 Verificações focalizadas (consolide duplicadas):
@@ -466,5 +470,5 @@ Verificações focalizadas (consolide duplicadas):
 
 Registre provas reais minimizadas, resultado e limites do roteiro autorizado. Não substituir código no mesmo celular por QR em duas telas nem declarar PASS por mock. Só encerrar etapa 1 com os aceites funcionais e operacionais aplicáveis.
 
-Atualize os itens T cobertos e WAP-E12 em tasks.md somente com evidência, mais contrato/runbook da fronteira. Faça git diff --check; publique uma entrega coerente em commit(s) atômico(s), um push e um PR, sem merge automático ou grafo versionado. Informe IDs/requisitos, arquivos, comandos/resultados, SHA/PR, risco/rollback e pendências. Não avance para o próximo E nesta sessão.
+Atualize os itens T cobertos e WAP-E12 em tasks.md somente com evidência, mais contrato/runbook da fronteira. Faça git diff --check e mantenha checkpoints em commits atômicos no próprio codex/wap-e05, incluindo apenas seus arquivos; não use git add indiscriminado. Teste localmente o código acumulado E05–12 antes do merge, sem exigir push ou deploy para os testes sintéticos. Quando publicar, faça push no mesmo branch e atualize a única PR do E05; se ela ainda não existir, abra-a uma única vez e reutilize-a nas próximas etapas. Não crie PR separada por E nem faça merge automático. Informe IDs/requisitos, arquivos, comandos/resultados, SHA/PR existente, risco/rollback e pendências. Preserve o branch para a etapa seguinte. Não avance para o próximo E nesta sessão.
 ```

@@ -21,14 +21,24 @@ Nenhum item de runtime está concluído por esta revisão documental.
 
 ## Unidade de entrega e gates
 
-Execute E01 → E12 serialmente, com dependências integradas. E05 pode ter seu
-schema e leitores preparados antes, mas só entrega o escritor após E04. Cada
-E é uma entrega/PR revisável: seus itens T são passos internos na ordem
-indicada, com commits atômicos quando houver fronteiras distintas. Sem branch
-ou PR extra por subitem mecânico. Reuse o contexto e não repita gates completos
+Execute as etapas serialmente. Por instrução do proprietário em 17/11/2026,
+**E05–E12 usam o mesmo branch `codex/wap-e05` e uma única PR cumulativa**.
+E06–E12 exigem o código e os testes da etapa anterior no próprio branch, sem
+aguardar merge ou publicação em master. E01–E04 mantêm seu histórico anterior.
+E05 pode ter schema e leitores preparados antes, mas só entrega o escritor
+após E04. Os itens T são passos internos na ordem indicada, com checkpoints
+em commits atômicos; não abrir outro branch/PR entre E05 e E12. Reuse o contexto e não repita gates completos
 entre passos sem alteração/falha que justifique; rode-os uma vez na fronteira
 integrada antes de publicar. Não pule teste negativo, PostgreSQL real sintético
 ou a11y; redução de prompts não é dispensa de aceite.
+
+O proprietário pode testar o código acumulado localmente antes de um único
+merge final. E12 distingue testes locais/preparação de homologação real: falta
+de deploy ou autorização real deixa apenas o gate live pendente, sem impedir
+o ensaio sintético nem inventar conclusão do piloto. Reutilizar a PR do E05
+(abrir uma vez, se ainda ausente) e preservar o branch para a etapa seguinte.
+Esta orientação de execução prevalece sobre recomendações antigas de uma PR
+por E; não autoriza implantação ou efeito real.
 
 Cada entrega que introduz efeito já traz guard fail-closed/default off; E11
 apenas consolida configuração/capacidade. ACL/histórico persistem com flag off.

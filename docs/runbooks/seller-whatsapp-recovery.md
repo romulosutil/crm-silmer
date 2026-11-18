@@ -57,11 +57,11 @@ A escolha do SHA é um controle de procedimento.
 | SHA                     | Permitido | Como foi testado                                                                    |
 | ----------------------- | --------- | ----------------------------------------------------------------------------------- |
 | `f5833287` (pré-E05)    | Não       | Leitura de código e sonda real contra o banco restaurado: escolheu um alvo pendente |
-| `60f11d42` (fim do E09) | Sim       | Export por `git archive`, `npm ci` próprio, saídas 7/7 e Assunto 14/14, zero skips  |
+| `ded870d7` (fim do E09) | Sim       | Export por `git archive`, `npm ci` próprio, saídas 7/7 e Assunto 14/14, zero skips  |
 | HEAD do E11             | Sim       | Drill completo com `SELLER_WHATSAPP_FIRST_SEND_ENABLED=false`                       |
 
-As migrações são idênticas entre `60f11d42` e o HEAD (`0083`). Voltar para
-`60f11d42` remove o primeiro envio: desligue-o antes e reconcilie os envios
+As migrações são idênticas entre `ded870d7` e o HEAD (`0083`). Voltar para
+`ded870d7` remove o primeiro envio: desligue-o antes e reconcilie os envios
 pendentes.
 
 ## Restore

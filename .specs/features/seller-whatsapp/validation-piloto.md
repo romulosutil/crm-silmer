@@ -3,7 +3,7 @@
 WAP-T05-05, WAP-T05-06 e WAP-T05-07, 18/11/2026, branch cumulativo
 `codex/wap-e05` (PR única
 [romulosutil/crm-silmer#398](https://github.com/romulosutil/crm-silmer/pull/398)),
-a partir do E11 `e627c508`. [Spec](spec.md), [design §10](design.md),
+a partir do E11 `12b4c101`. [Spec](spec.md), [design §10](design.md),
 [tasks](tasks.md), [roteiro do piloto](../../../docs/runbooks/seller-whatsapp.md#roteiro-do-piloto-wap-e12),
 [prontidão](validation-etapa1.md) e ADRs 090/091.
 
@@ -132,15 +132,59 @@ nos headers.
 `npm run test:e2e -- --workers=2`, sem carga paralela: 1.115 aprovados e os
 7 skips existentes, inclusive o BCS-07.
 
+## Demo local e QA exploratório
+
+Para o teste do proprietário antes do merge, um ambiente local sintético roda
+este branch com PostgreSQL próprio. As flags pessoais ficam ligadas só para
+vendedores semeados. O controle de conexão real roda com o worker, os nós Code
+gerados do n8n e os adapters reais do Evolution. Só os endpoints HTTP do
+Evolution são simulados, e o QR é falso: não pareia nenhum aparelho. Scripts e
+dados ficam fora do repositório. Isso não é evidência live.
+
+Um QA independente fez teste exploratório de caixa preta em 10 áreas:
+carteira, isolamento, Inbox pessoal, Pedido por Assunto, primeiro envio,
+pareamento, flags, regressão da linha geral, acessibilidade e
+console/rede. Os achados abaixo foram corrigidos com teste vermelho antes. O
+reteste aprovou os 10 itens, com axe sem violações em 390 e 1366 px nos dois
+temas. QR e código não apareceram em logs, banco, storage do navegador nem em
+respostas além da própria chamada de desafio.
+
+| ID     | Sev. | Achado                                                                                                     | Estado                             |
+| ------ | ---- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| E12-6  | P2   | Inbox não mostrava de qual WhatsApp era a conversa (WAP-09)                                                | corrigido, `1d921374` e `5131192f` |
+| E12-7  | P1   | QR/código sumia em cerca de 9 s (versão subia em reconciliação sem mudança), contra TTL de 60 s            | corrigido, `9effe6fa`              |
+| E12-8  | P1   | Qualquer vendedor criava Pedido avulso para cliente privado de outra carteira e lia o nome (WAP-07/31)     | corrigido, `2a452533`              |
+| E12-9  | P2   | Pedido em conversa pessoal sem Assunto nascia sem origem e travava o segundo Pedido (WAP-31/33)            | corrigido, `2a452533`              |
+| E12-10 | P1   | `stream.reset` de outra linha apagava o QR; depois de recarregar, a renovação ficava presa em `409`        | corrigido, `4a9897f6`              |
+| E12-11 | P2   | Linha bloqueada sem saída na tela; foco caía no `body` ao mostrar QR/código                                | corrigido, `4a9897f6`              |
+| E12-12 | P2   | Linha pessoal caída ainda convidava a enviar (WAP-11); banner de onboarding para quem já conectou          | corrigido, `5131192f`              |
+| E12-13 | P2   | Criar pedido apertado antes da leitura dos Assuntos era recusado sem abrir o diálogo (intermitente no E2E) | corrigido, `d8477e7e`              |
+| E12-14 | P3   | Asserção nova listava conversas de outra suíte no banco compartilhado do CI e falhava ao decifrar          | corrigido, `2dddd6f7`              |
+
+Abertos, sem bloquear o piloto:
+
+- P3: outra aba que pede novo desafio deixa o QR antigo visível na primeira
+  até o TTL (a GET já expõe o id; falta comparar no polling).
+- P3: Admin em Meus clientes faz duas leituras `403`.
+- P3: rótulo do Admin usa só o primeiro nome do titular.
+- P3: Assuntos no diálogo de Pedido sem data ou trecho.
+- P3: busca de Meus clientes ignora maiúsculas, mas não acentos.
+
+**Decisão de política pendente (PO, relacionada a F12):** a lista de Pedidos,
+o detalhe e a busca por nome mostram a outro vendedor os Pedidos de cliente da
+linha pessoal de A, com nome e ficha completa. É o comportamento de sempre do
+quadro de Pedidos (`order.read` vê todos), agora aplicado a um cliente privado
+de carteira.
+
 ## Findings do ensaio
 
 | ID    | Sev. | Achado                                                                                                                                                                                                      | Estado                                                                |
 | ----- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| E12-1 | P2   | Edição recusada de campo compartilhado restrito chegava como `403 INVALID_REQUEST`. `ClientRegistration.vue` só mantém o rascunho e orienta a revisão com o código próprio                                  | corrigido no E03/E09, `cc01938c`                                      |
-| E12-2 | P2   | Envio pela Inbox com linha indisponível chegava como `SERVICE_UNAVAILABLE`. A Inbox não dizia que a linha caiu e que o rascunho foi mantido. Com flags off, `/me/clients` também mascarava o código         | corrigido no E04/E08, `cc01938c`                                      |
-| E12-3 | P2   | Dois envios concorrentes da ficha em PDF com a mesma chave travavam (`40P01`) por ordem de lock invertida entre conversa e quota. Nunca houve comando duplicado                                             | corrigido no E08, `f18225ff`                                          |
-| E12-4 | P2   | Revisão de QA: o gravador da ficha ainda fechava ciclo pelo FK `uploaded_by` → `crm.users` com um envio de mídia da Inbox do mesmo vendedor, em outra aba                                                   | corrigido no E08, `d5384387`                                          |
-| E12-5 | P2   | Anterior a este branch: erro sem `statusCode` (por exemplo, erro bruto do PostgreSQL) nas rotas de conversa e de operação caía no handler padrão do Fastify e devolvia `500` com código e mensagem do banco | corrigido, `354a31d3`: handler raiz com corpo genérico; 4xx idênticos |
+| E12-1 | P2   | Edição recusada de campo compartilhado restrito chegava como `403 INVALID_REQUEST`. `ClientRegistration.vue` só mantém o rascunho e orienta a revisão com o código próprio                                  | corrigido no E03/E09, `0ee59186`                                      |
+| E12-2 | P2   | Envio pela Inbox com linha indisponível chegava como `SERVICE_UNAVAILABLE`. A Inbox não dizia que a linha caiu e que o rascunho foi mantido. Com flags off, `/me/clients` também mascarava o código         | corrigido no E04/E08, `0ee59186`                                      |
+| E12-3 | P2   | Dois envios concorrentes da ficha em PDF com a mesma chave travavam (`40P01`) por ordem de lock invertida entre conversa e quota. Nunca houve comando duplicado                                             | corrigido no E08, `c94b280e`                                          |
+| E12-4 | P2   | Revisão de QA: o gravador da ficha ainda fechava ciclo pelo FK `uploaded_by` → `crm.users` com um envio de mídia da Inbox do mesmo vendedor, em outra aba                                                   | corrigido no E08, `2493cdad`                                          |
+| E12-5 | P2   | Anterior a este branch: erro sem `statusCode` (por exemplo, erro bruto do PostgreSQL) nas rotas de conversa e de operação caía no handler padrão do Fastify e devolvia `500` com código e mensagem do banco | corrigido, `faf72e02`: handler raiz com corpo genérico; 4xx idênticos |
 
 ## Resultado live
 
@@ -177,8 +221,15 @@ live minimizada.
 
 | SHA        | Fronteira | Conteúdo                                                        |
 | ---------- | --------- | --------------------------------------------------------------- |
-| `cc01938c` | E03/E04   | E12-1 e E12-2: códigos públicos de que a interface depende      |
-| `f18225ff` | E08       | E12-3: conversa antes da quota da ficha; 503 genérico nas rotas |
-| `d5384387` | E08       | E12-4: usuário, conversa e quota, nessa ordem                   |
-| `932f9c7a` | E12       | ensaio local do piloto e passo no job PostgreSQL do CI          |
-| `354a31d3` | E12       | E12-5: corpo genérico para 5xx e falhas sem `statusCode`        |
+| `0ee59186` | E03/E04   | E12-1 e E12-2: códigos públicos de que a interface depende      |
+| `c94b280e` | E08       | E12-3: conversa antes da quota da ficha; 503 genérico nas rotas |
+| `2493cdad` | E08       | E12-4: usuário, conversa e quota, nessa ordem                   |
+| `9a3ffb7a` | E12       | ensaio local do piloto e passo no job PostgreSQL do CI          |
+| `faf72e02` | E12       | E12-5: corpo genérico para 5xx e falhas sem `statusCode`        |
+| `1d921374` | E12       | E12-6: selo de linha na Inbox                                   |
+| `9effe6fa` | E02/E09   | E12-7: desafio fica pelo TTL inteiro                            |
+| `2a452533` | E05       | E12-8 e E12-9: visibilidade do Contact e Assunto de origem      |
+| `4a9897f6` | E09       | E12-10 e E12-11: pareamento recuperável, linha bloqueada, foco  |
+| `5131192f` | E09/E12   | E12-12 e selo verde: aviso de linha caída, banner               |
+| `2dddd6f7` | E12       | E12-14: asserção com escopo da suíte                            |
+| `d8477e7e` | E05       | E12-13: Criar pedido espera a leitura dos Assuntos              |

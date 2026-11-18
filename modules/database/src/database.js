@@ -46,12 +46,21 @@ export function createDatabase({
     max,
   });
   const migrations = loadMigrations();
+  const readiness = async () => checkDatabaseReadiness(pool, await migrations);
   /**
    * @template T
    * @param {(client: import('pg').PoolClient) => Promise<T>} work
    */
   const transaction = (work) => withTransaction(pool, work);
   return Object.freeze({
+    assertReady: async () => {
+      if (!(await readiness())) {
+        throw Object.assign(
+          new Error('Required expand migrations are missing or incompatible'),
+          { code: 'DATABASE_SCHEMA_NOT_READY' },
+        );
+      }
+    },
     close: () => pool.end(),
     /** Dedicated session without BEGIN, e.g. an upload writer advisory lease.
      * @template T @param {(client: import('pg').PoolClient) => Promise<T>} work */
@@ -69,7 +78,7 @@ export function createDatabase({
       }
     },
     query: pool.query.bind(pool),
-    readiness: async () => checkDatabaseReadiness(pool, await migrations),
+    readiness,
     transaction,
   });
 }

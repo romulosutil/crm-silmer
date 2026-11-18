@@ -24,6 +24,10 @@ import { createConversationHandoffRuntime } from './conversation-handoff-runtime
 import { createConversationApiRuntime } from './conversation-runtime.js';
 import { createIdentityApiRuntime } from './identity-runtime.js';
 import { createSellerWhatsAppRuntime } from './seller-whatsapp-runtime.js';
+import {
+  createSellerWhatsAppFirstSendRuntime,
+  sellerWhatsAppFirstSendConfiguration,
+} from './seller-whatsapp-first-send-runtime.js';
 import { sellerWhatsAppConfiguration } from '@crm-silmer/inbox-channels';
 import { createFinanceApiRuntime } from './finance-runtime.js';
 import { createDashboardApiRuntime } from './dashboard-runtime.js';
@@ -66,6 +70,7 @@ import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
  *   metaWebhook?: ReturnType<typeof createMetaWebhookRuntime>,
  *   identity?: ReturnType<typeof createIdentityApiRuntime>,
  *   sellerWhatsApp?: ReturnType<typeof createSellerWhatsAppRuntime>,
+ *   sellerWhatsAppFirstSend?: ReturnType<typeof createSellerWhatsAppFirstSendRuntime>,
  *   automationAuth?: ReturnType<typeof createAutomationAuthRuntime>,
  *   operationalAuth?: Record<string, any>,
  *   conversations?: Record<string, any>,
@@ -415,11 +420,33 @@ export function createServerApi(runtime = {}) {
           environment,
         })
       : undefined);
+  // WAP-E10: invalid first-send configuration fails at startup; default off.
+  const firstSendConfiguration =
+    sellerWhatsAppFirstSendConfiguration(environment);
+  const sellerWhatsAppFirstSend =
+    runtime.sellerWhatsAppFirstSend ??
+    (firstSendConfiguration.enabled
+      ? runtime.database &&
+        typeof operations?.authorizeRead === 'function' &&
+        typeof operations?.authorizeWrite === 'function' &&
+        typeof n8n?.commandOutbox?.enqueueChannelMessage === 'function'
+        ? createSellerWhatsAppFirstSendRuntime(runtime.database, {
+            access: operations,
+            environment,
+            outbox: n8n.commandOutbox,
+          })
+        : (() => {
+            throw new Error(
+              'SELLER_WHATSAPP_FIRST_SEND_ENABLED requires database, operational access and n8n command outbox',
+            );
+          })()
+      : undefined);
   const api = createApi(
     { trustProxy: runtime.trustProxy ?? false },
     {
       ...runtime,
       sellerWhatsApp,
+      sellerWhatsAppFirstSend,
       finance,
       dashboard,
       dashboardCheckpoint,

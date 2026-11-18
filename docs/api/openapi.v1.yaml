@@ -2343,6 +2343,80 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+  /contacts/{contactId}/whatsapp/first-message-preview:
+    get:
+      operationId: previewSellerWhatsAppFirstMessage
+      summary: Prévia sem efeito do primeiro envio individual pela própria linha
+      description: >-
+        WAP-E10 / WAP-T04-03 (WAP-22/23/24/32). Não cria identidade, conversa,
+        mensagem ou outbox. Exige vínculo ativo do próprio vendedor; vínculo
+        cadastral nunca dá acesso à conversa de outra linha. Destino derivado
+        no servidor do telefone do Contact e exibido mascarado. A restrição
+        identity_conflict não revela o outro Contact. Default off por
+        SELLER_WHATSAPP_FIRST_SEND_ENABLED e allowlist
+        SELLER_WHATSAPP_FIRST_SEND_SELLER_IDS, além das guardas de envio
+        pessoal e carteira; no-store.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ContactId'
+        - $ref: '#/components/parameters/HumanReadOrigin'
+      responses:
+        '200':
+          description: Versões a enviar no POST, disponibilidade e restrição
+          content:
+            application/json:
+              schema:
+                { $ref: '#/components/schemas/SellerWhatsAppFirstSendPreview' }
+        '400': { $ref: '#/components/responses/SellerWhatsAppFirstSendProblem' }
+        '403': { $ref: '#/components/responses/SellerWhatsAppFirstSendProblem' }
+        '404': { $ref: '#/components/responses/SellerWhatsAppFirstSendProblem' }
+        '429': { $ref: '#/components/responses/SellerWhatsAppFirstSendProblem' }
+        '503': { $ref: '#/components/responses/SellerWhatsAppFirstSendProblem' }
+  /contacts/{contactId}/whatsapp/conversations:
+    post:
+      operationId: sendSellerWhatsAppFirstMessage
+      summary: Envia a primeira mensagem humana pela linha pessoal do titular
+      description: >-
+        WAP-E10 / WAP-T04-03 (WAP-22/23/24/32). Opcional e individual; nunca
+        exigido para atendimento passivo ou Pedido. Conta, instância e
+        destino derivados no servidor; corpo estrito recusa to, userId,
+        instanceName, accountId e URLs. Uma transação compõe identidade no
+        mesmo Contact, reuso da conversa humana ativa do titular ou novo
+        ciclo quando a anterior encerrou, mensagem, comando n8n e auditoria.
+        Linha offline antes da reserva não cria nada. Timeout depois da
+        reserva fica outcome_unknown e exige reconciliação, sem nova tentativa
+        cega. Replay revalida sessão, guardas, titular e vínculo antes de
+        devolver o mesmo corpo. Corpo máximo 8 KiB; no-store.
+      security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ContactId'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              { $ref: '#/components/schemas/SellerWhatsAppFirstSendRequest' }
+      responses:
+        '201':
+          description: Mensagem enfileirada na conversa criada ou reutilizada
+          content:
+            application/json:
+              schema:
+                { $ref: '#/components/schemas/SellerWhatsAppFirstSendResponse' }
+        '200':
+          description: Replay autorizado da mesma chave e corpo, sem novo efeito
+          content:
+            application/json:
+              schema:
+                { $ref: '#/components/schemas/SellerWhatsAppFirstSendResponse' }
+        '400': { $ref: '#/components/responses/SellerWhatsAppFirstSendProblem' }
+        '403': { $ref: '#/components/responses/SellerWhatsAppFirstSendProblem' }
+        '404': { $ref: '#/components/responses/SellerWhatsAppFirstSendProblem' }
+        '409': { $ref: '#/components/responses/SellerWhatsAppFirstSendProblem' }
+        '422': { $ref: '#/components/responses/SellerWhatsAppFirstSendProblem' }
+        '429': { $ref: '#/components/responses/SellerWhatsAppFirstSendProblem' }
+        '503': { $ref: '#/components/responses/SellerWhatsAppFirstSendProblem' }
   /postal-codes/lookup:
     post:
       operationId: lookupPostalCode
@@ -8877,6 +8951,117 @@ components:
               type: integer
               minimum: 0
               description: Índice da linha recusada em INVALID_GRADE.
+    SellerWhatsAppFirstSendPreview:
+      type: object
+      additionalProperties: false
+      required: [preview]
+      properties:
+        preview:
+          type: object
+          additionalProperties: false
+          required:
+            [
+              contact,
+              link,
+              line,
+              recipient,
+              conversation,
+              available,
+              restriction,
+            ]
+          properties:
+            contact:
+              type: object
+              additionalProperties: false
+              required: [id, name, version]
+              properties:
+                id: { type: string }
+                name: { type: [string, 'null'] }
+                version: { type: integer, minimum: 1 }
+            link:
+              type: object
+              additionalProperties: false
+              required: [id, version]
+              properties:
+                id: { type: string }
+                version: { type: integer, minimum: 1 }
+            line:
+              type: [object, 'null']
+              additionalProperties: false
+              required: [id, version, generation, state, maskedNumber]
+              properties:
+                id: { type: string, format: uuid }
+                version: { type: integer, minimum: 1 }
+                generation: { type: integer, minimum: 1 }
+                state: { type: string }
+                maskedNumber: { type: [string, 'null'] }
+            recipient:
+              type: [object, 'null']
+              additionalProperties: false
+              required: [maskedNumber]
+              properties:
+                maskedNumber: { type: string }
+            conversation:
+              type: [object, 'null']
+              additionalProperties: false
+              required: [id, version]
+              properties:
+                id: { type: string }
+                version: { type: integer, minimum: 1 }
+            available: { type: boolean }
+            restriction:
+              type: [string, 'null']
+              enum:
+                [
+                  null,
+                  line_not_configured,
+                  line_unavailable,
+                  destination_invalid,
+                  identity_conflict,
+                  conversation_unavailable,
+                ]
+    SellerWhatsAppFirstSendRequest:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          text,
+          expectedContactVersion,
+          expectedLinkVersion,
+          expectedLineVersion,
+          expectedGeneration,
+        ]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Aparado no servidor; vazio depois de aparar é recusado
+        expectedContactVersion: { type: integer, minimum: 1 }
+        expectedLinkVersion: { type: integer, minimum: 1 }
+        expectedLineVersion: { type: integer, minimum: 1 }
+        expectedGeneration: { type: integer, minimum: 1 }
+    SellerWhatsAppFirstSendResponse:
+      type: object
+      additionalProperties: false
+      required: [conversation, message]
+      properties:
+        conversation:
+          type: object
+          additionalProperties: false
+          required: [id, version, reused, cycleNumber]
+          properties:
+            id: { type: string }
+            version: { type: integer, minimum: 1 }
+            reused: { type: boolean }
+            cycleNumber: { type: integer, minimum: 1 }
+        message:
+          type: object
+          additionalProperties: false
+          required: [id, status]
+          properties:
+            id: { type: string }
+            status: { type: string, const: queued }
     Error:
       type: object
       additionalProperties: false
@@ -8889,6 +9074,27 @@ components:
           properties:
             code: { type: string }
   responses:
+    SellerWhatsAppFirstSendProblem:
+      description: >-
+        application/problem+json com code público: INVALID_REQUEST,
+        IDEMPOTENCY_KEY, FORBIDDEN, NOT_FOUND, CONTACT_VERSION_CONFLICT,
+        WHATSAPP_GENERATION_STALE, WHATSAPP_IDENTITY_CONFLICT (genérico, sem
+        IDs ou nomes), CONVERSATION_UNAVAILABLE, IDEMPOTENCY_CONFLICT,
+        WHATSAPP_DESTINATION_INVALID, RATE_LIMITED (60 por minuto),
+        WHATSAPP_SEND_UNAVAILABLE (linha fora de conexão antes da reserva),
+        SELLER_WHATSAPP_FIRST_SEND_DISABLED ou SERVICE_UNAVAILABLE, sem eco
+        do corpo, telefone ou texto
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [type, title, status, code]
+            properties:
+              type: { type: string, const: about:blank }
+              title: { type: string }
+              status: { type: integer }
+              code: { type: string }
     LeadOutcomeProblem:
       description: >-
         application/problem+json com `code` público: INVALID_REQUEST,

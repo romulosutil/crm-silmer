@@ -22,6 +22,9 @@ export const OPERATIONAL_ACTIONS = Object.freeze(
     'contact.create',
     'contact.read',
     'contact.rename',
+    // WAP-E10: first human message on the titular's own personal line; the
+    // runtime still requires its default-off allowlist, line and own link.
+    'contact.whatsapp.first_send',
     'conversation.convert',
     'conversation.archive',
     'conversation.read',

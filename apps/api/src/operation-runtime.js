@@ -1931,7 +1931,7 @@ function requireContactReview(actor, review) {
     throw new OperationReadError(400, 'CONTACT_REVIEW_REQUIRED');
 }
 /** @param {Record<string,string|undefined>} environment */
-function sellerClientsConfiguration(environment) {
+export function sellerClientsConfiguration(environment) {
   const flag = environment.SELLER_CLIENTS_ENABLED;
   if (flag !== undefined && !['true', 'false'].includes(flag))
     throw new Error('SELLER_CLIENTS_ENABLED must be true or false');

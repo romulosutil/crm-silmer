@@ -86,6 +86,7 @@ function fixture(options = {}) {
           version: 1,
           maskedNumber: '••••0000',
         },
+        ...options.state,
       };
     },
     submit: async (/** @type {any} */ command) => {
@@ -297,6 +298,65 @@ test('human GET is read-only, server derives owner and rejects auth/CSRF/origin/
   assert.equal(calls.submit, 1);
   assert.doesNotMatch(response.body, /5511999990000|instance|token/u);
   await api.close();
+});
+
+test('human GET projects only challenge metadata for the holder, never the bytes', async () => {
+  const id = randomUUID();
+  const expiresAt = new Date(Date.now() + 30_000).toISOString();
+  const { api } = fixture({
+    state: {
+      challenge: {
+        id,
+        state: 'resolved',
+        expiresAt,
+        value: 'synthetic-ephemeral-challenge',
+        reference,
+        mode: 'qr',
+      },
+    },
+  });
+  const response = await api.inject({
+    method: 'GET',
+    url: '/api/v1/me/whatsapp',
+    headers,
+  });
+  assert.equal(response.statusCode, 200);
+  assert.match(String(response.headers['cache-control']), /no-store/u);
+  assert.deepEqual(response.json().challenge, {
+    id,
+    state: 'resolved',
+    expiresAt,
+  });
+  assert.doesNotMatch(
+    response.body,
+    new RegExp(`synthetic-ephemeral|${reference}`, 'u'),
+  );
+  await api.close();
+  for (const challenge of [null, undefined]) {
+    const empty = fixture({ state: { challenge } });
+    const read = await empty.api.inject({
+      method: 'GET',
+      url: '/api/v1/me/whatsapp',
+      headers,
+    });
+    assert.equal(read.json().challenge, null);
+    await empty.api.close();
+  }
+  for (const challenge of [
+    { id: 'not-a-uuid', state: 'resolved', expiresAt },
+    { id, state: 'forged', expiresAt },
+    { id, state: 'resolved', expiresAt: 'tomorrow' },
+  ]) {
+    const forged = fixture({ state: { challenge } });
+    const read = await forged.api.inject({
+      method: 'GET',
+      url: '/api/v1/me/whatsapp',
+      headers,
+    });
+    assert.equal(read.statusCode, 503);
+    assert.doesNotMatch(read.body, /not-a-uuid|forged|tomorrow/u);
+    await forged.api.close();
+  }
 });
 
 test('technical control requires Basic, workflow/version, matching correlation/key and strict metadata', async () => {

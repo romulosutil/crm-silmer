@@ -818,6 +818,88 @@ if (!url) {
       );
 
       await t.test(
+        'GET exposes only the latest challenge metadata; a reloaded client renews with it once reconciled',
+        async () => {
+          await reset();
+          const current = await prepared();
+          assert.equal(current.challenge, null);
+          const pending = await challenge(current);
+          /** @param {any} view */
+          const metadata = (view) => {
+            assert.deepEqual(Object.keys(view.challenge).sort(), [
+              'expiresAt',
+              'id',
+              'state',
+            ]);
+            return view.challenge;
+          };
+          assert.deepEqual(metadata(await repository.get({ actorId: A })), {
+            id: pending.challengeId,
+            state: 'reserved',
+            expiresAt: pending.expiresAt,
+          });
+          await repository.reserveChallenge(pending);
+          await repository.finishChallenge({ ...pending, delivered: true });
+          // The tab that showed the QR is gone; a reload knows only the GET.
+          now = new Date(now.getTime() + 61_000);
+          const reloaded = await repository.get({ actorId: A });
+          assert.equal(reloaded.line.state, 'awaiting_pairing');
+          assert.equal(metadata(reloaded).id, pending.challengeId);
+          assert.equal(reloaded.challenge.state, 'delivered');
+          // Expired but not yet confirmed by a read: still uncertain.
+          await assert.rejects(
+            challenge(reloaded, { renewChallengeId: reloaded.challenge.id }),
+            rejects('WHATSAPP_OPERATION_UNCERTAIN'),
+          );
+          // The read queued by finishChallenge was lost; the sweep re-queues it.
+          await pool.query(
+            "UPDATE crm.outbox_jobs SET status='completed',completed_at=now() WHERE whatsapp_operation_id=$1",
+            [current.operation.id],
+          );
+          assert.equal(
+            (await repository.scheduleReconciliations()).scheduled,
+            1,
+          );
+          await result(
+            await reserve(current.operation, { action: 'reconcile' }),
+            { providerState: 'connecting' },
+          );
+          const confirmed = await repository.get({ actorId: A });
+          assert.deepEqual(metadata(confirmed), {
+            id: pending.challengeId,
+            state: 'resolved',
+            expiresAt: pending.expiresAt,
+          });
+          // Without the id from the GET the renewal is still refused.
+          await assert.rejects(
+            challenge(confirmed),
+            rejects('WHATSAPP_OPERATION_UNCERTAIN'),
+          );
+          const renewed = await challenge(confirmed, {
+            renewChallengeId: confirmed.challenge.id,
+          });
+          const after = await repository.get({ actorId: A });
+          assert.equal(metadata(after).id, renewed.challengeId);
+          assert.equal(after.challenge.state, 'reserved');
+          // Another seller never sees this seller's challenge metadata.
+          assert.equal((await repository.get({ actorId: B })).challenge, null);
+          // A new generation starts without challenge metadata.
+          const leaving = await repository.submit({
+            actorId: A,
+            action: 'disconnect',
+            expectedVersion: after.line.version,
+            idempotencyKey: randomUUID(),
+            correlationId: randomUUID(),
+          });
+          assert.equal(
+            (await repository.get({ actorId: A })).line.generation,
+            leaving.line.generation,
+          );
+          assert.equal((await repository.get({ actorId: A })).challenge, null);
+        },
+      );
+
+      await t.test(
         'disconnect cancels an unreserved connect before its effect fence',
         async () => {
           await reset();

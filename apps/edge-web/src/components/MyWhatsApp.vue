@@ -17,13 +17,20 @@ const busy = ref(false);
 const requestingChallenge = ref(false);
 const error = ref('');
 const secret = ref(null);
-const challengeTrigger = ref(null);
+const root = ref(null);
+const title = ref(null);
+const qrTrigger = ref(null);
+const codeTrigger = ref(null);
+const lastMode = ref('qr');
+// Fallback only for a server that does not report challenge metadata.
 const challengeId = ref('');
-const uncertain = ref(false);
+// '' | 'challenge' | 'control': a command whose outcome this tab cannot know.
+const uncertain = ref('');
 let readController;
 let commandController;
 let expiryTimer = 0;
 let pollTimer = 0;
+let followUpTimer = 0;
 let epoch = 0;
 const labels = {
   not_configured: 'Não configurado',
@@ -36,11 +43,56 @@ const labels = {
   blocked: 'Bloqueado',
   unknown: 'Aguardando reconciliação',
 };
+// Challenge states the server has not confirmed by a read yet (WAP-03).
+const UNCONFIRMED = ['reserved', 'dispatching', 'delivered', 'unknown'];
 const line = computed(() => state.value?.line);
 const operation = computed(
   () => state.value?.operation ?? line.value?.operation,
 );
+const reportsChallenge = computed(() =>
+  Boolean(state.value && 'challenge' in state.value),
+);
+const unconfirmedOnServer = computed(() =>
+  UNCONFIRMED.includes(state.value?.challenge?.state),
+);
+const challengeLocked = computed(
+  () => busy.value || Boolean(uncertain.value) || unconfirmedOnServer.value,
+);
+const waitingMessage = computed(() => {
+  if (uncertain.value === 'control')
+    return 'Aguardando a confirmação da operação anterior. Consulte o estado antes de tentar novamente.';
+  if (
+    !secret.value &&
+    !busy.value &&
+    (uncertain.value === 'challenge' ||
+      (unconfirmedOnServer.value && line.value?.state === 'awaiting_pairing'))
+  )
+    return 'Aguardando confirmação do desafio anterior. Isso leva alguns segundos; depois você poderá pedir outro QR ou código.';
+  return '';
+});
 
+/** @param {any} data */
+function settled(data) {
+  const next = data?.line;
+  const op = data?.operation ?? next?.operation;
+  return (
+    Boolean(next) &&
+    next.state !== 'unknown' &&
+    !['pending', 'dispatching', 'unknown'].includes(op?.state) &&
+    !UNCONFIRMED.includes(data.challenge?.state)
+  );
+}
+function scheduleFollowUp() {
+  if (followUpTimer) clearTimeout(followUpTimer);
+  followUpTimer = 0;
+  if (!uncertain.value && !unconfirmedOnServer.value) return;
+  // The worker confirms a delivered challenge within seconds; poll faster
+  // than the regular interval so the wait clears by itself.
+  followUpTimer = setTimeout(() => {
+    followUpTimer = 0;
+    if (!busy.value && document.visibilityState === 'visible') void refresh();
+  }, 3000);
+}
 function clearSecret() {
   epoch++;
   commandController?.abort();
@@ -52,12 +104,16 @@ function clearSecret() {
   expiryTimer = 0;
 }
 function cancelChallenge() {
-  if (busy.value) uncertain.value = true;
+  if (busy.value) uncertain.value = 'challenge';
   clearSecret();
+  scheduleFollowUp();
 }
 function closeChallenge() {
+  const mode = secret.value?.mode ?? lastMode.value;
   clearSecret();
-  void nextTick(() => challengeTrigger.value?.focus());
+  void nextTick(() =>
+    (mode === 'code' ? codeTrigger.value : qrTrigger.value)?.focus(),
+  );
 }
 function onVisibilityChange() {
   if (document.visibilityState !== 'visible') cancelChallenge();
@@ -74,14 +130,15 @@ async function refresh() {
     if (readController !== controller) return;
     const previous = line.value;
     const previousOperation = operation.value?.id;
-    const next = result.data?.line;
-    const nextOperation = (result.data?.operation ?? next?.operation)?.id;
+    const data = result.data;
+    const next = data?.line;
+    const nextOperation = (data?.operation ?? next?.operation)?.id;
     // A version bump alone (e.g. a read that saw the line still pairing) does
     // not invalidate the challenge: only a new line/generation/operation, a
     // state change, hiding the tab or the TTL timer does.
     if (
       !next ||
-      result.data?.available !== true ||
+      data?.available !== true ||
       next.state !== 'awaiting_pairing' ||
       (previous &&
         (previous.generation !== next.generation ||
@@ -89,8 +146,13 @@ async function refresh() {
           previousOperation !== nextOperation))
     )
       clearSecret();
-    state.value = result.data;
+    state.value = data;
     error.value = '';
+    // Only a server that reports challenge metadata can prove the earlier
+    // outcome was reconciled; then the wait clears without a new command.
+    if (uncertain.value && reportsChallenge.value && settled(data))
+      uncertain.value = '';
+    scheduleFollowUp();
   } catch (cause) {
     if (readController !== controller || cause?.name === 'AbortError') return;
     clearSecret();
@@ -98,11 +160,13 @@ async function refresh() {
     error.value = 'Não foi possível consultar seu WhatsApp agora.';
   }
 }
+/** @param {'connect'|'disconnect'} action */
 async function control(action) {
   if (!line.value || busy.value) return;
+  if (action === 'connect' && uncertain.value) return;
   clearSecret();
   challengeId.value = '';
-  uncertain.value = false;
+  uncertain.value = '';
   const current = new AbortController();
   commandController = current;
   busy.value = true;
@@ -128,7 +192,7 @@ async function control(action) {
     await refresh();
   } catch (cause) {
     if (commandController !== current || cause?.name === 'AbortError') return;
-    uncertain.value = true;
+    uncertain.value = 'control';
     await refresh();
     error.value =
       'Não foi possível confirmar o comando. Consulte o estado antes de tentar novamente.';
@@ -136,15 +200,18 @@ async function control(action) {
     if (commandController === current) busy.value = false;
   }
 }
+/** @param {'qr'|'code'} mode */
 async function challenge(mode) {
-  if (busy.value || uncertain.value) return;
+  if (challengeLocked.value) return;
+  lastMode.value = mode;
   busy.value = true;
   requestingChallenge.value = true;
   await refresh();
   if (
     !requestingChallenge.value ||
     line.value?.state !== 'awaiting_pairing' ||
-    !operation.value?.id
+    !operation.value?.id ||
+    unconfirmedOnServer.value
   ) {
     busy.value = false;
     requestingChallenge.value = false;
@@ -156,12 +223,16 @@ async function challenge(mode) {
   commandController = current;
   busy.value = true;
   requestingChallenge.value = true;
+  // After a reload/new tab the id of the latest challenge comes from the GET.
+  const renewChallengeId = reportsChallenge.value
+    ? state.value.challenge?.id
+    : challengeId.value;
   const body = {
     operationId: operation.value.id,
     expectedVersion: line.value.version,
     generation: line.value.generation,
     mode,
-    ...(challengeId.value ? { renewChallengeId: challengeId.value } : {}),
+    ...(renewChallengeId ? { renewChallengeId } : {}),
   };
   try {
     const response = await request('/api/v1/me/whatsapp/pairing-challenge', {
@@ -185,12 +256,25 @@ async function challenge(mode) {
     )
       throw new Error('invalid challenge');
     challengeId.value = value.challengeId;
-    if (Number.isSafeInteger(value.version) && state.value?.line)
+    if (state.value?.line)
       state.value = {
         ...state.value,
-        line: { ...state.value.line, version: value.version },
+        line: Number.isSafeInteger(value.version)
+          ? { ...state.value.line, version: value.version }
+          : state.value.line,
+        // Metadata only; the server confirms it by a read in a few seconds.
+        ...(reportsChallenge.value
+          ? {
+              challenge: {
+                id: value.challengeId,
+                state: 'delivered',
+                expiresAt: value.expiresAt,
+              },
+            }
+          : {}),
       };
     secret.value = { mode, value: value.value };
+    scheduleFollowUp();
     // Bound the in-memory lifetime even if the device clock is behind. A
     // canonical server Date, when available, also avoids trusting that clock.
     const referenceTime =
@@ -201,9 +285,10 @@ async function challenge(mode) {
     );
   } catch (cause) {
     if (currentEpoch !== epoch || cause?.name === 'AbortError') return;
-    uncertain.value = true;
-    error.value =
-      'Não foi possível confirmar o desafio. Consulte o estado; não solicite outro enquanto o resultado estiver incerto.';
+    uncertain.value = 'challenge';
+    await refresh();
+    if (currentEpoch !== epoch) return;
+    error.value = 'Não foi possível confirmar o desafio agora.';
   } finally {
     if (commandController === current) {
       busy.value = false;
@@ -211,11 +296,31 @@ async function challenge(mode) {
     }
   }
 }
+// Keyboard focus never falls to <body> when the control it was on goes away
+// (challenge closed or expired, cancel, state change after a command).
+watch(
+  [secret, requestingChallenge, () => line.value?.state],
+  () => {
+    if (!root.value?.contains(document.activeElement)) return;
+    void nextTick(() => {
+      if (root.value?.contains(document.activeElement)) return;
+      const trigger =
+        lastMode.value === 'code' ? codeTrigger.value : qrTrigger.value;
+      (trigger ?? title.value)?.focus();
+    });
+  },
+  { flush: 'pre' },
+);
 watch(liveEvent, (event) => {
-  if (event?.reset || event?.type === 'identity.user.changed') {
-    if (busy.value) uncertain.value = true;
+  if (event?.type === 'identity.user.changed') {
+    if (busy.value)
+      uncertain.value = requestingChallenge.value ? 'challenge' : 'control';
     clearSecret();
     challengeId.value = '';
+    void refresh();
+  } else if (event?.reset) {
+    // A reset only means the stream lost events this reader may not see
+    // (often another seller's activity). Re-read and apply the same rules.
     void refresh();
   }
 });
@@ -231,21 +336,23 @@ onBeforeUnmount(() => {
   clearSecret();
   readController?.abort();
   if (pollTimer) clearInterval(pollTimer);
+  if (followUpTimer) clearTimeout(followUpTimer);
 });
 </script>
 
 <template>
-  <section class="surface" aria-labelledby="my-whatsapp-title">
-    <h2 id="my-whatsapp-title">Meu WhatsApp</h2>
+  <section
+    ref="root"
+    class="surface my-whatsapp"
+    aria-labelledby="my-whatsapp-title"
+  >
+    <h2 id="my-whatsapp-title" ref="title" tabindex="-1">Meu WhatsApp</h2>
     <p>
       Conecte sua linha para atender seus clientes. Você pode continuar usando o
       CRM sem conectá-la.
     </p>
     <p v-if="error" role="alert">{{ error }}</p>
-    <p v-if="uncertain" role="status">
-      Há uma operação com resultado incerto. Aguarde a reconciliação antes de
-      solicitar outro desafio.
-    </p>
+    <p v-if="waitingMessage" role="status">{{ waitingMessage }}</p>
     <template v-if="line">
       <p role="status">
         {{ labels[line.state] ?? 'Estado indisponível'
@@ -253,6 +360,10 @@ onBeforeUnmount(() => {
       </p>
       <p v-if="!state.available">
         A conexão pessoal não está disponível para sua conta.
+      </p>
+      <p v-if="state.available && line.state === 'blocked'">
+        O número conectado não é o informado. Desconecte e conecte de novo com o
+        número certo.
       </p>
       <form
         v-if="
@@ -270,24 +381,28 @@ onBeforeUnmount(() => {
           required
           pattern="\+?[1-9][0-9]{7,14}"
         />
-        <button type="submit" :disabled="busy || uncertain">
+        <button
+          type="submit"
+          :aria-disabled="busy || Boolean(uncertain) ? 'true' : undefined"
+        >
           Conectar WhatsApp
         </button>
       </form>
       <template v-if="state.available && line.state === 'awaiting_pairing'">
         <p>Peça um desafio somente quando estiver pronto para conectar.</p>
-        <div class="inline-actions">
+        <div class="inline-actions" :aria-busy="busy ? 'true' : undefined">
           <button
-            ref="challengeTrigger"
+            ref="qrTrigger"
             type="button"
-            :disabled="busy || uncertain"
+            :aria-disabled="challengeLocked ? 'true' : undefined"
             @click="challenge('qr')"
           >
             Mostrar QR
           </button>
           <button
+            ref="codeTrigger"
             type="button"
-            :disabled="busy || uncertain"
+            :aria-disabled="challengeLocked ? 'true' : undefined"
             @click="challenge('code')"
           >
             Mostrar código
@@ -316,17 +431,36 @@ onBeforeUnmount(() => {
       <button
         v-if="
           state.available &&
-          ['connected', 'awaiting_pairing'].includes(line.state)
+          ['connected', 'awaiting_pairing', 'blocked'].includes(line.state)
         "
         type="button"
-        :disabled="busy"
+        :aria-disabled="busy ? 'true' : undefined"
         @click="control('disconnect')"
       >
         Desconectar
       </button>
     </template>
-    <button type="button" :disabled="busy" @click="refresh">
+    <button
+      type="button"
+      :aria-disabled="busy ? 'true' : undefined"
+      @click="!busy && refresh()"
+    >
       Atualizar estado
     </button>
   </section>
 </template>
+
+<style scoped>
+.my-whatsapp h2:focus {
+  outline: none;
+}
+.my-whatsapp h2:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.my-whatsapp button[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+</style>

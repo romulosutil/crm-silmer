@@ -7,6 +7,7 @@ import {
   WAP_WORKFLOW_KEY,
   WAP_WORKFLOW_VERSION,
   whatsappControlError as error,
+  challengeMetadata,
   controlObject,
 } from './seller-whatsapp-contract.js';
 
@@ -79,7 +80,11 @@ export function createSellerWhatsAppRuntime(database, options) {
     authorizeWrite: (/** @type {any} */ auth) =>
       options.access.authorizeWrite(auth),
     authorizeTechnical,
-    get: (/** @type {any} */ input) => repository.get(input),
+    /** @param {any} input */
+    async get(input) {
+      const state = await repository.get(input);
+      return { ...state, challenge: challengeMetadata(state?.challenge) };
+    },
     submit: (/** @type {any} */ input) => repository.submit(input),
     /** @param {any} input */
     async challenge(input) {

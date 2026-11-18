@@ -145,6 +145,26 @@
         "version": { "$ref": "#/$defs/generation" }
       }
     },
+    "challengeMetadata": {
+      "description": "GET /me/whatsapp `challenge` (null when absent): latest challenge of the holder's current generation. Metadata only, never QR/code bytes; its id is the renewChallengeId once state is resolved.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "state", "expiresAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "state": {
+          "enum": [
+            "reserved",
+            "dispatching",
+            "delivered",
+            "unknown",
+            "resolved",
+            "revoked"
+          ]
+        },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      }
+    },
     "ingress": {
       "type": "object",
       "additionalProperties": false,

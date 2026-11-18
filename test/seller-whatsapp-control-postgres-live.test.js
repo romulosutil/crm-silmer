@@ -81,6 +81,8 @@ else {
     let exists = false,
       providerState = 'close',
       instanceName = '';
+    // Like Evolution, connect while already connecting reuses the socket.
+    /** @type {object} */ let socket = {};
     const logger = createSafeLogger({
       service: 'crm-silmer-api',
       sink: (record) => logs.push(record),
@@ -282,7 +284,8 @@ else {
               instance: { state: providerState },
             });
           if (path.startsWith('/instance/connect/')) {
-            socketRuntime.captureSocket(instanceName, {});
+            if (providerState !== 'connecting') socket = {};
+            socketRuntime.captureSocket(instanceName, socket);
             providerState = 'connecting';
             if (holdChallenge) {
               challengeEntered();
@@ -349,6 +352,58 @@ else {
         providerCalls.filter((path) => path.startsWith('/instance/connect/'))
           .length,
         1,
+      );
+      // A reload/new tab only has the GET: metadata, never the bytes.
+      /** @returns {Promise<any>} */
+      const read = async () => {
+        const response = await api.inject({
+          method: 'GET',
+          url: '/api/v1/me/whatsapp',
+          headers: humanHeaders,
+        });
+        assert.equal(response.statusCode, 200);
+        assert.equal(response.body.includes(canary), false);
+        return response.json();
+      };
+      let view = await read();
+      assert.deepEqual(view.challenge, {
+        id: challenged.json().challengeId,
+        state: 'delivered',
+        expiresAt: challenged.json().expiresAt,
+      });
+      /** @param {any} state */
+      const renew = (state) =>
+        api.inject({
+          method: 'POST',
+          url: '/api/v1/me/whatsapp/pairing-challenge',
+          headers: { ...humanHeaders, 'idempotency-key': randomUUID() },
+          payload: {
+            operationId: state.operation.id,
+            expectedVersion: state.line.version,
+            generation: state.line.generation,
+            mode: 'code',
+            renewChallengeId: state.challenge.id,
+          },
+        });
+      const early = await renew(view);
+      assert.equal(early.statusCode, 409, 'not reconciled yet');
+      assert.equal(early.body.includes(canary), false);
+      await deliver({
+        jobType: 'whatsapp.control.reconcile',
+        whatsappOperationId: current.operation.id,
+        whatsappAction: 'reconcile',
+      });
+      view = await read();
+      assert.equal(view.line.state, 'awaiting_pairing');
+      assert.equal(view.challenge.state, 'resolved');
+      const renewed = await renew(view);
+      assert.equal(renewed.statusCode, 200);
+      assert.equal(renewed.json().value, canary);
+      assert.equal((await read()).challenge.id, renewed.json().challengeId);
+      assert.equal(
+        providerCalls.filter((path) => path.startsWith('/instance/connect/'))
+          .length,
+        2,
       );
       providerState = 'open';
       await deliver({

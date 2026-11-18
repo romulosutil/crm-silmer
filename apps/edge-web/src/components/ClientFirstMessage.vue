@@ -12,6 +12,8 @@ const TEXT = {
   disabled:
     'O primeiro envio pelo CRM não está habilitado para você. O atendimento continua quando o cliente procurar seu WhatsApp.',
   stale: 'O cadastro, o vínculo ou sua linha mudaram. Confira de novo.',
+  pending:
+    'Há uma mensagem sua neste atendimento ainda sem confirmação. Abra a conversa para conferir o envio antes de mandar outra.',
   conversation:
     'Este atendimento mudou desde que você abriu a mensagem (outra aba ou o cliente respondeu). Confira de novo antes de enviar.',
   unavailable: 'Este cliente não está disponível para o primeiro envio.',
@@ -90,6 +92,11 @@ const restriction = computed(() =>
 const lineRestricted = computed(() =>
   LINE_RESTRICTIONS.has(preview.value?.restriction),
 );
+// Reconcile before repeating: a queued, sending or uncertain message of this
+// seller in the reusable conversation must be checked there first.
+const pendingConversationId = computed(() =>
+  preview.value?.pendingSend ? (preview.value.conversation?.id ?? '') : '',
+);
 /** Why sending is unavailable now; '' when it is available. */
 const blockedReason = computed(() => {
   if (disabledFeature.value) return TEXT.disabled;
@@ -97,6 +104,7 @@ const blockedReason = computed(() => {
   if (uncertain.value) return '';
   if (recheck.value || previewFailed.value) return error.value || TEXT.preview;
   if (loading.value || !preview.value) return 'Conferindo cliente e linha…';
+  if (preview.value.pendingSend) return TEXT.pending;
   return restriction.value;
 });
 const showHelp = computed(
@@ -338,7 +346,9 @@ function fail(cause, contactId) {
         ? TEXT.unavailable
         : code === 'CONVERSATION_VERSION_CONFLICT'
           ? TEXT.conversation
-          : TEXT.stale;
+          : code === 'WHATSAPP_OPERATION_UNCERTAIN'
+            ? TEXT.pending
+            : TEXT.stale;
     void nextTick(() => recheckButton.value?.focus());
     return;
   }
@@ -421,6 +431,11 @@ onBeforeUnmount(() => {
         {{ blockedReason }}
         <RouterLink v-if="lineRestricted" to="/conta#my-whatsapp-title"
           >Abrir Minha conta</RouterLink
+        >
+        <RouterLink
+          v-if="pendingConversationId"
+          :to="`/inbox/${encodeURIComponent(pendingConversationId)}`"
+          >Abrir conversa</RouterLink
         >
       </p>
       <label :for="ids.field">Mensagem para o cliente</label>

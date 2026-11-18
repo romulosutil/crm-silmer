@@ -240,7 +240,7 @@ async function loadContact(id, silent = false) {
       cause?.name !== 'AbortError'
     ) {
       if ([403, 404].includes(Number(cause?.status))) {
-        clearPrivateContact();
+        clearPrivateContact(id);
         error.value = 'Este cliente não está disponível para seu acesso.';
         return;
       }
@@ -295,7 +295,7 @@ async function refreshConflictName() {
   } catch (cause) {
     if (renameBase.value !== base) return;
     if ([403, 404].includes(Number(cause?.status))) {
-      clearPrivateContact();
+      clearPrivateContact(contactId);
       error.value = 'Este cliente não está disponível para seu acesso.';
     } else renameCurrentKnown.value = false;
   }
@@ -350,7 +350,7 @@ async function saveName() {
   } catch (cause) {
     if (renameBase.value !== base || commandController !== controller) return;
     if ([403, 404].includes(Number(cause?.status))) {
-      contactUnavailable();
+      contactUnavailable(base.contactId);
     } else if (Number(cause?.status) === 409) {
       renameConflict.value = true;
       await refreshConflictName();
@@ -407,7 +407,10 @@ function scheduleLiveRefresh() {
 }
 
 /** WAP-T02-07: revoke every cached projection before any asynchronous reread. */
-function clearPrivateContact() {
+/** @param {string|null} [lostContactId] */
+function clearPrivateContact(lostContactId = selected.value?.id) {
+  // Design §4: a lost or unknown access takes that client's draft with it.
+  if (lostContactId) firstMessageDrafts.delete(lostContactId);
   const focused = globalThis.document.activeElement;
   const hadPrivateContent = contacts.value.length > 0 || detail.value !== null;
   for (const controller of [
@@ -452,8 +455,9 @@ function clearPrivateContact() {
   });
 }
 
-function contactUnavailable() {
-  clearPrivateContact();
+/** @param {string} [contactId] */
+function contactUnavailable(contactId = selected.value?.id) {
+  clearPrivateContact(contactId);
   error.value = 'Este cliente não está disponível para seu acesso.';
 }
 
@@ -498,10 +502,16 @@ watch(
   liveEvent,
   (event) => {
     if (!event) return;
-    if (event.reset) clearPrivateContact();
-    else if (event.type === 'inbox.contact.changed')
+    if (event.reset) {
+      firstMessageDrafts.clear();
+      clearPrivateContact();
+    } else if (event.type === 'inbox.contact.changed')
       invalidateContactRelations(event);
-    else if (event.type === 'identity.user.changed') firstMessageEpoch.value++;
+    else if (
+      event.type === 'identity.user.changed' &&
+      (!event.userId || event.userId === sessionUser.value?.id)
+    )
+      firstMessageEpoch.value++;
     scheduleLiveRefresh();
   },
   { flush: 'sync' },
@@ -523,7 +533,8 @@ watch(query, () => {
   }, 300);
 });
 onBeforeUnmount(() => {
-  clearPrivateContact();
+  // Leaving the view drops the whole draft map with it.
+  clearPrivateContact(null);
   if (searchTimer) globalThis.clearTimeout(searchTimer);
   if (refreshTimer) globalThis.clearTimeout(refreshTimer);
 });
@@ -809,7 +820,7 @@ onBeforeUnmount(() => {
             :contact="selected"
             @saved="onRegistrationSaved"
             @loaded="onRegistrationLoaded"
-            @unavailable="contactUnavailable"
+            @unavailable="contactUnavailable()"
           />
 
           <ClientOrders v-if="mine" :key="selected.id" :contact="selected" />

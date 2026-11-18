@@ -460,11 +460,18 @@ test(
           );
           assert.equal(await usable(sellerA), true, 'connected holder');
           assert.equal(await usable(admin), false, 'admin is not the holder');
+          // Scoped to this suite's owner: an unfiltered administrator list
+          // reads every suite's rows in the shared test database, sealed with
+          // other keys.
+          const listed = (
+            await inbox.list(
+              { limit: 100, assignedUserId: sellerA },
+              reader(admin),
+            )
+          ).items.find((/** @type {any} */ item) => item.id === own.id);
+          assert.ok(listed, 'the holder conversation is listed');
           assert.equal(
-            (await inbox.list({ limit: 100 }, reader(admin))).items.some(
-              (/** @type {any} */ item) =>
-                item.id === own.id && 'personalLineUsable' in item,
-            ),
+            'personalLineUsable' in listed,
             false,
             'the list never carries the line state',
           );

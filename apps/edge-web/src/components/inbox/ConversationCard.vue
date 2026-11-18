@@ -22,6 +22,12 @@ const props = defineProps({
   badges: { type: Object, required: true },
   /** The conversation open in the pane (`aria-current`). */
   current: { type: Boolean, default: false },
+  /**
+   * WAP-09: the personal WhatsApp the conversation belongs to ("Seu
+   * WhatsApp", "WhatsApp de Ana"), outside the two seals; empty for the
+   * general line and other channels.
+   */
+  line: { type: String, default: '' },
 });
 /** `open(conversationId)`: the row was activated. */
 const emit = defineEmits(['open']);
@@ -75,7 +81,7 @@ const unread = computed(() =>
       }}</span
       >{{ messageText(conversation.lastMessage) }}</span
     >
-    <span v-if="badges.visible.length" class="conv-badges"
+    <span v-if="badges.visible.length || line" class="conv-badges"
       ><span
         v-for="badge in badges.visible"
         :key="badge.key"
@@ -91,7 +97,7 @@ const unread = computed(() =>
         ><span class="sr-only">{{
           badges.hidden.map((badge) => badge.label).join(', ')
         }}</span></span
-      ></span
+      ><span v-if="line" class="badge" data-badge="line">{{ line }}</span></span
     >
   </button>
 </template>

@@ -362,3 +362,144 @@ for (const width of [390, 1366]) {
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   });
 }
+
+// WAP-09: a personal line shows in the row and the header, in words; the
+// general line keeps both as they were. The composer says where a reply
+// leaves on both lines, and an administrator reading a seller's personal
+// line (who cannot send there) reads that only the holder sends.
+const LINE_CASES = [
+  {
+    name: 'vendedor na própria linha pessoal',
+    id: 'r-joao',
+    personal: true,
+    admin: false,
+    badge: 'Seu WhatsApp',
+    identity: 'WhatsApp pessoal · Em atendimento · Você',
+    hint: 'Sai pelo seu WhatsApp',
+  },
+  {
+    name: 'vendedor na linha geral',
+    id: 'r-ana',
+    personal: false,
+    admin: false,
+    badge: '',
+    identity: 'WhatsApp · Em atendimento · Você',
+    hint: 'Sai pela linha Silmer',
+  },
+  {
+    name: 'administrador na linha pessoal de um vendedor',
+    id: 'r-bruno',
+    personal: true,
+    admin: true,
+    badge: 'WhatsApp de Carlos',
+    identity: 'WhatsApp pessoal de Carlos · Em atendimento · Carlos Lima',
+    hint: 'Envio só pelo titular da linha',
+  },
+];
+
+for (const theme of ['light', 'dark']) {
+  for (const width of [390, 1366]) {
+    for (const scene of LINE_CASES) {
+      test(`WAP-09 ${scene.name} em ${width}px ${theme}`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 844 });
+        await page.addInitScript((appearance) => {
+          globalThis.localStorage.setItem('silmer-theme', appearance);
+        }, theme);
+        const mock = await installMocks(
+          page,
+          {},
+          { fixedClock: false, admin: scene.admin },
+        );
+        const item = /** @type {Record<string, any>|undefined} */ (
+          mock.items.find(({ id }) => id === scene.id)
+        );
+        if (!item) throw new Error('Missing synthetic conversation');
+        item.personalLine = scene.personal;
+        await page.goto('/inbox');
+        await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+
+        // The row: a quiet seal in words on a personal line, never
+        // focusable; nothing on the general line.
+        const row = page.locator(
+          `.conversation-row[data-conversation-id="${scene.id}"]`,
+        );
+        await expect(row).toBeVisible();
+        const badge = row.locator('[data-badge="line"]');
+        if (scene.badge) {
+          await expect(badge).toHaveText(scene.badge);
+          await expect(badge).not.toHaveAttribute('data-tone');
+        } else {
+          await expect(badge).toHaveCount(0);
+        }
+        await expect(
+          page.locator('[data-badge="line"][tabindex], [data-badge="line"] *'),
+        ).toHaveCount(0);
+        // Only the personal conversation carries a line; general-line rows
+        // and other channels stay as they were.
+        await expect(page.locator('[data-badge="line"]')).toHaveCount(
+          scene.badge ? 1 : 0,
+        );
+        await expect(
+          page.locator(
+            '.conversation-row[data-conversation-id="r-hugo"] [data-badge="line"]',
+          ),
+        ).toHaveCount(0);
+
+        if (theme === 'light' && width === 390)
+          await page.screenshot({
+            path: `test-results/wap-09-${scene.id}-${width}-list.png`,
+          });
+
+        // Keyboard order is unchanged: rows are the tab stops, the seal is not.
+        await row.focus();
+        await page.keyboard.press('Tab');
+        await expect(row).not.toBeFocused();
+        await expect(page.locator(':focus')).not.toHaveAttribute(
+          'data-badge',
+          'line',
+        );
+        await row.focus();
+        await page.keyboard.press('Enter');
+        await expect(page).toHaveURL(new RegExp(`/inbox/${scene.id}$`, 'u'));
+
+        // The header names the line, then who is serving.
+        await expect(page.locator('.conv-identity')).toHaveText(scene.identity);
+
+        // Beside the send button: the exit, read with the field and the
+        // button, and not a live region.
+        const hint = page.locator('#reply-line');
+        await expect(hint).toHaveText(scene.hint);
+        await expect(hint).toBeVisible();
+        await expect(hint).not.toHaveAttribute('aria-live');
+        await expect(hint).not.toHaveAttribute('role');
+        const field = page.getByRole('textbox', {
+          name: 'Responder',
+          exact: true,
+        });
+        await expect(field).toHaveAccessibleDescription(
+          new RegExp(`${scene.hint}$`, 'u'),
+        );
+        await expect(
+          page.getByRole('button', { name: 'Enviar resposta', exact: true }),
+        ).toHaveAccessibleDescription(scene.hint);
+
+        await expect
+          .poll(() =>
+            page.evaluate(
+              () =>
+                globalThis.document.documentElement.scrollWidth <=
+                globalThis.innerWidth,
+            ),
+          )
+          .toBe(true);
+        expect((await new AxeBuilder({ page }).analyze()).violations).toEqual(
+          [],
+        );
+        if (theme === 'light')
+          await page.screenshot({
+            path: `test-results/wap-09-${scene.id}-${width}.png`,
+          });
+      });
+    }
+  }
+}

@@ -41,6 +41,7 @@ import {
 import {
   CHANNEL_LABELS,
   conversationLabel,
+  conversationLine,
   dateTimeBR,
   formatPhoneNumber,
   messageText,
@@ -422,6 +423,15 @@ const serviceLabel = computed(() => {
     ? `Em atendimento · ${ownerLabel.value}`
     : 'Sem responsável';
 });
+/** WAP-09: the open conversation's line (header and composer). */
+const activeLine = computed(() => lineOf(active.value));
+/**
+ * WAP-09: beside the send button, by which WhatsApp a reply leaves. Only
+ * while replying is possible; otherwise `#reply-help` says why not.
+ */
+const replyLineHint = computed(() =>
+  canReply.value ? (activeLine.value?.sendHint ?? '') : '',
+);
 const transferOptions = computed(() =>
   assignableUsers.value.filter((user) => user.id !== currentUserId.value),
 );
@@ -935,8 +945,19 @@ const rowCards = computed(() =>
     conversation,
     time: cardTime(conversation),
     badges: cardBadges(conversation),
+    line: lineOf(conversation)?.badge ?? '',
   })),
 );
+
+/** WAP-09: the WhatsApp of a conversation, in the words of this reader. @param {Record<string, any>|null|undefined} conversation */
+function lineOf(conversation) {
+  return conversationLine(conversation, {
+    actorId: currentUserId.value,
+    holderName: assignableUsers.value.find(
+      (user) => user.id === conversation?.assignedUser?.id,
+    )?.name,
+  });
+}
 
 /** Two seals on the card, the rest counted and read in full. @param {Record<string, any>} conversation */
 function cardBadges(conversation) {
@@ -3324,7 +3345,7 @@ onBeforeUnmount(() => {
           @scroll.passive="measureUnreadView"
         >
           <li
-            v-for="{ conversation, time, badges } in rowCards"
+            v-for="{ conversation, time, badges, line } in rowCards"
             :key="conversation.id"
           >
             <!-- RFC 052 card: who and how long; what was said; up to two seals. -->
@@ -3332,6 +3353,7 @@ onBeforeUnmount(() => {
               :conversation="conversation"
               :time="time"
               :badges="badges"
+              :line="line"
               :current="activeId === conversation.id"
               @open="openConversation"
             />
@@ -3446,8 +3468,8 @@ onBeforeUnmount(() => {
                 </RouterLink>
               </div>
               <p class="conv-identity">
-                {{ CHANNEL_LABELS[active.channel] }} ·
-                {{ serviceLabel }}
+                {{ activeLine?.identity ?? CHANNEL_LABELS[active.channel] }}
+                · {{ serviceLabel }}
               </p>
             </div>
             <!-- The conversation's one primary is "Assumir atendimento" here
@@ -3980,9 +4002,17 @@ onBeforeUnmount(() => {
                     :disabled="busy || mediaSending || recordingActive"
                     :aria-disabled="canReply ? undefined : 'true'"
                     :readonly="!canReply"
-                    aria-describedby="reply-help"
+                    :aria-describedby="
+                      replyLineHint ? 'reply-help reply-line' : 'reply-help'
+                    "
                     @keydown="replyKeydown"
                   ></textarea>
+                  <!-- WAP-09: the number a reply leaves by. Plain text read
+                       with the field and the send button, never a live
+                       region: it changes only with the conversation. -->
+                  <p v-if="replyLineHint" id="reply-line" class="composer-help">
+                    {{ replyLineHint }}
+                  </p>
                   <p
                     id="reply-help"
                     class="composer-help"
@@ -4024,7 +4054,13 @@ onBeforeUnmount(() => {
                     (canReply && !reply.trim())
                   "
                   :aria-disabled="canReply ? undefined : 'true'"
-                  :aria-describedby="canReply ? undefined : 'reply-help'"
+                  :aria-describedby="
+                    canReply
+                      ? replyLineHint
+                        ? 'reply-line'
+                        : undefined
+                      : 'reply-help'
+                  "
                   @click="canReply || $event.preventDefault()"
                 >
                   <AppIcon name="send" />

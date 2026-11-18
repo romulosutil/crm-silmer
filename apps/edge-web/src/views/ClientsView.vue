@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'vue-router';
 import ClientRegistration from '../components/ClientRegistration.vue';
 import ClientOrders from '../components/ClientOrders.vue';
+import ClientFirstMessage from '../components/ClientFirstMessage.vue';
 import PortfolioCreate from '../components/PortfolioCreate.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import {
@@ -60,6 +61,12 @@ let appendController;
 let commandController;
 let refreshTimer = 0;
 let searchTimer = 0;
+// WAP-22: first-message drafts and their pending attempt, per contact, only in
+// this view's memory. A new epoch remounts the composer: reads and the
+// command are aborted and a late answer can neither show nor navigate.
+/** @type {Map<string, {text?: string, attempt?: unknown, uncertain?: boolean}>} */
+const firstMessageDrafts = new Map();
+const firstMessageEpoch = ref(0);
 
 const filtered = computed(() => contacts.value);
 const selected = computed(() => detail.value?.contact ?? null);
@@ -432,6 +439,7 @@ function clearPrivateContact() {
   renameCurrentKnown.value = false;
   actionMessage.value = '';
   error.value = '';
+  firstMessageEpoch.value++;
   // A live reset can arrive during route entry. Keep focus on surviving
   // controls, including the title on entry. Revocation can also arrive while
   // focus is already on the body, for example after disabling pagination.
@@ -473,6 +481,7 @@ function invalidateContactRelations(event) {
 watch(
   () => props.selectedId,
   (id) => {
+    firstMessageEpoch.value++;
     if (id && id !== renameBase.value?.contactId) {
       renaming.value = false;
       renameBase.value = null;
@@ -492,7 +501,16 @@ watch(
     if (event.reset) clearPrivateContact();
     else if (event.type === 'inbox.contact.changed')
       invalidateContactRelations(event);
+    else if (event.type === 'identity.user.changed') firstMessageEpoch.value++;
     scheduleLiveRefresh();
+  },
+  { flush: 'sync' },
+);
+watch(
+  () => sessionUser.value?.id ?? null,
+  () => {
+    firstMessageDrafts.clear();
+    firstMessageEpoch.value++;
   },
   { flush: 'sync' },
 );
@@ -795,6 +813,13 @@ onBeforeUnmount(() => {
           />
 
           <ClientOrders v-if="mine" :key="selected.id" :contact="selected" />
+
+          <ClientFirstMessage
+            v-if="mine"
+            :key="`${selected.id}:${firstMessageEpoch}`"
+            :contact="selected"
+            :drafts="firstMessageDrafts"
+          />
 
           <div class="panel-head subsection-heading">
             <h3>Canais de contato</h3>

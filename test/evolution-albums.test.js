@@ -108,6 +108,100 @@ test('album announcement is ignored inside wrappers and before unresolved LID lo
   }
 });
 
+test('INBOX-PROTOCOL-01: standalone encrypted edits stop before identity lookup and preserve sibling content', () => {
+  const encrypted = {
+    targetMessageKey: { id: 'SYNTHETIC_ORIGINAL' },
+    secretEncType: 2,
+    encPayload: 'synthetic-ciphertext',
+  };
+  const edit = { secretEncryptedMessage: encrypted, messageContextInfo: {} };
+  const standalone = inbound(edit, 'SYNTHETIC_EDIT');
+  standalone.data.key.remoteJid = '12345@lid';
+  const wrapped = inbound({
+    ephemeralMessage: { message: { secretEncryptedMessage: encrypted } },
+  });
+  const text = inbound({ ...edit, conversation: 'Mensagem de teste.' });
+  const photo = inbound({ ...edit, imageMessage: { mimetype: 'image/jpeg' } });
+  const poll = inbound({ ...edit, pollCreationMessage: {} });
+  const invalid = inbound({ secretEncryptedMessage: [] });
+  const events = [standalone, wrapped, text, photo, poll, invalid];
+
+  // The active workflow also keeps a bounded summary of unsupported fields.
+  const live = structuredClone(published);
+  const validator = live.nodes.find(
+    (/** @type {any} */ n) => n.name === target,
+  );
+  validator.parameters.jsCode = patchEvolutionAlbums(published)
+    .workflow.nodes.find((/** @type {any} */ n) => n.name === target)
+    .parameters.jsCode.replace(
+      /  \/\/ INBOX-PROTOCOL-01:[\s\S]*?(?=  const quoted =)/u,
+      '',
+    )
+    .replace(
+      "      kind: 'message',\n",
+      `$&      // INBOX-UNSUPPORTED-DIAG
+      shape: [...new Set([payload.messageType, ...Object.keys(message && typeof message === 'object' ? message : {})])].filter((name) => typeof name === 'string' && /^[A-Za-z][A-Za-z0-9]{0,39}$/.test(name)).slice(0, 6).join('+'),
+`,
+    );
+  const prior = run(live, [inbound(edit)])[0].json;
+  assert.equal(prior.event.type, 'unsupported');
+  assert.equal(prior.event.shape, 'secretEncryptedMessage+messageContextInfo');
+  const converter = live.nodes
+    .find(
+      (/** @type {any} */ n) =>
+        n.name === 'Evolution - Montar evento WhatsApp (MVP)',
+    )
+    .parameters.jsCode.replace(
+      'type: payload.type,',
+      "type: payload.type === 'unsupported' && payload.shape ? 'unsupported:' + payload.shape : payload.type,",
+    )
+    .replaceAll('__SILMER_OWN_NUMBER__', config.ownNumber);
+  const converted = vm.runInNewContext(`(function(){${converter}})()`, {
+    $: () => ({ item: { json: prior } }),
+  });
+  const normalizer = live.nodes.find(
+    (/** @type {any} */ n) => n.name === 'Normalizar evento WhatsApp (MVP)',
+  ).parameters.jsCode;
+  const normalized = vm.runInNewContext(`(function(){${normalizer}})()`, {
+    $json: converted.json,
+    $input: { item: {} },
+    $execution: { id: 'SYNTHETIC_EXECUTION' },
+  }).json;
+  assert.equal(
+    normalized.text,
+    '[Mensagem do tipo unsupported:secretEncryptedMessage+messageContextInfo que o atendimento automático não lê]',
+  );
+
+  const { workflow } = patchEvolutionAlbums(live);
+  assert.deepEqual(patchEvolutionAlbums(workflow).changedNodeNames, []);
+  const restored = structuredClone(workflow);
+  const afterValidator = restored.nodes.find(
+    (/** @type {any} */ n) => n.name === target,
+  );
+  afterValidator.parameters.jsCode = afterValidator.parameters.jsCode.replace(
+    /  \/\/ INBOX-PROTOCOL-01:[\s\S]*?(?=  const quoted =)/u,
+    '',
+  );
+  assert.deepEqual(restored, live);
+  const result = run(workflow, events);
+  assert.deepEqual(
+    Array.from(result, (item) => [item.pairedItem.item, item.json.event.type]),
+    [
+      [2, 'text'],
+      [3, 'image'],
+      [4, 'unsupported'],
+      [5, 'unsupported'],
+    ],
+  );
+  assert.equal(result[0].json.event.text, 'Mensagem de teste.');
+  assert.equal(result[1].json.event.mimetype, 'image/jpeg');
+  assert.equal(
+    result[2].json.event.shape,
+    'secretEncryptedMessage+messageContextInfo+pollCreationMessage',
+  );
+  assert.doesNotMatch(JSON.stringify(result), /synthetic-ciphertext/u);
+});
+
 test('real content, unsupported messages, auth checks and receipts keep their existing behavior', () => {
   for (const [message, type] of [
     [{ imageMessage: { mimetype: 'image/jpeg' }, albumMessage: {} }, 'image'],
@@ -159,6 +253,15 @@ test('offline patch preserves every other field, is idempotent and rejects chang
   ).parameters.jsCode;
   assert.deepEqual(restored, published);
   assert.deepEqual(patchEvolutionAlbums(workflow).changedNodeNames, []);
+  const albumsOnly = structuredClone(workflow);
+  const validator = albumsOnly.nodes.find(
+    (/** @type {any} */ n) => n.name === target,
+  );
+  validator.parameters.jsCode = validator.parameters.jsCode.replace(
+    /  \/\/ INBOX-PROTOCOL-01:[\s\S]*?(?=  const quoted =)/u,
+    '',
+  );
+  assert.deepEqual(patchEvolutionAlbums(albumsOnly).workflow, workflow);
   const changed = structuredClone(published);
   changed.nodes.find(
     (/** @type {any} */ n) => n.name === target,

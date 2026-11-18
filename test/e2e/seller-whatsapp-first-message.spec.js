@@ -225,6 +225,7 @@ test('WAP-22: envia o contrato exato com as versões da conferência', async ({
     expectedLinkVersion: 2,
     expectedLineVersion: 5,
     expectedGeneration: 7,
+    expectedConversation: null,
   });
   expect(state.writes[0].key).toMatch(KEY);
   expect(state.writes[0].csrf).toBe('synthetic');
@@ -256,40 +257,168 @@ test('WAP-23: duplo clique e Ctrl+Enter durante o envio geram um só comando', a
   expect(state.writes[0].key).toMatch(KEY);
 });
 
-test('WAP-23: duas abas chegam ao mesmo atendimento sem duplicar', async ({
+const CONVERSATION_CHANGED =
+  'Este atendimento mudou desde que você abriu a mensagem (outra aba ou o cliente respondeu). Confira de novo antes de enviar.';
+
+/** Server double: one active conversation; a stale `null` is refused. */
+function sharedServer() {
+  const server = {
+    committed: false,
+    /** @param {string} contactId */
+    preview: (contactId) => ({
+      json: {
+        preview: previewOf(contactId, {
+          conversation: server.committed ? { id: 'r-ana', version: 4 } : null,
+        }),
+      },
+    }),
+    /** @param {Write} write @returns {Answer} */
+    respond: (write) => {
+      if (server.committed && write.body.expectedConversation === null)
+        return {
+          status: 409,
+          json: { code: 'CONVERSATION_VERSION_CONFLICT' },
+        };
+      const reused = server.committed;
+      server.committed = true;
+      return accepted(reused);
+    },
+  };
+  return server;
+}
+
+test('WAP-23: duas abas não geram duas primeiras mensagens', async ({
   page,
   context,
 }) => {
-  let created = false;
-  const respond = () => {
-    const reused = created;
-    created = true;
-    return accepted(reused);
-  };
-  const first = await setup(page, { respond });
+  const server = sharedServer();
+  const first = await setup(page, server);
   const other = await context.newPage();
-  const second = await setup(other, { respond });
+  const second = await setup(other, server);
   for (const tab of [page, other]) {
     await tab.goto('/meus-clientes/contact-r-ana');
     const ui = composer(tab);
     await ui.start.click();
-    await expect(ui.region.getByText('••••0000')).toBeVisible();
+    await expect(ui.region.getByText('Abre um novo atendimento')).toBeVisible();
     await ui.field.fill('Olá, Ana!');
   }
   await composer(page).send.click();
   await expect(page).toHaveURL(/\/inbox\/r-ana$/u);
-  await composer(other).send.click();
+  const ui = composer(other);
+  await ui.send.click();
+  await expect(ui.alert).toContainText(CONVERSATION_CHANGED);
+  await expect(ui.field).toHaveValue('Olá, Ana!');
+  await expect(other).toHaveURL(/\/meus-clientes\/contact-r-ana$/u);
+  const recheck = ui.region.getByRole('button', { name: 'Conferir de novo' });
+  await expect(recheck).toBeFocused();
+  await recheck.press('Enter');
+  await expect(
+    ui.region.getByText('Continua o atendimento ativo'),
+  ).toBeVisible();
+  await expect(ui.field).toBeFocused();
+  await ui.send.click();
   await expect(other).toHaveURL(/\/inbox\/r-ana$/u);
   await expect(other.locator('.notice-toast')).toContainText(
     'no atendimento ativo',
   );
-  expect(first.writes).toHaveLength(1);
-  expect(second.writes).toHaveLength(1);
-  expect(first.writes[0].key).toMatch(KEY);
-  expect(second.writes[0].key).toMatch(KEY);
-  expect(first.writes[0].key).not.toBe(second.writes[0].key);
-  expect(second.writes[0].body).toEqual(first.writes[0].body);
+  const base = {
+    text: 'Olá, Ana!',
+    expectedContactVersion: 3,
+    expectedLinkVersion: 2,
+    expectedLineVersion: 5,
+    expectedGeneration: 7,
+  };
+  expect(first.writes.map((write) => write.body)).toEqual([
+    { ...base, expectedConversation: null },
+  ]);
+  expect(second.writes.map((write) => write.body)).toEqual([
+    { ...base, expectedConversation: null },
+    { ...base, expectedConversation: { id: 'r-ana', version: 4 } },
+  ]);
+  const keys = [...first.writes, ...second.writes].map((write) => write.key);
+  for (const key of keys) expect(key).toMatch(KEY);
+  expect(new Set(keys).size).toBe(3);
   await other.close();
+});
+
+test('WAP-24: destino inválido recusa e mantém o rascunho', async ({
+  page,
+}) => {
+  const state = await setup(page, {
+    respond: () => ({
+      status: 422,
+      json: { code: 'WHATSAPP_DESTINATION_INVALID' },
+    }),
+  });
+  await page.goto('/meus-clientes/contact-r-ana');
+  const ui = composer(page);
+  await ui.start.click();
+  await expect(ui.region.getByText('••••0000')).toBeVisible();
+  await ui.field.fill('Rascunho para telefone inválido');
+  await ui.send.click();
+  await expect(ui.alert).toContainText(
+    'O telefone do cliente não é um WhatsApp válido. Corrija o cadastro do cliente; o rascunho foi mantido.',
+  );
+  await expect(ui.field).toHaveValue('Rascunho para telefone inválido');
+  await expect(ui.send).toBeFocused();
+  await expect(page).toHaveURL(/\/meus-clientes\/contact-r-ana$/u);
+  await expect(
+    page.getByRole('button', { name: 'Completar cadastro' }),
+  ).toBeEnabled();
+  expect(state.writes).toHaveLength(1);
+});
+
+test('WAP-24: tentativa incerta perdida ao recarregar não duplica o envio', async ({
+  page,
+}) => {
+  const server = sharedServer();
+  let pending = false;
+  const state = await setup(page, {
+    preview: server.preview,
+    respond: (write, index) => {
+      if (index === 0) {
+        // Accepted by the server, but the answer never reaches the browser.
+        pending = true;
+        return 'timedout';
+      }
+      // The first attempt commits before this one is processed.
+      if (pending) server.committed = true;
+      return server.respond(write);
+    },
+  });
+  await page.goto('/meus-clientes/contact-r-ana');
+  let ui = composer(page);
+  await ui.start.click();
+  await expect(ui.region.getByText('Abre um novo atendimento')).toBeVisible();
+  await ui.field.fill('Mensagem talvez enviada');
+  await ui.send.click();
+  await expect(ui.alert).toContainText('Não conseguimos confirmar o envio.');
+  await page.reload();
+  ui = composer(page);
+  await ui.start.click();
+  await expect(ui.field).toHaveValue('');
+  await expect(ui.region.getByText('Abre um novo atendimento')).toBeVisible();
+  await ui.field.fill('Mensagem talvez enviada');
+  await ui.send.click();
+  await expect(ui.alert).toContainText(CONVERSATION_CHANGED);
+  await expect(ui.field).toHaveValue('Mensagem talvez enviada');
+  await expect(page).toHaveURL(/\/meus-clientes\/contact-r-ana$/u);
+  await ui.region.getByRole('button', { name: 'Conferir de novo' }).click();
+  await expect(
+    ui.region.getByText('Continua o atendimento ativo'),
+  ).toBeVisible();
+  expect(state.writes).toHaveLength(2);
+  expect(state.writes[1].key).not.toBe(state.writes[0].key);
+  expect(state.writes[1].body.expectedConversation).toBeNull();
+  expect(
+    await page.evaluate(() =>
+      [globalThis.localStorage, globalThis.sessionStorage].some((store) =>
+        Object.keys(store).some((key) =>
+          store.getItem(key)?.includes('talvez enviada'),
+        ),
+      ),
+    ),
+  ).toBe(false);
 });
 
 test('WAP-24: linha offline recusa sem criar nada e mantém o rascunho', async ({

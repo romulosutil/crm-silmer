@@ -149,6 +149,10 @@ export function createApi(options = {}, runtime = {}) {
     });
   });
 
+  // WAP-E12 (E12-5): scopes and routes with their own handler take
+  // precedence; this one only sees what they rethrow or never caught.
+  api.setErrorHandler(genericErrorHandler);
+
   api.addHook('onResponse', async (request, reply) => {
     const context = requests.get(request);
     const duration = Math.max(
@@ -503,6 +507,49 @@ export function createApi(options = {}, runtime = {}) {
   api.get('/health/live', live);
 
   return api;
+}
+
+/**
+ * WAP-E12 (E12-5): root error handler. A deliberate 4xx (an Error whose
+ * `statusCode`, or `status`, is an integer 400-499, such as body parsing,
+ * size, validation or the rate limit) is rethrown so Fastify's default
+ * handler answers it exactly as before, headers included. Anything else (a
+ * raw database error such as 40P01/23505, a renderer failure, a bug) keeps
+ * the status the default would send and answers only a generic code: never
+ * the message, which can carry row data, nor the original code. The onError
+ * hook has already logged the bounded `error_code`.
+ *
+ * @param {unknown} error
+ * @param {import('fastify').FastifyRequest} _request
+ * @param {import('fastify').FastifyReply} reply
+ */
+function genericErrorHandler(error, _request, reply) {
+  const failure = /** @type {{statusCode?: unknown, status?: unknown}} */ (
+    error ?? {}
+  );
+  // Same precedence as Fastify's default: statusCode, then status.
+  const declared = Number(
+    [failure.statusCode, failure.status].find(
+      (value) =>
+        Number.isInteger(value) && Number(value) >= 400 && Number(value) <= 599,
+    ) ?? NaN,
+  );
+  if (
+    reply.raw.headersSent ||
+    (error instanceof Error && declared >= 400 && declared <= 499)
+  )
+    throw error;
+  const status = declared >= 500 && declared <= 599 ? declared : 500;
+  if (!reply.hasHeader('cache-control'))
+    reply.header('cache-control', 'no-store');
+  return reply
+    .code(status)
+    .type('application/json; charset=utf-8')
+    .send({
+      error: {
+        code: status === 503 ? 'SERVICE_UNAVAILABLE' : 'INTERNAL_ERROR',
+      },
+    });
 }
 
 /** @param {unknown} contentType */

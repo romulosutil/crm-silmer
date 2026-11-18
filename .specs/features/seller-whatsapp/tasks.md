@@ -574,18 +574,18 @@ Contact compartilhado, conflito por campo, primeiro envio de B e ficha pela
 linha de A. O resultado foi 11/11 em três execuções, sem skips, com 789
 colunas e logs sem marcadores. O ensaio entra no job PostgreSQL do CI.
 
-O ensaio e a revisão de QA acharam quatro P2, corrigidos nas fronteiras donas
-com teste vermelho antes: `cc01938c` (códigos públicos de restrição e linha
-indisponível), `f18225ff` e `d5384387` (ordem de lock da ficha em PDF e `503`
-genérico). E12-5, erro bruto do banco no corpo `500` das rotas de conversa e de
-operação, é anterior ao branch e fica aberto para decisão antes do piloto.
+O ensaio e a revisão de QA acharam cinco P2, corrigidos com teste vermelho
+antes: `cc01938c` (códigos públicos de restrição e linha indisponível),
+`f18225ff` e `d5384387` (ordem de lock da ficha em PDF e `503` genérico) e
+`354a31d3` (E12-5, anterior ao branch: o handler raiz deixa de expor código e
+mensagem do banco em respostas 5xx; os 4xx seguem idênticos).
 
-Gates do código acumulado E05–E12: suítes PostgreSQL do CI 824/824, integração
-E07/E08/E10/E11 sem falhas nem skips, `npm run validate` com 2.893 aprovados e
-61 skips live sem URL, e `npm run test:e2e -- --workers=2` com 1.114 aprovados.
-O único caso instável foi o BCS-07, que passou 5/5 isolado. Pendente: CI da
-PR, merge, imagens com digest, E01 (código no mesmo celular), F3/F4/E12-5,
-restore remoto e as autorizações do PO, da Operação, da Privacidade e Financeira.
+Gates do código acumulado E05–E12, depois de E12-5: suítes PostgreSQL do CI
+825/825, integração E07/E08/E10/E11 sem falhas nem skips, ensaio 11/11 três
+vezes e `npm run validate` com 2.898 aprovados e 61 skips live sem URL.
+`npm run test:e2e -- --workers=2` com 1.115 aprovados e os 7 skips existentes.
+Pendente: CI da PR, merge, imagens com digest, E01 (código no mesmo celular),
+F3/F4, restore remoto e as autorizações do PO, da Operação, da Privacidade e Financeira.
 
 ## Cobertura por requisito
 

@@ -925,3 +925,29 @@ test('CONV-ACL-01: auxiliary reads receive only the authenticated reader and cur
     }
   }
 });
+
+test('E12-5: a raw read failure answers a generic 500 without the database code or message', async () => {
+  const { api, headers } = harness({
+    async getContact() {
+      throw Object.assign(
+        new Error('duplicate key Key (email)=(private-detail-canary)'),
+        { code: '23505', constraint: 'private-detail-canary' },
+      );
+    },
+  });
+  try {
+    const response = await api.inject({
+      headers,
+      method: 'GET',
+      url: '/api/v1/contacts/contact-1',
+    });
+    assert.equal(response.statusCode, 500);
+    assert.deepEqual(response.json(), { error: { code: 'INTERNAL_ERROR' } });
+    assert.doesNotMatch(
+      response.body + JSON.stringify(response.headers),
+      /private-detail-canary|23505|duplicate key|message/u,
+    );
+  } finally {
+    await api.close();
+  }
+});

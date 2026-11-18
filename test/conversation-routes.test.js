@@ -302,3 +302,35 @@ test('WAP-E04/E08: an unavailable personal line keeps its public 503 code; other
     );
   }
 });
+
+test('E12-5: a raw failure without statusCode answers a generic 500 without the database code or message', async (t) => {
+  const api = createApi(
+    {},
+    {
+      conversations: {
+        async authorize() {
+          return { actor: { id: 'user-synthetic', role: 'ATENDIMENTO' } };
+        },
+        async archive() {
+          throw Object.assign(
+            new Error('deadlock detected Key (phone)=(private-detail-canary)'),
+            { code: '40P01', detail: 'private-detail-canary' },
+          );
+        },
+      },
+    },
+  );
+  t.after(() => api.close());
+  const response = await api.inject({
+    headers: baseHeaders,
+    method: 'POST',
+    payload: { expectedVersion: 6, reason: 'operator_command' },
+    url: '/api/v1/conversations/conversation-synthetic/archive',
+  });
+  assert.equal(response.statusCode, 500);
+  assert.deepEqual(response.json(), { error: { code: 'INTERNAL_ERROR' } });
+  assert.doesNotMatch(
+    response.body + JSON.stringify(response.headers),
+    /private-detail-canary|40P01|deadlock|message/u,
+  );
+});

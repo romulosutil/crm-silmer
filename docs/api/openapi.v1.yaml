@@ -5,7 +5,16 @@ x-order-billing-chat-contract:
 info:
   title: CRM Silmer API
   version: 1.0.0
-  description: Contratos versionados de identidade e domínio do CRM Silmer.
+  description: >-
+    Contratos versionados de identidade e domínio do CRM Silmer. Falha
+    inesperada fora dos códigos documentados de cada operação (erro de banco,
+    renderizador ou defeito) responde 500 ou o 5xx declarado com
+    `{"error":{"code":"INTERNAL_ERROR"}}` (503 usa SERVICE_UNAVAILABLE) e
+    `Cache-Control: no-store` quando a rota não definiu outro; nunca ecoa a
+    mensagem nem o código original (WAP-E12, ver
+    `#/components/responses/InternalError`). Erros 4xx do framework (JSON
+    inválido, corpo grande demais, validação de schema, limite de taxa)
+    mantêm o corpo padrão do Fastify.
 servers:
   - url: /api/v1
 paths:
@@ -9265,6 +9274,17 @@ components:
           schema: { $ref: '#/components/schemas/Error' }
     Unavailable:
       description: Dependência de autenticação ou persistência indisponível
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    InternalError:
+      description: >-
+        Falha inesperada não mapeada pela rota (WAP-E12): code
+        INTERNAL_ERROR (ou SERVICE_UNAVAILABLE em 503), sem mensagem, código
+        de banco ou dado da requisição
+      headers:
+        Cache-Control:
+          schema: { type: string, default: no-store }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }

@@ -2,6 +2,8 @@ import {
   personalIdentityVisible,
   contactConversationVisible,
 } from '@crm-silmer/contacts';
+import { randomUUID } from 'node:crypto';
+import { contactReadable } from './order-contact-access.js';
 
 import { decryptContactIdentityEnvelope } from '@crm-silmer/contacts/identity-envelope';
 import { contactPhoneHash, normalizeContactPhone } from '@crm-silmer/contacts';
@@ -280,6 +282,72 @@ export class PostgresOrderConversationPort {
     };
   }
 
+  /**
+   * WAP-31/WAP-33 (P2-1): with creation by Subject available, an order on a
+   * conversation without any Subject gets its own target in the same
+   * transaction, as a current "geral" Subject the order then promotes. It is
+   * never created over an existing Subject; the caller is bound to the
+   * creation transaction and holds the conversation lock.
+   *
+   * @param {string} conversationId
+   * @param {{actorId: string, correlationId: string, now: Date}} input
+   * @returns {Promise<string>}
+   */
+  async createOrderSubject(conversationId, input) {
+    const subjectId = randomUUID();
+    const at = input.now.toISOString();
+    const created = await this.#database.query(
+      `INSERT INTO crm.conversation_subjects
+         (id, conversation_id, contact_id, order_id, kind, position,
+          is_current, selected_source, selected_by, selected_at,
+          created_by, created_by_kind, version, created_at, updated_at)
+       SELECT $1, conversation.id, identity.current_contact_id, NULL, 'geral',
+              1, true, 'human', $3, $4::timestamptz, $3, 'human', 1, $4, $4
+       FROM crm.conversations conversation
+       JOIN crm.contact_identities identity
+         ON identity.id = conversation.contact_identity_id
+       WHERE conversation.id = $2
+         AND NOT EXISTS (SELECT 1 FROM crm.conversation_subjects existing
+                         WHERE existing.conversation_id = conversation.id)
+       RETURNING id`,
+      [subjectId, conversationId, input.actorId, at],
+    );
+    if (!created.rows[0]) throw new OrderConflictError('Subjects changed');
+    // The Inbox rereads Subjects on this event, as after "Adicionar assunto".
+    await this.#database.query(
+      `INSERT INTO crm.domain_events
+         (id, aggregate_type, aggregate_id, aggregate_version, event_type,
+          payload, correlation_id, occurred_at)
+       SELECT $1, 'conversation', $2,
+              COALESCE((SELECT max(existing.aggregate_version)
+                        FROM crm.domain_events existing
+                        WHERE existing.aggregate_type='conversation'
+                          AND existing.aggregate_id=$2), 0)+1,
+              'conversation.subjects_changed', $3::jsonb, $4, $5`,
+      [
+        `event-${randomUUID()}`,
+        conversationId,
+        JSON.stringify({
+          conversationId,
+          subjectId,
+          orderId: null,
+          previousSubjectId: null,
+        }),
+        input.correlationId,
+        at,
+      ],
+    );
+    await this.#database.query(
+      `INSERT INTO crm.audit_events
+         (id, actor_id, action, target_type, target_id, version, reason,
+          correlation_id, occurred_at)
+       VALUES ($1, $2, 'conversation.subject_created', 'conversation_subject',
+               $3, '1', 'ORDER_TARGET_CREATED', $4, $5)`,
+      [randomUUID(), input.actorId, subjectId, input.correlationId, at],
+    );
+    return subjectId;
+  }
+
   /** @param {string[]} subjectIds
    * @returns {Promise<Map<string, import('../application/order-service.js').OrderConversationContext>>} */
   async readSubjectOrderContexts(subjectIds) {
@@ -358,14 +426,21 @@ export class PostgresOrderConversationPort {
     return new Map(result.rows.map((row) => [row.start_id, row.contact_id]));
   }
 
-  /** Current operator-entered names of contacts used by manual orders. */
-  /** @param {string[]} contactIds */
-  async readContactNames(contactIds) {
+  /**
+   * Current operator-entered names of contacts used by manual orders. With a
+   * `visibilityActorId` only the Contacts that person may read are returned
+   * (WAP-07): the predicate of `GET /api/v1/contacts/:id`, or every Contact
+   * under a current COMMERCIAL_ADMIN grant. A hidden Contact is absent.
+   *
+   * @param {string[]} contactIds @param {{visibilityActorId?: string}} [reader]
+   */
+  async readContactNames(contactIds, reader = {}) {
     if (contactIds.length === 0) return new Map();
     const result = await this.#database.query(
-      `SELECT id, display_name, display_name_source
-       FROM crm.contacts WHERE id = ANY($1::text[])`,
-      [contactIds],
+      `SELECT contact.id, contact.display_name, contact.display_name_source
+       FROM crm.contacts contact WHERE contact.id = ANY($1::text[])
+         AND ($2::text IS NULL OR ${contactReadable('contact', '$2')})`,
+      [contactIds, reader.visibilityActorId ?? null],
     );
     return new Map(
       result.rows.map((row) => [

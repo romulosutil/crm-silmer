@@ -117,6 +117,59 @@ else {
         [id, conv, ficha, seller.id, NOW],
       );
     }
+    /** WAP-E03: puts a conversation on the owner's personal line and wallet.
+     * @param {string} owner @param {string} conv @param {string} contact */
+    async function personalLine(owner, conv, contact) {
+      const id = randomUUID(),
+        digest = randomUUID().replaceAll('-', '').padEnd(64, 'f');
+      // One line per seller: a later conversation reuses the owner's line.
+      const existing = (
+        await pool.query(
+          'SELECT account_id FROM crm.seller_whatsapp_lines WHERE seller_id=$1',
+          [owner],
+        )
+      ).rows[0];
+      const account = existing ? String(existing.account_id) : randomUUID();
+      await database.transaction(async (/** @type {any} */ tx) => {
+        if (!existing)
+          await tx.query(
+            `INSERT INTO crm.seller_whatsapp_lines(id,seller_id,account_id,instance_name,number_digest,number_envelope,state,generation,version,created_at,updated_at)
+          VALUES($1,$2,$3,$4,$5,$6::jsonb,'disconnected',1,1,$7,$7)`,
+            [
+              id,
+              owner,
+              account,
+              `wap_${randomUUID().replaceAll('-', '')}`,
+              digest,
+              JSON.stringify(
+                encryptJson(
+                  { number: '5511990000000' },
+                  'synthetic-number',
+                  KEY,
+                ),
+              ),
+              NOW,
+            ],
+          );
+        if (!existing)
+          await tx.query(
+            "INSERT INTO crm.whatsapp_number_reservations(number_digest,kind,line_id,created_at) VALUES($1,'personal',$2,$3)",
+            [digest, id, NOW],
+          );
+        await tx.query(
+          'UPDATE crm.contact_identities SET provider_account_id=$2 WHERE id=$1',
+          [`identity-${conv}`, account],
+        );
+        await tx.query(
+          'UPDATE crm.conversations SET provider_account_id=$2,assigned_user_id=$3 WHERE id=$1',
+          [conv, account, owner],
+        );
+        await tx.query(
+          `INSERT INTO crm.seller_client_links(id,seller_id,contact_id,provenance,status,version,created_by,updated_by,created_at,updated_at) VALUES($1,$2,$3,'explicit_link','active',1,$2,$2,$4,$4)`,
+          [randomUUID(), owner, contact, NOW],
+        );
+      });
+    }
     /** @param {string} conv @param {string|undefined} [target] @param {string} [key] @param {number} [version] */
     function command(conv, target, key = randomUUID(), version = 1) {
       return {
@@ -594,20 +647,47 @@ else {
             { code: 'ORDER_TARGET_REQUIRED' },
           );
           await conversation('legacy');
-          const legacy = await runtime().createManual(command('legacy'));
+          // A genuine legacy draft: written while targeted creation was off.
+          const legacy = await runtime({
+            ORDER_SUBJECT_CREATION_ENABLED: 'false',
+          }).createManual(command('legacy'));
           await assert.rejects(draftBeforeUpgrade(randomUUID(), 'legacy'), {
             code: '23505',
             constraint: 'orders_one_pending_per_legacy_conversation',
           });
+          // With targeting on and zero Subjects the legacy draft is reused,
+          // never wrapped in an inferred Subject.
+          const reused = await runtime().createManual(command('legacy'));
+          assert.equal(reused.created, false);
+          assert.equal(reused.order.id, legacy.order.id);
           assert.equal(
-            (await runtime().createManual(command('legacy'))).order.id,
-            legacy.order.id,
+            (
+              await pool.query(
+                "SELECT count(*)::int AS n FROM crm.conversation_subjects WHERE conversation_id='legacy'",
+              )
+            ).rows[0].n,
+            0,
           );
           await subject('legacy-new-subject', 'legacy');
           await assert.rejects(
             runtime().createManual(command('legacy', 'legacy-new-subject')),
             { code: 'ORDER_TARGET_REQUIRED' },
           );
+          // P2-1: the explicit resolution (a Subject naming the legacy draft)
+          // opens the second order on the new Subject.
+          await createSubjectService(database).create({
+            actor: seller,
+            conversationId: 'legacy',
+            orderId: legacy.order.id,
+            idempotencyKey: randomUUID(),
+            correlationId: randomUUID(),
+          });
+          const next = await runtime().createManual(
+            command('legacy', 'legacy-new-subject'),
+          );
+          assert.equal(next.created, true);
+          assert.notEqual(next.order.id, legacy.order.id);
+          assert.equal(next.order.originSubjectId, 'legacy-new-subject');
         },
       );
       await t.test(
@@ -730,7 +810,9 @@ else {
           );
           // A historical legacy origin may not be reopened alongside an explicit target.
           await conversation('legacy-reopen');
-          const legacy = await runtime().createManual(command('legacy-reopen'));
+          const legacy = await runtime({
+            ORDER_SUBJECT_CREATION_ENABLED: 'false',
+          }).createManual(command('legacy-reopen'));
           const legacyRaw = await repository.findById(legacy.order.id);
           assert.ok(legacyRaw);
           const frozen = await repository.saveStatus(
@@ -820,7 +902,9 @@ else {
               ),
             ],
           );
-          const created = await runtime().createManual(command('name-legacy'));
+          const created = await runtime({
+            ORDER_SUBJECT_CREATION_ENABLED: 'false',
+          }).createManual(command('name-legacy'));
           const linked = await createSubjectService(database).create({
             actor: seller,
             conversationId: 'name-legacy',
@@ -854,48 +938,7 @@ else {
           const contact = await conversation('personal');
           await conversation('personal-other', contact);
           /** @param {string} owner @param {string} conv */
-          async function line(owner, conv) {
-            const id = randomUUID(),
-              account = randomUUID(),
-              digest = randomUUID().replaceAll('-', '').padEnd(64, 'f');
-            await database.transaction(async (/** @type {any} */ tx) => {
-              await tx.query(
-                `INSERT INTO crm.seller_whatsapp_lines(id,seller_id,account_id,instance_name,number_digest,number_envelope,state,generation,version,created_at,updated_at)
-              VALUES($1,$2,$3,$4,$5,$6::jsonb,'disconnected',1,1,$7,$7)`,
-                [
-                  id,
-                  owner,
-                  account,
-                  `wap_${randomUUID().replaceAll('-', '')}`,
-                  digest,
-                  JSON.stringify(
-                    encryptJson(
-                      { number: '5511990000000' },
-                      'synthetic-number',
-                      KEY,
-                    ),
-                  ),
-                  NOW,
-                ],
-              );
-              await tx.query(
-                "INSERT INTO crm.whatsapp_number_reservations(number_digest,kind,line_id,created_at) VALUES($1,'personal',$2,$3)",
-                [digest, id, NOW],
-              );
-              await tx.query(
-                'UPDATE crm.contact_identities SET provider_account_id=$2 WHERE id=$1',
-                [`identity-${conv}`, account],
-              );
-              await tx.query(
-                'UPDATE crm.conversations SET provider_account_id=$2,assigned_user_id=$3 WHERE id=$1',
-                [conv, account, owner],
-              );
-              await tx.query(
-                `INSERT INTO crm.seller_client_links(id,seller_id,contact_id,provenance,status,version,created_by,updated_by,created_at,updated_at) VALUES($1,$2,$3,'explicit_link','active',1,$2,$2,$4,$4)`,
-                [randomUUID(), owner, contact, NOW],
-              );
-            });
-          }
+          const line = (owner, conv) => personalLine(owner, conv, contact);
           await line(seller.id, 'personal');
           await line(other.id, 'personal-other');
           await subject('personal-a', 'personal');
@@ -1167,6 +1210,226 @@ else {
             runtime(offSettings[0]).currentForConversation('reopen', seller),
             { code: 'ORDER_TARGET_REQUIRED' },
           );
+        },
+      );
+      await t.test(
+        'P2-1: zero-Subject creation persists its own Subject and a new explicit Subject opens another order',
+        async () => {
+          for (const personal of [false, true]) {
+            const id = personal ? 'fresh-personal' : 'fresh-general';
+            const contact = await conversation(id);
+            if (personal) await personalLine(seller.id, id, contact);
+            const key = randomUUID();
+            const first = await runtime().createManual(
+              command(id, undefined, key),
+            );
+            assert.equal(first.created, true);
+            const rows = (
+              await pool.query(
+                `SELECT subject.id,subject.kind,subject.order_id,subject.is_current,
+                        subject.position,subject.contact_id,orders.origin_subject_id
+                 FROM crm.conversation_subjects subject
+                 JOIN crm.orders orders ON orders.id=$2
+                 WHERE subject.conversation_id=$1`,
+                [id, first.order.id],
+              )
+            ).rows;
+            assert.equal(rows.length, 1);
+            assert.deepEqual(rows[0], {
+              id: rows[0].id,
+              kind: 'pedido',
+              order_id: first.order.id,
+              is_current: true,
+              position: 1,
+              contact_id: contact,
+              origin_subject_id: rows[0].id,
+            });
+            assert.equal(first.order.originSubjectId, rows[0].id);
+            assert.equal(
+              (
+                await pool.query(
+                  "SELECT count(*)::int AS n FROM crm.domain_events WHERE aggregate_id=$1 AND event_type='conversation.subjects_changed'",
+                  [id],
+                )
+              ).rows[0].n,
+              1,
+            );
+            // Replay and another key reuse the order; no second Subject.
+            assert.equal(
+              (await runtime().createManual(command(id, undefined, key))).order
+                .id,
+              first.order.id,
+            );
+            const again = await runtime().createManual(command(id));
+            assert.equal(again.created, false);
+            assert.equal(again.order.id, first.order.id);
+            // WAP-33: a new target uses an explicit Subject.
+            await subject(`${id}-next`, id);
+            const second = await runtime().createManual(
+              command(id, `${id}-next`),
+            );
+            assert.equal(second.created, true);
+            assert.notEqual(second.order.id, first.order.id);
+            assert.equal(second.order.originSubjectId, `${id}-next`);
+            await assert.rejects(runtime().createManual(command(id)), {
+              code: 'ORDER_TARGET_REQUIRED',
+            });
+          }
+          // The implicit Subject shares the order's transaction.
+          await conversation('fresh-rollback');
+          await pool.query(`CREATE FUNCTION crm.wap_test_audit_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.target_id='fresh-rollback' THEN RAISE EXCEPTION 'synthetic audit failure'; END IF; RETURN NEW; END $$;
+          CREATE TRIGGER wap_test_audit_failure BEFORE INSERT ON crm.audit_events FOR EACH ROW EXECUTE FUNCTION crm.wap_test_audit_failure()`);
+          try {
+            await assert.rejects(
+              runtime().createManual(command('fresh-rollback')),
+              /synthetic audit failure/u,
+            );
+          } finally {
+            await pool.query(
+              'DROP TRIGGER wap_test_audit_failure ON crm.audit_events; DROP FUNCTION crm.wap_test_audit_failure()',
+            );
+          }
+          for (const table of ['orders', 'conversation_subjects'])
+            assert.equal(
+              (
+                await pool.query(
+                  `SELECT count(*)::int AS n FROM crm.${table} WHERE conversation_id='fresh-rollback'`,
+                )
+              ).rows[0].n,
+              0,
+            );
+          // General line with targeted creation off keeps the legacy draft.
+          await conversation('fresh-off');
+          const off = await runtime({
+            ORDER_SUBJECT_CREATION_ENABLED: 'false',
+          }).createManual(command('fresh-off'));
+          assert.equal(off.order.originSubjectId, undefined);
+          assert.equal(
+            (
+              await pool.query(
+                "SELECT count(*)::int AS n FROM crm.conversation_subjects WHERE conversation_id='fresh-off'",
+              )
+            ).rows[0].n,
+            0,
+          );
+        },
+      );
+      await t.test(
+        'P1-1: a stand-alone order needs the Contact visibility of reading it',
+        async () => {
+          const intruder = {
+            id: 'acl-intruder',
+            kind: 'human',
+            functionName: 'Vendedor',
+            capabilities: [],
+          };
+          const admin = {
+            id: 'acl-admin',
+            kind: 'human',
+            functionName: 'Vendedor',
+            capabilities: ['COMMERCIAL_ADMIN'],
+          };
+          // A seller with a personal line of their own sees no more.
+          const peer = { ...intruder, id: 'acl-peer' };
+          for (const user of [intruder, admin, peer]) {
+            await pool.query(
+              `INSERT INTO crm.users(id,email,password_hash,name) VALUES($1,$2,'$argon2id$synthetic','Usuário Sintético')`,
+              [user.id, `${user.id}@example.test`],
+            );
+            await pool.query(
+              "INSERT INTO crm.user_functions(user_id,function_name) VALUES($1,'Vendedor')",
+              [user.id],
+            );
+          }
+          await pool.query(
+            "INSERT INTO crm.user_capabilities(user_id,capability) VALUES($1,'COMMERCIAL_ADMIN')",
+            [admin.id],
+          );
+          const privateContact = await conversation('acl-private');
+          await personalLine(seller.id, 'acl-private', privateContact);
+          const generalContact = await conversation('acl-general');
+          const peerContact = await conversation('acl-peer-client');
+          await personalLine(peer.id, 'acl-peer-client', peerContact);
+          /** @param {any} actor @param {string} contactId */
+          const standalone = (actor, contactId) =>
+            runtime().createForContact({
+              actor,
+              contactId,
+              idempotencyKey: randomUUID(),
+              correlationId: randomUUID(),
+            });
+          /** @param {string} contactId */
+          const manualOrders = async (contactId) =>
+            (
+              await pool.query(
+                'SELECT count(*)::int AS n FROM crm.orders WHERE contact_id=$1 AND conversation_id IS NULL',
+                [contactId],
+              )
+            ).rows[0].n;
+          for (const actor of [intruder, peer])
+            await assert.rejects(standalone(actor, privateContact), {
+              code: 'CONTACT_NOT_FOUND',
+            });
+          await assert.rejects(standalone(seller, peerContact), {
+            code: 'CONTACT_NOT_FOUND',
+          });
+          // The writer re-reads visibility under the Contact lock.
+          await assert.rejects(
+            repository.createPending({
+              actor: intruder,
+              contactId: privateContact,
+              conversationId: null,
+              correlationId: randomUUID(),
+              createdBy: intruder.id,
+              createdByKind: 'user',
+              fabCode: '01',
+              ficha: briefingToFicha(null),
+              firstContactAt: NOW.toISOString(),
+              id: randomUUID(),
+              manualCreateKey: randomUUID(),
+              manualOwnerId: intruder.id,
+              missingFields: ['items'],
+              now: NOW,
+              totalPieces: 0,
+            }),
+            { code: 'CONTACT_NOT_FOUND' },
+          );
+          const api = createApi(
+            {},
+            {
+              orders: createOrderApiRuntime(database, {
+                access: {
+                  authorizeRead: async () => ({ actor: intruder }),
+                  authorizeWrite: async () => ({ actor: intruder }),
+                },
+                environment,
+              }),
+            },
+          );
+          try {
+            const response = await api.inject({
+              method: 'POST',
+              url: '/api/v1/orders',
+              headers: { 'idempotency-key': randomUUID() },
+              payload: { contactId: privateContact },
+            });
+            assert.equal(response.statusCode, 404, response.body);
+            assert.deepEqual(response.json(), {
+              error: { code: 'CONTACT_NOT_FOUND' },
+            });
+            assert.doesNotMatch(response.body, /Sintético/u);
+          } finally {
+            await api.close();
+          }
+          assert.equal(await manualOrders(privateContact), 0);
+          // The owner and an Admin keep working; a general client stays open.
+          const own = await standalone(seller, privateContact);
+          assert.equal(own.ficha.summary.cliente, 'Cliente Sintético');
+          const byAdmin = await standalone(admin, privateContact);
+          assert.equal(byAdmin.contactId, privateContact);
+          const general = await standalone(intruder, generalContact);
+          assert.equal(general.contactId, generalContact);
+          assert.equal(await manualOrders(privateContact), 2);
         },
       );
     } finally {

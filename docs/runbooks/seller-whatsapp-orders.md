@@ -41,6 +41,23 @@ par, zero ou um Assunto permitem resolver o legado; vários Assuntos retornam
 `409 ORDER_TARGET_REQUIRED`, mesmo havendo um atual. Não há escolha pela ordem
 do banco ou pela última interação.
 
+Com zero Assuntos e nenhum pendente, a criação por alvo grava na mesma
+transação um Assunto `geral` atual (evento `conversation.subjects_changed` e
+auditoria `conversation.subject_created`), promovido ao Pedido criado: o
+Pedido nasce com origem e a ficha inicial usa a pré-ficha da conversa, pois o
+Assunto novo não tem briefing próprio. Um Assunto criado depois é um novo
+alvo explícito. Pendente legado já existente (origem nula, gravado com a
+criação por alvo desligada) é devolvido sem Assunto inferido e continua
+exigindo resolução explícita — Assunto que o nomeia — antes de outro alvo;
+até lá, par explícito recebe `409 ORDER_TARGET_REQUIRED`. Prova:
+subtestes `P2-1` e `legacy draft cannot coexist with unresolved explicit
+target` em `test/order-subject-postgres-live.test.js`.
+
+`POST /api/v1/orders` (pedido sem conversa) aplica ao `contactId` a mesma
+visibilidade de `GET /api/v1/contacts/:id`; Contact invisível responde
+`404 CONTACT_NOT_FOUND` sem escrita nem nome, e a verificação se repete sob o
+lock do Contact (subteste `P1-1`).
+
 ### Linha geral com criação por alvo desligada
 
 Sem os três gates (ou sem os índices de 0081) para o responsável da conversa,

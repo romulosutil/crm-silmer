@@ -3440,7 +3440,10 @@ paths:
       description: >-
         Ação order.create. O vendedor autenticado é o responsável inicial.
         Cada chave de idempotência identifica um único pedido; a ficha nasce
-        editável pelas rotas usuais do pedido.
+        editável pelas rotas usuais do pedido. O Contact precisa ser visível
+        ao autor pela mesma regra de GET /contacts/{contactId} (COMMERCIAL_ADMIN
+        vê todos); invisível responde 404 CONTACT_NOT_FOUND, sem escrita nem
+        nome (WAP-07).
       security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
       parameters:
         - $ref: '#/components/parameters/Origin'
@@ -3597,6 +3600,9 @@ paths:
         O pedido nasce pendente, com número NN-CRM reservado, pré-preenchido
         com a pré-ficha do Assunto alvo. subjectId e expectedSubjectVersion são
         opcionais em par; omissão exige legado inequívoco, senão ORDER_TARGET_REQUIRED.
+        Com escritor por alvo ativo, conversa sem Assunto e sem pendente cria
+        na mesma transação um Assunto que vira a origem do Pedido; pendente
+        legado existente é devolvido sem Assunto inferido.
         Alvo com pendente elegível responde 200; histórico exige novo Assunto.
         Pedido/vínculo/número/evento/auditoria/recibo compartilham transação.
         Escritor por alvo exige flags privadas e allowlist, default off (WAP-E05).

@@ -315,3 +315,39 @@ test('manual draft follows contact name and refuses unknown contact or another o
     { code: 'FORBIDDEN' },
   );
 });
+
+test('P1-1: a stand-alone order reads the Contact with the author visibility', async () => {
+  const repository = new InMemoryOrderRepository();
+  /** @type {unknown[]} */
+  const readers = [];
+  const service = createOrderService({
+    authorizeOwnership: async () => undefined,
+    conversations: {
+      readContactNames: async (ids, reader) => {
+        if (reader) readers.push(reader);
+        // The private client is visible to its seller only (WAP-07); the
+        // presentation of an existing order reads names unscoped.
+        return new Map(
+          !reader || reader.visibilityActorId === OWNER.id
+            ? ids.map((id) => [id, 'Cliente Privado'])
+            : [],
+        );
+      },
+      readOrderContexts: async () => new Map(),
+      searchConversationIds: async () => [],
+    },
+    fabCode: '01',
+    repository,
+  });
+  await assert.rejects(create(service, 'hidden', OTHER), {
+    code: 'CONTACT_NOT_FOUND',
+    statusCode: 404,
+  });
+  assert.equal((await repository.list({ limit: 10 })).items.length, 0);
+  const own = await create(service, 'visible', OWNER);
+  assert.equal(own.ficha.summary.cliente, 'Cliente Privado');
+  assert.deepEqual(readers, [
+    { visibilityActorId: OTHER.id },
+    { visibilityActorId: OWNER.id },
+  ]);
+});

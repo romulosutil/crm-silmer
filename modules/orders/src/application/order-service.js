@@ -59,7 +59,8 @@ import {
  *     readOrderContexts(conversationIds: string[]): Promise<Map<string, OrderConversationContext>>,
  *     readSubjectOrderContexts?(subjectIds: string[]): Promise<Map<string, OrderConversationContext>>,
  *     resolveOrderTarget?(conversationId: string, subjectId?: string, expectedSubjectVersion?: number): Promise<{subjectId: string|null, orderId: string|null}>,
- *     readContactNames?(contactIds: string[]): Promise<Map<string, string|null>>,
+ *     createOrderSubject?(conversationId: string, input: {actorId: string, correlationId: string, now: Date}): Promise<string>,
+ *     readContactNames?(contactIds: string[], reader?: {visibilityActorId?: string}): Promise<Map<string, string|null>>,
  *     searchConversationIds(query: string, reader?: any): Promise<string[]>,
  *     searchContactIds?(query: string, reader?: any): Promise<string[]>,
  *     listAssignedOrderConversationIds?(userId: string): Promise<string[]>,
@@ -400,7 +401,7 @@ export function createOrderService(options) {
    * @returns {Promise<{created: boolean, order: Order}>}
    */
   async function ensurePending(input) {
-    const target =
+    let target =
       input.createdByKind === 'user' &&
       conversations.resolveOrderTarget &&
       (input.subjectId !== undefined || input.implicitSubjectTarget !== false)
@@ -458,11 +459,48 @@ export function createOrderService(options) {
     }
     if (target.orderId) throw new OrderNotFoundError();
 
+    // P2-1 (WAP-31/WAP-33): with creation by Subject available, a
+    // conversation without any Subject and without a pending draft gets its
+    // own target in this transaction, so the order is born with an origin
+    // and a later Subject is a new target, not a legacy draft to resolve. A
+    // legacy draft found above is still reused as it is, never wrapped.
+    let implicitSubject = false;
+    if (
+      input.implicitSubjectTarget === true &&
+      input.subjectId === undefined &&
+      input.createdByKind === 'user' &&
+      input.createdBy &&
+      !target.subjectId &&
+      conversations.createOrderSubject &&
+      repository.bindSubject
+    ) {
+      target = {
+        subjectId: await conversations.createOrderSubject(
+          input.conversationId,
+          {
+            actorId: input.createdBy,
+            correlationId: input.correlationId,
+            now: clock(),
+          },
+        ),
+        orderId: null,
+      };
+      implicitSubject = true;
+    }
+
+    // A Subject created just now has no briefing of its own; the order keeps
+    // the conversation's pre-ficha, as the legacy draft did.
     const context = (
-      target.subjectId && conversations.readSubjectOrderContexts
+      target.subjectId &&
+      !implicitSubject &&
+      conversations.readSubjectOrderContexts
         ? await conversations.readSubjectOrderContexts([target.subjectId])
         : await conversations.readOrderContexts([input.conversationId])
-    ).get(target.subjectId ?? input.conversationId);
+    ).get(
+      implicitSubject
+        ? input.conversationId
+        : (target.subjectId ?? input.conversationId),
+    );
     if (!context) {
       throw new OrderNotFoundError(
         'Conversation was not found',
@@ -712,7 +750,13 @@ export function createOrderService(options) {
       ) {
         throw new OrderForbiddenError();
       }
-      const names = await conversations.readContactNames([contactId]);
+      // P1-1 (WAP-07): the Contact must be one this seller may read, by the
+      // predicate of `GET /api/v1/contacts/:id`; a hidden Contact is absent,
+      // so the answer is the same 404 and no name is read. The repository
+      // checks again under the Contact lock.
+      const names = await conversations.readContactNames([contactId], {
+        visibilityActorId: input.actor.id,
+      });
       if (!names.has(contactId)) {
         throw new OrderNotFoundError(
           'Contact was not found',

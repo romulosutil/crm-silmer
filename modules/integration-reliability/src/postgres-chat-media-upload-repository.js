@@ -80,8 +80,13 @@ export class PostgresChatMediaUploadRepository {
   /** Reserve quota durably before writing a renderer-generated PDF. @param {any} input @param {Function} write */
   async writeGeneratedPdf(input, write) {
     await this.#database.transaction(async (/** @type {any} */ client) => {
-      // Conversation before quota, like every send/attach path: the chat_media
-      // FK would otherwise take this KEY SHARE after the quota row (40P01).
+      // Actor user, then conversation, then quota, like every send/attach path
+      // (users FOR UPDATE in requireSellerClientActor comes first there). The
+      // chat_media FKs would otherwise take these KEY SHAREs after the quota
+      // row and close a cycle with a concurrent send (40P01, WAP-E08/E12).
+      await client.query('SELECT 1 FROM crm.users WHERE id=$1 FOR KEY SHARE', [
+        input.actorId,
+      ]);
       await client.query(
         'SELECT 1 FROM crm.conversations WHERE id=$1 FOR KEY SHARE',
         [input.conversationId],

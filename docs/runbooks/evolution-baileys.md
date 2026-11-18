@@ -322,6 +322,29 @@ anterior e valida a remoção apenas dele, preservando quatro fotos e o pairing
 dos itens. Cobre wrappers, LID sem identidade, autenticação, ACK, conteúdo
 misto, drift e proteção da CLI. Publicação/homologação real permanecem pendentes.
 
+## Edição cifrada exibida como mensagem — INBOX-PROTOCOL-01
+
+INB-01, MSG-01/02 e ORC-08. No
+[protocolo da versão fixada do Baileys](https://github.com/WhiskeySockets/Baileys/blob/v7.0.0-rc.9/WAProto/WAProto.proto#L3235-L3244),
+`secretEncryptedMessage` referencia uma mensagem existente. Quando chega
+sozinho, com `messageContextInfo` opcional, o validador encerra o evento
+antes da consulta de identidade, da gravação no CRM e do agente. Texto, mídia e
+outros tipos de conteúdo no mesmo evento seguem o fluxo existente. A projeção
+privada da linha pessoal conserva somente a indicação do tipo para esse caso.
+
+O chat da Inbox omite o marcador histórico gerado pelo n8n para esse tipo,
+preservando os registros armazenados. A comparação é exata e se limita a
+texto recebido do contato pelo n8n em conversas do WhatsApp.
+
+Para a linha geral, aplicar o procedimento de exportação e revisão da seção
+anterior com o mesmo helper. Ele aceita a versão ativa conferida, com o filtro
+de álbum e o diagnóstico de tipos já instalados. Conferir a versão ativa após
+publicação e usar somente eventos
+sintéticos em testes de regressão. Em caso de divergência do validador,
+revisar o código ativo antes de aplicar o delta. O rollback restaura o nó
+anterior a partir do export privado. A linha pessoal usa seu workflow gerado
+e a imagem n8n com a projeção correspondente no próximo rollout autorizado.
+
 ## Suspensão e recuperação
 
 Interromper somente o gateway e o transporte da ponte. Preservar volumes,

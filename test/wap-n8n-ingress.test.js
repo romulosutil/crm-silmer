@@ -327,6 +327,27 @@ test('WAP-E04: personal message projection precedes persistence and removes gene
     'https://private.invalid/secret',
   ])
     assert.equal(JSON.stringify(ctx.req).includes(secret), false);
+  const encrypted = {
+    secretEncryptedMessage: { encPayload: 'synthetic-private-ciphertext' },
+    messageContextInfo: { messageSecret: 'synthetic-message-secret' },
+  };
+  for (const [message, expected] of [
+    [encrypted, { secretEncryptedMessage: {} }],
+    [{ ...encrypted, conversation: 'Olá' }, { conversation: 'Olá' }],
+    [{ ...encrypted, pollCreationMessage: {} }, {}],
+  ]) {
+    const edit = context({
+      parameters: { path },
+      req: { body: { ...raw, data: { ...raw.data, message } } },
+    });
+    assert.equal(
+      await protectIngress(edit, config, async () =>
+        verificationResponse({ source: origin, instance }),
+      ),
+      false,
+    );
+    assert.deepEqual(edit.req.body.data.message, expected);
+  }
   for (const malformed of [
     { ...raw, event: 'qrcode.updated' },
     { ...raw, instance: 'not_allowlisted' },

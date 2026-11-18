@@ -795,6 +795,7 @@ export class PostgresInboxReadRepository {
             database.query(
               `SELECT message.id, message.conversation_id, message.direction,
                     message.author_kind, message.author_id, message.message_type,
+                    message.n8n_execution_id IS NOT NULL AS via_n8n,
                     message.content_envelope, message.status, message.delivery_status,
                     CASE WHEN message.delivery_status NOT IN ('failed', 'outcome_unknown')
                            OR message.delivery_status IS NULL THEN NULL
@@ -832,9 +833,22 @@ export class PostgresInboxReadRepository {
           this,
           turn?.nowIso ?? null,
         ),
-        messages: messages.rows.map((/** @type {any} */ message) =>
-          mapMessage(message, this),
-        ),
+        messages: messages.rows.flatMap((/** @type {any} */ message) => {
+          const mapped = mapMessage(message, this);
+          // INBOX-PROTOCOL-01: keep historical integration records outside the transcript.
+          if (
+            row.channel === 'whatsapp' &&
+            message.via_n8n === true &&
+            mapped.direction === 'inbound' &&
+            mapped.authorKind === 'contact' &&
+            mapped.type === 'text' &&
+            /^\[Mensagem do tipo unsupported:(?:secretEncryptedMessage(?:\+messageContextInfo)?|messageContextInfo\+secretEncryptedMessage) que o atendimento automático não lê\]$/u.test(
+              mapped.preview ?? '',
+            )
+          )
+            return [];
+          return [mapped];
+        }),
         suggestion: suggestion.rows[0]
           ? mapSuggestion(suggestion.rows[0], this)
           : null,

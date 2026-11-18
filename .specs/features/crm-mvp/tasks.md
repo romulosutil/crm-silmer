@@ -1197,6 +1197,20 @@ OPS-ERR-04/05 e OPS-HEALTH-T01. Sem nova arquitetura ou infraestrutura.
       READ ONLY pela interface confirmou timeout sem recibo/reserva.
       Não resolver/reenviar apenas pela ausência de novas falhas.
 
+## INBOX-PROTOCOL-01 — edição cifrada exibida como mensagem (18/11/2026)
+
+INB-01, MSG-01/02 e ORC-08.
+
+- [x] Ignorar o envelope isolado `secretEncryptedMessage` na entrada
+      Evolution, preservando conteúdo misto e mantendo a projeção pessoal
+      sem material criptográfico.
+- [x] Omitir o marcador histórico específico no chat do WhatsApp, preservando
+      os registros armazenados e o conteúdo de outros tipos.
+- [x] Exercitar o validador, o delta offline e a leitura do chat com dados
+      sintéticos. Operação e rollback no
+      [runbook](../../../docs/runbooks/evolution-baileys.md#edição-cifrada-exibida-como-mensagem--inbox-protocol-01).
+- [ ] Publicar o delta no workflow ativo e conferir a Inbox após o deploy.
+
 ## INBOX-UX-02 — prioridades do vendedor e alertas (03/11/2026)
 
 PCX-15a–f, PCX-03/04/13/14 e AGT-03/05. Proposta revisada e implementação

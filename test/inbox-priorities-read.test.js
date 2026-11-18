@@ -41,8 +41,8 @@ function syntheticRow(overrides = {}) {
   };
 }
 
-/** @param {Record<string, any>[]} rows */
-function harness(rows) {
+/** @param {Record<string, any>[]} rows @param {Record<string, any>[]} [messages] */
+function harness(rows, messages = []) {
   const calls = /** @type {{sql:string, values:unknown[]}[]} */ ([]);
   const repository = new PostgresInboxReadRepository({
     contactEnvelopeKey: KEY,
@@ -65,17 +65,73 @@ function harness(rows) {
         return {
           rows: sql.includes('SELECT count(*)::integer count')
             ? [{ count: 174 }]
-            : /^\s*SELECT message\.id|^\s*SELECT id, conversation_id, source_message_id/u.test(
-                  sql,
-                )
-              ? []
-              : rows,
+            : /^\s*SELECT message\.id/u.test(sql)
+              ? messages
+              : /^\s*SELECT id, conversation_id, source_message_id/u.test(sql)
+                ? []
+                : rows,
         };
       },
     },
   });
   return { repository, calls };
 }
+
+test('INBOX-PROTOCOL-01: WhatsApp detail omits only the historical n8n edit placeholder', async () => {
+  const placeholder =
+    '[Mensagem do tipo unsupported:secretEncryptedMessage+messageContextInfo que o atendimento automático não lê]';
+  /** @param {string} id @param {string} text @param {Record<string, any>} [overrides] */
+  const message = (id, text, overrides = {}) => ({
+    id,
+    direction: 'inbound',
+    author_kind: 'contact',
+    message_type: 'text',
+    status: 'received',
+    via_n8n: true,
+    occurred_at: '2026-11-03T12:00:00.000Z',
+    content_envelope: encryptJson({ text }, `message:${id}`, KEY),
+    ...overrides,
+  });
+  const messages = [
+    message('legitimate-text', 'Qual é o valor?'),
+    message('edit-placeholder', placeholder),
+    message(
+      'real-unsupported',
+      placeholder.replace(
+        'secretEncryptedMessage+messageContextInfo',
+        'pollCreationMessage',
+      ),
+    ),
+    message('shared-example', `Exemplo: ${placeholder}`),
+    message('other-ingress', placeholder, { via_n8n: false }),
+    message('seller-copy', placeholder, {
+      direction: 'outbound',
+      author_kind: 'human',
+    }),
+  ];
+  const row = syntheticRow();
+  const { repository, calls } = harness([row], messages);
+  const detail = await repository.get(row.id);
+  assert.match(
+    calls[1].sql,
+    /message\.n8n_execution_id IS NOT NULL AS via_n8n/u,
+  );
+  assert.deepEqual(
+    detail.messages.map((/** @type {{id: string}} */ message) => message.id),
+    [
+      'legitimate-text',
+      'real-unsupported',
+      'shared-example',
+      'other-ingress',
+      'seller-copy',
+    ],
+  );
+  const site = harness([syntheticRow({ channel: 'site_chat' })], messages);
+  assert.equal(
+    (await site.repository.get(row.id)).messages.length,
+    messages.length,
+  );
+});
 
 test('INBOX-UX-02: projection is minimal and readiness comes from persisted order validation', async () => {
   const { repository } = harness([

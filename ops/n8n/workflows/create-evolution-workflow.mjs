@@ -143,6 +143,16 @@ export function validateEvolutionEvent(root, config) {
     )
   )
     return null;
+  // INBOX-PROTOCOL-01: encrypted edits target an existing message.
+  if (
+    message.secretEncryptedMessage &&
+    typeof message.secretEncryptedMessage === 'object' &&
+    !Array.isArray(message.secretEncryptedMessage) &&
+    Object.keys(message).every((name) =>
+      ['secretEncryptedMessage', 'messageContextInfo'].includes(name),
+    )
+  )
+    return null;
   const quoted =
     payload.contextInfo?.stanzaId ??
     media?.contextInfo?.stanzaId ??

@@ -197,6 +197,14 @@ function eventBody(
 }
 function projectMessage(raw, depth = 0) {
   if (!object(raw) || depth > 3) denied();
+  // Keep only the kind so the validator can ignore standalone encrypted edits.
+  if (
+    object(raw.secretEncryptedMessage) &&
+    Object.keys(raw).every((name) =>
+      ['secretEncryptedMessage', 'messageContextInfo'].includes(name),
+    )
+  )
+    return { secretEncryptedMessage: {} };
   const projected = {};
   for (const field of [
     'ephemeralMessage',

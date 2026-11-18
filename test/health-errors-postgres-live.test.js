@@ -840,6 +840,70 @@ test(
         "UPDATE crm.users SET disabled_at=NULL WHERE id='archive-admin'",
       );
 
+      // OPS-INBOX-SEND-13 derives one technical trace per send. The archived
+      // WAHA commands and an event from a different conversation are excluded.
+      /** @param {Record<string, string>} [headers] */
+      const traceSends = (headers = admin) =>
+        api.inject({ url: '/api/v1/admin/health-errors/send-traces', headers });
+      assert.equal((await traceSends(otherAdmin)).statusCode, 403);
+      assert.equal(
+        (await traceSends({ ...admin, authorization: 'Basic synthetic' }))
+          .statusCode,
+        403,
+      );
+      const initiallyMissing = await traceSends();
+      assert.equal(initiallyMissing.statusCode, 200, initiallyMissing.body);
+      assert.equal(initiallyMissing.json().items.length, 3);
+      assert.ok(
+        initiallyMissing
+          .json()
+          .items.some(
+            (/** @type {any} */ item) => item.stage === 'no_reservation_record',
+          ),
+      );
+
+      await pool.query(
+        "UPDATE crm.messages SET n8n_execution_id='archive-event-12' WHERE id='archive-message-12'",
+      );
+      await pool.query(
+        "UPDATE crm.messages SET delivery_status='delivered' WHERE id='archive-message-13'",
+      );
+      for (const type of ['message.sent', 'message.delivered']) {
+        await pool.query(
+          `INSERT INTO crm.n8n_events(id,idempotency_scope,idempotency_key,external_event_id,event_type,
+            fingerprint,conversation_id,message_id,correlation_id,occurred_at,processed_at)
+          VALUES($1,'trace-fixture',$1,$1,$2,$3,'archive-conversation','archive-message-13',$1,now(),now())`,
+          [`trace-fixture-${type}`, type, 'd'.repeat(64)],
+        );
+      }
+
+      const beforeTrace = await originalEffects();
+      const traced = await traceSends();
+      assert.equal(traced.statusCode, 200, traced.body);
+      assert.equal(traced.headers['cache-control'], 'private, no-store');
+      assert.deepEqual(
+        traced
+          .json()
+          .items.map((/** @type {any} */ item) => item.stage)
+          .sort(),
+        ['delivered', 'inconsistent', 'reserved'],
+      );
+      const reserved = traced
+        .json()
+        .items.find((/** @type {any} */ item) => item.stage === 'reserved');
+      assert.deepEqual(Object.keys(reserved).sort(), [
+        'reference',
+        'reservedAt',
+        'stage',
+        'uncertainAt',
+      ]);
+      assert.match(reserved.reference, /^[0-9a-f]{32}$/u);
+      assert.ok(reserved.reservedAt);
+      assert.deepEqual((await traceSends()).json().items, traced.json().items);
+      assert.equal(traced.json().hasMore, false);
+      assert.doesNotMatch(traced.body, /archive-|synthetic-|trace-fixture/u);
+      assert.deepEqual(await originalEffects(), beforeTrace);
+
       // Archival is not a delivery gate: an authenticated late callback remains
       // valid and preserves the marker instead of granting another send.
       const { PostgresN8nIntegrationRepository } =

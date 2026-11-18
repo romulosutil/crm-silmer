@@ -59,6 +59,24 @@ export function healthErrorTitle(code) {
   return labels[code] ?? 'Falha registrada';
 }
 
+/** @param {string} stage */
+export function healthSendTraceStage(stage) {
+  const labels = /** @type {Record<string, string>} */ ({
+    read: 'Leitura confirmada',
+    delivered: 'Entrega confirmada',
+    sent: 'Envio confirmado',
+    delivery_failed: 'Falha de entrega confirmada',
+    failed_before_transport: 'Falha comprovada antes do envio',
+    transport_unknown: 'Resultado incerto registrado pelo n8n',
+    reserved: 'Reserva registrada, resultado incerto',
+    no_reservation_record: 'Sem reserva registrada',
+    inconsistent: 'Registros divergentes',
+  });
+  return Object.hasOwn(labels, stage)
+    ? labels[stage]
+    : 'Evidência inconclusiva';
+}
+
 const dateTime = new Intl.DateTimeFormat('pt-BR', {
   dateStyle: 'short',
   timeStyle: 'short',

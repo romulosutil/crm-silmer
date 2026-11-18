@@ -213,6 +213,60 @@ async function setup(page, options = {}) {
   };
 }
 
+test('OPS-INBOX-SEND-13: keyboard disclosure reads opaque send evidence without sending or changing triage', async ({
+  page,
+}) => {
+  const mock = await setup(page);
+  const reference = 'a'.repeat(32);
+  let calls = 0;
+  await page.route(
+    '**/api/v1/admin/health-errors/send-traces',
+    async (route) => {
+      calls += 1;
+      expect(route.request().method()).toBe('GET');
+      await route.fulfill({
+        json: {
+          checkedAt: '2026-11-17T21:05:00Z',
+          hasMore: false,
+          items: [
+            {
+              reference,
+              stage: 'reserved',
+              uncertainAt: '2026-11-17T21:02:00Z',
+              reservedAt: '2026-11-17T21:01:00Z',
+            },
+          ],
+        },
+      });
+    },
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/saude-erros');
+  await expect(page.getByRole('article')).toBeVisible();
+  const section = page.getByText('Rastreamento de envios incertos', {
+    exact: true,
+  });
+  await section.focus();
+  await page.keyboard.press('Enter');
+  const consult = page.getByRole('button', { name: 'Consultar rastreamento' });
+  expect(calls).toBe(0);
+  await consult.focus();
+  await page.keyboard.press('Enter');
+  await expect(
+    page.getByText('Reserva registrada, resultado incerto', { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(reference, { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Atualizar rastreamento' }),
+  ).toBeFocused();
+  expect(calls).toBe(1);
+  expect(mock.writes).toHaveLength(0);
+  const accessibility = await new AxeBuilder({ page })
+    .include('#main-content')
+    .analyze();
+  expect(accessibility.violations).toEqual([]);
+});
+
 test('designated administrator opens Saúde e erros by keyboard and registers treatment', async ({
   page,
 }) => {

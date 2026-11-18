@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import {
@@ -441,6 +441,83 @@ const ACTIVE_FAILURES_SQL = `WITH sources AS (${SOURCE_STATES_SQL}),
     AND NOT EXISTS (SELECT 1 FROM operationally_closed c WHERE c.command_id=s.n8n_command_id)
   GROUP BY source, code`;
 
+const SEND_TRACE_LIMIT = 50;
+
+// A reconciled job can retain its original uncertain attempt. Combine that
+// evidence with current sources before limiting, so a job and its command
+// appear once and late confirmations remain visible.
+const SEND_TRACES_SQL = `
+  WITH uncertainty AS (
+    SELECT command_id, updated_at AS observed_at
+    FROM crm.n8n_commands WHERE status='outcome_unknown'
+    UNION ALL
+    SELECT j.n8n_command_id, greatest(
+      CASE WHEN j.status='outcome_unknown' THEN j.updated_at END,
+      attempt.finished_at
+    )
+    FROM crm.outbox_jobs j
+    LEFT JOIN LATERAL (
+      SELECT max(a.finished_at) AS finished_at
+      FROM crm.processing_attempts a
+      WHERE a.job_id=j.id AND a.state='outcome_unknown'
+        AND a.finished_at BETWEEN now()-interval '14 days' AND now()
+    ) attempt ON true
+    WHERE j.job_type='n8n.command.deliver'
+      AND j.status IN ('outcome_unknown','completed','dead_letter')
+      AND j.updated_at >= now()-interval '14 days'
+  ), candidates AS MATERIALIZED (
+    SELECT c.command_id, max(u.observed_at) AS uncertain_at
+    FROM uncertainty u JOIN crm.n8n_commands c USING (command_id)
+    WHERE u.observed_at BETWEEN now()-interval '14 days' AND now()
+      AND c.action='send_message' AND c.actor_kind='human'
+      AND NOT EXISTS (SELECT 1 FROM crm.n8n_command_operational_archives a
+                      WHERE a.command_id=c.command_id)
+    GROUP BY c.command_id
+    ORDER BY uncertain_at DESC, c.command_id
+    LIMIT $1
+  ), concluded AS (${CONCLUDED_SENDS_SQL})
+  SELECT c.command_id, trace.uncertain_at, events.reserved_at,
+    CASE
+      WHEN m.id IS NULL THEN 'inconsistent'
+      WHEN c.status='sent' AND c.external_message_id=m.external_message_id
+        AND length(c.external_message_id)>0 AND events.sent_at IS NOT NULL
+      THEN CASE
+        WHEN m.status='failed' AND m.delivery_status='failed'
+          AND events.delivery_failed_at IS NOT NULL THEN 'delivery_failed'
+        WHEN m.status<>'sent' THEN 'inconsistent'
+        WHEN m.delivery_status='read' AND events.read_at IS NOT NULL THEN 'read'
+        WHEN m.delivery_status IN ('read','delivered')
+          AND events.delivered_at IS NOT NULL THEN 'delivered'
+        ELSE 'sent'
+      END
+      WHEN c.external_message_id IS NOT NULL OR m.external_message_id IS NOT NULL
+        OR events.sent_at IS NOT NULL OR events.delivered_at IS NOT NULL
+        OR events.read_at IS NOT NULL THEN 'inconsistent'
+      WHEN EXISTS (SELECT 1 FROM concluded f WHERE f.command_id=c.command_id)
+        THEN 'failed_before_transport'
+      WHEN events.unknown_at IS NOT NULL THEN 'transport_unknown'
+      WHEN events.reserved_at IS NOT NULL THEN 'reserved'
+      ELSE 'no_reservation_record'
+    END AS stage
+  FROM candidates trace
+  JOIN crm.n8n_commands c USING (command_id)
+  LEFT JOIN crm.messages m ON m.id=c.message_id AND m.command_id=c.command_id
+    AND m.conversation_id=c.conversation_id AND m.direction='outbound'
+    AND m.author_kind='human' AND m.author_id=c.actor_id
+  LEFT JOIN LATERAL (
+    SELECT min(e.processed_at) FILTER (WHERE e.event_type='message.send.requested'
+             AND e.execution_id=m.n8n_execution_id) AS reserved_at,
+           max(e.processed_at) FILTER (WHERE e.event_type='message.send.unknown'
+             AND e.execution_id=m.n8n_execution_id) AS unknown_at,
+           max(e.processed_at) FILTER (WHERE e.event_type='message.sent') AS sent_at,
+           max(e.processed_at) FILTER (WHERE e.event_type='message.delivered') AS delivered_at,
+           max(e.processed_at) FILTER (WHERE e.event_type='message.read') AS read_at,
+           max(e.processed_at) FILTER (WHERE e.event_type='message.failed') AS delivery_failed_at
+    FROM crm.n8n_events e
+    WHERE e.message_id=m.id AND e.conversation_id=m.conversation_id
+  ) events ON true
+  ORDER BY trace.uncertain_at DESC, c.command_id`;
+
 /** @param {any} client @param {any[]} rows */
 async function projectActivity(client, rows) {
   const active = (await client.query(ACTIVE_FAILURES_SQL)).rows;
@@ -606,6 +683,37 @@ export function createHealthErrorsRuntime({
           },
           checkedAt: clock().toISOString(),
           collectionPending: sources.rows.length > 500,
+        };
+      });
+    },
+
+    /** @param {any} input */
+    async traceSends(input) {
+      const auth = credentials(input, false);
+      return database.transaction(async (/** @type {any} */ client) => {
+        await client.query("SET LOCAL lock_timeout = '100ms'");
+        await client.query("SET LOCAL statement_timeout = '1s'");
+        await identity.authorizeHealthErrors(auth, client);
+        const { rows } = await client.query(SEND_TRACES_SQL, [
+          SEND_TRACE_LIMIT + 1,
+        ]);
+        return {
+          checkedAt: clock().toISOString(),
+          hasMore: rows.length > SEND_TRACE_LIMIT,
+          items: rows
+            .slice(0, SEND_TRACE_LIMIT)
+            .map((/** @type {any} */ row) => ({
+              reference: createHmac('sha256', envelopeKey)
+                .update('health-send-trace/v1\0')
+                .update(row.command_id)
+                .digest('hex')
+                .slice(0, 32),
+              uncertainAt: new Date(row.uncertain_at).toISOString(),
+              reservedAt: row.reserved_at
+                ? new Date(row.reserved_at).toISOString()
+                : null,
+              stage: row.stage,
+            })),
         };
       });
     },

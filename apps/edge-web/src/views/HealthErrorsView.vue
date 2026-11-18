@@ -11,6 +11,7 @@ import {
   healthErrorSource,
   healthErrorStatus,
   healthErrorTitle,
+  healthSendTraceStage,
 } from '../lib/health-errors.js';
 import '../styles/screens/99-health-errors.css';
 
@@ -33,6 +34,9 @@ const announcement = ref('');
 const denied = ref(false);
 const requiresRefresh = ref(false);
 const answer = ref(null);
+const traceAnswer = ref(null);
+const traceError = ref('');
+const traceLoading = ref(false);
 const operational = ref(null);
 const operationalFailed = ref(false);
 const operationalLoading = ref(true);
@@ -46,6 +50,7 @@ const operation = computed(() =>
 let listController;
 let operationalController;
 let actionController;
+let traceController;
 let disposed = false;
 const base = '/api/v1/admin/health-errors';
 const items = computed(() => answer.value?.items ?? []);
@@ -74,7 +79,14 @@ const filterLabel = computed(
       ?.label,
 );
 
+function clearTraces() {
+  traceController?.abort();
+  traceAnswer.value = null;
+  traceError.value = '';
+}
+
 function clearPrivateData() {
+  clearTraces();
   answer.value = null;
   operational.value = null;
   listController?.abort();
@@ -173,6 +185,28 @@ async function load({ announce = false, refreshOperations = false } = {}) {
         ? `Ocorrências atualizadas. ${operation.value.title}.`
         : 'Ocorrências atualizadas.';
     if (own === listController && !disposed) loading.value = false;
+  }
+}
+
+async function loadSendTraces() {
+  if (disposed || denied.value || traceLoading.value) return;
+  const own = new AbortController();
+  traceController = own;
+  traceLoading.value = true;
+  traceAnswer.value = null;
+  traceError.value = '';
+  try {
+    const response = await request(`${base}/send-traces`, {
+      signal: own.signal,
+    });
+    if (!disposed && !denied.value && !own.signal.aborted)
+      traceAnswer.value = response.data;
+  } catch (cause) {
+    if (disposed || own.signal.aborted || accessFailure(cause)) return;
+    traceError.value =
+      'Não foi possível consultar o rastreamento. Tente novamente.';
+  } finally {
+    if (own === traceController) traceLoading.value = false;
   }
 }
 
@@ -303,6 +337,7 @@ function dispose() {
   listController?.abort();
   operationalController?.abort();
   actionController?.abort();
+  clearTraces();
   answer.value = null;
   operational.value = null;
   archiveReview.value = null;
@@ -315,6 +350,7 @@ onMounted(() => {
     // Identity events refresh the shell, which revokes this view immediately.
     refreshFromEvent() {},
     reset() {
+      clearTraces();
       answer.value = null;
       void load();
     },
@@ -410,6 +446,56 @@ onBeforeUnmount(() => {
         de tarefas e comandos n8n são coletadas dos registros do CRM. Esta
         consulta não substitui o monitoramento externo de disponibilidade.
       </p>
+    </details>
+    <details
+      v-if="!denied"
+      class="health-errors-scope health-errors-explanation"
+    >
+      <summary>Rastreamento de envios incertos</summary>
+      <p>
+        Consulte as evidências dos últimos 14 dias, incluindo confirmações
+        tardias. Só registros vinculados ao mesmo envio contam como prova. A
+        ausência de evidência mantém o resultado incerto.
+      </p>
+      <button
+        type="button"
+        class="secondary"
+        :aria-disabled="traceLoading ? 'true' : undefined"
+        @click="loadSendTraces"
+      >
+        {{ traceAnswer ? 'Atualizar rastreamento' : 'Consultar rastreamento' }}
+      </button>
+      <p v-if="traceLoading" role="status">Consultando evidências de envio…</p>
+      <p v-if="traceError" role="alert">{{ traceError }}</p>
+      <template v-if="traceAnswer">
+        <p role="status">
+          {{ traceAnswer.items.length }} envios na consulta. Consulta em
+          {{ healthErrorInstant(traceAnswer.checkedAt) }} (Brasília).
+          {{
+            traceAnswer.hasMore ? 'Exibindo os 50 registros mais recentes.' : ''
+          }}
+        </p>
+        <ul
+          v-if="traceAnswer.items.length"
+          class="health-send-traces"
+          role="list"
+        >
+          <li v-for="trace in traceAnswer.items" :key="trace.reference">
+            <p>
+              <strong>{{ healthSendTraceStage(trace.stage) }}</strong>
+            </p>
+            <p>
+              Referência <code>{{ trace.reference }}</code>
+            </p>
+            <p>
+              Incerteza registrada {{ healthErrorInstant(trace.uncertainAt) }}
+            </p>
+            <p v-if="trace.reservedAt">
+              Reserva registrada {{ healthErrorInstant(trace.reservedAt) }}
+            </p>
+          </li>
+        </ul>
+      </template>
     </details>
     <p v-if="announcement" class="sr-only" role="status">{{ announcement }}</p>
     <div v-if="error" class="audit-note" role="alert">

@@ -207,6 +207,7 @@ export class PostgresSellerWhatsAppRepository {
           generation: 0,
           maskedNumber: null,
         },
+        challenge: null,
         available: this.#options.enabled === true,
       };
     const number = decrypt(
@@ -229,6 +230,14 @@ export class PostgresSellerWhatsAppRepository {
         [line.id],
       )
     ).rows[0];
+    // Metadata of the latest challenge of the current generation only, so a
+    // reloaded tab can present renewChallengeId. The bytes are never stored.
+    const challenge = (
+      await client.query(
+        'SELECT id,state,expires_at FROM crm.seller_whatsapp_challenges WHERE line_id=$1 AND generation=$2 ORDER BY sequence DESC LIMIT 1',
+        [line.id, line.generation],
+      )
+    ).rows[0];
     return {
       line: {
         id: line.id,
@@ -239,6 +248,13 @@ export class PostgresSellerWhatsAppRepository {
         operation: projected,
       },
       operation: projected,
+      challenge: challenge
+        ? {
+            id: challenge.id,
+            state: challenge.state,
+            expiresAt: new Date(challenge.expires_at).toISOString(),
+          }
+        : null,
       ...(revocation
         ? { revocation: { id: revocation.id, state: revocation.state } }
         : {}),

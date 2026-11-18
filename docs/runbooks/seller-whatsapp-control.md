@@ -23,6 +23,14 @@ o estado; repetir a chave não recupera nem regenera bytes. Renovar requer outro
 comando com versão atual e `renewChallengeId`, depois da reconciliação por leitura.
 Expirar o TTL não resolve uma operação incerta.
 
+O GET do titular traz `challenge` (ou `null`): só id, estado e expiração do
+último desafio da geração atual, sem bytes. Uma aba recarregada usa esse id como
+`renewChallengeId` quando o estado é `resolved`; antes disso a renovação continua
+409 e a tela mostra "Aguardando confirmação do desafio anterior" até a leitura
+do worker ou do sweep resolver o desafio. `stream.reset` do SSE só provoca nova
+leitura: o desafio na tela some apenas por mudança de linha, geração, operação
+ou estado, TTL, aba oculta ou troca de identidade.
+
 Configuração de servidor, **sem valores reais neste documento**:
 
 | Variável                                                        | Uso                                                                                                                                            |

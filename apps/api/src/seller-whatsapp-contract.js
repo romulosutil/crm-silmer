@@ -48,6 +48,39 @@ export function controlEnum(value, choices) {
   return value;
 }
 
+export const CHALLENGE_STATES = /** @type {const} */ ([
+  'reserved',
+  'dispatching',
+  'delivered',
+  'unknown',
+  'resolved',
+  'revoked',
+]);
+
+/** WAP-03: the holder's GET carries only id/state/expiry of the latest
+ * challenge, so a reloaded tab can renew. Anything else (bytes, reference,
+ * mode) is dropped; a malformed value fails closed as a server fault.
+ * @param {any} value */
+export function challengeMetadata(value) {
+  if (value === null || value === undefined) return null;
+  const expiresAt =
+    typeof value.expiresAt === 'string' ? Date.parse(value.expiresAt) : NaN;
+  if (
+    typeof value.id !== 'string' ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+      value.id,
+    ) ||
+    !CHALLENGE_STATES.includes(value.state) ||
+    !Number.isFinite(expiresAt)
+  )
+    throw new Error('Invalid challenge metadata');
+  return {
+    id: value.id,
+    state: value.state,
+    expiresAt: new Date(expiresAt).toISOString(),
+  };
+}
+
 /** @param {any} body @param {'connect'|'disconnect'|'challenge'} action */
 export function readHumanControl(body, action) {
   if (action === 'connect') {

@@ -623,3 +623,271 @@ test('revogação remove código que já estava visível', async ({ page }) => {
   );
   await expect(page.getByText('TEST-CODE')).toHaveCount(0);
 });
+
+// WAP-03/WAP-11 (QA P1-2, P2-2, P2-4): the GET reports only challenge
+// metadata; the bytes come solely from the synchronous POST below.
+const PNG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
+
+/** @param {import('@playwright/test').Page} page @param {any} [initial] */
+async function pairing(page, initial = {}) {
+  await installMocks(page, {}, { fixedClock: false });
+  await page.addInitScript(() => {
+    const add = globalThis.EventTarget.prototype.addEventListener;
+    globalThis.EventTarget.prototype.addEventListener = function (
+      type,
+      listener,
+      options,
+    ) {
+      if (type === 'stream.reset')
+        /** @type {any} */ (globalThis).__wapEventSource = this;
+      return add.call(this, type, listener, options);
+    };
+  });
+  const server = {
+    line: {
+      id: 'line-synthetic',
+      state: 'awaiting_pairing',
+      version: 2,
+      generation: 1,
+      maskedNumber: '••••0778',
+    },
+    operation: { id: 'operation-synthetic', state: 'succeeded' },
+    challenge: /** @type {any} */ (null),
+    available: true,
+    ...initial,
+  };
+  /** @type {any[]} */
+  const commands = [];
+  /** @type {Promise<unknown>} */
+  let gate = Promise.resolve();
+  await page.route('**/api/v1/me/whatsapp', (route) =>
+    route.fulfill({ json: server }),
+  );
+  await page.route('**/api/v1/me/whatsapp/pairing-challenge', async (route) => {
+    const body = route.request().postDataJSON();
+    commands.push({ path: 'challenge', body });
+    await gate;
+    const id = `challenge-${commands.length}`;
+    server.line = { ...server.line, version: server.line.version + 1 };
+    const expiresAt = new Date(Date.now() + 30000).toISOString();
+    server.challenge = { id, state: 'delivered', expiresAt };
+    await route
+      .fulfill({
+        json: {
+          challengeId: id,
+          operationId: server.operation.id,
+          generation: server.line.generation,
+          mode: body.mode,
+          value: body.mode === 'qr' ? PNG : 'TEST-CODE',
+          version: server.line.version,
+          expiresAt,
+        },
+      })
+      .catch(() => {});
+  });
+  await page.route('**/api/v1/me/whatsapp/disconnect', (route) => {
+    commands.push({ path: 'disconnect', body: route.request().postDataJSON() });
+    server.line = {
+      ...server.line,
+      state: 'disconnected',
+      version: server.line.version + 1,
+      generation: server.line.generation + 1,
+    };
+    server.challenge = null;
+    return route.fulfill({ status: 202, json: {} });
+  });
+  const reset = async () => {
+    const read = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === '/api/v1/me/whatsapp' &&
+        response.request().method() === 'GET',
+    );
+    await page.evaluate(() =>
+      /** @type {any} */ (globalThis).__wapEventSource.dispatchEvent(
+        new globalThis.MessageEvent('stream.reset', { data: '{}' }),
+      ),
+    );
+    await read;
+  };
+  /** @param {Promise<unknown>} next */
+  const hold = (next) => {
+    gate = next;
+  };
+  return { server, commands, reset, hold };
+}
+
+/** @param {import('@playwright/test').Page} page */
+const focusedTag = (page) =>
+  page.evaluate(() => globalThis.document.activeElement?.tagName);
+
+/** @param {import('@playwright/test').Page} page */
+async function axeEverywhere(page) {
+  for (const width of [390, 1366])
+    for (const theme of /** @type {const} */ (['light', 'dark'])) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.emulateMedia({ colorScheme: theme });
+      await page.evaluate((value) => {
+        globalThis.document.documentElement.dataset.theme = value;
+      }, theme);
+      // Let the theme's color transitions settle before measuring contrast.
+      await page.evaluate(() =>
+        Promise.all(
+          globalThis.document.getAnimations().map((item) => item.finished),
+        ),
+      );
+      expect(
+        (await new AxeBuilder({ page }).include('.my-whatsapp').analyze())
+          .violations,
+      ).toEqual([]);
+    }
+}
+
+test('reinício do stream sozinho mantém o desafio e o pedido seguinte renova', async ({
+  page,
+}) => {
+  const { server, commands, reset } = await pairing(page);
+  await page.goto('/conta');
+  await page.getByRole('button', { name: 'Mostrar código' }).click();
+  await expect(page.getByText('TEST-CODE')).toBeVisible();
+  // Another seller's activity reaches this reader only as stream.reset.
+  await reset();
+  await reset();
+  await expect(page.getByText('TEST-CODE')).toBeVisible();
+  // Not confirmed yet: no new challenge may be asked for.
+  await expect(
+    page.getByRole('button', { name: 'Mostrar código' }),
+  ).toBeDisabled();
+  // The worker read confirms it; the next reset keeps the code and unlocks.
+  server.challenge = { ...server.challenge, state: 'resolved' };
+  await reset();
+  await expect(page.getByText('TEST-CODE')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Mostrar código' }),
+  ).toBeEnabled();
+  await page.getByRole('button', { name: 'Mostrar código' }).click();
+  await expect.poll(() => commands.length).toBe(2);
+  expect(commands[1].body).toMatchObject({
+    renewChallengeId: 'challenge-1',
+    expectedVersion: 3,
+  });
+  await expect(page.getByText('TEST-CODE')).toBeVisible();
+});
+
+test('recarregar a página renova com o desafio informado pelo GET', async ({
+  page,
+}) => {
+  const { server, commands } = await pairing(page, {
+    challenge: {
+      id: 'challenge-before-reload',
+      state: 'delivered',
+      expiresAt: new Date(Date.now() - 60000).toISOString(),
+    },
+  });
+  await page.goto('/conta');
+  // Still unconfirmed by a read: a clear wait instead of a dead end.
+  await expect(
+    page.getByText('Aguardando confirmação do desafio anterior'),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mostrar QR' })).toBeDisabled();
+  await axeEverywhere(page);
+  // The sweep reconciles it; the wait clears by itself, without reload.
+  server.challenge = { ...server.challenge, state: 'resolved' };
+  await expect(
+    page.getByText('Aguardando confirmação do desafio anterior'),
+  ).toHaveCount(0, { timeout: 8000 });
+  await expect(page.getByRole('button', { name: 'Mostrar QR' })).toBeEnabled();
+  await page.reload();
+  await page.getByRole('button', { name: 'Mostrar QR' }).click();
+  await expect(
+    page.getByRole('img', { name: 'QR para conectar seu WhatsApp' }),
+  ).toBeVisible();
+  expect(commands).toHaveLength(1);
+  expect(commands[0].body).toEqual({
+    operationId: 'operation-synthetic',
+    expectedVersion: 2,
+    generation: 1,
+    mode: 'qr',
+    renewChallengeId: 'challenge-before-reload',
+  });
+});
+
+test('teclado mantém o foco ao pedir e ao fechar o desafio', async ({
+  page,
+}) => {
+  const { hold } = await pairing(page);
+  /** @type {() => void} */
+  let release = () => {};
+  hold(
+    new Promise((resolve) => {
+      release = () => resolve(undefined);
+    }),
+  );
+  await page.goto('/conta');
+  const code = page.getByRole('button', { name: 'Mostrar código' });
+  await code.focus();
+  await page.keyboard.press('Enter');
+  await expect(
+    page.getByRole('button', { name: 'Cancelar desafio' }),
+  ).toBeVisible();
+  await expect(code).toBeFocused();
+  expect(await focusedTag(page)).not.toBe('BODY');
+  release();
+  await expect(page.getByText('TEST-CODE')).toBeVisible();
+  await expect(code).toBeFocused();
+  await page.getByRole('button', { name: 'Fechar desafio' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByText('TEST-CODE')).toHaveCount(0);
+  await expect(code).toBeFocused();
+});
+
+test('cancelar pelo teclado devolve o foco ao botão do desafio', async ({
+  page,
+}) => {
+  const { hold } = await pairing(page);
+  hold(new Promise(() => {}));
+  await page.goto('/conta');
+  const qr = page.getByRole('button', { name: 'Mostrar QR' });
+  await qr.focus();
+  await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: 'Cancelar desafio' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(
+    page.getByRole('button', { name: 'Cancelar desafio' }),
+  ).toHaveCount(0);
+  await expect(qr).toBeFocused();
+});
+
+test('linha bloqueada explica o motivo e permite desconectar', async ({
+  page,
+}) => {
+  const { commands } = await pairing(page, {
+    line: {
+      id: 'line-synthetic',
+      state: 'blocked',
+      version: 7,
+      generation: 2,
+      maskedNumber: '••••0778',
+    },
+    operation: { id: 'operation-synthetic', state: 'reconciled' },
+  });
+  await page.goto('/conta');
+  await expect(page.getByText('Bloqueado · ••••0778')).toBeVisible();
+  await expect(
+    page.getByText(
+      'O número conectado não é o informado. Desconecte e conecte de novo com o número certo.',
+    ),
+  ).toBeVisible();
+  await axeEverywhere(page);
+  await page.getByRole('button', { name: 'Desconectar' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByText('Desconectado', { exact: false })).toBeVisible();
+  expect(commands).toEqual([
+    {
+      path: 'disconnect',
+      body: { expectedVersion: 7, expectedGeneration: 2 },
+    },
+  ]);
+  await expect(page.getByLabel('Número com código do país')).toBeVisible();
+  expect(await focusedTag(page)).not.toBe('BODY');
+});

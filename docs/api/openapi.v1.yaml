@@ -129,7 +129,7 @@ paths:
     get:
       operationId: readPersonalWhatsApp
       summary: Estado da própria linha, sem criar ou reconectar
-      description: WAP-E02/WAP-01/02/11. Sessão e origem atuais; número próprio mascarado. No-store; controle default off.
+      description: WAP-E02/WAP-01/02/03/11. Sessão e origem atuais; número próprio mascarado. No-store; controle default off. Campo `challenge` (null quando ausente) traz só id/estado/expiração do último desafio da geração atual do titular (seller-whatsapp-control.v1.json#/$defs/challengeMetadata), para a aba recarregada renovar com renewChallengeId depois que o estado for resolved; nunca QR/código.
       security: [{ sessionCookie: [] }]
       responses:
         '200':
@@ -137,7 +137,8 @@ paths:
             description: Linha,
             versão,
             geração,
-            operação pendente e disponibilidade; sem QR/código,
+            operação pendente,
+            metadados do último desafio e disponibilidade; sem QR/código,
           }
         '401': { description: Sessão ausente ou revogada }
         '403': { description: Origem, função ou capacidade recusada }

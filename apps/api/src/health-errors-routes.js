@@ -63,6 +63,9 @@ export function registerHealthErrorsRoutes(api, runtime) {
       });
     }),
   );
+  api.get('/api/v1/admin/health-errors/send-traces', async (request, reply) =>
+    respond(reply, () => runtime.traceSends(headers(request))),
+  );
   api.post(
     '/api/v1/admin/health-errors/legacy/archive',
     async (request, reply) =>

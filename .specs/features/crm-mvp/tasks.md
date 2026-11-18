@@ -1222,6 +1222,15 @@ transporte n8n, confirmação comercial, ACL de escrita ou infraestrutura.
       unsupported no workflow. Operação e rollback no
       [runbook](../../../docs/runbooks/inbox-prioridades.md).
 
+## OPS-INBOX-SEND-13 — Evidência por envio incerto
+
+Requisitos MSG-02/03, ORC-08, OPS-ERR-01/02/04/10/11 e PRV-01. A consulta
+operadora deduplica registros do worker e n8n, conserva provas tardias e
+mostra somente referência opaca, estágio controlado e horários. O teste
+PostgreSQL cobre autorização, vínculo, privacidade e ausência de mutação;
+E2E cobre teclado, foco, ausência de comandos e acessibilidade.
+[Operação](../../../docs/runbooks/saude-erros.md#rastrear-envios-incertos--ops-inbox-send-13).
+
 ## OPS-ERR-BOOT-01 — Impedir inicialização sobre schema incompatível (18/11/2026)
 
 Requisitos OPS-ERR-03/04/08 e OPSH-01/02. A API e o worker verificam todas as

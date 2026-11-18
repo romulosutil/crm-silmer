@@ -113,6 +113,32 @@ de tentar novamente. O servidor valida versão e idempotência e mantém
 auditoria transacional. Nenhum desses comandos reexecuta jobs, envia
 mensagens, confirma pedidos ou altera o comando n8n de origem.
 
+### Rastrear envios incertos — OPS-INBOX-SEND-13
+
+Em **Rastreamento de envios incertos**, use **Consultar rastreamento**.
+A consulta é exclusiva da conta operadora e mostra os 50 envios humanos mais
+recentes com registro de incerteza nos últimos 14 dias. A mesma operação
+aparece uma única vez, mesmo quando worker e n8n a registraram separadamente.
+Comandos WAHA arquivados ficam fora da consulta. A referência é calculada
+com uma chave privada e permanece igual em consultas sucessivas com essa
+chave. Nenhum identificador do provedor, destinatário, conteúdo ou execução
+bruta é retornado.
+
+- **Envio confirmado** exige IDs externos concordantes entre mensagem e
+  comando e o evento imutável `message.sent` do mesmo envio. **Entrega
+  confirmada**, **Leitura confirmada** e **Falha de entrega confirmada**
+  exigem também o recibo correspondente.
+- **Falha comprovada antes do envio** usa as guardas de OPS-ERR-11.
+- **Reserva registrada**, **Sem reserva registrada**, **Resultado incerto
+  registrado pelo n8n** e **Registros divergentes** deixam o resultado em
+  aberto. Ausência de recibo ou de execução retida não prova falha.
+- O poll já existente pode concluir uma pendência se receber uma prova
+  autenticada tardia. O rastreamento apenas lê a evidência. A consulta não
+  envia, repete tarefas, altera a triagem ou modifica o histórico.
+
+Rollback consiste em restaurar a versão anterior do app. A consulta não
+adiciona tabela ou amplia a retenção dos registros operacionais.
+
 ## Cobertura e diagnóstico
 
 | Origem | Códigos                                                        | Como investigar                                                                                     |

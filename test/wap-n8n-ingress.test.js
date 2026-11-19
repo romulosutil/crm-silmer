@@ -885,7 +885,7 @@ test('WAP-E01: raw manual request rejects partial, destination, trigger data and
           /** @type {any} */ body,
         ) => guardManualRequest(saved, body, env),
       }),
-      bad_request_error_1: { BadRequestError: Error },
+      errors_1: { BadRequestError: Error },
     },
   );
   const controller = new Controller();
@@ -934,7 +934,7 @@ test('WAP-E01: REST workflow writes reject pinData/settings before persistence a
           /** @type {any} */ payload,
         ) => guardWorkflowMutation(existing, payload, env),
       }),
-      bad_request_error_1: { BadRequestError: Error },
+      errors_1: { BadRequestError: Error },
       workflow_entity_mapper_1: {
         createWorkflowEntityFromPayload: (/** @type {any} */ body) => body,
       },

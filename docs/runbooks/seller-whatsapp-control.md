@@ -105,9 +105,12 @@ e corpo diferente conflita.
    reiniciar/apagar instância, repetir create/logout/connect ou consumir revisão
    inbound. Reconciliação antiga não supera observação mais recente.
    Depois de um reinício do Evolution, `connectionState` de instância sem socket
-   em memória vem sem `state`. Se ela não tem titular (`ownerJid`) e não está
-   `open` em `fetchInstances`, o `reconcile` devolve `close`: a linha fica
-   `disconnected` e o vendedor reconecta. Com titular, ou `open`, segue incerta.
+   em memória vem com o nome da instância e sem `state`. Para uma instância
+   sem titular (`ownerJid`) que aparece como `close` ou `connecting` em
+   `fetchInstances`, o `reconcile` devolve `close`. A reconexão reutiliza a
+   mesma instância após confirmar essa leitura, reaplica e confere os ajustes
+   e o webhook, e libera um novo desafio. Leituras incompletas de instâncias
+   com titular ou marcadas como `open` mantêm a operação incerta.
 6. Desconectar/inativar revoga geração/desafios e impede novo despacho. Efeito
    iniciado conserva seu recibo antigo; não reabre acesso. Logout que depende
    de efeito incerto aguarda reconciliação, com revogação local imediata.

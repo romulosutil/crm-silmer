@@ -930,18 +930,23 @@ export function createOperationReadRuntime(database, options = {}) {
     },
 
     /** A manual contact has no unverified channel identity (CP-01).
-     * @param {{actor: {id: string}, correlationId: string, displayName: unknown, email?: unknown, phone: unknown, idempotencyKey: string, portfolio?:boolean}} input
+     * @param {{actor: {id: string}, correlationId: string, displayName: unknown, email?: unknown, phone?: unknown, idempotencyKey: string, portfolio?:boolean}} input
      */
     async createContact(input) {
       const displayName = readDisplayName(input.displayName);
       if (!displayName)
         throw new OperationReadError(400, 'INVALID_DISPLAY_NAME');
-      const phone = normalizeContactPhone(input.phone);
-      if (!phone) throw new OperationReadError(400, 'INVALID_PHONE');
+      const hasPhone =
+        input.phone !== undefined && input.phone !== null && input.phone !== '';
+      const phone = hasPhone ? normalizeContactPhone(input.phone) : null;
+      if ((hasPhone || input.portfolio) && !phone)
+        throw new OperationReadError(400, 'INVALID_PHONE');
       const email = normalizeContactEmail(input.email);
       if (email === undefined)
         throw new OperationReadError(400, 'INVALID_EMAIL');
-      const phoneHash = contactPhoneHash(phone, contactLookupKey);
+      const phoneHash = phone
+        ? contactPhoneHash(phone, contactLookupKey)
+        : null;
       const key = requireId(input.idempotencyKey, 'IDEMPOTENCY_KEY');
       if (!input.actor?.id) throw new OperationReadError(403, 'FORBIDDEN');
       return database.transaction(async (/** @type {any} */ transaction) => {
@@ -952,9 +957,12 @@ export function createOperationReadRuntime(database, options = {}) {
         if (input.portfolio) portfolioGuard(input);
         const occurredAt = new Date().toISOString();
         const contactId = randomUUID();
-        await transaction.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
-          phoneHash,
-        ]);
+        if (phoneHash) {
+          await transaction.query(
+            'SELECT pg_advisory_xact_lock(hashtext($1))',
+            [phoneHash],
+          );
+        }
         const replay = (
           await transaction.query(
             `SELECT id, display_name, version, manually_created_by,
@@ -963,7 +971,7 @@ export function createOperationReadRuntime(database, options = {}) {
             [key],
           )
         ).rows[0];
-        if (!replay) {
+        if (!replay && phoneHash) {
           const candidates = await transaction.query(
             `SELECT EXISTS (
                SELECT 1 FROM crm.contacts WHERE contact_phone_hash = $1
@@ -995,9 +1003,11 @@ export function createOperationReadRuntime(database, options = {}) {
                 key,
                 input.actor.id,
                 phoneHash,
-                JSON.stringify(
-                  encryptContactDetails({ email, phone }, contactKey),
-                ),
+                email || phone
+                  ? JSON.stringify(
+                      encryptContactDetails({ email, phone }, contactKey),
+                    )
+                  : null,
                 input.portfolio === true,
               ],
             );
@@ -1013,16 +1023,17 @@ export function createOperationReadRuntime(database, options = {}) {
               [key],
             )
           ).rows[0];
-        const storedDetails = row?.contact_details_envelope
-          ? decryptContactDetails(row.contact_details_envelope, contactKey)
-          : null;
+        const storedDetails = decryptContactDetails(
+          row?.contact_details_envelope,
+          contactKey,
+        );
         if (
           !row ||
           row.display_name !== displayName ||
           row.manually_created_by !== input.actor.id ||
           row.contact_phone_hash !== phoneHash ||
-          storedDetails?.email !== email ||
-          storedDetails?.phone !== phone ||
+          storedDetails.email !== email ||
+          storedDetails.phone !== phone ||
           Boolean(row.wallet_created) !== Boolean(input.portfolio)
         ) {
           throw new OperationReadError(409, 'CONTACT_CONFLICT');
@@ -1053,11 +1064,13 @@ export function createOperationReadRuntime(database, options = {}) {
           );
         }
         if (created) {
-          await transaction.query(
-            `INSERT INTO crm.contact_phone_lookup (contact_id, phone_hash, source)
-             VALUES ($1, $2, 'manual') ON CONFLICT DO NOTHING`,
-            [row.id, phoneHash],
-          );
+          if (phoneHash) {
+            await transaction.query(
+              `INSERT INTO crm.contact_phone_lookup (contact_id, phone_hash, source)
+               VALUES ($1, $2, 'manual') ON CONFLICT DO NOTHING`,
+              [row.id, phoneHash],
+            );
+          }
           await auditPort.append(
             {
               action: 'contact.created',

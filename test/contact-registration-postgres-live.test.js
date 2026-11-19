@@ -37,7 +37,7 @@ const REGISTRATION = Object.freeze({
 });
 
 if (connectionString) {
-  test('PostgreSQL live: 0044 registration is encrypted, versioned, idempotent and private in the list', async () => {
+  test('PostgreSQL live: contact creation and registration are encrypted, versioned and idempotent', async () => {
     assert.equal(
       new URL(connectionString).pathname.slice(1),
       'crm_silmer_test',
@@ -60,6 +60,57 @@ if (connectionString) {
         environment: ENVIRONMENT,
       });
       const actor = { id: 'seller-1' };
+      const minimalCommand = {
+        actor,
+        correlationId: 'correlation-minimal-create',
+        displayName: 'Cliente sem telefone',
+        idempotencyKey: 'minimal-contact-live-create',
+      };
+      const [minimal, retry] = await Promise.all([
+        operations.createContact(minimalCommand),
+        operations.createContact(minimalCommand),
+      ]);
+      assert.equal(minimal.contact.id, retry.contact.id);
+      assert.deepEqual([minimal.created, retry.created].sort(), [false, true]);
+      const emailOnly = await operations.createContact({
+        ...minimalCommand,
+        email: 'sem-telefone@example.test',
+        idempotencyKey: 'email-only-contact-live-create',
+      });
+      assert.notEqual(emailOnly.contact.id, minimal.contact.id);
+      const contactDetail = await operations.getContact({
+        contactId: emailOnly.contact.id,
+      });
+      assert.equal(contactDetail.contact.email, 'sem-telefone@example.test');
+      assert.equal(contactDetail.contact.phone, null);
+      assert.deepEqual(contactDetail.identities, []);
+      assert.deepEqual(contactDetail.conversations, []);
+      const minimalDetail = await operations.getContact({
+        contactId: minimal.contact.id,
+      });
+      assert.equal(minimalDetail.contact.displayName, 'Cliente sem telefone');
+      assert.equal(minimalDetail.contact.phone, null);
+      assert.equal(minimalDetail.contact.email, null);
+      const sideEffects = await pool.query(
+        `SELECT 1 FROM crm.contact_phone_lookup WHERE contact_id IN ($1, $2)
+         UNION ALL
+         SELECT 1 FROM crm.orders WHERE contact_id IN ($1, $2)`,
+        [minimal.contact.id, emailOnly.contact.id],
+      );
+      assert.equal(sideEffects.rowCount, 0);
+      const encrypted = await pool.query(
+        'SELECT contact_details_envelope FROM crm.contacts WHERE id = $1',
+        [emailOnly.contact.id],
+      );
+      assert.equal(
+        encrypted.rows[0].contact_details_envelope.algorithm,
+        'AES-256-GCM',
+      );
+      assert.doesNotMatch(
+        JSON.stringify(encrypted.rows[0].contact_details_envelope),
+        /sem-telefone@example\.test/u,
+      );
+
       const created = await operations.createContact({
         actor,
         correlationId: 'correlation-create',

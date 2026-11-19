@@ -901,7 +901,11 @@ humana, epoch, revisão e idempotência antes de projetar na ficha. O primeiro
 replay não autoriza novo envio. O workflow legado mantém seu briefing na
 Conversa até a troca, feita somente após instalar o CRM.
 
-Novo cadastro manual exige nome e telefone; e-mail é opcional (ADR 033).
+Em Clientes, `POST /api/v1/contacts` exige nome e aceita telefone e e-mail
+opcionais e independentes (ADR 094). Só um telefone informado gera hash e
+índice de busca. A migração expand `0084` permite o envelope cifrado de e-mail
+sem hash de telefone e é compatível com a API anterior. Meus clientes exige
+telefone segundo WAP-18.
 Novo Pedido manual exige telefone no Contato, inclusive se legado, mas a
 consulta e a correção do legado permanecem disponíveis. A busca por telefone
 usa números normalizados das identidades confirmadas e do cadastro manual;

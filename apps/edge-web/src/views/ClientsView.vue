@@ -12,6 +12,7 @@ import { useRouter } from 'vue-router';
 import ClientRegistration from '../components/ClientRegistration.vue';
 import ClientOrders from '../components/ClientOrders.vue';
 import ClientFirstMessage from '../components/ClientFirstMessage.vue';
+import NewClient from '../components/NewClient.vue';
 import PortfolioCreate from '../components/PortfolioCreate.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import {
@@ -29,6 +30,7 @@ const props = defineProps({
 });
 const liveEvent = inject('liveEvent', ref(null));
 const sessionUser = inject('sessionUser', ref({}));
+const notify = inject('notify', () => {});
 const router = useRouter();
 const heading = ref(null);
 const searchInput = ref(null);
@@ -134,6 +136,14 @@ function openContact(contact, event) {
   void router.push(
     `${props.mine ? '/meus-clientes' : '/clientes'}/${encodeURIComponent(contact.id)}`,
   );
+}
+
+/** @param {string} id */
+async function onGeneralClientCreated(id) {
+  await router.push(`/clientes/${encodeURIComponent(id)}`);
+  notify('Cliente criado.');
+  if (query.value) query.value = '';
+  else void loadContacts(true);
 }
 
 /** @param {unknown} cause */
@@ -655,6 +665,10 @@ onBeforeUnmount(() => {
 
     <div v-if="!portfolioUnavailable" class="filter-bar">
       <PortfolioCreate v-if="mine" @created="onClientCreated" />
+      <NewClient
+        v-else-if="sessionUser?.functionName === 'Vendedor'"
+        @created="onGeneralClientCreated"
+      />
       <div class="search-control">
         <label for="client-search">{{
           mine

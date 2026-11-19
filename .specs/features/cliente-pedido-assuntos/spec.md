@@ -5,10 +5,12 @@ Decisão: [RFC 019](../../../docs/rfc/019-cliente-pedido-manual-e-assuntos.md) /
 
 ## Pedido sem canal
 
-- **CP-01:** Vendedor autorizado pode cadastrar Contato com nome e telefone
-  obrigatórios, e-mail opcional, sem criar Conversa ou presumir identidade de
-  canal confirmada; nomes iguais não são unidos. Contatos antigos sem telefone
-  permanecem consultáveis para correção.
+- **CP-01:** Em Clientes, vendedor autorizado pode criar um Contato com nome
+  obrigatório e telefone e e-mail opcionais e independentes. Ao salvar, a tela
+  atualiza a lista e abre a ficha, onde os demais dados podem ser preenchidos.
+  O cadastro não cria Conversa, Pedido ou identidade de canal confirmada. Nomes
+  iguais não são unidos e telefones informados seguem CP-19. Um retry do mesmo
+  comando não duplica o Contato. Meu WhatsApp/Meus clientes segue WAP-18.
 - **CP-02:** Pedidos oferece “Novo pedido” com busca paginada por nome,
   seleção por teclado e cadastro de Contato ausente.
 - **CP-03:** Criar Pedido para Contato selecionado cria um `pendente` numerado,

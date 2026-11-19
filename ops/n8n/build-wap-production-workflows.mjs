@@ -711,20 +711,24 @@ export function buildWapProductionWorkflows(main, rawConfig) {
           config.credentials.evolutionApiHeader.name;
     }
   const inbound = buildInbound(main, config);
-  const send = configurePersonalSend(
-    structuredClone(main),
-    config.personalSendLineIds,
-  );
-  delete send.versionId;
-  delete send.activeVersionId;
-  delete send.activeVersion;
-  send.active = false;
-  send.pinData = {};
+  // Personal send patches the live main; with no send lines there is nothing
+  // to apply, so the draft is not produced (the live main may also have
+  // drifted from the nodes the patch anchors on).
+  const send = config.personalSendLineIds.length
+    ? configurePersonalSend(structuredClone(main), config.personalSendLineIds)
+    : null;
+  if (send) {
+    delete send.versionId;
+    delete send.activeVersionId;
+    delete send.activeVersion;
+    send.active = false;
+    send.pinData = {};
+  }
   const workflows = {
     control,
     challenge,
     inbound: inbound.workflow,
-    'main-personal-send': send,
+    ...(send ? { 'main-personal-send': send } : {}),
   };
   const scoped = { control, challenge, inbound: inbound.workflow };
   const summary = {
@@ -741,7 +745,9 @@ export function buildWapProductionWorkflows(main, rawConfig) {
         settings: sha256(stableJson(main.settings ?? {})),
       },
     },
-    main: nodeDiff(main, send),
+    main: send
+      ? nodeDiff(main, send)
+      : { skipped: 'personalSendLineIds is empty' },
     inbound: inbound.counts,
     lines: config.lineIds.length,
     instances: config.instances.length,
@@ -819,16 +825,19 @@ export async function runCli(argv, io = {}) {
     'inbound',
     'main-personal-send',
     'summary',
-  ]) {
+  ].filter((key) => key in built)) {
     const content =
       JSON.stringify(/** @type {any} */ (built)[name], null, 2) + '\n';
     writeFileSync(path.join(resolved, `${name}.json`), content, { flag: 'wx' });
     files[name] = sha256(content);
   }
+  const diff = built.summary.main;
   const lines = [
     `main nodes=${main.nodes.length} sha256=${built.summary.input.fingerprints.nodes}`,
     `inbound kept=${built.summary.inbound.kept} added=${built.summary.inbound.added} removedTriggers=${built.summary.inbound.removed.triggersAndOtherWebhooks} removedUnreachable=${built.summary.inbound.removed.unreachable}`,
-    `main-personal-send added=${built.summary.main.added.length} modified=${built.summary.main.modified.length} removed=${built.summary.main.removed.length}`,
+    'skipped' in diff
+      ? 'main-personal-send skipped (personalSendLineIds is empty)'
+      : `main-personal-send added=${diff.added.length} modified=${diff.modified.length} removed=${diff.removed.length}`,
     `lines=${built.summary.lines} instances=${built.summary.instances} personalSendLines=${built.summary.personalSendLines}`,
     ...Object.entries(files).map(
       ([name, hash]) => `${name}.json sha256=${hash}`,

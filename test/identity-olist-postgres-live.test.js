@@ -16,9 +16,9 @@ const connectionString = process.env.TEST_DATABASE_URL;
 
 if (connectionString) {
   test('OLIST-T19: expansion defaults, concurrent authorization CAS, rollback and disable fencing in PostgreSQL', async () => {
-    assert.equal(
+    assert.match(
       new URL(connectionString).pathname.slice(1),
-      'crm_silmer_test',
+      /^crm_silmer_test(?:_[a-z0-9_]+)?$/u,
       'Only the dedicated synthetic database may be reset',
     );
     const pool = new Pool({ connectionString, max: 5 });

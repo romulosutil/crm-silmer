@@ -19,24 +19,6 @@ export const SHARD_0_EXACT_DB = [
   'test/postgres-job-queue-live.test.js',
   'test/work-management-postgres-live.test.js',
   'test/finance-postgres-live.test.js',
-  'test/identity-olist-postgres-live.test.js',
-  'test/olist-connection-postgres-live.test.js',
-  'test/olist-foundation-postgres-live.test.js',
-  'test/olist-upgrade-compat-postgres-live.test.js',
-  'test/olist-runtime-postgres-live.test.js',
-  'test/orders-source-postgres-live.test.js',
-  'test/olist-preview-postgres-live.test.js',
-  'test/olist-resource-repository-postgres-live.test.js',
-  'test/olist-export-command-repository-postgres-live.test.js',
-  'test/olist-export-command-postgres-live.test.js',
-  'test/olist-sale-repository-postgres-live.test.js',
-  'test/olist-admin-repository-postgres-live.test.js',
-  'test/olist-administration-postgres-live.test.js',
-  'test/olist-export-invalidation-postgres-live.test.js',
-  'test/olist-liveness-worker-postgres-live.test.js',
-  'test/order-cancellation-postgres-live.test.js',
-  'test/order-olist-guards-postgres-live.test.js',
-  'test/olist-post-export-recovery-postgres-live.test.js',
   'test/order-billing-postgres-live.test.js',
   'test/order-billing-chat-postgres-live.test.js',
   'test/inbox-postgres-live.test.js',
@@ -56,8 +38,8 @@ export const SHARD_0_EXACT_DB = [
   'test/seller-conversation-access-postgres-live.test.js',
 ];
 
-// Shards 1 and 2 run on dedicated `crm_silmer_test_s1` and `crm_silmer_test_s2`
-// databases in parallel with Shard 0 and with the WAP integration suites.
+// Shards 1, 2 and 3 run on dedicated `crm_silmer_test_s1..s3` databases in
+// parallel with Shard 0 across the 4 vCPUs of the CI runner.
 export const SHARD_1_PARALLEL = [
   'test/orders-postgres-live.test.js',
   'test/store-orders-postgres-live.test.js',
@@ -71,6 +53,11 @@ export const SHARD_1_PARALLEL = [
   'test/cancelled-orders-n8n-postgres-live.test.js',
   'test/cancelled-orders-inbox-subject-postgres-live.test.js',
   'test/olist-operation-rehearsal-postgres-live.test.js',
+  'test/olist-preview-postgres-live.test.js',
+  'test/olist-resource-repository-postgres-live.test.js',
+  'test/olist-export-command-repository-postgres-live.test.js',
+  'test/olist-export-command-postgres-live.test.js',
+  'test/olist-sale-repository-postgres-live.test.js',
 ];
 
 export const SHARD_2_PARALLEL = [
@@ -90,6 +77,22 @@ export const SHARD_2_PARALLEL = [
   'test/conversation-reminder-postgres-live.test.js',
   'test/seller-whatsapp-inbound-postgres-live.test.js',
   'test/order-subject-postgres-live.test.js',
+  'test/identity-olist-postgres-live.test.js',
+  'test/olist-connection-postgres-live.test.js',
+  'test/olist-foundation-postgres-live.test.js',
+  'test/olist-upgrade-compat-postgres-live.test.js',
+  'test/olist-runtime-postgres-live.test.js',
+  'test/orders-source-postgres-live.test.js',
+];
+
+export const SHARD_3_PARALLEL = [
+  'test/olist-admin-repository-postgres-live.test.js',
+  'test/olist-administration-postgres-live.test.js',
+  'test/olist-export-invalidation-postgres-live.test.js',
+  'test/olist-liveness-worker-postgres-live.test.js',
+  'test/order-cancellation-postgres-live.test.js',
+  'test/order-olist-guards-postgres-live.test.js',
+  'test/olist-post-export-recovery-postgres-live.test.js',
 ];
 
 /**
@@ -148,6 +151,7 @@ async function main() {
   const extraDatabases = [
     'crm_silmer_test_s1',
     'crm_silmer_test_s2',
+    'crm_silmer_test_s3',
     'crm_silmer_test_wap_e08',
     'crm_silmer_test_wap_e10',
     'crm_silmer_test_e11',
@@ -170,7 +174,7 @@ async function main() {
   // - Worker A: exact-db suites on crm_silmer_test
   // - Worker B: regex-db shard 1 on crm_silmer_test_s1
   // - Worker C: regex-db shard 2 on crm_silmer_test_s2
-  // - Worker D: dedicated WAP E08/E10/E11/E12 integration & recovery drill suites
+  // - Worker D: regex-db shard 3 on crm_silmer_test_s3 + dedicated WAP E08/E10/E11/E12 suites
   await Promise.all([
     runNodeTests('shard-0 (crm_silmer_test)', SHARD_0_EXACT_DB, {
       TEST_DATABASE_URL: dbUrlFor('crm_silmer_test'),
@@ -182,6 +186,9 @@ async function main() {
       TEST_DATABASE_URL: dbUrlFor('crm_silmer_test_s2'),
     }),
     (async () => {
+      await runNodeTests('shard-3 (crm_silmer_test_s3)', SHARD_3_PARALLEL, {
+        TEST_DATABASE_URL: dbUrlFor('crm_silmer_test_s3'),
+      });
       await runNodeTests(
         'wap-e08 (crm_silmer_test_wap_e08)',
         ['test/integration/seller-whatsapp-outbound.test.js'],

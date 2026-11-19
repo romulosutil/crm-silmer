@@ -248,7 +248,7 @@ test('scans each local OCI layout before its only registry publication', async (
   assert.doesNotMatch(workflow, /:\s*latest\b|:latest\b/u);
 });
 
-test('reports required image checks even when a PR does not affect images', async () => {
+test('skips image build VMs when a PR does not affect images', async () => {
   const workflow = await text('.github/workflows/ci.yml');
   const imagesJob = workflow.slice(
     workflow.indexOf('\n  images:'),
@@ -259,12 +259,10 @@ test('reports required image checks even when a PR does not affect images', asyn
     .split(/\n {6}- name: /u)
     .slice(1);
 
-  // A skipped matrix job never expands its name, so the required
-  // "Build and scan <image>" checks would stay pending forever.
-  assert.doesNotMatch(
+  assert.match(
     imagesJob,
-    /^ {4}if:/mu,
-    'images job must always run so its matrix check names are reported',
+    /^ {4}if: needs\.quality\.outputs\.image_build_required == 'true'$/mu,
+    'images job must skip VM allocation when image_build_required is false',
   );
   assert.ok(imageSteps.length >= 8);
   for (const step of imageSteps) {

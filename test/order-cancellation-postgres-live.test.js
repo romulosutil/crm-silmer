@@ -52,9 +52,9 @@ if (!connectionString)
   );
 else
   test('OLIST-T23 terminal cancellation, current ACL, preserved history and sale races', async (t) => {
-    assert.equal(
+    assert.match(
       new URL(connectionString).pathname.slice(1),
-      'crm_silmer_test',
+      /^crm_silmer_test(?:_[a-z0-9_]+)?$/u,
     );
     const pool = new Pool({
       connectionString,

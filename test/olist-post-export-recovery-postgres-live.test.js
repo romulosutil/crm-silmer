@@ -43,9 +43,9 @@ if (!connectionString)
   );
 else
   test('OLIST-T10 shared effects, current authority and restored pending state', async (t) => {
-    assert.equal(
+    assert.match(
       new URL(connectionString).pathname.slice(1),
-      'crm_silmer_test',
+      /^crm_silmer_test(?:_[a-z0-9_]+)?$/u,
     );
     const pool = new Pool({
       connectionString,

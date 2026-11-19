@@ -7,6 +7,7 @@ import {
   SHARD_0_EXACT_DB,
   SHARD_1_PARALLEL,
   SHARD_2_PARALLEL,
+  SHARD_3_PARALLEL,
 } from '../scripts/run-postgres-live-ci.mjs';
 
 const bash =
@@ -127,13 +128,18 @@ test('PostgreSQL CI runner partitions live suites across isolated databases with
     ...SHARD_0_EXACT_DB,
     ...SHARD_1_PARALLEL,
     ...SHARD_2_PARALLEL,
+    ...SHARD_3_PARALLEL,
   ];
   assert.equal(
     new Set(allSuites).size,
     allSuites.length,
     'every live PostgreSQL suite must run at most once per CI job',
   );
-  for (const suite of [...SHARD_1_PARALLEL, ...SHARD_2_PARALLEL]) {
+  for (const suite of [
+    ...SHARD_1_PARALLEL,
+    ...SHARD_2_PARALLEL,
+    ...SHARD_3_PARALLEL,
+  ]) {
     const content = readFileSync(
       new URL(`../${suite}`, import.meta.url),
       'utf8',

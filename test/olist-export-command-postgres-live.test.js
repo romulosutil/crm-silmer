@@ -81,9 +81,9 @@ if (!connectionString)
   );
 else
   test('OLIST-T07: one atomic idempotent snapshot and job per order/account', async (t) => {
-    assert.equal(
+    assert.match(
       new URL(connectionString).pathname.slice(1),
-      'crm_silmer_test',
+      /^crm_silmer_test(?:_[a-z0-9_]+)?$/u,
       'Only the dedicated synthetic database may be reset',
     );
     const pool = new Pool({ connectionString, max: 12 });

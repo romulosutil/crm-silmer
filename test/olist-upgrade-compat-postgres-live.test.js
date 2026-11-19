@@ -8,9 +8,9 @@ const connectionString = process.env.TEST_DATABASE_URL;
 
 if (connectionString) {
   test('OLIST-T03: expansion preserves already installed outbox types and target contracts', async (t) => {
-    assert.equal(
+    assert.match(
       new URL(connectionString).pathname.slice(1),
-      'crm_silmer_test',
+      /^crm_silmer_test(?:_[a-z0-9_]+)?$/u,
       'Only the dedicated synthetic database may be reset',
     );
     const pool = new Pool({ connectionString, max: 3 });

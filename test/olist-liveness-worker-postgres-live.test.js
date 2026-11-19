@@ -54,7 +54,10 @@ if (!URL)
   );
 else
   test('OLIST-LIVENESS dispatcher and worker: pre-effect retry, terminal denials and archived exports on a real queue', async (t) => {
-    assert.equal(new globalThis.URL(URL).pathname.slice(1), 'crm_silmer_test');
+    assert.match(
+      new globalThis.URL(URL).pathname.slice(1),
+      /^crm_silmer_test(?:_[a-z0-9_]+)?$/u,
+    );
     const pool = new Pool({
       connectionString: URL,
       max: 12,

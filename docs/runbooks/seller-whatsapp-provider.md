@@ -33,7 +33,8 @@ ensaio. WAP-E01/T01-01 permanecem abertos nesses critérios, sem avanço E02.
 
 ### Patches entregues
 
-- n8n 2.38.7: [Dockerfile](../../ops/n8n/wap-ingress-Dockerfile),
+- n8n 2.43.7 (portado da 2.38.7, ver [porte](#porte-para-o-n8n-2437)):
+  [Dockerfile](../../ops/n8n/wap-ingress-Dockerfile),
   [patcher](../../ops/n8n/wap-ingress-patch.mjs) e
   [guardas](../../ops/n8n/wap-ingress-runtime.cjs). Hashes de Webhook.node.js,
   active-executions.js e workflows.controller.js são verificados antes de
@@ -58,6 +59,33 @@ As imagens só foram construídas localmente no Mel e removidas depois:
 
 - Evolution corrigida: `sha256:90664dde6f89be5009f4fd1d0ba2c5aaafd5ad5c875058ddc3072be8f8bf960a`.
 - n8n corrigido: `sha256:1b10735a274cf87d3a74cb9a5a7743e7a5271b2c3a3c5168b5c14c5084d09717`.
+
+### Porte para o n8n 2.43.7
+
+Em 18/11/2026, o n8n de produção (`schedule/n8n`) já rodava `n8nio/n8n:2.43.7`.
+A imagem fixada na 2.38.7 faria downgrade do n8n compartilhado, então o patch
+foi portado sem mudar guardas nem âncoras:
+
+- Base `n8nio/n8n:2.43.7@sha256:3db21366be1d3c77c1708963129c051948573019659e8873e0294be035ffc1b2`
+  (índice OCI oficial; o mesmo método reproduz o digest antigo da 2.38.7).
+- Hashes novos de `Webhook.node.js` (n8n-nodes-base 2.43.5),
+  `active-executions.js` e `workflows.controller.js` (n8n 2.43.7). Os pacotes
+  npm 2.38.x reproduzem os três hashes antigos, e o build da imagem oficial
+  aceitou os novos (`WAP_N8N_INGRESS_PATCHED`).
+- Todas as âncoras existem uma única vez e na mesma ordem. O controller passou
+  a importar o erro como `errors_1.BadRequestError`. A 2.38 agora é recusada.
+- O ensaio `wap-provider-spike` materializava só quatro dos cinco blocos
+  embutidos do `Dockerfile.inline` e falhava no Docker legado depois do WAP-E02.
+  Agora ele inclui `wap-control-runtime.cjs`.
+
+A [evidência da 2.43.7](../../ops/evolution/wap-provider-spike.n8n-2.43.7.evidence.json)
+(SHA-256 `aa914b0fd44a710231bf18a5edc6805e4756f8bc5669a47083603a194feb8e00`)
+tem `technicalGate=passed`, `privacyFailures=[]` e todos os scans negativos.
+Imagens locais no Mel, removidas ao final: Evolution
+`sha256:7eb707106bd75166e23be884bffcdb3824859f80a85954506aebbf4419d5cfbd`,
+n8n `sha256:d332460e5f2b71a6c83b8ea9013dfafa3254cab46f92c0f80eefcc815f5614a9`.
+O gate continua `blocked` pelos mesmos motivos: código no mesmo celular e
+retenção operacional de múltiplas instâncias.
 
 ### Resultado da prova corrigida
 

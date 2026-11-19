@@ -18,7 +18,7 @@ import {
 } from './wap-spike-privacy.mjs';
 
 const N8N =
-  'n8nio/n8n:2.38.7@sha256:a8c95f75c6fdf65f5f2b7a7b354744eaa1c62bb911b5c00af6499c3f38e4cd32';
+  'n8nio/n8n:2.43.7@sha256:3db21366be1d3c77c1708963129c051948573019659e8873e0294be035ffc1b2';
 const POSTGRES = 'postgres:17-alpine';
 const NODE = 'node:24.20.0-bookworm-slim';
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -276,6 +276,11 @@ walk('/home/node/.n8n'); process.stdout.write(JSON.stringify(found));`;
           'wap-generation-patch.mjs',
           'WAP_GENERATION_PATCH',
           'silmer-wap-generation-patch.mjs',
+        ],
+        [
+          'wap-control-runtime.cjs',
+          'WAP_CONTROL_RUNTIME',
+          'wap-control-runtime.cjs',
         ],
       ]) {
         const source = await readFile(

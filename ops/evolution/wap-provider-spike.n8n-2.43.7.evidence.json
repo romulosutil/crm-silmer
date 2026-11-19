@@ -1,0 +1,231 @@
+{
+  "scope": "WAP-E01/WAP-T01-01; synthetic, no pairing, no messages",
+  "n8nImage": "n8nio/n8n:2.43.7@sha256:3db21366be1d3c77c1708963129c051948573019659e8873e0294be035ffc1b2",
+  "providerSource": "cd800f2976e1e5b682fbf86a01ee4d85ae61f370",
+  "checks": {
+    "providerUnauthenticated": "401",
+    "provider": {
+      "wap-synthetic-qr": {
+        "create": 201,
+        "initialState": "close",
+        "connect": 200,
+        "challengeQr": true,
+        "challengeCode": false,
+        "providerError": false,
+        "state": "connecting",
+        "logout": 200
+      },
+      "wap-synthetic-code": {
+        "create": 201,
+        "initialState": "close",
+        "connect": 200,
+        "challengeQr": false,
+        "challengeCode": true,
+        "providerError": false,
+        "state": "connecting",
+        "logout": 200
+      }
+    },
+    "providerLogs": "no actual QR/code or synthetic canary in stdout",
+    "n8nGuard": "unauthenticated, non-allowlisted and stale synthetic generation denied before fixture",
+    "numericChallengeCannotEnterGenerationMetadata": true,
+    "malformedIngressStatus": 422,
+    "malformedIngressFixedDenial": false,
+    "malformedIngressRejectedBeforeWrite": true,
+    "unsafeSettingsRejectedBeforeWrite": true,
+    "pinDataWriteRejectedBeforePersistence": true,
+    "pinDataDenied": {
+      "databaseAndLogicalBackup": false,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "roundTrip": {
+      "qr": {
+        "status": 200,
+        "noStore": true,
+        "fixtureCalls": 1
+      },
+      "code": {
+        "status": 200,
+        "noStore": true,
+        "fixtureCalls": 1
+      },
+      "provider-qr": {
+        "status": 200,
+        "noStore": true,
+        "fixtureCalls": 1
+      },
+      "provider-code": {
+        "status": 200,
+        "noStore": true,
+        "fixtureCalls": 1
+      }
+    },
+    "qr": {
+      "databaseAndLogicalBackup": false,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "code": {
+      "databaseAndLogicalBackup": false,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "provider-qr": {
+      "databaseAndLogicalBackup": false,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "provider-code": {
+      "databaseAndLogicalBackup": false,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "errorAfterChallenge": {
+      "databaseAndLogicalBackup": false,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "generationSource": {
+      "proof": "synthetic notification through real patched callback, queue and emitter; no WhatsApp socket",
+      "oldQueuedGenerationRejected": true,
+      "currentGenerationAccepted": true,
+      "replayPreservesSource": true,
+      "otherLineAccepted": true,
+      "crossLineTokenRejected": true,
+      "lifecycleEventsRejectedWithoutUnhandledRejection": true,
+      "retryAfterRevocationRejected": true,
+      "replacementGenerationAccepted": true,
+      "pairingCodeExcludedBeforeCredentialSerialization": true,
+      "observations": [
+        {
+          "status": 403,
+          "source": {
+            "bindingId": "synthetic-a-g1",
+            "lineId": "synthetic-line-a",
+            "accountId": "synthetic-account-a",
+            "generation": 1
+          }
+        },
+        {
+          "status": 200,
+          "source": {
+            "bindingId": "synthetic-a-g2",
+            "lineId": "synthetic-line-a",
+            "accountId": "synthetic-account-a",
+            "generation": 2
+          }
+        },
+        {
+          "status": 200,
+          "source": {
+            "bindingId": "synthetic-a-g2",
+            "lineId": "synthetic-line-a",
+            "accountId": "synthetic-account-a",
+            "generation": 2
+          }
+        },
+        {
+          "status": 200,
+          "source": {
+            "bindingId": "synthetic-b-g1",
+            "lineId": "synthetic-line-b",
+            "accountId": "synthetic-account-b",
+            "generation": 1
+          }
+        },
+        {
+          "status": 403,
+          "source": {
+            "bindingId": "synthetic-b-g1",
+            "lineId": "synthetic-line-b",
+            "accountId": "synthetic-account-b",
+            "generation": 1
+          }
+        },
+        {
+          "status": 503,
+          "source": {
+            "bindingId": "synthetic-a-g2",
+            "lineId": "synthetic-line-a",
+            "accountId": "synthetic-account-a",
+            "generation": 2
+          }
+        },
+        {
+          "status": 403,
+          "source": {
+            "bindingId": "synthetic-a-g2",
+            "lineId": "synthetic-line-a",
+            "accountId": "synthetic-account-a",
+            "generation": 2
+          }
+        },
+        {
+          "status": 200,
+          "source": {
+            "bindingId": "synthetic-a-g3",
+            "lineId": "synthetic-line-a",
+            "accountId": "synthetic-account-a",
+            "generation": 3
+          }
+        }
+      ]
+    },
+    "generationAdversarialBeforeWrite": true,
+    "generationIngress": {
+      "databaseAndLogicalBackup": false,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "inProgress": {
+      "databaseAndLogicalBackup": false,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "manualDispatched": true,
+    "initialExecutionModes": [
+      "webhook:running",
+      "webhook:running",
+      "webhook:running",
+      "webhook:running",
+      "webhook:running",
+      "webhook:running",
+      "webhook:running",
+      "webhook:running",
+      "webhook:running",
+      "webhook:running",
+      "manual:running"
+    ],
+    "manualRuntimeSuccess": true,
+    "manual": {
+      "databaseAndLogicalBackup": false,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "manualPartialRejectedBeforeEffect": true,
+    "manualPartialDenied": {
+      "databaseAndLogicalBackup": false,
+      "stdout": false,
+      "stateAndSnapshotBackup": false
+    },
+    "pinDataAndErrorWorkflow": "empty, no error workflow",
+    "defaultOffRejectsBeforePersistence": true,
+    "defaultOffLogsLeak": false,
+    "stoppedStateAndPhysicalDatabase": {
+      "stoppedStateLeak": false,
+      "physicalDatabaseLeak": false
+    }
+  },
+  "privacyFailures": [],
+  "technicalGate": "passed",
+  "gate": "blocked",
+  "blockers": [
+    "Same-phone pairing is not homologated; this experiment never pairs an account",
+    "Multi-instance operational retention is not homologated by this proof"
+  ],
+  "buildRecipe": "unchanged pinned recipe, embedded COPY sources materialized byte-for-byte for legacy Docker",
+  "providerImage": "sha256:7eb707106bd75166e23be884bffcdb3824859f80a85954506aebbf4419d5cfbd",
+  "n8nPatchedImage": "sha256:d332460e5f2b71a6c83b8ea9013dfafa3254cab46f92c0f80eefcc815f5614a9",
+  "cleanup": "all dedicated resources removed"
+}

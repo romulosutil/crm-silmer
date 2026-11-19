@@ -4,11 +4,11 @@ import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const WEBHOOK_SHA256 =
-  '848cb027dd32ca69bb22466721bd9223b002a8480bd28352d1c9a402f0f8fe73';
+  'afd0a6e02ce62b85c090a11acca1c1d207b9b6d15f21b87508af8fb4bf165039';
 export const EXECUTIONS_SHA256 =
-  '2bda316bde14792cfe03f7c462c2b314dd6b4dcf25e7acfb5cfb1619262bc436';
+  '01ca68a06b0a502c2bf6885439a48bc28b026e2136440e7880b74f4262736f0b';
 export const CONTROLLER_SHA256 =
-  '70c6bee175804b8e92bb1c4156ffb6ef6e703242dc5471c198900b816e618cc8';
+  'a23362c684450f8efa065cdca680ab38023aa4e915248cb663d79ade4d9e8127';
 const helper = '/opt/silmer/wap-ingress-runtime.cjs';
 /** @param {string} source @param {string} expected @param {string} anchor @param {string} insertion */
 function inject(source, expected, anchor, insertion) {
@@ -71,16 +71,16 @@ export function patchControllerSource(source, expected = CONTROLLER_SHA256) {
     source,
     expected,
     anchor,
-    `        try {\n            require('${helper}').guardManualRequest(dbWorkflow, req.body);\n        } catch {\n            throw new bad_request_error_1.BadRequestError('WAP_MANUAL_REQUEST_DENIED');\n        }\n`,
+    `        try {\n            require('${helper}').guardManualRequest(dbWorkflow, req.body);\n        } catch {\n            throw new errors_1.BadRequestError('WAP_MANUAL_REQUEST_DENIED');\n        }\n`,
   );
   patched = patched.replace(
     createAnchor,
-    `        try {\n            require('${helper}').guardWorkflowMutation(null, body);\n        } catch {\n            throw new bad_request_error_1.BadRequestError('WAP_WORKFLOW_WRITE_DENIED');\n        }\n` +
+    `        try {\n            require('${helper}').guardWorkflowMutation(null, body);\n        } catch {\n            throw new errors_1.BadRequestError('WAP_WORKFLOW_WRITE_DENIED');\n        }\n` +
       createAnchor,
   );
   patched = patched.replace(
     updateAnchor,
-    `        const wapCurrentWorkflow = await this.workflowRepository.get({ id: workflowId });\n        try {\n            require('${helper}').guardWorkflowMutation(wapCurrentWorkflow, body);\n        } catch {\n            throw new bad_request_error_1.BadRequestError('WAP_WORKFLOW_WRITE_DENIED');\n        }\n` +
+    `        const wapCurrentWorkflow = await this.workflowRepository.get({ id: workflowId });\n        try {\n            require('${helper}').guardWorkflowMutation(wapCurrentWorkflow, body);\n        } catch {\n            throw new errors_1.BadRequestError('WAP_WORKFLOW_WRITE_DENIED');\n        }\n` +
       updateAnchor,
   );
   return patched;

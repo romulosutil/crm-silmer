@@ -73,10 +73,27 @@ function validateEnvironment(env) {
     DOCKER_ENV: 'true',
     TZ: 'UTC',
     DATABASE_SAVE_DATA_NEW_MESSAGE: 'true',
+    // WAP-E12: every Evolution 2.3.7 egress integration is pinned off. They
+    // must be present: an absent flag would leave the decision to upstream.
+    RABBITMQ_ENABLED: 'false',
+    SQS_ENABLED: 'false',
+    KAFKA_ENABLED: 'false',
+    NATS_ENABLED: 'false',
+    PUSHER_ENABLED: 'false',
+    S3_ENABLED: 'false',
+    CHATWOOT_ENABLED: 'false',
+    TYPEBOT_ENABLED: 'false',
+    OPENAI_ENABLED: 'false',
+    DIFY_ENABLED: 'false',
+    N8N_ENABLED: 'false',
+    EVOAI_ENABLED: 'false',
+    FLOWISE_ENABLED: 'false',
+    PROVIDER_ENABLED: 'false',
   };
   for (const [key, value] of Object.entries(required)) {
     if (env[key] !== value) fail('EVOLUTION_PROFILE_CONFIGURATION_INVALID');
   }
+  if (env.SENTRY_DSN) fail('EVOLUTION_PROFILE_CONFIGURATION_INVALID');
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(env.SILMER_EVOLUTION_INSTANCE || '')) {
     fail('EVOLUTION_INSTANCE_CONFIGURATION_INVALID');
   }
@@ -193,10 +210,14 @@ function installRuntimeProtection(env = process.env) {
     return result;
   };
   const { PrismaClient } = require('@prisma/client');
-  const { scheduleRetention } = require('./silmer-retention.cjs');
+  const {
+    scheduleRetention,
+    retentionInstances,
+  } = require('./silmer-retention.cjs');
   const prisma = new PrismaClient({ log: [] });
+  // WAP-E12: same seven-day policy for the general and personal instances.
   scheduleRetention(prisma, {
-    instance: env.SILMER_EVOLUTION_INSTANCE,
+    instances: retentionInstances(env),
     report: (code) => safeOutput(`${code}\n`),
   });
 }

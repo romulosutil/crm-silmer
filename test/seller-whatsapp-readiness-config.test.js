@@ -793,6 +793,23 @@ test('WAP-T05-01 Evolution socket generation is off by default and requires an e
   );
 });
 
+/** WAP-E12: every Evolution 2.3.7 egress integration flag, pinned off. */
+const EVOLUTION_EGRESS = Object.freeze([
+  'RABBITMQ_ENABLED',
+  'SQS_ENABLED',
+  'KAFKA_ENABLED',
+  'NATS_ENABLED',
+  'PUSHER_ENABLED',
+  'S3_ENABLED',
+  'CHATWOOT_ENABLED',
+  'TYPEBOT_ENABLED',
+  'OPENAI_ENABLED',
+  'DIFY_ENABLED',
+  'N8N_ENABLED',
+  'EVOAI_ENABLED',
+  'FLOWISE_ENABLED',
+  'PROVIDER_ENABLED',
+]);
 const evolutionBoot = Object.freeze({
   AUTHENTICATION_API_KEY: 'k'.repeat(48),
   SILMER_EVOLUTION_WEBHOOK_TOKEN: 't'.repeat(48),
@@ -815,6 +832,7 @@ const evolutionBoot = Object.freeze({
   DOCKER_ENV: 'true',
   TZ: 'UTC',
   DATABASE_SAVE_DATA_NEW_MESSAGE: 'true',
+  ...Object.fromEntries(EVOLUTION_EGRESS.map((name) => [name, 'false'])),
 });
 const generationToken = 'synthetic-generation-token-000000000000';
 /** @param {Record<string, any>} [patch] @param {Record<string, any>} [data] */
@@ -934,5 +952,47 @@ test('WAP-T05-01 Evolution boot profile adds personal routing only for a valid l
       SILMER_WAP_CONTROL_ENABLED: 'TRUE',
     }).personalInstances,
     undefined,
+  );
+});
+
+test('WAP-E12 Evolution boot refuses any egress integration that is not pinned to literal false', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const example = await readFile(
+    new URL('../ops/evolution/environment.env.example', import.meta.url),
+    'utf8',
+  );
+  assert.doesNotThrow(() => privacy.validateEnvironment(evolutionBoot));
+  for (const name of EVOLUTION_EGRESS) {
+    assert.match(example, new RegExp(`^${name}=false$`, 'mu'), name);
+    /** @type {Record<string, string>} */
+    const missing = { ...evolutionBoot };
+    delete missing[name];
+    /** @type {Record<string, string>[]} */
+    const variants = [
+      missing,
+      ...['true', 'TRUE', 'False', '', '0', ' false'].map((value) => ({
+        ...evolutionBoot,
+        [name]: value,
+      })),
+    ];
+    for (const env of variants)
+      assert.throws(
+        () => privacy.validateEnvironment(env),
+        /EVOLUTION_PROFILE_CONFIGURATION_INVALID/u,
+        `${name}=${JSON.stringify(env[name])}`,
+      );
+  }
+  // Error reporting is an egress too: an absent or empty DSN only.
+  assert.match(example, /^SENTRY_DSN=$/mu);
+  assert.doesNotThrow(() =>
+    privacy.validateEnvironment({ ...evolutionBoot, SENTRY_DSN: '' }),
+  );
+  assert.throws(
+    () =>
+      privacy.validateEnvironment({
+        ...evolutionBoot,
+        SENTRY_DSN: 'https://key@sentry.synthetic.invalid/1',
+      }),
+    /EVOLUTION_PROFILE_CONFIGURATION_INVALID/u,
   );
 });

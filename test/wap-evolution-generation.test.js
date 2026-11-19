@@ -549,3 +549,170 @@ test('WAP-E12: the EasyPanel inline Evolution Dockerfile matches the render of c
     /\nRUN node \/evolution\/silmer-wap-generation-patch\.mjs \/evolution\/dist\/main\.js\n/u,
   );
 });
+
+const retention = createRequire(import.meta.url)(
+  '../ops/evolution/retention.cjs',
+);
+
+test('WAP-E12: retention covers the general and every allowlisted personal instance, never an unsafe name', async () => {
+  const general = { SILMER_EVOLUTION_INSTANCE: 'synthetic-general' };
+  assert.deepEqual(retention.retentionInstances(general), [
+    'synthetic-general',
+  ]);
+  for (const flag of [undefined, 'false', 'true']) {
+    const env = {
+      ...general,
+      ...(flag === undefined ? {} : { SILMER_WAP_GENERATION_ENABLED: flag }),
+    };
+    // An empty personal list keeps the general-only purge (enabled + empty
+    // is refused below, as the generation runtime refuses it).
+    if (flag !== 'true')
+      assert.deepEqual(
+        retention.retentionInstances({
+          ...env,
+          SILMER_WAP_GENERATION_INSTANCES: '',
+        }),
+        ['synthetic-general'],
+      );
+    // Listed personal instances stay covered even after a rollback to off.
+    assert.deepEqual(
+      retention.retentionInstances({
+        ...env,
+        SILMER_WAP_GENERATION_INSTANCES: 'synthetic-a,synthetic-b',
+      }),
+      ['synthetic-general', 'synthetic-a', 'synthetic-b'],
+    );
+  }
+  for (const change of [
+    { SILMER_EVOLUTION_INSTANCE: undefined },
+    { SILMER_EVOLUTION_INSTANCE: "silmer' OR '1'='1" },
+    { SILMER_WAP_GENERATION_ENABLED: 'TRUE' },
+    { SILMER_WAP_GENERATION_ENABLED: 'yes' },
+    { SILMER_WAP_GENERATION_ENABLED: 'true' },
+    {
+      SILMER_WAP_GENERATION_ENABLED: 'true',
+      SILMER_WAP_GENERATION_INSTANCES: '',
+    },
+    { SILMER_WAP_GENERATION_INSTANCES: 'synthetic-a,synthetic-a' },
+    { SILMER_WAP_GENERATION_INSTANCES: 'synthetic-a,' },
+    { SILMER_WAP_GENERATION_INSTANCES: 'synthetic a' },
+    { SILMER_WAP_GENERATION_INSTANCES: 'a\');DELETE FROM "Instance";--' },
+    { SILMER_WAP_GENERATION_INSTANCES: 'x'.repeat(65) },
+    { SILMER_WAP_GENERATION_INSTANCES: 'synthetic-general' },
+  ]) {
+    const env = { ...general, ...change };
+    assert.throws(
+      () => retention.retentionInstances(env),
+      /EVOLUTION_RETENTION_CONFIGURATION_INVALID/u,
+      JSON.stringify(change),
+    );
+    // Whatever the generation runtime refuses, retention refuses too.
+    if (
+      'SILMER_WAP_GENERATION_INSTANCES' in change &&
+      change.SILMER_WAP_GENERATION_INSTANCES !== 'synthetic-general'
+    )
+      assert.throws(
+        () => fromEnvironment(env),
+        /WAP_GENERATION_CONFIG_INVALID/u,
+      );
+  }
+
+  const now = Date.parse('2026-11-19T12:00:00Z');
+  const cutoff = Math.floor(now / 1000) - retention.RETENTION_SECONDS;
+  const rows = [
+    ['old-general', 'synthetic-general', cutoff - 1],
+    ['old-a', 'synthetic-a', cutoff - 1],
+    ['old-b', 'synthetic-b', cutoff - 60],
+    ['boundary-a', 'synthetic-a', cutoff],
+    ['recent-b', 'synthetic-b', cutoff + 1],
+    ['old-other', 'other', cutoff - 1],
+  ];
+  /** @type {any[]} */ const filters = [];
+  const refuse = () => assert.fail('retention must not run raw SQL');
+  const prisma = {
+    $executeRaw: refuse,
+    $executeRawUnsafe: refuse,
+    $queryRaw: refuse,
+    $queryRawUnsafe: refuse,
+    message: {
+      async deleteMany(/** @type {any} */ { where }) {
+        filters.push(where);
+        const names = where.Instance.is.name.in;
+        const ids = rows
+          .filter(
+            ([, instance, ts]) =>
+              names.includes(instance) && ts < where.messageTimestamp.lt,
+          )
+          .map(([id]) => id);
+        return { count: ids.length, ids };
+      },
+    },
+    instance: { deleteMany: () => assert.fail('Instance is never deleted') },
+    session: { deleteMany: () => assert.fail('Session is never deleted') },
+  };
+  const instances = retention.retentionInstances({
+    ...general,
+    SILMER_WAP_GENERATION_ENABLED: 'true',
+    SILMER_WAP_GENERATION_INSTANCES: 'synthetic-a,synthetic-b',
+  });
+  assert.deepEqual(
+    await retention.purgeExpiredMessages(prisma, { instances, now }),
+    {
+      count: 3,
+      ids: ['old-general', 'old-a', 'old-b'],
+    },
+  );
+  // One parameterised Prisma statement with the same seven-day cutoff.
+  assert.deepEqual(filters, [
+    {
+      Instance: {
+        is: {
+          name: { in: ['synthetic-general', 'synthetic-a', 'synthetic-b'] },
+        },
+      },
+      messageTimestamp: { lt: cutoff },
+    },
+  ]);
+  for (const bad of [
+    [],
+    'synthetic-general',
+    ['synthetic-general', 'synthetic-general'],
+    ['synthetic-general', "x' OR 1=1 --"],
+    ['synthetic-general', 7],
+  ])
+    await assert.rejects(
+      () => retention.purgeExpiredMessages(prisma, { instances: bad, now }),
+      /EVOLUTION_RETENTION_CONFIGURATION_INVALID/u,
+      JSON.stringify(bad),
+    );
+  assert.equal(filters.length, 1);
+  // The hourly job purges the same list.
+  const job = retention.scheduleRetention(prisma, {
+    instances,
+    report() {},
+    schedule: () => ({ unref() {} }),
+  });
+  await job.tick();
+  assert.deepEqual(filters[1].Instance, filters[0].Instance);
+});
+
+test('WAP-E12: boot and hourly retention read the personal allowlist from the environment', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const privacySource = await readFile(
+    new URL('../ops/evolution/privacy.cjs', import.meta.url),
+    'utf8',
+  );
+  const retentionSource = await readFile(
+    new URL('../ops/evolution/retention.cjs', import.meta.url),
+    'utf8',
+  );
+  assert.match(privacySource, /instances: retentionInstances\(env\)/u);
+  assert.match(
+    retentionSource,
+    /instances: retentionInstances\(process\.env\)/u,
+  );
+  assert.doesNotMatch(
+    privacySource + retentionSource,
+    /\$(?:query|execute)Raw|instance: (?:env|process\.env)\.SILMER_EVOLUTION_INSTANCE/u,
+  );
+});

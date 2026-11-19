@@ -67,6 +67,10 @@ Redis fica desativado; o `LocalCache` upstream é selecionado explicitamente.
 Não há backend de filas, Chatwoot, IA ou agente paralelo na Evolution.
 `N8N_ENABLED=false` desliga o chatbot interno da Evolution, sem impedir o
 webhook para o workflow n8n existente.
+As 14 flags de integração de saída da 2.3.7 (RabbitMQ, SQS, Kafka, NATS,
+Pusher, S3, Chatwoot, Typebot, OpenAI, Dify, n8n, EvoAI, Flowise e provider
+de sessão) são obrigatórias com o literal `false` e `SENTRY_DSN` fica vazio;
+ausência faz o boot falhar (WAP-E12).
 `TZ=UTC` fixa o timestamp sem offset emitido pelo upstream no mesmo referencial
 UTC usado pelo adapter; não reutilizar o default São Paulo da imagem base.
 `CORS_ORIGIN=*` com `CORS_CREDENTIALS=false` é necessário no upstream fixado
@@ -109,8 +113,9 @@ histórico nem mantém cadastros comerciais na Evolution. Contatos, chats,
 labels, histórico e atualizações de mensagem em banco ficam desativados.
 
 `retention.cjs` usa o Prisma Client gerado da própria imagem para remover
-somente `Message` da instância configurada com `messageTimestamp` anterior a
-sete dias. `Media` e `MessageUpdate` seguem os `onDelete: Cascade` do schema
+somente `Message` da instância geral (`SILMER_EVOLUTION_INSTANCE`) e das
+instâncias pessoais listadas em `SILMER_WAP_GENERATION_INSTANCES` (WAP-E12,
+mesmo com a geração desligada) com `messageTimestamp` anterior a sete dias. `Media` e `MessageUpdate` seguem os `onDelete: Cascade` do schema
 oficial. Instância, sessão, autenticação e dados do CRM não são alvos.
 
 Há expurgo inicial obrigatório após migrations e antes da API, depois uma

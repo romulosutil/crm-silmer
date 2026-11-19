@@ -672,7 +672,10 @@ test(
           AUTHENTICATION_API_KEY: secret,
         },
         generationRuntime: socketRuntime,
-        fetchImpl: async (/** @type {any} */ input) => {
+        fetchImpl: async (
+          /** @type {any} */ input,
+          /** @type {any} */ init,
+        ) => {
           const path = new URL(input).pathname;
           providerCalls.push(path);
           const instance = instances.find((i) => path.includes(i));
@@ -693,6 +696,23 @@ test(
               { status: 201 },
             );
           }
+          // WAP-E12: settings are reapplied and verified on every connect.
+          if (path.startsWith('/settings/set/'))
+            return globalThis.Response.json(
+              { settings: { settings: JSON.parse(init.body) } },
+              { status: 201 },
+            );
+          if (path.startsWith('/settings/find/'))
+            return globalThis.Response.json({
+              rejectCall: false,
+              msgCall: '',
+              groupsIgnore: true,
+              alwaysOnline: false,
+              readMessages: false,
+              readStatus: false,
+              syncFullHistory: false,
+              wavoipToken: '',
+            });
           if (path.startsWith('/webhook/find/'))
             return globalThis.Response.json({
               enabled: true,

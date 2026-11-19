@@ -104,6 +104,10 @@ e corpo diferente conflita.
    sweep recuperam por `reconcile`, que só lê estado/identidade/webhook/ajustes. Não
    reiniciar/apagar instância, repetir create/logout/connect ou consumir revisão
    inbound. Reconciliação antiga não supera observação mais recente.
+   Depois de um reinício do Evolution, `connectionState` de instância sem socket
+   em memória vem sem `state`. Se ela não tem titular (`ownerJid`) e não está
+   `open` em `fetchInstances`, o `reconcile` devolve `close`: a linha fica
+   `disconnected` e o vendedor reconecta. Com titular, ou `open`, segue incerta.
 6. Desconectar/inativar revoga geração/desafios e impede novo despacho. Efeito
    iniciado conserva seu recibo antigo; não reabre acesso. Logout que depende
    de efeito incerto aguarda reconciliação, com revogação local imediata.

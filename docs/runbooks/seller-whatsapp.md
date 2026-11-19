@@ -236,7 +236,9 @@ salvamento pelo editor passa pelo guard de escrita.
 
 - O vínculo de geração fica em memória no Evolution. Qualquer reinício ou
   redeploy do Evolution exige novo pareamento. Prepare todos os vendedores
-  antes de um único reinício.
+  antes de um único reinício. Linha sem titular, cujo socket não voltou, é
+  lida como `close` no `reconcile` e vai para `disconnected`; ela não fica
+  presa em `unknown`.
 - Instância criada antes de `a3ee53f6` tem o webhook antigo e fica `blocked`
   na reconciliação. Ela precisa reconectar.
 - Mensagens enviadas pelo CRM não geram eco `messages.upsert`

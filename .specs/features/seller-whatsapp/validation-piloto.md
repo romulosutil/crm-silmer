@@ -34,21 +34,58 @@ autoriza o piloto pessoal:
 Por isso, nada foi publicado, pareado, enviado ou cobrado. Nenhuma flag foi
 ligada em ambiente real.
 
+## Publicação (18/11/2026)
+
+A PR 398 foi mesclada por rebase na master (`1489c2fe`, conferido no GitHub)
+e o branch `codex/wap-e05` foi apagado. A sessão "Seller WhatsApp prompts
+conclusão" fez a publicação a pedido do proprietário e relatou:
+
+- antes do merge, as expand `0080`, `0082` e `0083` foram aplicadas em produção
+  pelo runner, com os arquivos do head `e5402ac3` (checksums conferidos);
+- silmer-api, silmer-worker e silmer-edge-web foram implantados no SHA do merge;
+  `/api/health/live` e `/ready` responderam 200; worker com heartbeat e filas
+  com idade 0;
+- a contract rodou pelo container novo e aplicou `0081`, mais `0012_remove_mfa`
+  e `0018_remove_invitations`, pendentes desde setembro (tabelas sem uso). O
+  backup anterior com essas tabelas é `pre-inbox-expand-0077-0079-2026-11-17`;
+  o posterior, `post-wap-0080-0083-contract-0081-2026-11-18`;
+- no smoke de leitura, Inbox, Pedidos, resumo e Contatos responderam 200, e
+  `/me/clients` respondeu `503 SELLER_CLIENTS_DISABLED`: todas as flags
+  pessoais seguem desligadas;
+- **bloqueio:** o n8n de produção está em `n8nio/n8n:2.43.7`, mas
+  `ops/n8n/wap-ingress-Dockerfile` e `wap-ingress-patch.mjs` estão travados por
+  hash para a 2.38.7. Construir a imagem faria downgrade do n8n compartilhado, e
+  o patch precisa ser portado para a 2.43.7 antes do piloto. A imagem do
+  Evolution não foi trocada: a de produção corresponde ao `Dockerfile.inline`
+  de `732d0fe2` (EVOL-01), e o alvo é o de `ddc7a9a0`.
+
+Decisões do PO no mesmo dia:
+
+- o piloto não precisa do Pedido passivo (cliente que procura primeiro); basta
+  o cliente ser criado ou vinculado e ficar ligado à conversa, ao vendedor e
+  ao Pedido;
+- cada vendedor vê só as próprias conversas e as sem dono, e conversa da linha
+  pessoal sempre tem dono. Pedidos de cliente da linha pessoal de outro vendedor
+  não aparecem nas leituras de Pedido (F12). Implementado em `feb69b24`, depois
+  do merge: lista, detalhe, busca, arquivos, cobrança, PDF, Olist, frete,
+  Painel e comandos por id respondem conforme o leitor. O vendedor do pedido e
+  o `COMMERCIAL_ADMIN` continuam vendo, e Pedidos da linha geral não mudam.
+
 ## Gates do piloto
 
 O go/no-go está no [roteiro](../../../docs/runbooks/seller-whatsapp.md#gono-go-antes-do-primeiro-efeito-real).
 
-| Gate                                                                  | Estado   | Bloqueio / dono                                                  |
-| --------------------------------------------------------------------- | -------- | ---------------------------------------------------------------- |
-| CI verde do HEAD da PR e merge linear                                 | pendente | GitHub Actions da PR 398; merge é decisão única do proprietário  |
-| SHA/digest, `/api/health/ready`, migrações `0077`–`0083`              | pendente | DevOps, depois do merge; `0081` contract só após leitores        |
-| Imagens Evolution/n8n com patches WAP por digest                      | pendente | DevOps; hoje só existem builds locais removidos (E01)            |
-| Código no mesmo celular (WAP-E01/T01-01)                              | pendente | aberto desde E01; sem ele não há autonomia mobile                |
-| Decisões F3 (trava pós-restore) e F4 (limite por usuário)             | pendente | Tech Lead/PO, [validation-etapa1](validation-etapa1.md#findings) |
-| Restore remoto, RPO/RTO e banco do n8n                                | pendente | DevOps, [recovery](../../../ops/recovery/RUNBOOK.md)             |
-| SHA de rollback, varredura de base dos logs, allowlist só no ambiente | pendente | DevOps/Privacidade, itens 7–9 do go/no-go                        |
-| Números dedicados, cliente sintético e janela                         | pendente | Operação                                                         |
-| Autorizações do PO, da Operação, da Privacidade e Financeira          | pendente | PO, Operação, Privacidade e Financeiro; cada uma por escrito     |
+| Gate                                                                  | Estado    | Bloqueio / dono                                                              |
+| --------------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------- |
+| CI verde do HEAD da PR e merge linear                                 | feito     | PR 398 mesclada por rebase, master `1489c2fe`                                |
+| SHA/digest, `/api/health/ready`, migrações `0077`–`0083`              | feito     | expand antes do merge, contract `0081` depois; health 200 (seção Publicação) |
+| Imagens Evolution/n8n com patches WAP por digest                      | bloqueado | n8n de produção em 2.43.7; patch WAP travado na 2.38.7 precisa ser portado   |
+| Código no mesmo celular (WAP-E01/T01-01)                              | pendente  | aberto desde E01; sem ele não há autonomia mobile                            |
+| Decisões F3 (trava pós-restore) e F4 (limite por usuário)             | pendente  | Tech Lead/PO, [validation-etapa1](validation-etapa1.md#findings)             |
+| Restore remoto, RPO/RTO e banco do n8n                                | pendente  | DevOps, [recovery](../../../ops/recovery/RUNBOOK.md)                         |
+| SHA de rollback, varredura de base dos logs, allowlist só no ambiente | pendente  | DevOps/Privacidade, itens 7–9 do go/no-go                                    |
+| Números dedicados, cliente sintético e janela                         | pendente  | Operação                                                                     |
+| Autorizações do PO, da Operação, da Privacidade e Financeira          | pendente  | PO, Operação, Privacidade e Financeiro; cada uma por escrito                 |
 
 ## Ensaio local integrado
 
@@ -170,7 +207,7 @@ Abertos, sem bloquear o piloto:
 - P3: Assuntos no diálogo de Pedido sem data ou trecho.
 - P3: busca de Meus clientes ignora maiúsculas, mas não acentos.
 
-**Decisão de política pendente (PO, relacionada a F12):** a lista de Pedidos,
+**Decisão de política (PO, F12), resolvida em 18/11 (seção Publicação):** a lista de Pedidos,
 o detalhe e a busca por nome mostram a outro vendedor os Pedidos de cliente da
 linha pessoal de A, com nome e ficha completa. É o comportamento de sempre do
 quadro de Pedidos (`order.read` vê todos), agora aplicado a um cliente privado

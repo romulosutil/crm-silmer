@@ -157,6 +157,29 @@ mais) na API e no worker, sem tocar no panel-command da linha geral. O roteiro
 agora manda conferir o container novo depois de cada reinício. Próximo passo:
 implantar essa mudança e repetir o passo 2 com a credencial nova.
 
+**Passo 2, segunda tentativa (19/11).** Com a PR 413 implantada, a credencial
+WAP foi gerada no navegador (segredo aleatório de 64 caracteres, sem passar
+pelo chat) e gravada no env da API e do worker; o controle foi ligado só na API.
+O container novo subiu com a flag, `/api/health/ready` 200, e um usuário fora
+da allowlist recebeu `403` ao tentar conectar. O worker segue sem
+`SELLER_WHATSAPP_CONTROL_ENABLED`.
+
+**Passos 3 e 4 (19/11).** O vendedor clicou "Conectar" uma vez; a tela mostra
+"Preparando". O SQL somente leitura deu linha `preparing`, geração 1, operação
+`connect` `pending` e job `whatsapp.control.deliver` `pending`; o ID da
+linha e o nome da instância foram conferidos no banco, sem guardá-los em
+documento.
+
+**Passo 5 (19/11).** O export do principal vivo (144 nós, versão em edição igual
+à publicada) mostrou que o normalizador do painel virou um nó Set, e o build
+quebrava ao tentar o patch de envio mesmo sem linhas de envio. Corrigido: sem
+`personalSendLineIds`, o build não produz `main-personal-send`, e um
+normalizador que não seja nó Code é recusado com
+`EVOLUTION_SEND_NODE_UNSUPPORTED`. Contra o export real, o build gerou o
+inbound com 33 nós mantidos e 11 acrescentados (119 inalcançáveis e 3 gatilhos
+removidos). Falta a credencial Basic do gatilho de controle no n8n, criada pelo
+operador com o par `N8N_WAP_CLIENT_*`, para gerar a versão final.
+
 Decisões do PO no mesmo dia:
 
 - o piloto não precisa do Pedido passivo (cliente que procura primeiro); basta

@@ -137,7 +137,9 @@ diff, ticket ou relatório. A evidência segue a regra
 | 10    | Ligar o restante por fase, um passo por vez: `SELLER_CLIENTS_*`, depois `SELLER_WHATSAPP_INBOUND_*` e, por último, `ORDER_SUBJECT_*`. `SELLER_WHATSAPP_SEND_*` e `SELLER_WHATSAPP_FIRST_SEND_ENABLED` ficam desligadas no piloto inicial                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Em cada fase, outro vendedor segue recusado                                                                                                                                                                                                                                        | Outro vendedor aceito em qualquer fase                                                                   |
 
 O envio pessoal exige o `main-personal-send`, com smoke próprio da linha
-geral, e fica para depois. O primeiro envio exige o gate do JID
+geral, e fica para depois. Em 19/11 o principal vivo já não tinha o
+"Normalizar comando do painel (MVP)" como nó Code (virou um nó Set), então o
+patch de envio precisa ser portado antes de ligar o envio pessoal. O primeiro envio exige o gate do JID
 ([saídas](seller-whatsapp-outbound.md)).
 
 SQL dos passos 4 e 8, somente leitura. Registre só prefixos de 8 caracteres:
@@ -193,8 +195,8 @@ cópia privada:
   `<n8nBaseUrl>/webhook/silmer/seller-whatsapp/events`.
 
 O build grava, sem sobrescrever, `control.json`, `challenge.json`,
-`inbound.json`, `main-personal-send.json` e `summary.json`. Todos saem
-inativos. O `summary.json` traz as variáveis propostas para API, worker, n8n e
+`inbound.json`, `main-personal-send.json` (só quando `personalSendLineIds`
+não está vazio) e `summary.json`. Todos saem inativos. O `summary.json` traz as variáveis propostas para API, worker, n8n e
 Evolution, validadas pelos loaders reais, e a lista dos segredos que não
 mudam. A allowlist de vendedores sai como placeholder. Recusas, só com código
 fixo:
@@ -216,7 +218,7 @@ fixo:
 | `WAP_BUILD_EVOLUTION_ORIGIN_MISMATCH` | nó do Evolution cujo prefixo literal sai de `evolutionBaseUrl`                                                                                                                                                  |
 | `WAP_BUILD_INBOUND_UNSAFE`            | inbound com envio, gatilho extra, `$env`, nó de IA ou referência solta; URL com credencial cujo prefixo não se prova (fallback, ternário, template); leitura do Evolution que não seja a da instância de origem |
 | `WAP_BUILD_ENVIRONMENT_INVALID`       | variáveis propostas recusadas por um loader ou pela sonda do ingresso                                                                                                                                           |
-| `EVOLUTION_SEND_*`                    | âncoras do envio pessoal ausentes ou repetidas no principal                                                                                                                                                     |
+| `EVOLUTION_SEND_*`                    | âncoras do envio pessoal ausentes ou repetidas no principal, ou normalizador do painel que não é nó Code (`EVOLUTION_SEND_NODE_UNSUPPORTED`)                                                                    |
 | `WAP_BUILD_FAILED`                    | qualquer outra falha; o build não ecoa entrada, caminho nem causa                                                                                                                                               |
 
 No passo 6, as variáveis do n8n são `SILMER_WAP_INGRESS_ENABLED=true`,

@@ -34,6 +34,10 @@ export function configurePersonalSend(workflow, lineIds) {
     return node;
   };
   const normalize = find('Normalizar comando do painel (MVP)');
+  // The patch edits Code-node source; a main where this node was rebuilt as
+  // another node type cannot be patched safely.
+  if (typeof normalize.parameters?.jsCode !== 'string')
+    throw new Error('EVOLUTION_SEND_NODE_UNSUPPORTED');
   if (
     normalize.parameters.jsCode.includes('payload.whatsapp_target') ||
     workflow.nodes.some((/** @type {any} */ node) =>

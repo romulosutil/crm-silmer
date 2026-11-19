@@ -23,6 +23,7 @@ import {
   probeIngressEnvironment,
   reachableNodes,
 } from '../ops/n8n/build-wap-production-workflows.mjs';
+import { configurePersonalSend } from '../ops/n8n/workflows/seller-whatsapp-send.mjs';
 
 const { guardWorkflowMutation } = createRequire(import.meta.url)(
   '../ops/n8n/wap-ingress-runtime.cjs',
@@ -294,11 +295,10 @@ test('WAP-E12: the main keeps every untouched node and gains exactly the dispatc
   assert.equal(send.id, input.id);
   assert.equal(send.versionId, undefined);
   assert.deepEqual(send.settings, input.settings);
-  assert.deepEqual(built.summary.main.added, expectedWapNodes);
-  assert.deepEqual(built.summary.main.removed, []);
-  const modified = new Set(
-    built.summary.main.modified.map((/** @type {any} */ m) => m.name),
-  );
+  const diff = /** @type {any} */ (built.summary.main);
+  assert.deepEqual(diff.added, expectedWapNodes);
+  assert.deepEqual(diff.removed, []);
+  const modified = new Set(diff.modified.map((/** @type {any} */ m) => m.name));
   assert.ok(modified.has('Normalizar comando do painel (MVP)'));
   const after = new Map(send.nodes.map((/** @type {any} */ n) => [n.name, n]));
   for (const node of input.nodes) {
@@ -336,22 +336,40 @@ test('WAP-E12: the main keeps every untouched node and gains exactly the dispatc
     () => buildWapProductionWorkflows(send, config()),
     /WAP_BUILD_MAIN_ALREADY_WAP/u,
   );
+  // No send lines: no main draft at all, and the summary says why.
   const quiet = buildWapProductionWorkflows(main(), {
     ...config(),
     personalSendLineIds: [],
   });
-  assert.deepEqual(quiet.summary.main.added, []);
+  assert.equal(quiet['main-personal-send'], undefined);
+  assert.deepEqual(quiet.summary.main, {
+    skipped: 'personalSendLineIds is empty',
+  });
+  assert.equal('main-personal-send' in quiet.summary.outputs, false);
   assert.equal(
     quiet.summary.environment.api.SELLER_WHATSAPP_SEND_ENABLED,
     'false',
   );
   assert.throws(
-    () =>
-      buildWapProductionWorkflows(quiet['main-personal-send'], {
-        ...config(),
-        personalSendLineIds: [],
-      }),
+    () => configurePersonalSend(structuredClone(send), []),
     /EVOLUTION_SEND_ALREADY_CONFIGURED/u,
+  );
+  // A live main whose panel normalizer was rebuilt as a Set node still builds
+  // the pilot (no send lines) and refuses the send patch with a clear code.
+  const rebuilt = main();
+  const setNode = rebuilt.nodes.find(
+    (/** @type {any} */ n) => n.name === 'Normalizar comando do painel (MVP)',
+  );
+  setNode.type = 'n8n-nodes-base.set';
+  setNode.parameters = { mode: 'raw', jsonOutput: '={{ {} }}', options: {} };
+  const pilot = buildWapProductionWorkflows(rebuilt, {
+    ...config(),
+    personalSendLineIds: [],
+  });
+  assert.equal(pilot.inbound.name, 'Silmer seller WhatsApp inbound');
+  assert.throws(
+    () => buildWapProductionWorkflows(rebuilt, config()),
+    /EVOLUTION_SEND_NODE_UNSUPPORTED/u,
   );
 });
 

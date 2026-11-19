@@ -119,10 +119,10 @@ function protectWebhookRequest(config, profile) {
     destination !==
       (personal ? profile.personalWebhookUrl : profile.webhookUrl) ||
     !WEBHOOK_EVENTS.has(data.event) ||
+    // WAP-E12: personal lifecycle, inbound, echo and receipt events all need
+    // the socket-bound source and generation proof (wap-generation-runtime).
     (personal &&
-      (data.event !== 'connection.update' ||
-        !data.source ||
-        !config.headers?.['X-Silmer-Wap-Generation-Token']))
+      (!data.source || !config.headers?.['X-Silmer-Wap-Generation-Token']))
   ) {
     fail('EVOLUTION_WEBHOOK_DESTINATION_REJECTED');
   }

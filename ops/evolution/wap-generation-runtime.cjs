@@ -8,9 +8,54 @@ const { createHash } = require('node:crypto');
 const GENERATION_HEADER = 'X-Silmer-Wap-Generation-Token';
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const SOURCE_KEYS = ['accountId', 'bindingId', 'generation', 'lineId'];
+const MESSAGE_EVENTS = new Set(['messages.upsert', 'messages.update']);
+const EVENTS = new Set(['connection.update', ...MESSAGE_EVENTS]);
+// Mirrors validateEvolutionEvent: SERVER_ACK is represented by the HTTP result.
+const RECEIPTS = new Set(['ERROR', 'DELIVERY_ACK', 'READ', 'PLAYED']);
+const UNUSED_CHAT = /@(?:g\.us|broadcast|newsletter)$/;
 
 function reject(code) {
   throw new Error(code);
+}
+
+function plainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+// WAP-E12: same top-level allowlist as the n8n ingress eventBody. The upstream
+// apikey and any `extra` keys never leave the process. Chats the CRM never
+// uses (groups, broadcast/status, newsletters) and receipts it ignores are
+// refused here so their content does not transit n8n.
+function messageEnvelope(context, original) {
+  const data = original.data;
+  const key = original.event === 'messages.update' ? data : data?.key;
+  if (
+    !plainObject(data) ||
+    !plainObject(key) ||
+    typeof original.date_time !== 'string' ||
+    typeof original.sender !== 'string' ||
+    !['destination', 'server_url'].every(
+      (field) =>
+        original[field] === undefined ||
+        (typeof original[field] === 'string' && original[field].length <= 1024),
+    ) ||
+    key.participant ||
+    key.participantAlt ||
+    UNUSED_CHAT.test(String(key.remoteJid)) ||
+    (original.event === 'messages.update' &&
+      (key.fromMe !== true || !RECEIPTS.has(key.status)))
+  )
+    reject('WAP_GENERATION_ENVELOPE_DENIED');
+  return {
+    event: original.event,
+    instance: context.instance,
+    source: context.source,
+    data,
+    destination: original.destination,
+    date_time: original.date_time,
+    sender: original.sender,
+    server_url: original.server_url,
+  };
 }
 
 function immutableSource(value) {
@@ -193,8 +238,8 @@ function createGenerationRuntime(options = {}) {
       requireContext(context);
       if (context.instance !== instance)
         reject('WAP_GENERATION_INSTANCE_MISMATCH');
-      // Personal message schemas/activation belong to E04. Default deny here.
-      if (event !== 'connection.update') reject('WAP_GENERATION_EVENT_DENIED');
+      // WAP-E12: lifecycle plus inbound/echo/receipt events. Default deny the rest.
+      if (!EVENTS.has(event)) reject('WAP_GENERATION_EVENT_DENIED');
       return context;
     },
     headers(context, original) {
@@ -210,6 +255,11 @@ function createGenerationRuntime(options = {}) {
     envelope(context, original) {
       if (context === null) return original;
       requireContext(context);
+      if (
+        original?.instance === context.instance &&
+        MESSAGE_EVENTS.has(original?.event)
+      )
+        return messageEnvelope(context, original);
       if (
         original?.instance !== context.instance ||
         original?.event !== 'connection.update' ||

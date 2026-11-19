@@ -25,6 +25,12 @@ function equal(left, right) {
   const b = Buffer.from(typeof right === 'string' ? right : '');
   return a.length > 0 && a.length === b.length && timingSafeEqual(a, b);
 }
+// WAP-E12: lifecycle plus inbound/echo (upsert) and receipts (update).
+const WEBHOOK_EVENTS = Object.freeze([
+  'CONNECTION_UPDATE',
+  'MESSAGES_UPSERT',
+  'MESSAGES_UPDATE',
+]);
 function verifiedWebhook(webhook, expectedUrl) {
   return (
     webhook?.enabled === true &&
@@ -32,8 +38,9 @@ function verifiedWebhook(webhook, expectedUrl) {
     webhook.webhookByEvents === false &&
     webhook.webhookBase64 === false &&
     Array.isArray(webhook.events) &&
-    webhook.events.length === 1 &&
-    webhook.events[0] === 'CONNECTION_UPDATE'
+    webhook.events.length === WEBHOOK_EVENTS.length &&
+    new Set(webhook.events).size === WEBHOOK_EVENTS.length &&
+    WEBHOOK_EVENTS.every((event) => webhook.events.includes(event))
   );
 }
 function configuration(env) {
@@ -238,6 +245,14 @@ function createControlAdapter({
               instanceName: body.instance,
               integration: 'WHATSAPP-BAILEYS',
               qrcode: false,
+              // Evolution 2.3.7 InstanceDto settings: no group traffic, no
+              // read receipts sent on the seller's behalf, no history import.
+              groupsIgnore: true,
+              readMessages: false,
+              readStatus: false,
+              syncFullHistory: false,
+              alwaysOnline: false,
+              rejectCall: false,
             });
             if (created?.instance?.instanceName !== body.instance)
               throw new Error('WAP_CONTROL_UNKNOWN');
@@ -248,7 +263,7 @@ function createControlAdapter({
               url: config.webhook,
               byEvents: false,
               base64: false,
-              events: ['CONNECTION_UPDATE'],
+              events: [...WEBHOOK_EVENTS],
             },
           });
           const observedWebhook = await http(`/webhook/find/${name}`);

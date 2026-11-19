@@ -272,7 +272,7 @@ test('WAP-E02: gateway adapter only prepares a single opaque account and discard
           url: webhookUrl,
           webhookByEvents: false,
           webhookBase64: false,
-          events: ['CONNECTION_UPDATE'],
+          events: ['CONNECTION_UPDATE', 'MESSAGES_UPSERT', 'MESSAGES_UPDATE'],
         });
       if (path.includes('/instance/connectionState/'))
         return response({ instance: { state: 'close' } });
@@ -297,6 +297,27 @@ test('WAP-E02: gateway adapter only prepares a single opaque account and discard
     ],
   );
   assert.equal(JSON.parse(calls[1].init.body).qrcode, false);
+  // WAP-E12: Evolution 2.3.7 instance settings applied at create time.
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    instanceName: 'synthetic-one',
+    integration: 'WHATSAPP-BAILEYS',
+    qrcode: false,
+    groupsIgnore: true,
+    readMessages: false,
+    readStatus: false,
+    syncFullHistory: false,
+    alwaysOnline: false,
+    rejectCall: false,
+  });
+  assert.deepEqual(JSON.parse(calls[2].init.body), {
+    webhook: {
+      enabled: true,
+      url: webhookUrl,
+      byEvents: false,
+      base64: false,
+      events: ['CONNECTION_UPDATE', 'MESSAGES_UPSERT', 'MESSAGES_UPDATE'],
+    },
+  });
   assert.equal(
     calls.some((call) => call.path.startsWith('/instance/connect/')),
     false,
@@ -380,7 +401,7 @@ test('WAP-E02: reconciliation reads status, actual owner identity and exact webh
           url: webhookUrl,
           webhookByEvents: false,
           webhookBase64: false,
-          events: ['CONNECTION_UPDATE'],
+          events: ['CONNECTION_UPDATE', 'MESSAGES_UPSERT', 'MESSAGES_UPDATE'],
         });
       return response([
         {
@@ -425,7 +446,7 @@ test('WAP-E02: missing identity or webhook proof never claims a confirmed connec
         return response({
           enabled: true,
           url: 'https://other.invalid',
-          events: ['CONNECTION_UPDATE'],
+          events: ['CONNECTION_UPDATE', 'MESSAGES_UPSERT', 'MESSAGES_UPDATE'],
         });
       return response([{ name: 'synthetic-one', number: '5511000000001' }]);
     },
@@ -494,7 +515,7 @@ test('WAP-E02: an old open socket cannot prove a pending new generation, includi
         url: webhookUrl,
         webhookByEvents: false,
         webhookBase64: false,
-        events: ['CONNECTION_UPDATE'],
+        events: ['CONNECTION_UPDATE', 'MESSAGES_UPSERT', 'MESSAGES_UPDATE'],
       });
     },
   });
@@ -743,5 +764,56 @@ test('WAP-E02: generated workflows are inactive/default-off, shared, authenticat
       assert.equal(node.parameters.options.timeout, 15000);
     }
     assert.equal(JSON.stringify(workflow).includes(token), false);
+  }
+});
+
+test('WAP-E12: webhook proof requires exactly connection plus message events', async () => {
+  const runtime = createGenerationRuntime({
+    enabled: true,
+    instances: ['synthetic-one'],
+  });
+  for (const [events, expected] of [
+    [['CONNECTION_UPDATE', 'MESSAGES_UPSERT', 'MESSAGES_UPDATE'], true],
+    [['MESSAGES_UPDATE', 'CONNECTION_UPDATE', 'MESSAGES_UPSERT'], true],
+    [['CONNECTION_UPDATE'], false],
+    [['CONNECTION_UPDATE', 'MESSAGES_UPSERT'], false],
+    [['CONNECTION_UPDATE', 'MESSAGES_UPSERT', 'MESSAGES_UPSERT'], false],
+    [
+      [
+        'CONNECTION_UPDATE',
+        'MESSAGES_UPSERT',
+        'MESSAGES_UPDATE',
+        'QRCODE_UPDATED',
+      ],
+      false,
+    ],
+    [['CONNECTION_UPDATE', 'MESSAGES_UPSERT', 'SEND_MESSAGE'], false],
+    ['CONNECTION_UPDATE,MESSAGES_UPSERT,MESSAGES_UPDATE', false],
+  ]) {
+    const adapter = createControlAdapter({
+      env,
+      generationRuntime: runtime,
+      fetchImpl: async (/** @type {any} */ url) => {
+        const path = new URL(url).pathname;
+        if (path.includes('fetchInstances'))
+          return response([{ name: 'synthetic-one' }]);
+        if (path.includes('connectionState'))
+          return response({ instance: { state: 'close' } });
+        return response({
+          enabled: true,
+          url: webhookUrl,
+          webhookByEvents: false,
+          webhookBase64: false,
+          events,
+        });
+      },
+    });
+    const result = await adapter.execute({
+      ...privateInput,
+      action: 'reconcile',
+      source: null,
+      generationToken: null,
+    });
+    assert.equal(result.webhookVerified, expected, JSON.stringify(events));
   }
 });

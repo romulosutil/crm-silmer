@@ -404,6 +404,84 @@ test('WAP-E02: challenge installs immutable socket source before one provider co
   assert.deepEqual(paths, ['/instance/connect/synthetic-one']);
 });
 
+test('WAP-E12: challenge waits for the asynchronously rendered QR while the instance is connecting', async () => {
+  const qr = `data:image/png;base64,${Buffer.from('synthetic-QR').toString('base64')}`;
+  /** @param {any} replies */
+  const run = async (replies, mode = 'qr') => {
+    const runtime = createGenerationRuntime({
+      enabled: true,
+      instances: ['synthetic-one'],
+    });
+    /** @type {string[]} */ const paths = [];
+    let t = now.getTime();
+    const adapter = createControlAdapter({
+      env,
+      clock: () => new Date(t),
+      sleep: async (/** @type {number} */ ms) => {
+        t += ms;
+      },
+      generationRuntime: runtime,
+      fetchImpl: async (/** @type {any} */ url) => {
+        const path = new URL(url).pathname;
+        paths.push(path);
+        if (path.startsWith('/instance/connectionState/'))
+          return response({
+            instance: { state: replies.state ?? 'connecting' },
+          });
+        return response(replies.connect.shift() ?? { count: 0 });
+      },
+    });
+    const body = {
+      kind: 'challenge',
+      instance: privateInput.instance,
+      expectedNumber: privateInput.expectedNumber,
+      webhookUrl,
+      source,
+      generationToken: token,
+      challenge: {
+        challengeId,
+        operationId,
+        mode,
+        expiresAt: new Date(t + 60000).toISOString(),
+      },
+    };
+    return { paths, result: adapter.execute(body) };
+  };
+  // Evolution 2.3.7: the first connect returns { count: 0 } after its 2 s.
+  const late = await run({
+    connect: [{ count: 0 }, { count: 0 }, { base64: qr, count: 1 }],
+  });
+  assert.equal((await late.result).value, qr);
+  assert.deepEqual(late.paths, [
+    '/instance/connect/synthetic-one',
+    '/instance/connectionState/synthetic-one',
+    '/instance/connect/synthetic-one',
+    '/instance/connectionState/synthetic-one',
+    '/instance/connect/synthetic-one',
+  ]);
+  const code = await run(
+    {
+      connect: [{ count: 1, pairingCode: null }, { pairingCode: 'ABCD-1234' }],
+    },
+    'code',
+  );
+  assert.equal((await code.result).value, 'ABCD-1234');
+  // Never rendered within the bound: uncertain, and polling stops.
+  const never = await run({ connect: [] });
+  await assert.rejects(never.result, /WAP_CONTROL_UNKNOWN/u);
+  assert.equal(
+    never.paths.filter((p) => p.startsWith('/instance/connect/')).length,
+    17,
+  );
+  // A socket that left 'connecting' is not reopened by the poll.
+  const closed = await run({ connect: [{ count: 0 }], state: 'close' });
+  await assert.rejects(closed.result, /WAP_CONTROL_UNKNOWN/u);
+  assert.deepEqual(closed.paths, [
+    '/instance/connect/synthetic-one',
+    '/instance/connectionState/synthetic-one',
+  ]);
+});
+
 test('WAP-E02: reconciliation reads status, actual owner identity and exact webhook without connect/logout/delete', async () => {
   /** @type {any[]} */ const calls = [];
   const adapter = createControlAdapter({

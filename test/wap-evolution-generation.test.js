@@ -149,6 +149,57 @@ test('WAP-E01: socket generation is default off, allowlisted and missing binding
   );
 });
 
+test('WAP-E12: the linked socket completes the native 515 handoff once under the same binding', async () => {
+  const runtime = createGenerationRuntime({
+    enabled: true,
+    instances: ['synthetic-a'],
+  });
+  const before = {};
+  const successor = {};
+  runtime.bindNextSocket('synthetic-a', a1, token1);
+  const binding = runtime.captureSocket('synthetic-a', before);
+  let calls = 0;
+  const replace = async (/** @type {boolean} */ saveBeforeReconnect) => {
+    calls++;
+    assert.equal(saveBeforeReconnect, true);
+    await Promise.resolve();
+    assert.equal(runtime.pairingHandoffPending('synthetic-a'), true);
+    assert.equal(
+      runtime.bindingMatchesSocket('synthetic-a', a1, token1),
+      false,
+    );
+    assert.throws(
+      () => runtime.ensureBinding('synthetic-a', a2, token2),
+      /WAP_GENERATION_BINDING_PENDING/u,
+    );
+    assert.equal(runtime.captureSocket('synthetic-a', successor), binding);
+    assert.throws(
+      () => runtime.captureSocket('synthetic-a', {}),
+      /WAP_GENERATION_BINDING_REQUIRED/u,
+    );
+  };
+  await runtime.continueAfterPairing('synthetic-a', before, 515, replace);
+  await runtime.wrap(binding, () =>
+    runtime.continueAfterPairing('synthetic-a', before, 401, replace),
+  )();
+  assert.equal(calls, 0);
+  await runtime.wrap(binding, () =>
+    runtime.continueAfterPairing('synthetic-a', before, 515, replace),
+  )();
+  assert.equal(calls, 1);
+  assert.equal(runtime.pairingHandoffPending('synthetic-a'), false);
+  assert.equal(runtime.bindingMatchesSocket('synthetic-a', a1, token1), true);
+  await runtime.wrap(binding, () =>
+    runtime.continueAfterPairing('synthetic-a', successor, 515, replace),
+  )();
+  runtime.bindNextSocket('synthetic-a', a2, token2);
+  await runtime.wrap(binding, () =>
+    runtime.continueAfterPairing('synthetic-a', successor, 515, replace),
+  )();
+  assert.equal(calls, 1);
+  assert.equal(runtime.captureSocket('synthetic-a', {}).source.generation, 2);
+});
+
 test('WAP-E01: delayed native queue callbacks retain their socket generation after reconnect and every await', async () => {
   const runtime = createGenerationRuntime({
     enabled: true,

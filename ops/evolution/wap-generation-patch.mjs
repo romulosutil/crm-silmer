@@ -34,6 +34,10 @@ export function patchEvolutionGeneration(bundle) {
   const replacements = [
     [PRISMA_CREDENTIAL_WRITER, patchedPrismaCredentialWriter()],
     [
+      'await this.connectToWhatsapp(this.phoneNumber)',
+      `await ${runtime}.continueAfterPairing(this.instanceName,this.client,i,async save=>{if(save)await this.instance.authState.saveCreds();return this.connectToWhatsapp(this.phoneNumber)})`,
+    ],
+    [
       's.connectionStatus==="open"||s.connectionStatus==="connecting"?(this.logger.info(`Auto-connecting instance',
       `(s.connectionStatus==="open"||s.connectionStatus==="connecting")&&!${runtime}.deferUnpairedStartup(s.instanceName,s.connectionStatus,s.ownerJid)?(this.logger.info(\`Auto-connecting instance`,
     ],

@@ -246,6 +246,11 @@ function createControlAdapter({
         )
           denied();
       }
+      if (
+        body.action !== 'reconcile' &&
+        generationRuntime?.pairingHandoffPending?.(body.instance)
+      )
+        throw new Error('WAP_CONTROL_UNKNOWN');
       if (inFlight.has(body.instance)) denied();
       inFlight.add(body.instance);
       const name = encodeURIComponent(body.instance);
@@ -378,12 +383,17 @@ function createControlAdapter({
             bindingVerified: false,
           };
         if (own.length !== 1) throw new Error('WAP_CONTROL_UNKNOWN');
+        const handoff = generationRuntime?.pairingHandoffPending?.(body.instance);
         const state = await http(`/instance/connectionState/${name}`);
         const webhook = await http(`/webhook/find/${name}`);
         const settings = await http(`/settings/find/${name}`);
-        const providerState = unpairedWithoutSocket(own[0], state)
+        const observedState = unpairedWithoutSocket(own[0], state)
           ? 'close'
           : state?.instance?.state;
+        const providerState = observedState === 'close' &&
+          (handoff || generationRuntime?.pairingHandoffPending?.(body.instance))
+          ? 'connecting'
+          : observedState;
         if (!['open', 'close', 'connecting'].includes(providerState))
           throw new Error('WAP_CONTROL_UNKNOWN');
         // WAP-E12: the CRM contract has one routing proof; drifted settings

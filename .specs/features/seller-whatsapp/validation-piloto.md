@@ -338,10 +338,16 @@ continua pedindo o número. Contrato e idempotência na nota WAP-E12 do
 [design](design.md); testes de rota, PostgreSQL real e E2E com axe. Evidência
 local, não live.
 
+**Pareamento em mais de uma aba e relógio do aparelho (WAP-03, WAP-T05-06).**
+Em testes de navegador, a primeira aba mantinha o QR anterior após receber os
+metadados de um novo desafio, e um celular com relógio adiantado recusava um
+código válido. A aba agora descarta o desafio substituído e devolve o foco ao
+acionador. Respostas atrasadas não restauram o QR/código obsoleto. O prazo é
+calculado pelo relógio HTTP do servidor, com fallback para o do aparelho. As
+regressões usam desafios sintéticos e integram `seller-whatsapp-interface.spec.js`.
+
 Abertos, sem bloquear o piloto:
 
-- P3: outra aba que pede novo desafio deixa o QR antigo visível na primeira
-  até o TTL (a GET já expõe o id; falta comparar no polling).
 - P3: Admin em Meus clientes faz duas leituras `403`.
 - P3: rótulo do Admin usa só o primeiro nome do titular.
 - P3: Assuntos no diálogo de Pedido sem data ou trecho.

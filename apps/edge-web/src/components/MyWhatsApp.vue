@@ -140,9 +140,15 @@ async function refresh() {
     const data = result.data;
     const next = data?.line;
     const nextOperation = (data?.operation ?? next?.operation)?.id;
-    // A version bump alone (e.g. a read that saw the line still pairing) does
-    // not invalidate the challenge: only a new line/generation/operation, a
-    // state change, hiding the tab or the TTL timer does.
+    // A read started before the challenge POST may return after it.
+    if (
+      previous?.id &&
+      previous.id === next?.id &&
+      next.version < previous.version
+    )
+      return;
+    // The latest challenge ID changes when another tab renews it. A version
+    // bump on its own can be a reconciliation of the same challenge.
     if (
       !next ||
       data?.available !== true ||
@@ -150,7 +156,11 @@ async function refresh() {
       (previous &&
         (previous.generation !== next.generation ||
           previous.id !== next.id ||
-          previousOperation !== nextOperation))
+          previousOperation !== nextOperation)) ||
+      (secret.value &&
+        'challenge' in data &&
+        (data.challenge?.id !== challengeId.value ||
+          data.challenge?.state === 'revoked'))
     )
       clearSecret();
     state.value = data;
@@ -253,10 +263,13 @@ async function challenge(mode) {
     if (currentEpoch !== epoch || commandController !== current) return;
     const value = response.data;
     const expires = Date.parse(value.expiresAt);
+    // Prefer the HTTP clock for both validation and the in-memory TTL.
+    const referenceTime =
+      response.serverTime === null ? Date.now() : response.serverTime + 1000;
     if (
       value.mode !== mode ||
       !Number.isFinite(expires) ||
-      expires <= Date.now() ||
+      expires <= referenceTime ||
       value.generation !== body.generation ||
       value.operationId !== body.operationId ||
       (mode === 'qr' &&
@@ -264,15 +277,26 @@ async function challenge(mode) {
       (mode === 'code' && !/^[A-Za-z0-9-]{8,32}$/u.test(value.value))
     )
       throw new Error('invalid challenge');
+    const latestChallenge = state.value?.challenge;
+    if (
+      reportsChallenge.value &&
+      ((line.value.version > value.version &&
+        latestChallenge?.id !== value.challengeId) ||
+        (latestChallenge?.state === 'revoked' &&
+          latestChallenge.id === value.challengeId))
+    )
+      return;
     challengeId.value = value.challengeId;
     if (state.value?.line)
       state.value = {
         ...state.value,
-        line: Number.isSafeInteger(value.version)
-          ? { ...state.value.line, version: value.version }
-          : state.value.line,
+        line:
+          Number.isSafeInteger(value.version) &&
+          value.version > line.value.version
+            ? { ...state.value.line, version: value.version }
+            : state.value.line,
         // Metadata only; the server confirms it by a read in a few seconds.
-        ...(reportsChallenge.value
+        ...(reportsChallenge.value && latestChallenge?.id !== value.challengeId
           ? {
               challenge: {
                 id: value.challengeId,
@@ -284,10 +308,7 @@ async function challenge(mode) {
       };
     secret.value = { mode, value: value.value };
     scheduleFollowUp();
-    // Bound the in-memory lifetime even if the device clock is behind. A
-    // canonical server Date, when available, also avoids trusting that clock.
-    const referenceTime =
-      response.serverTime === null ? Date.now() : response.serverTime + 1000;
+    // Bound the in-memory lifetime even without a server clock.
     expiryTimer = setTimeout(
       clearSecret,
       Math.min(120_000, Math.max(0, expires - referenceTime)),

@@ -15,7 +15,9 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'npm run build && npm run preview',
+    command: process.env.CI
+      ? 'npm run preview'
+      : 'npm run build && npm run preview',
     env: { PORT: String(port) },
     reuseExistingServer: false,
     timeout: 60_000,

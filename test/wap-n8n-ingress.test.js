@@ -985,3 +985,25 @@ test('WAP-E01: REST workflow writes reject pinData/settings before persistence a
     guardWorkflowMutation(null, { name: 'legacy', nodes: [] }, {}),
   );
 });
+
+test('WAP-E12: the EasyPanel inline n8n Dockerfile matches the pinned recipe and sources', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const { renderWapIngressDockerfile } =
+    await import('../ops/n8n/render-wap-ingress-dockerfile.mjs');
+  const inline = await readFile(
+    new URL('../ops/n8n/wap-ingress-Dockerfile.inline', import.meta.url),
+    'utf8',
+  );
+  const recipe = await readFile(
+    new URL('../ops/n8n/wap-ingress-Dockerfile', import.meta.url),
+    'utf8',
+  );
+  assert.equal(inline, await renderWapIngressDockerfile());
+  const base = recipe.split('\n').find((line) => line.startsWith('FROM '));
+  assert.match(base ?? '', /^FROM n8nio\/n8n:[0-9.]+@sha256:[a-f0-9]{64}$/u);
+  assert.ok(inline.includes(`\n${base}\n`));
+  assert.match(
+    inline,
+    /\nRUN node \/opt\/silmer\/wap-ingress-patch\.mjs \/usr\/local\/lib\/node_modules\/n8n\nUSER node\n$/u,
+  );
+});

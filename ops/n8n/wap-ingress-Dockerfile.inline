@@ -1,0 +1,780 @@
+# syntax=docker/dockerfile:1.7
+# WAP-E01/E12. Inline render of ops/n8n/wap-ingress-Dockerfile for EasyPanel;
+# all personal ingress remains default off.
+FROM n8nio/n8n:2.43.7@sha256:3db21366be1d3c77c1708963129c051948573019659e8873e0294be035ffc1b2
+USER root
+COPY <<'SILMER_WAP_INGRESS_RUNTIME_EOF' /opt/silmer/wap-ingress-runtime.cjs
+'use strict';
+
+// WAP-E01 / WAP-02/03/04/10/12. Called before the initial n8n execution write.
+// This module never logs requests, responses, credentials or exception causes.
+const RESERVED_PATH = /^(?:wap-e01-|silmer\/seller-whatsapp\/)/;
+const ID = /^[A-Za-z0-9_-]{1,64}$/;
+const GENERATION_HEADER = 'x-silmer-wap-generation-token';
+const VERIFY_URL = 'http://wap-provider-fixture:8080/ingress/verify';
+const MODES = new Set([
+  'qr',
+  'code',
+  'failure',
+  'progress',
+  'manual',
+  'provider-qr',
+  'provider-code',
+]);
+
+function denied() {
+  throw new Error('WAP_INGRESS_DENIED');
+}
+function unavailable() {
+  throw new Error('WAP_INGRESS_UNAVAILABLE');
+}
+function object(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function keys(value, allowed) {
+  if (
+    !object(value) ||
+    Object.keys(value).some((key) => !allowed.includes(key))
+  )
+    denied();
+}
+function empty(value) {
+  return value == null || (object(value) && Object.keys(value).length === 0);
+}
+function configuration(env) {
+  if (env.SILMER_WAP_INGRESS_ENABLED !== 'true') denied();
+  let paths;
+  try {
+    paths = JSON.parse(env.SILMER_WAP_INGRESS_PATHS || '');
+  } catch {
+    denied();
+  }
+  if (
+    !object(paths) ||
+    !Object.keys(paths).length ||
+    Object.entries(paths).some(
+      ([path, kind]) =>
+        !RESERVED_PATH.test(path) ||
+        !/^[A-Za-z0-9/_-]{1,128}$/.test(path) ||
+        !['control', 'challenge', 'event'].includes(kind),
+    )
+  )
+    denied();
+  return paths;
+}
+function workflowSettings(workflow) {
+  if (!object(workflow) || !object(workflow.settings)) denied();
+  const settings = workflow.settings;
+  if (
+    settings.saveDataSuccessExecution !== 'none' ||
+    settings.saveDataErrorExecution !== 'none' ||
+    settings.saveManualExecutions !== false ||
+    settings.saveExecutionProgress !== false ||
+    ![undefined, null, ''].includes(settings.errorWorkflow) ||
+    !empty(workflow.pinData)
+  )
+    denied();
+}
+function challengeBody(body) {
+  // Operation/challenge IDs require authoritative E02 validation. Accepting an
+  // arbitrary opaque string here would let a credential be persisted as an ID.
+  keys(body, ['actor', 'generation', 'mode']);
+  if (
+    !['synthetic-a', 'synthetic-b'].includes(body.actor) ||
+    // E01 is a fixed synthetic challenge profile. A freely supplied positive
+    // number could carry a numeric pairing code into the initial SQL input.
+    body.generation !== 1 ||
+    !MODES.has(body.mode)
+  )
+    denied();
+  return {
+    actor: body.actor,
+    generation: body.generation,
+    mode: body.mode,
+  };
+}
+function sourceBody(source) {
+  keys(source, ['bindingId', 'lineId', 'accountId', 'generation']);
+  if (
+    !['bindingId', 'lineId', 'accountId'].every(
+      (key) => typeof source[key] === 'string' && ID.test(source[key]),
+    ) ||
+    !Number.isSafeInteger(source.generation) ||
+    source.generation < 1
+  )
+    denied();
+  return {
+    bindingId: source.bindingId,
+    lineId: source.lineId,
+    accountId: source.accountId,
+    generation: source.generation,
+  };
+}
+function eventBody(
+  body,
+  instances = ['wap-synthetic-qr', 'wap-synthetic-code'],
+) {
+  keys(body, [
+    'event',
+    'instance',
+    'source',
+    'data',
+    'destination',
+    'date_time',
+    'sender',
+    'server_url',
+  ]);
+  if (['messages.upsert', 'messages.update'].includes(body.event)) {
+    if (
+      !instances.includes(body.instance) ||
+      !object(body.data) ||
+      typeof body.sender !== 'string' ||
+      !/^\d{8,15}@s\.whatsapp\.net$/.test(body.sender) ||
+      typeof body.date_time !== 'string' ||
+      !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(body.date_time) ||
+      !Number.isFinite(Date.parse(body.date_time))
+    )
+      denied();
+    const rawKey = body.event === 'messages.update' ? body.data : body.data.key;
+    if (!object(rawKey) || typeof rawKey.fromMe !== 'boolean') denied();
+    const key = {};
+    for (const field of [
+      'id',
+      'keyId',
+      'remoteJid',
+      'remoteJidAlt',
+      'participant',
+      'participantAlt',
+      'status',
+    ]) {
+      if (rawKey[field] === undefined) continue;
+      if (typeof rawKey[field] !== 'string' || rawKey[field].length > 512)
+        denied();
+      key[field] = rawKey[field];
+    }
+    key.fromMe = rawKey.fromMe;
+    const data =
+      body.event === 'messages.update'
+        ? key
+        : {
+            key,
+            messageTimestamp: body.data.messageTimestamp,
+            message: projectMessage(body.data.message),
+            pushName:
+              typeof body.data.pushName === 'string'
+                ? body.data.pushName.slice(0, 200)
+                : '',
+          };
+    if (
+      body.event === 'messages.upsert' &&
+      (typeof data.messageTimestamp !== 'number' ||
+        !Number.isFinite(data.messageTimestamp))
+    )
+      denied();
+    return {
+      event: body.event,
+      instance: body.instance,
+      source: sourceBody(body.source),
+      data,
+      sender: body.sender,
+      date_time: body.date_time,
+    };
+  }
+  keys(body.data, ['state']);
+  if (
+    body.event !== 'connection.update' ||
+    !instances.includes(body.instance) ||
+    !['connecting', 'close', 'open'].includes(body.data.state)
+  )
+    denied();
+  for (const key of ['destination', 'date_time', 'sender', 'server_url']) {
+    if (
+      body[key] !== undefined &&
+      (typeof body[key] !== 'string' || body[key].length > 1024)
+    )
+      denied();
+  }
+  return {
+    event: body.event,
+    instance: body.instance,
+    source: sourceBody(body.source),
+    data: { state: body.data.state },
+  };
+}
+function projectMessage(raw, depth = 0) {
+  if (!object(raw) || depth > 3) denied();
+  // Keep only the kind so the validator can ignore standalone encrypted edits.
+  if (
+    object(raw.secretEncryptedMessage) &&
+    Object.keys(raw).every((name) =>
+      ['secretEncryptedMessage', 'messageContextInfo'].includes(name),
+    )
+  )
+    return { secretEncryptedMessage: {} };
+  const projected = {};
+  for (const field of [
+    'ephemeralMessage',
+    'viewOnceMessage',
+    'viewOnceMessageV2',
+    'documentWithCaptionMessage',
+  ])
+    if (object(raw[field]?.message))
+      projected[field] = {
+        message: projectMessage(raw[field].message, depth + 1),
+      };
+  if (typeof raw.conversation === 'string')
+    projected.conversation = raw.conversation.slice(0, 4096);
+  for (const field of [
+    'extendedTextMessage',
+    'imageMessage',
+    'audioMessage',
+    'videoMessage',
+    'documentMessage',
+    'stickerMessage',
+  ]) {
+    if (!object(raw[field])) continue;
+    const value = {};
+    for (const name of ['text', 'caption', 'mimetype', 'fileName'])
+      if (typeof raw[field][name] === 'string')
+        value[name] = raw[field][name].slice(
+          0,
+          name === 'text' || name === 'caption' ? 4096 : 255,
+        );
+    const quote = raw[field].contextInfo?.stanzaId;
+    if (typeof quote === 'string' && /^[A-Za-z0-9_-]{1,512}$/.test(quote))
+      value.contextInfo = { stanzaId: quote };
+    projected[field] = value;
+  }
+  // Unsupported content is represented only by its kind, never raw contacts,
+  // key material, thumbnails, remote URLs or arbitrary provider objects.
+  for (const field of [
+    'albumMessage',
+    'contactMessage',
+    'contactsArrayMessage',
+    'reactionMessage',
+    'protocolMessage',
+  ])
+    if (object(raw[field])) projected[field] = {};
+  if (object(raw.locationMessage)) {
+    const loc = raw.locationMessage;
+    projected.locationMessage = {
+      degreesLatitude: loc.degreesLatitude,
+      degreesLongitude: loc.degreesLongitude,
+      address: typeof loc.address === 'string' ? loc.address.slice(0, 255) : '',
+    };
+    if (
+      !Number.isFinite(loc.degreesLatitude) ||
+      !Number.isFinite(loc.degreesLongitude)
+    )
+      denied();
+  }
+  return projected;
+}
+function replaceObject(target, projected) {
+  if (!object(target)) denied();
+  for (const key of Object.keys(target)) delete target[key];
+  Object.assign(target, projected);
+  return target;
+}
+async function verifySource(source, instance, token, env, fetchImpl, sender) {
+  const url = trustedVerifier(
+    env.SILMER_WAP_INGRESS_VERIFY_URL,
+    '/api/v1/integrations/n8n/whatsapp-control/ingress/verify',
+    VERIFY_URL,
+  );
+  if (
+    !/^Basic [A-Za-z0-9+/]+=*$/.test(
+      env.SILMER_WAP_INGRESS_VERIFY_BASIC || '',
+    ) ||
+    typeof token !== 'string' ||
+    !/^[A-Za-z0-9_-]{32,128}$/.test(token)
+  )
+    denied();
+  let response;
+  try {
+    response = await fetchImpl(url, {
+      method: 'POST',
+      redirect: 'error',
+      signal: AbortSignal.timeout(5000),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: env.SILMER_WAP_INGRESS_VERIFY_BASIC,
+        [GENERATION_HEADER]: token,
+        ...technicalHeaders(source.bindingId, source.bindingId),
+      },
+      body: JSON.stringify({ source, instance, ...(sender ? { sender } : {}) }),
+    });
+  } catch {
+    unavailable();
+  }
+  if (response.status >= 500) unavailable();
+  if (response.status !== 200) denied();
+  let bytes = 0;
+  const chunks = [];
+  try {
+    for await (const chunk of response.body) {
+      bytes += chunk.length;
+      if (bytes > 4096) denied();
+      chunks.push(Buffer.from(chunk));
+    }
+  } catch (error) {
+    if (error?.message === 'WAP_INGRESS_DENIED') throw error;
+    unavailable();
+  }
+  const parsed = JSON.parse(Buffer.concat(chunks).toString());
+  keys(parsed, ['source', 'instance']);
+  const canonical = sourceBody(parsed.source);
+  if (
+    parsed.instance !== instance ||
+    Object.keys(source).some((key) => canonical[key] !== source[key])
+  )
+    denied();
+  return canonical;
+}
+
+function trustedVerifier(raw, path, synthetic) {
+  if (raw === synthetic && synthetic) return raw;
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    denied();
+  }
+  if (
+    url.protocol !== 'https:' ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    url.pathname !== path
+  )
+    denied();
+  return url.href;
+}
+function technicalHeaders(correlation, key) {
+  return {
+    'x-silmer-workflow-key': 'seller-whatsapp-control',
+    'x-silmer-workflow-version': '1.0',
+    'x-silmer-execution-id': `ingress:${correlation}`,
+    'x-correlation-id': correlation,
+    'idempotency-key': key,
+  };
+}
+function controlEnvelope(value, kind) {
+  const base = ['operationId', 'lineId', 'generation', 'reference'];
+  keys(value, [
+    ...base,
+    ...(kind === 'control' ? ['action'] : ['challengeId', 'mode']),
+  ]);
+  const uuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (
+    ![
+      'operationId',
+      'lineId',
+      'reference',
+      ...(kind === 'challenge' ? ['challengeId'] : []),
+    ].every((key) => typeof value[key] === 'string' && uuid.test(value[key])) ||
+    !Number.isSafeInteger(value.generation) ||
+    value.generation < 1 ||
+    (kind === 'control'
+      ? !['connect', 'reconcile', 'disconnect'].includes(value.action)
+      : !['qr', 'code'].includes(value.mode))
+  )
+    denied();
+  return {
+    operationId: value.operationId,
+    lineId: value.lineId,
+    generation: value.generation,
+    reference: value.reference,
+    ...(kind === 'control'
+      ? { action: value.action }
+      : { challengeId: value.challengeId, mode: value.mode }),
+  };
+}
+async function verifyControl(body, kind, env, fetchImpl) {
+  const envelope = controlEnvelope(body, kind);
+  const path = '/api/v1/integrations/n8n/whatsapp-control/verify';
+  const url = trustedVerifier(
+    env.SILMER_WAP_CONTROL_VERIFY_URL,
+    path,
+    env.SILMER_WAP_INGRESS_SYNTHETIC === 'true'
+      ? `http://wap-control-fixture:8080${path}`
+      : undefined,
+  );
+  if (
+    !/^Basic [A-Za-z0-9+/]+=*$/.test(env.SILMER_WAP_INGRESS_VERIFY_BASIC || '')
+  )
+    denied();
+  let response;
+  try {
+    response = await fetchImpl(url, {
+      method: 'POST',
+      redirect: 'error',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+      headers: {
+        authorization: env.SILMER_WAP_INGRESS_VERIFY_BASIC,
+        'content-type': 'application/json',
+        ...technicalHeaders(
+          envelope.operationId,
+          kind === 'control' ? envelope.operationId : envelope.challengeId,
+        ),
+      },
+      body: JSON.stringify({ kind, envelope }),
+    });
+  } catch {
+    unavailable();
+  }
+  if (response.status >= 500) unavailable();
+  if (response.status !== 200) denied();
+  let size = 0;
+  const chunks = [];
+  let parsed;
+  try {
+    for await (const chunk of response.body) {
+      size += chunk.length;
+      if (size > 4096) denied();
+      chunks.push(Buffer.from(chunk));
+    }
+    parsed = JSON.parse(Buffer.concat(chunks).toString());
+  } catch {
+    denied();
+  }
+  keys(parsed, ['kind', 'envelope']);
+  if (parsed.kind !== kind) denied();
+  const canonical = controlEnvelope(parsed.envelope, kind);
+  if (Object.keys(canonical).some((key) => canonical[key] !== envelope[key]))
+    denied();
+  return canonical;
+}
+
+async function protectIngress(
+  context,
+  env = process.env,
+  fetchImpl = globalThis.fetch,
+) {
+  const path = context.getNodeParameter('path', '');
+  if (typeof path !== 'string' || !RESERVED_PATH.test(path)) return false;
+  const response = context.getResponseObject();
+  try {
+    const paths = configuration(env);
+    if (!Object.hasOwn(paths, path)) denied();
+    const node = context.getNode();
+    if (
+      node.parameters?.path !== path ||
+      !['headerAuth', 'basicAuth'].includes(
+        context.getNodeParameter('authentication', 'none'),
+      ) ||
+      context.getNodeParameter('responseMode', '') !== 'responseNode' ||
+      !empty(context.getNodeParameter('options', {}))
+    )
+      denied();
+    workflowSettings(context.workflow);
+    const req = context.getRequestObject();
+    if (
+      req.method !== 'POST' ||
+      !empty(req.params) ||
+      !empty(req.query) ||
+      req.contentType !== 'application/json'
+    )
+      denied();
+    let body;
+    if (
+      path.startsWith('silmer/seller-whatsapp/') &&
+      ['control', 'challenge'].includes(paths[path])
+    ) {
+      body = await verifyControl(req.body, paths[path], env, fetchImpl);
+    } else if (paths[path] === 'challenge') {
+      body = challengeBody(req.body);
+    } else {
+      const instances = path.startsWith('silmer/seller-whatsapp/')
+        ? (env.SILMER_WAP_INGRESS_INSTANCES || '').split(',')
+        : undefined;
+      if (
+        instances &&
+        (!instances.length || instances.some((instance) => !ID.test(instance)))
+      )
+        denied();
+      body = eventBody(req.body, instances);
+      body.source = await verifySource(
+        body.source,
+        body.instance,
+        req.headers?.[GENERATION_HEADER],
+        env,
+        fetchImpl,
+        body.sender,
+      );
+    }
+    // Mutate aliases too: WebhookContext caches references to req.headers/body.
+    replaceObject(req.headers, {});
+    req.params = replaceObject(req.params ?? {}, {});
+    // Express 5 exposes query as a getter without a setter. Shadow only this
+    // request after requiring its original query to be empty; preserve aliases.
+    const projectedQuery = replaceObject(req.query ?? {}, {});
+    Object.defineProperty(req, 'query', {
+      value: projectedQuery,
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
+    req.body = replaceObject(req.body, body);
+    if (Buffer.isBuffer(req.rawBody)) req.rawBody.fill(0);
+    delete req.rawBody;
+    return false;
+  } catch (error) {
+    const temporary = error?.message === 'WAP_INGRESS_UNAVAILABLE';
+    response.writeHead(temporary ? 503 : 403, {
+      'Cache-Control': 'no-store',
+    });
+    response.end(temporary ? 'WAP_INGRESS_UNAVAILABLE' : 'WAP_INGRESS_DENIED');
+    return true;
+  }
+}
+
+function scopedWorkflow(workflow) {
+  return (
+    (typeof workflow?.name === 'string' &&
+      (workflow.name.startsWith('WAP-E01 isolated ') ||
+        workflow.name.startsWith('Silmer seller WhatsApp '))) ||
+    (Array.isArray(workflow?.nodes) &&
+      workflow.nodes.some(
+        (node) =>
+          node.type === 'n8n-nodes-base.webhook' &&
+          typeof node.parameters?.path === 'string' &&
+          RESERVED_PATH.test(node.parameters.path),
+      ))
+  );
+}
+
+function guardInitialExecution(
+  executionData,
+  existingExecution,
+  env = process.env,
+) {
+  const workflow = executionData?.workflowData;
+  if (!scopedWorkflow(workflow)) return;
+  configuration(env);
+  workflowSettings(workflow);
+  if (
+    existingExecution !== undefined ||
+    executionData.retryOf != null ||
+    !['manual', 'webhook'].includes(executionData.executionMode)
+  )
+    denied();
+  const initial = executionData.executionData;
+  if (
+    !empty(initial?.resultData?.runData) ||
+    initial?.resultData?.error ||
+    !empty(initial?.pinData)
+  )
+    denied();
+  if (executionData.executionMode === 'manual') {
+    const stack = initial?.executionData?.nodeExecutionStack ?? [];
+    if (!Array.isArray(stack)) denied();
+    for (const frame of stack) {
+      if (frame.node?.type !== 'n8n-nodes-base.manualTrigger') denied();
+      const branches = frame.data?.main ?? [];
+      for (const branch of branches)
+        for (const item of branch ?? []) {
+          keys(item, ['json']);
+          if (!empty(item.json)) denied();
+        }
+    }
+  }
+}
+
+function guardManualRequest(workflow, body, env = process.env) {
+  if (!scopedWorkflow(workflow)) return;
+  configuration(env);
+  workflowSettings(workflow);
+  // Use the original HTTP body: the DTO strips unknown keys and the execution
+  // service may upgrade a partial request into a full execution.
+  keys(body, ['triggerToStartFrom']);
+  keys(body.triggerToStartFrom, ['name']);
+  if (
+    body.triggerToStartFrom.name !== 'Trigger' ||
+    !Array.isArray(workflow.nodes)
+  )
+    denied();
+  const triggers = workflow.nodes.filter((node) => node.name === 'Trigger');
+  if (
+    triggers.length !== 1 ||
+    triggers[0].type !== 'n8n-nodes-base.manualTrigger' ||
+    triggers[0].disabled === true
+  )
+    denied();
+}
+
+function guardWorkflowMutation(existing, payload, env = process.env) {
+  if (!object(payload)) denied();
+  const proposed = { ...(existing ?? {}), ...payload };
+  const wasScoped = scopedWorkflow(existing);
+  if (!wasScoped && !scopedWorkflow(proposed)) return;
+  const paths = configuration(env);
+  if (wasScoped && !scopedWorkflow(proposed)) denied();
+  if (
+    existing?.id !== undefined &&
+    payload.id !== undefined &&
+    payload.id !== existing.id
+  )
+    denied();
+  // If settings are supplied, treat them as a replacement rather than assuming
+  // how an upstream service merges them. All four privacy flags must be explicit.
+  workflowSettings(proposed);
+  if (!Array.isArray(proposed.nodes)) denied();
+  for (const node of proposed.nodes) {
+    if (node.type !== 'n8n-nodes-base.webhook') continue;
+    const parameters = node.parameters;
+    if (
+      !object(parameters) ||
+      !Object.hasOwn(paths, parameters.path) ||
+      !['headerAuth', 'basicAuth'].includes(parameters.authentication) ||
+      parameters.responseMode !== 'responseNode' ||
+      !empty(parameters.options)
+    )
+      denied();
+  }
+}
+
+module.exports = {
+  protectIngress,
+  guardInitialExecution,
+  guardManualRequest,
+  guardWorkflowMutation,
+};
+SILMER_WAP_INGRESS_RUNTIME_EOF
+COPY <<'SILMER_WAP_INGRESS_PATCH_EOF' /opt/silmer/wap-ingress-patch.mjs
+import { createHash } from 'node:crypto';
+import { readFile, writeFile, readdir } from 'node:fs/promises';
+import { resolve, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+export const WEBHOOK_SHA256 =
+  'afd0a6e02ce62b85c090a11acca1c1d207b9b6d15f21b87508af8fb4bf165039';
+export const EXECUTIONS_SHA256 =
+  '01ca68a06b0a502c2bf6885439a48bc28b026e2136440e7880b74f4262736f0b';
+export const CONTROLLER_SHA256 =
+  'a23362c684450f8efa065cdca680ab38023aa4e915248cb663d79ade4d9e8127';
+const helper = '/opt/silmer/wap-ingress-runtime.cjs';
+/** @param {string} source @param {string} expected @param {string} anchor @param {string} insertion */
+function inject(source, expected, anchor, insertion) {
+  if (
+    createHash('sha256').update(source).digest('hex') !== expected ||
+    source.split(anchor).length !== 2 ||
+    source.includes(helper)
+  )
+    throw new Error('WAP_N8N_SOURCE_MISMATCH');
+  return source.replace(anchor, insertion + anchor);
+}
+/** expected is overridable only by unit fixtures; installed image always uses pinned hashes.
+ * @param {string} source @param {string} [expected] */
+export function patchWebhookSource(source, expected = WEBHOOK_SHA256) {
+  const anchor =
+    '        const node = context.getNode();\n        const rawOptions = node.parameters?.options;';
+  const auth = 'validationData = await this.validateAuth(context);';
+  if (!source.includes(auth) || source.indexOf(auth) > source.indexOf(anchor))
+    throw new Error('WAP_N8N_AUTH_ORDER_MISMATCH');
+  return inject(
+    source,
+    expected,
+    anchor,
+    `        if (await require('${helper}').protectIngress(context)) {\n            return { noWebhookResponse: true };\n        }\n`,
+  );
+}
+/** @param {string} source @param {string} [expected] */
+export function patchExecutionsSource(source, expected = EXECUTIONS_SHA256) {
+  const anchor =
+    "        let executionStatus = existingExecution ? 'running' : 'new';";
+  return inject(
+    source,
+    expected,
+    anchor,
+    `        require('${helper}').guardInitialExecution(executionData, existingExecution);\n`,
+  );
+}
+/** @param {string} source @param {string} [expected] */
+export function patchControllerSource(source, expected = CONTROLLER_SHA256) {
+  const anchor =
+    '        const n8nAuthCookie = this.authService.getCookieToken(req);';
+  const lookup =
+    'const dbWorkflow = await this.workflowRepository.get({ id: workflowId });';
+  if (
+    !source.includes(lookup) ||
+    source.indexOf(lookup) > source.indexOf(anchor)
+  )
+    throw new Error('WAP_N8N_MANUAL_ORDER_MISMATCH');
+  const createAnchor =
+    '        const newWorkflow = (0, workflow_entity_mapper_1.createWorkflowEntityFromPayload)(body);';
+  const updateAnchor =
+    '        const { tags, parentFolderId, aiBuilderAssisted, expectedChecksum, autosaved, ...rest } = body;';
+  if (
+    [createAnchor, updateAnchor].some(
+      (value) => source.split(value).length !== 2,
+    )
+  )
+    throw new Error('WAP_N8N_SOURCE_MISMATCH');
+  let patched = inject(
+    source,
+    expected,
+    anchor,
+    `        try {\n            require('${helper}').guardManualRequest(dbWorkflow, req.body);\n        } catch {\n            throw new errors_1.BadRequestError('WAP_MANUAL_REQUEST_DENIED');\n        }\n`,
+  );
+  patched = patched.replace(
+    createAnchor,
+    `        try {\n            require('${helper}').guardWorkflowMutation(null, body);\n        } catch {\n            throw new errors_1.BadRequestError('WAP_WORKFLOW_WRITE_DENIED');\n        }\n` +
+      createAnchor,
+  );
+  patched = patched.replace(
+    updateAnchor,
+    `        const wapCurrentWorkflow = await this.workflowRepository.get({ id: workflowId });\n        try {\n            require('${helper}').guardWorkflowMutation(wapCurrentWorkflow, body);\n        } catch {\n            throw new errors_1.BadRequestError('WAP_WORKFLOW_WRITE_DENIED');\n        }\n` +
+      updateAnchor,
+  );
+  return patched;
+}
+/** @param {string} root */
+export async function patchInstalledN8n(root) {
+  const packageRoot = resolve(root);
+  const entries = (
+    await readdir(join(packageRoot, 'node_modules/.pnpm'))
+  ).filter((name) => name.startsWith('n8n-nodes-base@'));
+  if (entries.length !== 1) throw new Error('WAP_N8N_PACKAGE_MISMATCH');
+  const webhook = join(
+    packageRoot,
+    'node_modules/.pnpm',
+    entries[0],
+    'node_modules/n8n-nodes-base/dist/nodes/Webhook/Webhook.node.js',
+  );
+  const executions = join(packageRoot, 'dist/active-executions.js');
+  const controller = join(
+    packageRoot,
+    'dist/workflows/workflows.controller.js',
+  );
+  // Validate all three sources before changing any file.
+  const patchedWebhook = patchWebhookSource(await readFile(webhook, 'utf8'));
+  const patchedExecutions = patchExecutionsSource(
+    await readFile(executions, 'utf8'),
+  );
+  const patchedController = patchControllerSource(
+    await readFile(controller, 'utf8'),
+  );
+  await writeFile(webhook, patchedWebhook);
+  await writeFile(executions, patchedExecutions);
+  await writeFile(controller, patchedController);
+}
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  patchInstalledN8n(process.argv[2] ?? '/usr/local/lib/node_modules/n8n')
+    .then(() => {
+      process.stdout.write('WAP_N8N_INGRESS_PATCHED\n');
+    })
+    .catch(() => {
+      process.stderr.write('WAP_N8N_PATCH_REFUSED\n');
+      process.exitCode = 1;
+    });
+}
+SILMER_WAP_INGRESS_PATCH_EOF
+RUN node /opt/silmer/wap-ingress-patch.mjs /usr/local/lib/node_modules/n8n
+USER node

@@ -87,19 +87,31 @@ piloto, todas corrigidas no branch `claude/wap-e12-live-wiring`:
 
 - o Evolution só deixava sair `connection.update` das linhas pessoais; sem
   `messages.upsert` e `messages.update`, não havia entrada, eco nem recibo
-  (`c8915dc6`);
+  (`cfa3d998`);
 - o controle não alcançava o Evolution interno, que só responde por `http`; o
-  Gateway exigia `https` (`8925c221`);
+  Gateway exigia `https` (`b25880c9`);
 - não havia build de produção dos workflows a partir do principal vivo
-  (`8925c221`, `ops/n8n/build-wap-production-workflows.mjs`).
+  (`b25880c9`, `ops/n8n/build-wap-production-workflows.mjs`).
 
 Duas falhas de borda também foram corrigidas. A verificação do ingresso
 pessoal dividia o limite técnico de 60/min, insuficiente para o tráfego de um
-único IP do n8n; ela passou a ter 1200/min (`9b7554f8`). E o ingresso do n8n
+único IP do n8n; ela passou a ter 1200/min (`84eda252`). E o ingresso do n8n
 transformava um `429` do CRM em `403` permanente, perdendo o evento; agora
-devolve `503`, e o Evolution tenta de novo (`8925c221`). O ensaio local usava
+devolve `503`, e o Evolution tenta de novo (`b25880c9`). O ensaio local usava
 stubs para o HTTP do Evolution e, por isso, não pegou nenhuma delas. Nada
 disso foi executado em ambiente real.
+
+A revisão adversarial do branch não achou P0. Foram corrigidos: retenção das
+linhas pessoais no banco do Evolution (antes só a geral expirava), ajustes da
+instância reaplicados e conferidos a cada conexão, integrações de saída do
+Evolution travadas em `false` (`ee31d0f0`); limite da verificação por linha,
+com teto por IP, saída do build fora do repositório, prefixo exato das URLs do
+ingresso, "mensagem para si mesmo" por LID ignorada e confirmação antecipada do
+eco de mídia (`536cdb77`). Ficam abertos, em P3: o evento de falha de imagem do
+ingresso pessoal, provavelmente recusado em silêncio pelo CRM (anterior a este
+branch), e "mensagem para si mesmo" por LID sem número alternativo. Eventos da
+geração anterior que ainda estejam a caminho numa reconexão são recusados e não
+voltam: perda aceita no piloto.
 
 Decisões do PO no mesmo dia:
 
@@ -312,6 +324,9 @@ live minimizada.
 | `5131192f` | E09/E12   | E12-12 e selo verde: aviso de linha caída, banner               |
 | `2dddd6f7` | E12       | E12-14: asserção com escopo da suíte                            |
 | `d8477e7e` | E05       | E12-13: Criar pedido espera a leitura dos Assuntos              |
-| `c8915dc6` | Evolution | linhas pessoais levam mensagens e recibos                       |
-| `9b7554f8` | E04       | limite próprio para a verificação do ingresso pessoal           |
-| `8925c221` | n8n       | build de produção dos workflows; Evolution interno; 429 → 503   |
+| `cfa3d998` | Evolution | linhas pessoais levam mensagens e recibos                       |
+| `84eda252` | E04       | limite próprio para a verificação do ingresso pessoal           |
+| `b25880c9` | n8n       | build de produção dos workflows; Evolution interno; 429 → 503   |
+| `a979731c` | E12       | sequência de ativação do piloto em produção                     |
+| `536cdb77` | n8n/E04   | QA: limite por linha, prefixos exatos, LID, eco de mídia        |
+| `ee31d0f0` | Evolution | QA: retenção pessoal, ajustes por conexão, egress travado       |

@@ -84,6 +84,12 @@ tem `technicalGate=passed`, `privacyFailures=[]` e todos os scans negativos.
 Imagens locais no Mel, removidas ao final: Evolution
 `sha256:7eb707106bd75166e23be884bffcdb3824859f80a85954506aebbf4419d5cfbd`,
 n8n `sha256:d332460e5f2b71a6c83b8ea9013dfafa3254cab46f92c0f80eefcc815f5614a9`.
+O EasyPanel recebe o [Dockerfile inline](../../ops/n8n/wap-ingress-Dockerfile.inline),
+gerado por `node ops/n8n/render-wap-ingress-dockerfile.mjs` a partir do
+Dockerfile, do runtime e do patcher. Ele está em produção desde 18/11/2026
+(fonte Dockerfile do serviço `schedule/n8n`), e o teste do patch falha se o
+inline divergir das fontes. Rollback: voltar a fonte para `n8nio/n8n:2.43.7`.
+
 O gate continua `blocked` pelos mesmos motivos: código no mesmo celular e
 retenção operacional de múltiplas instâncias.
 

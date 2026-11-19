@@ -1,21 +1,36 @@
 import { readFile, writeFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
 
 const root = new URL('./', import.meta.url);
-const privacy = await readFile(new URL('privacy.cjs', root), 'utf8');
-const retention = await readFile(new URL('retention.cjs', root), 'utf8');
-const generationRuntime = await readFile(
-  new URL('wap-generation-runtime.cjs', root),
-  'utf8',
-);
-const generationPatch = await readFile(
-  new URL('wap-generation-patch.mjs', root),
-  'utf8',
-);
-const controlRuntime = await readFile(
-  new URL('wap-control-runtime.cjs', root),
-  'utf8',
-);
-const dockerfile = `# syntax=docker/dockerfile:1.7
+
+/** EVOL-01 / WAP-E12. Render the self-contained Dockerfile pasted into the
+ * EasyPanel Evolution source; sources are embedded verbatim. Pure: no writes.
+ * @returns {Promise<string>} */
+export async function renderEvolutionDockerfile() {
+  const privacy = await readFile(new URL('privacy.cjs', root), 'utf8');
+  const retention = await readFile(new URL('retention.cjs', root), 'utf8');
+  const generationRuntime = await readFile(
+    new URL('wap-generation-runtime.cjs', root),
+    'utf8',
+  );
+  const generationPatch = await readFile(
+    new URL('wap-generation-patch.mjs', root),
+    'utf8',
+  );
+  const controlRuntime = await readFile(
+    new URL('wap-control-runtime.cjs', root),
+    'utf8',
+  );
+  for (const [source, marker] of [
+    [privacy, 'SILMER_PRIVACY_EOF'],
+    [retention, 'SILMER_RETENTION_EOF'],
+    [generationRuntime, 'SILMER_WAP_GENERATION_RUNTIME_EOF'],
+    [controlRuntime, 'SILMER_WAP_CONTROL_RUNTIME_EOF'],
+    [generationPatch, 'SILMER_WAP_GENERATION_PATCH_EOF'],
+  ])
+    if (source.includes(marker))
+      throw new Error('EVOLUTION_INLINE_SOURCE_INVALID');
+  return `# syntax=docker/dockerfile:1.7
 # EVOL-01. Official Evolution v2.3.7 OCI index, verified 2026-10-29.
 FROM node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2 AS node_runtime
 FROM evoapicloud/evolution-api:v2.3.7@sha256:1bd8afc4a6cf48822e6cf02469aeae7bd35a12a6b616eacd1291926307f4d339
@@ -46,4 +61,14 @@ EXPOSE 8080
 # Runtime protection is loaded only in the API, never in npm/Prisma subprocesses.
 ENTRYPOINT ["/bin/bash", "-c", "set -eu; node /evolution/silmer-privacy.cjs --check; if /bin/bash ./Docker/scripts/deploy_database.sh >/dev/null 2>&1; then printf 'EVOLUTION_DATABASE_READY\\n'; else printf 'EVOLUTION_DATABASE_FAILED\\n' >&2; exit 1; fi; node /evolution/silmer-retention.cjs --once; exec node --require /evolution/silmer-privacy.cjs dist/main"]
 `;
-await writeFile(new URL('Dockerfile.inline', root), dockerfile);
+}
+
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  await writeFile(
+    new URL('Dockerfile.inline', root),
+    await renderEvolutionDockerfile(),
+  );
+}

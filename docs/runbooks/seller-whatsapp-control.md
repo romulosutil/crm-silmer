@@ -78,6 +78,16 @@ e corpo diferente conflita.
    Nenhum backfill de clientes, conversa, carteira, Pedido ou snapshot.
 2. Connect persiste intenção e job de metadados; worker → n8n prepara instância
    sem QR e configura/confere webhook. Isso deixa `awaiting_pairing`, nunca ativo.
+   A instância nasce com `groupsIgnore=true` e sem leitura automática, status,
+   histórico completo, presença ou rejeição de chamadas. O webhook só é
+   aceito com exatamente `CONNECTION_UPDATE`, `MESSAGES_UPSERT` e
+   `MESSAGES_UPDATE` (`byEvents=false`, `base64=false`); lista antiga só com
+   `CONNECTION_UPDATE`, lista maior ou repetida deixa `webhookVerified=false`.
+   Filtros na fonte e eco/recibos: runbook do provider, "Eventos pessoais".
+   Instância criada antes do WAP-E12 mantém a lista antiga e as configurações
+   antigas até um novo connect (que reaplica o webhook, não as configurações);
+   até lá a reconciliação dela termina em `blocked`. Os grupos continuam
+   barrados na fonte pelo runtime de geração.
 3. Desafio explícito reserva uso único, instala binding do socket e chama connect
    upstream uma vez. A resposta só sai após revalidar sessão, titular, geração e
    TTL. O binding captura source/token antes da fila; retry não reclassifica evento.

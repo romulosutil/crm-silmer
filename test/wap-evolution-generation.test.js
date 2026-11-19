@@ -222,10 +222,21 @@ test('WAP-E01: bindings cannot change line/account, reuse token or grant another
       () => runtime.current('synthetic-b', 'connection.update'),
       /WAP_GENERATION_INSTANCE_MISMATCH/u,
     );
-    assert.throws(
-      () => runtime.current('synthetic-a', 'messages.upsert'),
-      /WAP_GENERATION_EVENT_DENIED/u,
-    );
+    // WAP-E12: only connection.update and the two message events pass.
+    for (const event of [
+      'qrcode.updated',
+      'messages.set',
+      'send.message',
+      'messages.delete',
+      'contacts.upsert',
+      'MESSAGES_UPSERT',
+    ])
+      assert.throws(
+        () => runtime.current('synthetic-a', event),
+        /WAP_GENERATION_EVENT_DENIED/u,
+      );
+    for (const event of ['messages.upsert', 'messages.update'])
+      assert.equal(runtime.current('synthetic-a', event), context);
     assert.throws(
       () =>
         runtime.envelope(context, {
@@ -290,5 +301,251 @@ test('WAP-E01: source schema rejects arbitrary generation and patched bundle ref
   assert.throws(
     () => extractGenerationMethods(''),
     /WAP_EVOLUTION_EXTRACTION_MISMATCH/u,
+  );
+});
+
+const personalUrl =
+  'https://n8n.synthetic.invalid/webhook/silmer/seller-whatsapp/events';
+/** @param {any} [patch] @returns {any} */
+const upsert = (patch = {}) => ({
+  event: 'messages.upsert',
+  instance: 'synthetic-a',
+  data: {
+    key: {
+      id: 'SYNTHETIC_UPSERT_1',
+      remoteJid: '5511000000009@s.whatsapp.net',
+      fromMe: false,
+    },
+    messageTimestamp: 1795000000,
+    message: { conversation: 'synthetic' },
+    pushName: 'Synthetic',
+  },
+  destination: personalUrl,
+  date_time: '2026-11-18T12:00:00.000Z',
+  sender: '5511000000001@s.whatsapp.net',
+  server_url: 'http://127.0.0.1:8080',
+  apikey: 'must-not-escape',
+  ...patch,
+});
+/** @param {any} [patch] @param {any} [data] @returns {any} */
+const update = (patch = {}, data = {}) => ({
+  ...upsert(),
+  event: 'messages.update',
+  data: {
+    keyId: 'SYNTHETIC_UPSERT_1',
+    remoteJid: '5511000000009@s.whatsapp.net',
+    fromMe: true,
+    participant: null,
+    status: 'DELIVERY_ACK',
+    instanceId: 'synthetic-instance-id',
+    ...data,
+  },
+  ...patch,
+});
+/** @param {any} key */
+const upsertKey = (key) =>
+  upsert({
+    data: { ...upsert().data, key: { ...upsert().data.key, ...key } },
+  });
+const ENVELOPE_KEYS = [
+  'data',
+  'date_time',
+  'destination',
+  'event',
+  'instance',
+  'sender',
+  'server_url',
+  'source',
+];
+
+test('WAP-E12: message events queued under A1 and released after the A2 bind keep A1 source and token', async () => {
+  const runtime = createGenerationRuntime({
+    enabled: true,
+    instances: ['synthetic-a'],
+  });
+  runtime.bindNextSocket('synthetic-a', a1, token1);
+  const old = runtime.captureSocket('synthetic-a', {});
+  /** @type {()=>void} */
+  let release = () => {
+    throw new Error('release missing');
+  };
+  const held = new Promise(
+    /** @param {(value?: void)=>void} resolve */ (resolve) => {
+      release = resolve;
+    },
+  );
+  /** @type {any[]} */
+  const outcomes = [];
+  const oldCallback = runtime.wrap(old, async () => {
+    await held;
+    await Promise.resolve();
+    for (const original of [
+      upsert({ source: a2, extra: 'drop-me' }),
+      upsertKey({ fromMe: true }),
+      update({ source: a2 }),
+    ]) {
+      const captured = runtime.current('synthetic-a', original.event);
+      outcomes.push({
+        body: runtime.envelope(captured, original),
+        headers: runtime.headers(captured, {
+          'x-silmer-wap-generation-token': token2,
+        }),
+      });
+    }
+  });
+  const pending = oldCallback();
+  runtime.bindNextSocket('synthetic-a', a2, token2);
+  const current = runtime.captureSocket('synthetic-a', {});
+  await runtime.wrap(current, async () => {
+    const captured = runtime.current('synthetic-a', 'messages.upsert');
+    assert.deepEqual(runtime.envelope(captured, upsert()).source, a2);
+    assert.equal(
+      runtime.headers(captured, {})['X-Silmer-Wap-Generation-Token'],
+      token2,
+    );
+  })();
+  release();
+  await pending;
+  assert.equal(outcomes.length, 3);
+  for (const { body, headers } of outcomes) {
+    assert.deepEqual(Object.keys(body).sort(), ENVELOPE_KEYS);
+    assert.deepEqual(body.source, a1);
+    assert.equal(body.instance, 'synthetic-a');
+    assert.equal(body.apikey, undefined);
+    assert.equal(body.extra, undefined);
+    assert.equal(body.destination, personalUrl);
+    assert.equal(body.date_time, '2026-11-18T12:00:00.000Z');
+    assert.equal(body.sender, '5511000000001@s.whatsapp.net');
+    assert.equal(body.server_url, 'http://127.0.0.1:8080');
+    assert.equal(headers['X-Silmer-Wap-Generation-Token'], token1);
+    assert.equal(headers['x-silmer-wap-generation-token'], undefined);
+    assert.equal(JSON.stringify(body).includes(token1), false);
+  }
+  assert.deepEqual(outcomes[0].body.data, upsert().data);
+  assert.equal(outcomes[1].body.data.key.fromMe, true);
+  assert.deepEqual(outcomes[2].body.data, update().data);
+  // connection.update keeps its narrower historical shape.
+  await runtime.wrap(current, async () => {
+    assert.deepEqual(
+      runtime.envelope(runtime.current('synthetic-a', 'connection.update'), {
+        ...upsert(),
+        event: 'connection.update',
+        data: { state: 'open', wuid: 'synthetic' },
+      }),
+      {
+        event: 'connection.update',
+        instance: 'synthetic-a',
+        source: a2,
+        data: { state: 'open' },
+      },
+    );
+  })();
+});
+
+test('WAP-E12: message envelopes the CRM never uses are refused at the source', async () => {
+  const runtime = createGenerationRuntime({
+    enabled: true,
+    instances: ['synthetic-a', 'synthetic-b'],
+  });
+  runtime.bindNextSocket('synthetic-a', a1, token1);
+  const context = runtime.captureSocket('synthetic-a', {});
+  const rejected = [
+    upsertKey({ remoteJid: '120363000000000001@g.us' }),
+    upsertKey({ remoteJid: 'status@broadcast' }),
+    upsertKey({ remoteJid: '5511000000009@broadcast' }),
+    upsertKey({ remoteJid: '120363000000000002@newsletter' }),
+    upsertKey({ participant: '5511000000008@s.whatsapp.net' }),
+    upsertKey({ participantAlt: '5511000000008@s.whatsapp.net' }),
+    upsert({ data: { ...upsert().data, key: null } }),
+    upsert({ data: { ...upsert().data, key: [] } }),
+    update({}, { remoteJid: '120363000000000001@g.us' }),
+    update({}, { remoteJid: 'status@broadcast' }),
+    update({}, { remoteJid: '120363000000000002@newsletter' }),
+    update({}, { participant: '5511000000008@s.whatsapp.net' }),
+    update({}, { fromMe: false }),
+    update({}, { fromMe: undefined }),
+    update({}, { status: 'SERVER_ACK' }),
+    update({}, { status: 'PENDING' }),
+    update({}, { status: undefined }),
+    upsert({ instance: 'synthetic-b' }),
+    update({ instance: 'synthetic-b' }),
+    upsert({ event: 'connection.update' }),
+    upsert({ data: null }),
+    upsert({ data: [] }),
+    upsert({ data: 'synthetic' }),
+    update({ data: null }),
+    update({ data: [] }),
+    upsert({ date_time: 1795000000 }),
+    upsert({ date_time: undefined }),
+    upsert({ sender: undefined }),
+    update({ sender: { id: 'synthetic' } }),
+    upsert({ destination: { url: personalUrl } }),
+    upsert({ server_url: 8080 }),
+  ];
+  await runtime.wrap(context, async () => {
+    for (const original of rejected)
+      assert.throws(
+        () => runtime.envelope(context, original),
+        /WAP_GENERATION_ENVELOPE_DENIED/u,
+        JSON.stringify(original.data),
+      );
+    // participant null/absent is a 1:1 chat; @lid is a 1:1 identity.
+    assert.equal(
+      runtime.envelope(context, update({}, { participant: undefined })).event,
+      'messages.update',
+    );
+    for (const status of ['ERROR', 'DELIVERY_ACK', 'READ', 'PLAYED'])
+      assert.equal(
+        runtime.envelope(context, update({}, { status })).data.status,
+        status,
+      );
+    assert.equal(
+      runtime.envelope(context, upsertKey({ remoteJid: '123456789@lid' })).data
+        .key.remoteJid,
+      '123456789@lid',
+    );
+    assert.equal(
+      runtime.envelope(context, upsertKey({ participant: null })).event,
+      'messages.upsert',
+    );
+  })();
+});
+
+test('WAP-E12: a non-allowlisted instance passes through untouched for every event', () => {
+  const runtime = createGenerationRuntime({
+    enabled: true,
+    instances: ['synthetic-a'],
+  });
+  for (const event of [
+    'messages.upsert',
+    'messages.update',
+    'qrcode.updated',
+    'send.message',
+  ])
+    assert.equal(runtime.current('legacy', event), null);
+  const original = upsert({ instance: 'legacy' });
+  assert.equal(runtime.envelope(null, original), original);
+  assert.equal(original.apikey, 'must-not-escape');
+  const headers = { 'X-Other': 'synthetic' };
+  assert.equal(runtime.headers(null, headers), headers);
+});
+
+test('WAP-E12: the EasyPanel inline Evolution Dockerfile matches the render of current sources', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const { renderEvolutionDockerfile } =
+    await import('../ops/evolution/render-dockerfile.mjs');
+  const inline = await readFile(
+    new URL('../ops/evolution/Dockerfile.inline', import.meta.url),
+    'utf8',
+  );
+  assert.equal(inline, await renderEvolutionDockerfile());
+  const runtime = await readFile(
+    new URL('../ops/evolution/wap-generation-runtime.cjs', import.meta.url),
+    'utf8',
+  );
+  assert.ok(inline.includes(runtime));
+  assert.match(
+    inline,
+    /\nRUN node \/evolution\/silmer-wap-generation-patch\.mjs \/evolution\/dist\/main\.js\n/u,
   );
 });

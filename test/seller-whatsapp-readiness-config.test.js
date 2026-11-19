@@ -793,30 +793,123 @@ test('WAP-T05-01 Evolution socket generation is off by default and requires an e
   );
 });
 
+const evolutionBoot = Object.freeze({
+  AUTHENTICATION_API_KEY: 'k'.repeat(48),
+  SILMER_EVOLUTION_WEBHOOK_TOKEN: 't'.repeat(48),
+  DATABASE_CONNECTION_URI:
+    'postgresql://silmer_evolution:synthetic@db.synthetic.invalid:5432/silmer_evolution',
+  SILMER_EVOLUTION_WEBHOOK_URL:
+    'https://n8n.synthetic.invalid/webhook/silmer/evolution-events',
+  SILMER_EVOLUTION_INSTANCE: 'synthetic-general',
+  DATABASE_PROVIDER: 'postgresql',
+  CACHE_REDIS_ENABLED: 'false',
+  CACHE_REDIS_SAVE_INSTANCES: 'false',
+  CACHE_LOCAL_ENABLED: 'true',
+  TELEMETRY_ENABLED: 'false',
+  AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: 'false',
+  WEBHOOK_GLOBAL_ENABLED: 'false',
+  PROMETHEUS_METRICS: 'false',
+  WEBSOCKET_ENABLED: 'false',
+  LOG_LEVEL: 'ERROR',
+  LOG_BAILEYS: 'fatal',
+  DOCKER_ENV: 'true',
+  TZ: 'UTC',
+  DATABASE_SAVE_DATA_NEW_MESSAGE: 'true',
+});
+const generationToken = 'synthetic-generation-token-000000000000';
+/** @param {Record<string, any>} [patch] @param {Record<string, any>} [data] */
+const personalDispatch = (patch = {}, data = {}) => ({
+  url: evolutionControl.SILMER_WAP_CONTROL_WEBHOOK_URL,
+  headers: {
+    'Content-Type': 'application/json',
+    'X-Silmer-Wap-Generation-Token': generationToken,
+  },
+  data: {
+    event: 'messages.upsert',
+    instance: A,
+    source: {
+      bindingId: 'synthetic-binding',
+      lineId: 'synthetic-line',
+      accountId: 'synthetic-account',
+      generation: 2,
+    },
+    sender: '5511000000001@s.whatsapp.net',
+    date_time: '2026-11-18T12:00:00.000Z',
+    apikey: 'synthetic-instance-secret-never-forwarded',
+    data: { key: { id: 'synthetic-message', fromMe: true } },
+    ...data,
+  },
+  ...patch,
+});
+
+test('WAP-E12 personal message events with source and generation proof reach only the personal URL', () => {
+  const profile = privacy.validateEnvironment({
+    ...evolutionBoot,
+    ...evolutionControl,
+  });
+  for (const event of [
+    'messages.upsert',
+    'messages.update',
+    'connection.update',
+  ]) {
+    const output = privacy.protectWebhookRequest(
+      personalDispatch({}, { event }),
+      profile,
+    );
+    assert.equal(output.url, profile.personalWebhookUrl);
+    assert.equal(output.data.event, event);
+    assert.equal(output.data.apikey, undefined);
+    assert.equal(output.data.source.generation, 2);
+    assert.equal(output.maxRedirects, 0);
+    assert.equal(output.headers['X-Silmer-Evolution-Token'], 't'.repeat(48));
+    assert.equal(
+      output.headers['X-Silmer-Wap-Generation-Token'],
+      generationToken,
+    );
+  }
+});
+
+test('WAP-E12 personal events without proof, on the wrong URL or outside the allowlist are refused', () => {
+  const profile = privacy.validateEnvironment({
+    ...evolutionBoot,
+    ...evolutionControl,
+  });
+  const withoutGeneration = { 'Content-Type': 'application/json' };
+  for (const request of [
+    personalDispatch({}, { source: undefined }),
+    personalDispatch({}, { source: null }),
+    personalDispatch({ headers: withoutGeneration }),
+    personalDispatch({ headers: undefined }),
+    personalDispatch({}, { event: 'messages.update', source: undefined }),
+    personalDispatch(
+      { headers: withoutGeneration },
+      { event: 'messages.update' },
+    ),
+    personalDispatch({ url: profile.webhookUrl }),
+    personalDispatch({ url: profile.webhookUrl }, { event: 'messages.update' }),
+    personalDispatch({}, { instance: 'synthetic-general' }),
+    personalDispatch({}, { event: 'qrcode.updated' }),
+    personalDispatch({}, { event: 'messages.set' }),
+    personalDispatch({}, { event: 'send.message' }),
+  ])
+    assert.throws(
+      () => privacy.protectWebhookRequest(request, profile),
+      /EVOLUTION_WEBHOOK_DESTINATION_REJECTED/u,
+    );
+  // The general instance keeps its own URL; the personal clause does not apply.
+  const general = privacy.protectWebhookRequest(
+    personalDispatch(
+      { url: profile.webhookUrl, headers: {} },
+      { instance: 'synthetic-general', source: undefined },
+    ),
+    profile,
+  );
+  assert.equal(general.data.apikey, undefined);
+  assert.equal(general.headers['X-Silmer-Evolution-Token'], 't'.repeat(48));
+});
+
 test('WAP-T05-01 Evolution boot profile adds personal routing only for a valid literal opt-in', () => {
-  const profile = {
-    AUTHENTICATION_API_KEY: 'k'.repeat(48),
-    SILMER_EVOLUTION_WEBHOOK_TOKEN: 't'.repeat(48),
-    DATABASE_CONNECTION_URI:
-      'postgresql://silmer_evolution:synthetic@db.synthetic.invalid:5432/silmer_evolution',
-    SILMER_EVOLUTION_WEBHOOK_URL:
-      'https://n8n.synthetic.invalid/webhook/silmer/evolution-events',
-    SILMER_EVOLUTION_INSTANCE: 'synthetic-general',
-    DATABASE_PROVIDER: 'postgresql',
-    CACHE_REDIS_ENABLED: 'false',
-    CACHE_REDIS_SAVE_INSTANCES: 'false',
-    CACHE_LOCAL_ENABLED: 'true',
-    TELEMETRY_ENABLED: 'false',
-    AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: 'false',
-    WEBHOOK_GLOBAL_ENABLED: 'false',
-    PROMETHEUS_METRICS: 'false',
-    WEBSOCKET_ENABLED: 'false',
-    LOG_LEVEL: 'ERROR',
-    LOG_BAILEYS: 'fatal',
-    DOCKER_ENV: 'true',
-    TZ: 'UTC',
-    DATABASE_SAVE_DATA_NEW_MESSAGE: 'true',
-  };
+  const profile = { ...evolutionBoot };
   const general = privacy.validateEnvironment(profile);
   assert.equal(general.personalWebhookUrl, undefined);
   assert.equal(general.personalInstances, undefined);

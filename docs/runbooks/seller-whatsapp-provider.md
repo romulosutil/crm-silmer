@@ -125,9 +125,30 @@ somente arquivo e categoria se houver acerto, nunca os bytes encontrados.
 
 Todos os novos guards são default off. A instalação do binding é um hook
 interno, usado apenas no processo do rehearsal; a API Evolution do ensaio
-continua com geração off até existir o controle E02. Mensagens pessoais ainda
-são negadas: o esquema desta prova admite somente connection.update. Não
-selecionar estas imagens em ambiente real como consequência de aprovar o PR.
+continua com geração off até existir o controle E02. Não selecionar estas
+imagens em ambiente real como consequência de aprovar o PR.
+
+**Eventos pessoais (WAP-E12).** A instância pessoal emite somente
+`connection.update`, `messages.upsert` e `messages.update`; qualquer outro
+evento (`qrcode.updated`, `messages.set`, `send.message`, contatos, chats,
+grupos) é negado na fonte com o código fixo `WAP_GENERATION_EVENT_REJECTED`.
+Os três eventos carregam o `source` capturado no socket e o header
+`X-Silmer-Wap-Generation-Token` da mesma geração, inclusive quando o callback
+fica na fila e é liberado depois de um novo binding. O envelope de mensagem
+sai com exatamente `event`, `instance`, `source`, `data`, `destination`,
+`date_time`, `sender` e `server_url`; `apikey` e chaves extras do upstream não
+saem do processo. Antes do envio também são recusados chats que o CRM nunca
+usa: `remoteJid` terminado em `@g.us`, `@broadcast` (inclui `status@broadcast`)
+ou `@newsletter`, e mensagens com `participant`/`participantAlt`. Em
+`messages.update` só passa recibo de mensagem própria (`fromMe=true`) com
+status `ERROR`, `DELIVERY_ACK`, `READ` ou `PLAYED`; `SERVER_ACK` já é
+representado pelo resultado HTTP do envio. Os filtros espelham
+`validateEvolutionEvent`, exceto que `messages.upsert` com `fromMe=true`
+segue para o CRM: é o eco do que o vendedor digitou no aparelho (WAP-09).
+Mensagem enviada pelo CRM não gera eco em `messages.upsert` (Evolution 2.3.7
+usa `emitOwnEvents:false`); sua confirmação vem do resultado HTTP e dos
+recibos `messages.update`. Evento de geração antiga é recusado com 403 fixo no
+ingresso n8n; o 409 `WHATSAPP_GENERATION_STALE` do CRM é a segunda barreira.
 
 | Configuração                    | Default / uso na prova                                                         |
 | ------------------------------- | ------------------------------------------------------------------------------ |
@@ -266,9 +287,15 @@ não repete em caso de erro/timeout. Create e logout também não têm retry.
 Eventos na fonte: `messages.upsert`, `messages.update`, `connection.update` e
 `qrcode.updated`. `sender`/`wuid`/`ownerJid` são pistas de identidade a validar;
 o número informado pelo humano não é prova. `fromMe=true` é fato outbound,
-não autorização de reenvio. O adapter atual descarta esses upserts e permanece
-inalterado. QR/código só seguem pelo retorno síncrono do ensaio, nunca webhook
-de eventos; o wrapper continua recusando QR/histórico e limpando `apikey`.
+não autorização de reenvio. O adapter da linha geral descarta esses upserts e
+permanece inalterado; na instância pessoal eles são o eco WAP-09 descrito em
+"Eventos pessoais (WAP-E12)". QR/código só seguem pelo retorno síncrono do
+ensaio, nunca webhook de eventos; o wrapper continua recusando QR/histórico e
+limpando `apikey`. A instância pessoal é criada com `groupsIgnore=true` e
+`readMessages`, `readStatus`, `syncFullHistory`, `alwaysOnline` e `rejectCall`
+em `false` (campos do `InstanceDto` da 2.3.7), e o webhook é configurado e
+conferido com exatamente `CONNECTION_UPDATE`, `MESSAGES_UPSERT` e
+`MESSAGES_UPDATE`, `byEvents=false` e `base64=false`.
 
 Fontes primárias da revisão:
 

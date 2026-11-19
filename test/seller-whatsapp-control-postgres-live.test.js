@@ -277,7 +277,11 @@ else {
               url: webhookUrl,
               webhookByEvents: false,
               webhookBase64: false,
-              events: ['CONNECTION_UPDATE'],
+              events: [
+                'CONNECTION_UPDATE',
+                'MESSAGES_UPSERT',
+                'MESSAGES_UPDATE',
+              ],
             });
           if (path.startsWith('/instance/connectionState/'))
             return globalThis.Response.json({

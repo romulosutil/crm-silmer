@@ -173,7 +173,7 @@ async function main() {
     async get() {
       return {
         enabled: true,
-        events: ['CONNECTION_UPDATE'],
+        events: ['CONNECTION_UPDATE', 'MESSAGES_UPSERT', 'MESSAGES_UPDATE'],
         headers: {},
         url: n8nUrl,
         webhookByEvents: false,

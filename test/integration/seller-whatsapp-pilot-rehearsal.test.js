@@ -926,7 +926,7 @@ test(
 
     // ============ 0. preflight ============
     await t.test(
-      '0. migrations through 0083 plus contract 0081; flags off fail closed; allowlist [A,B] denies C',
+      '0. migrations through 0084 plus contract 0081; flags off fail closed; allowlist [A,B] denies C',
       async () => {
         const applied = (
           await pool.query(
@@ -943,7 +943,7 @@ test(
           applied.map((/** @type {any} */ r) => r.version),
           [...new Set(expected)],
         );
-        assert.equal(applied.at(-1).version, '0083');
+        assert.equal(applied.at(-1).version, '0084');
         assert.equal(
           applied.find((/** @type {any} */ r) => r.version === '0081').phase,
           'contract',

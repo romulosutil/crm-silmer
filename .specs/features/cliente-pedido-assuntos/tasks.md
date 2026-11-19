@@ -83,3 +83,10 @@ axe. Sem alteração do workflow n8n; ajustes de fala e gatilho do agente ficam
 na [RFC 036](../../../docs/rfc/036-assunto-da-mensagem-so-na-duvida-do-agente.md)
 até decisão do PO. Evidência de UX:
 [estudo de 28/10/2026](../../../docs/product/pesquisa-ux-assuntos-2026-10-28.md).
+
+## CP-T10 — Criar cliente na tela Clientes
+
+**Requisitos:** CP-01, preservando CP-19, CP-20 e WAP-18. Reusar
+`POST /api/v1/contacts` e a ficha de cadastro. Validar nome obrigatório,
+telefone e e-mail opcionais e independentes, retry, ausência de efeitos de
+canal e cadastro por teclado. Decisão no [ADR 094](../../../docs/adr/094-cadastro-de-cliente-com-nome.md).

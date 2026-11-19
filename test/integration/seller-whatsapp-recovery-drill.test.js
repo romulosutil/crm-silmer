@@ -1210,7 +1210,7 @@ test(
             'SELECT max(version) AS v, count(*)::int AS n FROM crm_meta.schema_migrations',
           )
         ).rows[0];
-        assert.equal(versions.v, '0083');
+        assert.equal(versions.v, '0084');
         let R = at(OFF);
         assert.equal(
           await R.store.loadForDelivery(a2.commandId, { now }),

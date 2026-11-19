@@ -601,8 +601,9 @@ Handoff, Pedido, auditoria e jobs. A interface Vue 3 oferece Dashboard,
 Caixa de Entrada, Clientes, Pedidos, Usuários e Conta, conforme ACL. Negócio/Kanban
 foram aposentados pela [ADR 004](docs/adr/004-aposentar-kanban-e-negocio.md).
 
-Novo Contato manual e novo Pedido manual exigem telefone. Nome identifica a
-pessoa na interface, e-mail é opcional e Contatos anteriores sem telefone
+Novo Contato em Clientes exige nome e aceita telefone e e-mail opcionais
+([ADR 094](docs/adr/094-cadastro-de-cliente-com-nome.md)).
+Novo Pedido manual exige telefone no Contato. Contatos sem telefone
 continuam disponíveis para correção. A busca considera números associados a
 identidades de canal; duplicatas exigem escolha humana
 ([ADR 033](docs/adr/033-telefone-no-cadastro-e-roteamento.md)).

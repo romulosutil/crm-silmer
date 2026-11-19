@@ -77,7 +77,7 @@ test('phone search uses a keyed hash and never sends plaintext to SQL', async ()
   );
 });
 
-test('manual creation rejects missing phone and invalid email before writing', async () => {
+test('CP-01 and WAP-18 reject invalid contact data before writing', async () => {
   const key = Buffer.alloc(32, 7).toString('base64url');
   const database = {
     query: async () => {
@@ -104,15 +104,20 @@ test('manual creation rejects missing phone and invalid email before writing', a
     idempotencyKey: 'create-1',
     phone: undefined,
   };
-  await assert.rejects(operations.createContact(base), {
+  await assert.rejects(
+    operations.createContact({ ...base, displayName: '   ' }),
+    { code: 'INVALID_DISPLAY_NAME' },
+  );
+  await assert.rejects(
+    operations.createContact({ ...base, phone: 'invalid' }),
+    { code: 'INVALID_PHONE' },
+  );
+  await assert.rejects(operations.createContact({ ...base, portfolio: true }), {
     code: 'INVALID_PHONE',
   });
-  await assert.rejects(
-    operations.createContact({ ...base, phone: '11987654321', email: 'bad' }),
-    {
-      code: 'INVALID_EMAIL',
-    },
-  );
+  await assert.rejects(operations.createContact({ ...base, email: 'bad' }), {
+    code: 'INVALID_EMAIL',
+  });
 });
 
 test('direct contact creation rejects a phone already claimed on site, without writing', async () => {

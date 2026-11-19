@@ -77,6 +77,8 @@ async function mockRegistrationApi(page) {
     ...contact,
     registrationStatus: status(contact),
   });
+  /** @type {{body: any, key: string|undefined}[]} */
+  const creates = [];
   /** @type {{body: any, key: string|undefined, id: string}[]} */
   const detailsWrites = [];
   /** @type {{body: any, key: string|undefined, id: string}[]} */
@@ -95,7 +97,14 @@ async function mockRegistrationApi(page) {
     const method = route.request().method();
     if (path === '/api/v1/sessions/current') {
       return route.fulfill({
-        json: { user: { id: 'seller-1', name: 'Marina', capabilities: [] } },
+        json: {
+          user: {
+            id: 'seller-1',
+            name: 'Marina',
+            functionName: 'Vendedor',
+            capabilities: [],
+          },
+        },
       });
     }
     if (path === '/api/v1/events') {
@@ -115,6 +124,24 @@ async function mockRegistrationApi(page) {
       return route.fulfill({
         json: { items, nextCursor: null, totalCount: items.length },
       });
+    }
+    if (path === '/api/v1/contacts' && method === 'POST') {
+      const body = route.request().postDataJSON();
+      creates.push({ body, key: route.request().headers()['idempotency-key'] });
+      if (creates.length === 1) return route.fulfill({ status: 503, json: {} });
+      const contact = {
+        id: 'contact-created',
+        displayName: body.displayName,
+        label: body.displayName,
+        version: 1,
+        phone: body.phone ?? null,
+        email: body.email ?? null,
+        registration: null,
+        updatedAt: new Date().toISOString(),
+        identities: [],
+      };
+      contacts[contact.id] = contact;
+      return route.fulfill({ status: 201, json: { contact } });
     }
     if (path.startsWith('/api/v1/postal-codes')) {
       if (path !== '/api/v1/postal-codes/lookup' || method !== 'POST') {
@@ -245,6 +272,7 @@ async function mockRegistrationApi(page) {
 
   return {
     contacts,
+    creates,
     detailsWrites,
     postalLookups,
     postalUrls,
@@ -286,6 +314,55 @@ async function mockRegistrationApi(page) {
     },
   };
 }
+
+test('CP-01 creates a client with only a name and opens the record after retry', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mock = await mockRegistrationApi(page);
+  await page.goto('/clientes');
+
+  const trigger = page.getByRole('button', { name: 'Novo cliente' });
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Novo cliente' });
+  const name = dialog.getByRole('textbox', { name: 'Nome (obrigatório)' });
+  await expect(name).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await expect(name).toBeFocused();
+  expect(mock.creates).toHaveLength(0);
+
+  await name.fill('  Cliente sem telefone  ');
+  await page.keyboard.press('Enter');
+  const error = dialog.getByRole('alert');
+  await expect(error).toHaveText(
+    'Não foi possível criar o cliente. Tente novamente.',
+  );
+  await expect(error).toBeFocused();
+  await expect(name).toHaveValue('  Cliente sem telefone  ');
+  await dialog.getByRole('button', { name: 'Criar cliente' }).press('Enter');
+
+  await expect(dialog).toBeHidden();
+  await expect(
+    page.getByRole('region', { name: 'Avisos' }).getByText('Cliente criado.'),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/clientes\/contact-created$/u);
+  await expect(
+    page.getByRole('heading', { name: 'Cliente sem telefone' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('row', { name: /Cliente sem telefone/u }),
+  ).toHaveCount(1);
+  expect(mock.creates).toEqual([
+    { body: { displayName: 'Cliente sem telefone' }, key: expect.any(String) },
+    { body: { displayName: 'Cliente sem telefone' }, key: mock.creates[0].key },
+  ]);
+});
 
 /** @param {import('@playwright/test').Page} page */
 function registration(page) {

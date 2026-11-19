@@ -168,6 +168,7 @@ if (!url) {
         '0080',
         '0082',
         '0083',
+        '0084',
       ]);
       assert.deepEqual((await migrate(pool, { migrations })).applied, []);
       assert.deepEqual(

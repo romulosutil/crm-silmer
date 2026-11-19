@@ -737,6 +737,19 @@ function verifiedSettings(settings) {
     )
   );
 }
+// Evolution can retain an unpaired row across a restart without loading its
+// socket. Its state reply then contains only the instance name.
+function unpairedWithoutSocket(row, observation) {
+  const instance = observation?.instance;
+  return (
+    row &&
+    !row.ownerJid &&
+    ['close', 'connecting'].includes(row.connectionStatus) &&
+    instance?.instanceName === row.name &&
+    !('state' in instance)
+  );
+}
+
 function configuration(env) {
   const enabled = env.SILMER_WAP_CONTROL_ENABLED === 'true';
   if (
@@ -947,9 +960,20 @@ function createControlAdapter({
           const all = await http('/instance/fetchInstances');
           if (!Array.isArray(all)) throw new Error('WAP_CONTROL_UNKNOWN');
           const own = all.filter((v) => v.name === body.instance);
-          if (own.length > 1 || own.some((v) => v.connectionStatus !== 'close'))
+          if (own.length > 1) throw new Error('WAP_CONTROL_UNKNOWN');
+          const existing = own[0];
+          if (
+            existing &&
+            existing.connectionStatus !== 'close' &&
+            (existing.connectionStatus !== 'connecting' ||
+              existing.ownerJid ||
+              !unpairedWithoutSocket(
+                existing,
+                await http(`/instance/connectionState/${name}`),
+              ))
+          )
             throw new Error('WAP_CONTROL_UNKNOWN');
-          if (!own.length) {
+          if (!existing) {
             const created = await http('/instance/create', 'POST', {
               instanceName: body.instance,
               integration: 'WHATSAPP-BAILEYS',
@@ -983,7 +1007,8 @@ function createControlAdapter({
           const observedState = await http(`/instance/connectionState/${name}`);
           if (
             !verifiedWebhook(observedWebhook, config.webhook) ||
-            observedState?.instance?.state !== 'close'
+            (observedState?.instance?.state !== 'close' &&
+              !unpairedWithoutSocket(existing, observedState))
           )
             throw new Error('WAP_CONTROL_UNKNOWN');
           return {
@@ -1019,17 +1044,9 @@ function createControlAdapter({
         const state = await http(`/instance/connectionState/${name}`);
         const webhook = await http(`/webhook/find/${name}`);
         const settings = await http(`/settings/find/${name}`);
-        // WAP-E12: after an Evolution restart an unpaired instance has no
-        // socket in memory and its state read omits `state`. The generation
-        // binding died with the process, so it is read as close (re-pair);
-        // a paired owner or a claimed open socket stays uncertain.
-        const unloaded =
-          state?.instance !== null &&
-          typeof state?.instance === 'object' &&
-          !('state' in state.instance) &&
-          !own[0].ownerJid &&
-          own[0].connectionStatus !== 'open';
-        const providerState = unloaded ? 'close' : state?.instance?.state;
+        const providerState = unpairedWithoutSocket(own[0], state)
+          ? 'close'
+          : state?.instance?.state;
         if (!['open', 'close', 'connecting'].includes(providerState))
           throw new Error('WAP_CONTROL_UNKNOWN');
         // WAP-E12: the CRM contract has one routing proof; drifted settings

@@ -540,11 +540,12 @@ test('WAP-E02: reconciliation reads status, actual owner identity and exact webh
   );
 });
 
-test('WAP-E12: reconcile reads an unpaired instance whose socket is not loaded after a restart as close', async () => {
-  /** @param {any} row @param {any} state */
+test('WAP-E12: reconcile and reconnect agree when an unpaired socket is not loaded', async () => {
+  /** @param {any} row @param {any} state @param {'connect'|'reconcile'} action */
   const run = async (
     row,
     state = { instance: { instanceName: 'synthetic-one' } },
+    action = 'reconcile',
   ) => {
     /** @type {any[]} */ const calls = [];
     const adapter = createControlAdapter({
@@ -574,7 +575,7 @@ test('WAP-E12: reconcile reads an unpaired instance whose socket is not loaded a
     });
     const result = adapter.execute({
       ...privateInput,
-      action: 'reconcile',
+      action,
       source,
       generationToken: token,
     });
@@ -594,6 +595,24 @@ test('WAP-E12: reconcile reads an unpaired instance whose socket is not loaded a
     unpaired.calls.every((call) => call.method === 'GET'),
     true,
   );
+  const reconnect = await run(
+    { connectionStatus: 'connecting', ownerJid: null },
+    undefined,
+    'connect',
+  );
+  assert.deepEqual(await reconnect.result, {
+    outcome: 'succeeded',
+    providerState: 'close',
+    webhookVerified: true,
+    bindingVerified: false,
+  });
+  assert.deepEqual(
+    reconnect.calls.filter(({ method }) => method !== 'GET'),
+    [
+      { path: '/settings/set/synthetic-one', method: 'POST' },
+      { path: '/webhook/set/synthetic-one', method: 'POST' },
+    ],
+  );
   // A paired owner, a claimed open socket or an unreadable reply stay uncertain.
   for (const [row, state] of [
     [
@@ -606,13 +625,21 @@ test('WAP-E12: reconcile reads an unpaired instance whose socket is not loaded a
     [{ connectionStatus: 'connecting', ownerJid: null }, {}],
     [
       { connectionStatus: 'connecting', ownerJid: null },
+      { instance: { instanceName: 'different-instance' } },
+    ],
+    [
+      { connectionStatus: 'connecting', ownerJid: null },
       { instance: { state: 'paused' } },
     ],
-  ])
+  ]) {
     await assert.rejects(
       (await run(row, state)).result,
       /WAP_CONTROL_UNKNOWN/u,
     );
+    const denied = await run(row, state, 'connect');
+    await assert.rejects(denied.result, /WAP_CONTROL_UNKNOWN/u);
+    assert.ok(denied.calls.every(({ method }) => method === 'GET'));
+  }
 });
 
 /** Every observed settings row that must not count as verified. */

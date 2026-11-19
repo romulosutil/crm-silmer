@@ -104,13 +104,15 @@ e corpo diferente conflita.
    sweep recuperam por `reconcile`, que só lê estado/identidade/webhook/ajustes. Não
    reiniciar/apagar instância, repetir create/logout/connect ou consumir revisão
    inbound. Reconciliação antiga não supera observação mais recente.
-   Depois de um reinício do Evolution, `connectionState` de instância sem socket
-   em memória vem com o nome da instância e sem `state`. Para uma instância
-   sem titular (`ownerJid`) que aparece como `close` ou `connecting` em
-   `fetchInstances`, o `reconcile` devolve `close`. A reconexão reutiliza a
-   mesma instância após confirmar essa leitura, reaplica e confere os ajustes
-   e o webhook, e libera um novo desafio. Leituras incompletas de instâncias
-   com titular ou marcadas como `open` mantêm a operação incerta.
+   No boot do Evolution, uma instância allowlisted com status persistido
+   `connecting` e sem titular é carregada em memória sem iniciar um socket.
+   A reconexão exige `connectionState` explicitamente `close` antes de
+   reaplicar e conferir os ajustes e o webhook. O desafio autorizado instala
+   a prova de geração antes de criar o socket. Se a instância ainda não
+   estiver carregada, a reconciliação pode devolver `close` para a leitura
+   sem titular, mas o comando de conexão para antes das escritas. Leituras
+   incompletas de instâncias com titular ou marcadas como `open` mantêm a
+   operação incerta. [Carregamento no Evolution 2.3.7](https://github.com/evolution-foundation/evolution-api/blob/cd800f2976e1e5b682fbf86a01ee4d85ae61f370/src/api/services/monitor.service.ts#L250-L282).
 6. Desconectar/inativar revoga geração/desafios e impede novo despacho. Efeito
    iniciado conserva seu recibo antigo; não reabre acesso. Logout que depende
    de efeito incerto aguarda reconciliação, com revogação local imediata.

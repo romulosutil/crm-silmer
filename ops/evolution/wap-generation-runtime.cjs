@@ -127,6 +127,11 @@ function createGenerationRuntime(options = {}) {
   };
 
   return Object.freeze({
+    // Load a retained unpaired instance as idle. Only the authorized challenge
+    // can bind its next socket, and the binding does not survive a restart.
+    deferUnpairedStartup(instance, state, owner) {
+      return enabled && selected(instance) && state === 'connecting' && !owner;
+    },
     // Trusted in-process control hook. E01 exercises it only from the rehearsal.
     // No HTTP route, mutation from provider payload, or implicit reconnect binding.
     bindNextSocket(instance, source, token) {

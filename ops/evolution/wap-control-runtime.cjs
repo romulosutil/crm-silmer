@@ -302,12 +302,13 @@ function createControlAdapter({
           if (
             existing &&
             existing.connectionStatus !== 'close' &&
-            (existing.connectionStatus !== 'connecting' ||
-              existing.ownerJid ||
-              !unpairedWithoutSocket(
-                existing,
-                await http(`/instance/connectionState/${name}`),
-              ))
+            (existing.connectionStatus !== 'connecting' || existing.ownerJid)
+          )
+            throw new Error('WAP_CONTROL_UNKNOWN');
+          if (
+            existing &&
+            (await http(`/instance/connectionState/${name}`))?.instance
+              ?.state !== 'close'
           )
             throw new Error('WAP_CONTROL_UNKNOWN');
           if (!existing) {
@@ -344,8 +345,7 @@ function createControlAdapter({
           const observedState = await http(`/instance/connectionState/${name}`);
           if (
             !verifiedWebhook(observedWebhook, config.webhook) ||
-            (observedState?.instance?.state !== 'close' &&
-              !unpairedWithoutSocket(existing, observedState))
+            observedState?.instance?.state !== 'close'
           )
             throw new Error('WAP_CONTROL_UNKNOWN');
           return {

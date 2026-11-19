@@ -34,6 +34,10 @@ export function patchEvolutionGeneration(bundle) {
   const replacements = [
     [PRISMA_CREDENTIAL_WRITER, patchedPrismaCredentialWriter()],
     [
+      's.connectionStatus==="open"||s.connectionStatus==="connecting"?(this.logger.info(`Auto-connecting instance',
+      `(s.connectionStatus==="open"||s.connectionStatus==="connecting")&&!${runtime}.deferUnpairedStartup(s.instanceName,s.connectionStatus,s.ownerJid)?(this.logger.info(\`Auto-connecting instance`,
+    ],
+    [
       'eventHandler(){this.client.ev.process(async e=>{',
       `eventHandler(){const silmerWapRuntime=${runtime},silmerWapSource=silmerWapRuntime.captureSocket(this.instanceName,this.client);const silmerWapProcess=cb=>this.client.ev.process(silmerWapRuntime.wrap(silmerWapSource,cb));silmerWapProcess(async e=>{`,
     ],

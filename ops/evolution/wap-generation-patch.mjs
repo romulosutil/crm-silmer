@@ -39,7 +39,7 @@ export function patchEvolutionGeneration(bundle) {
     ],
     [
       's.connectionStatus==="open"||s.connectionStatus==="connecting"?(this.logger.info(`Auto-connecting instance',
-      `(s.connectionStatus==="open"||s.connectionStatus==="connecting")&&!${runtime}.deferUnpairedStartup(s.instanceName,s.connectionStatus,s.ownerJid)?(this.logger.info(\`Auto-connecting instance`,
+      `(s.connectionStatus==="open"||s.connectionStatus==="connecting")&&!${runtime}.deferPairingStartup(s.instanceName,s.connectionStatus)?(this.logger.info(\`Auto-connecting instance`,
     ],
     [
       'eventHandler(){this.client.ev.process(async e=>{',

@@ -20,23 +20,22 @@ const a2 = { ...a1, bindingId: 'synthetic-a-g2', generation: 2 };
 const token1 = 'synthetic-generation-one-token-32-characters';
 const token2 = 'synthetic-generation-two-token-32-characters';
 
-test('WAP-E12: boot leaves only an allowlisted unpaired connecting instance idle', () => {
+test('WAP-E12: boot leaves allowlisted connecting instances idle', () => {
   const config = { instances: ['synthetic-personal'] };
   const enabled = createGenerationRuntime({ ...config, enabled: true });
   const disabled = createGenerationRuntime({ ...config, enabled: false });
   assert.equal(
-    enabled.deferUnpairedStartup('synthetic-personal', 'connecting', null),
+    enabled.deferPairingStartup('synthetic-personal', 'connecting'),
     true,
   );
-  for (const [instance, state, owner] of [
-    ['synthetic-general', 'connecting', null],
-    ['synthetic-personal', 'open', null],
-    ['synthetic-personal', 'close', null],
-    ['synthetic-personal', 'connecting', 'synthetic-owner'],
+  for (const [instance, state] of [
+    ['synthetic-general', 'connecting'],
+    ['synthetic-personal', 'open'],
+    ['synthetic-personal', 'close'],
   ])
-    assert.equal(enabled.deferUnpairedStartup(instance, state, owner), false);
+    assert.equal(enabled.deferPairingStartup(instance, state), false);
   assert.equal(
-    disabled.deferUnpairedStartup('synthetic-personal', 'connecting', null),
+    disabled.deferPairingStartup('synthetic-personal', 'connecting'),
     false,
   );
 });

@@ -233,7 +233,7 @@ salvamento pelo editor passa pelo guard de escrita.
 - O vínculo de geração fica em memória no Evolution. Qualquer reinício ou
   redeploy do Evolution exige novo pareamento. Prepare todos os vendedores
   antes de um único reinício.
-- Instância criada antes de `cfa3d998` tem o webhook antigo e fica `blocked`
+- Instância criada antes de `a3ee53f6` tem o webhook antigo e fica `blocked`
   na reconciliação. Ela precisa reconectar.
 - Mensagens enviadas pelo CRM não geram eco `messages.upsert`
   (`emitOwnEvents: false`). A confirmação vem do HTTP e dos recibos.
@@ -261,7 +261,7 @@ salvamento pelo editor passa pelo guard de escrita.
 | Trava de envio pós-restore no código                           | pendente | P1, decisão de Tech Lead/PO antes do piloto                                                                                                                      |
 | Limite de envio por usuário                                    | pendente | P1 de capacidade, Backend antes de ampliar além de 2                                                                                                             |
 | CI verde, merge e migrações em produção                        | feito    | PR 398 em `1489c2fe`; expand `0080`/`0082`/`0083`, contract `0081`; [publicação](../../.specs/features/seller-whatsapp/validation-piloto.md#publicação-18112026) |
-| Imagens Evolution/n8n com patch e digest                       | pendente | as de 18/11 (flags desligadas, PR 406 na 2.43.7) não têm `cfa3d998`/`b25880c9`; reconstruir, ver [ativação](#ativação-em-produção-piloto-de-um-vendedor)         |
+| Imagens Evolution/n8n com patch e digest                       | feito    | reconstruídas em 19/11 com a master `829e20e7`, flags desligadas; [validation-piloto](../../.specs/features/seller-whatsapp/validation-piloto.md)                |
 | Spike de provedor e código no mesmo celular (WAP-E01)          | pendente | E01 aberto; WAP-T05-06 no E12                                                                                                                                    |
 | Pareamento mobile, sincronização e eco reais                   | pendente | WAP-E12                                                                                                                                                          |
 | JID da resposta = `+E164` gravado (gate do primeiro envio)     | pendente | WAP-E12                                                                                                                                                          |
@@ -299,7 +299,7 @@ nenhum deles pode ser trocado por outro.
    ([health](../../EASYPANEL-TOPOLOGY.md)). Migrações expand até `0083`, e contract `0081` só
    depois dos leitores compatíveis.
 3. Imagens Evolution 2.3.7 e n8n 2.43.7 com os patches WAP, por digest,
-   reconstruídas com `cfa3d998` e `b25880c9`. As flags começam desligadas, e
+   reconstruídas com `a3ee53f6` e `1f222818`. As flags começam desligadas, e
    os workflows candidatos ficam inativos até o passo 5.
 4. Smoke da linha geral sem regressão (entrada, Pedido manual e envio).
 5. Flags ligadas por fase e por allowlist, um vendedor por vez:

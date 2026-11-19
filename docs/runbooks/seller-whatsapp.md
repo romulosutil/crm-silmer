@@ -196,7 +196,9 @@ cópia privada:
 
 O build grava, sem sobrescrever, `control.json`, `challenge.json`,
 `inbound.json`, `main-personal-send.json` (só quando `personalSendLineIds`
-não está vazio) e `summary.json`. Todos saem inativos. O `summary.json` traz as variáveis propostas para API, worker, n8n e
+não está vazio) e `summary.json`. Todos saem inativos. Controle, desafio e ingresso saem
+organizados da esquerda para a direita, sem nós sobrepostos; o rascunho do
+principal mantém o layout vivo. O `summary.json` traz as variáveis propostas para API, worker, n8n e
 Evolution, validadas pelos loaders reais, e a lista dos segredos que não
 mudam. A allowlist de vendedores sai como placeholder. Recusas, só com código
 fixo:

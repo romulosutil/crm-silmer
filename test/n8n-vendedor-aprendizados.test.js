@@ -74,6 +74,7 @@ function context(text, inbound = {}, event = {}) {
       text,
       customer_name: 'Cliente Sintético',
       message_type: 'text',
+      occurred_at: '2026-10-28T13:00:00.000Z',
       ...event,
     },
   });

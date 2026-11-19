@@ -81,12 +81,13 @@ T13..T18: bytes técnicos, workflow, DEV, DTO, cliente HTTP e composer.
 
 ### Phase 4: Gravação, histórico e fechamento
 
-T19..T23, T25, T26, T27, T28, T29, T30, T31, T32, T24: recorder, playback, integração Inbox, limpeza, rollout,
+T19..T23, T25, T26, T27, T28, T29, T30, T31, T32, T33, T24: recorder, playback, integração Inbox, limpeza, rollout,
 correção UX, recuperação de recusa conhecida e UAT.
 
 ```text
 T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8 -> T9 -> T10 -> T11 -> T12
 T12 -> T13 -> T14 -> T15 -> T16 -> T17 -> T18 -> T19 -> T20 -> T21 -> T22 -> T23 -> T25 -> T26 -> T27 -> T28 -> T29 -> T30 -> T31 -> T24
+T25 -> T33
 T23 -> T32 -> T24
 ```
 
@@ -523,6 +524,20 @@ toolbar. Imagem grande, nome longo e teclado cobertos em 1366×768, 1090×689,
 **Tests**: smoke remoto sintético, negativas IAM/ACL, schema/health/scanner e upload/leitura dos três tipos.
 **Gate**: Evidência operacional remota + revisão independente; evidência local não substitui ambiente alvo.
 **Commit**: docs(ops): record remote chat media development pipeline
+
+### T33: Colar, soltar e revisar imagens na conversa
+
+**Requirements**: MED-01, MED-08, MED-25, MED-30, MED-31, MED-33, MED-34.
+
+**What**: Reutilizar o pipeline de um anexo por mensagem para imagens coladas e arquivos soltos, com prévia que exibe a imagem inteira e mantém a legenda e os controles no compositor.
+
+**Depends on**: T25.
+
+**Tests**: E2E com colagem, drop na conversa, legenda, envio explícito, rascunho preservado, múltiplos arquivos e conversa bloqueada. Manter os cenários responsivos e de teclado.
+
+**Gate**: Full.
+
+**Done when**: [x] Gestos validam o mesmo rascunho do clipe. A prévia preserva a imagem inteira e o envio depende de confirmação.
 
 ### T24: Homologação da fatia e evidências
 

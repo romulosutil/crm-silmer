@@ -15,11 +15,14 @@ const props = defineProps({
   reasonId: { type: String, default: '' },
   // The "Pedido" group exists only when someone has one of its tools.
   orderTools: { type: Boolean, default: false },
+  dropTarget: { type: HTMLElement, default: null },
 });
 const emit = defineEmits(['sent', 'sending-change', 'recording-dismissed']);
 const inputId = useId(),
   captionId = useId(),
   statusId = useId();
+const composer = ref(null);
+const dropActive = ref(false);
 const fileInput = ref(null),
   attachButton = ref(null),
   captionInput = ref(null),
@@ -58,7 +61,7 @@ watch(
 );
 const softDisabled = computed(() => props.disabled && props.unavailable);
 function attach() {
-  if (props.disabled) return;
+  if (props.disabled || state.value === 'sending') return;
   fileInput.value?.click();
 }
 const sendAllowed = computed(
@@ -142,15 +145,85 @@ async function selectFile(event) {
   const files = Array.from(
     /** @type {HTMLInputElement} */ (event.target).files ?? [],
   );
+  if (props.disabled || state.value === 'sending' || !files.length) return;
+  await selectFiles(files);
+}
+
+/** @param {File[]} files */
+async function selectFiles(files) {
   clear();
   emit('recording-dismissed');
-  if (!files?.length) return;
   if (files.length !== 1) {
     error.value = 'Selecione apenas um arquivo.';
     return;
   }
   await selectCandidate(files[0]);
 }
+const canReceiveFile = computed(() => !props.disabled && !file.value);
+watch(canReceiveFile, (allowed) => {
+  if (!allowed) dropActive.value = false;
+});
+
+/** @param {ClipboardEvent} event */
+function pasteImage(event) {
+  const files = Array.from(event.clipboardData?.files ?? []).filter(
+    (candidate) =>
+      candidate.type.startsWith('image/') || hint(candidate)?.kind === 'image',
+  );
+  if (!files.length || !canReceiveFile.value || event.defaultPrevented) return;
+
+  event.preventDefault();
+  void selectFiles(files);
+}
+
+/** @param {DragEvent} event */
+function dragFile(event) {
+  const transfer = event.dataTransfer;
+  if (!transfer?.types.includes('Files')) return;
+
+  event.preventDefault();
+  transfer.dropEffect = canReceiveFile.value ? 'copy' : 'none';
+  dropActive.value = canReceiveFile.value;
+}
+
+/** @param {DragEvent} event */
+function leaveDropTarget(event) {
+  if (
+    event.currentTarget instanceof HTMLElement &&
+    event.relatedTarget instanceof Node &&
+    event.currentTarget.contains(event.relatedTarget)
+  )
+    return;
+
+  dropActive.value = false;
+}
+
+/** @param {DragEvent} event */
+function dropFile(event) {
+  const files = Array.from(event.dataTransfer?.files ?? []);
+  dropActive.value = false;
+  if (!files.length) return;
+
+  event.preventDefault();
+  if (canReceiveFile.value) void selectFiles(files);
+}
+
+watch(
+  () => props.dropTarget ?? composer.value,
+  (target, _previous, onCleanup) => {
+    if (!target) return;
+
+    const events = new AbortController();
+    const options = { signal: events.signal };
+    target.addEventListener('dragenter', dragFile, options);
+    target.addEventListener('dragover', dragFile, options);
+    target.addEventListener('dragleave', leaveDropTarget, options);
+    target.addEventListener('drop', dropFile, options);
+    onCleanup(() => events.abort());
+  },
+  { immediate: true },
+);
+
 /** @param {File} selected @param {string} [origin] */
 async function selectCandidate(selected, origin = 'attachment') {
   const actualMime = selected.type.split(';')[0].trim().toLowerCase();
@@ -441,7 +514,17 @@ watch(
 </script>
 
 <template>
-  <section class="media-composer" aria-label="Anexar mídia" :aria-busy="busy">
+  <section
+    ref="composer"
+    class="media-composer"
+    aria-label="Anexar mídia"
+    :aria-busy="busy"
+    @paste="pasteImage"
+  >
+    <div v-if="dropActive" class="media-composer__drop" aria-hidden="true">
+      <AppIcon name="paperclip" />
+      Solte o arquivo para anexar
+    </div>
     <input
       :id="inputId"
       ref="fileInput"
@@ -453,7 +536,11 @@ watch(
       :aria-describedby="statusId"
       @change="selectFile"
     />
-    <div v-if="file" class="media-composer__review">
+    <div
+      v-if="file"
+      class="media-composer__review"
+      :class="{ 'media-composer__review--image': kind === 'image' }"
+    >
       <div class="media-composer__file-heading">
         <p>
           <span class="media-composer__filename" :title="file.name">{{
@@ -479,7 +566,8 @@ watch(
           aria-haspopup="dialog"
           @click="openPreview"
         >
-          <img :src="preview" alt="Prévia do anexo" /><span aria-hidden="true"
+          <img :src="preview" alt="Prévia do anexo" draggable="false" /><span
+            aria-hidden="true"
             ><AppIcon name="maximize"
           /></span>
         </button>
@@ -622,6 +710,7 @@ watch(
 
 <style scoped>
 .media-composer {
+  position: relative;
   display: grid;
   gap: var(--space-3);
   padding: var(--space-4);
@@ -635,19 +724,34 @@ watch(
   gap: var(--space-2);
   min-width: 0;
 }
-.media-composer__review:has(.media-composer__image) {
-  grid-template-columns: var(--space-16) minmax(0, 1fr);
+.media-composer__drop {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+  background: var(--color-surface-active);
+  border: 2px dashed var(--color-focus);
+  border-radius: var(--radius-md);
+  pointer-events: none;
 }
-.media-composer__review:has(.media-composer__image)
-  > .media-composer__file-heading {
+.media-composer__review--image {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  align-items: start;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.media-composer__review--image > .media-composer__file-heading,
+.media-composer__review--image > textarea,
+.media-composer__review--image > p {
   grid-column: 2;
-  grid-row: 1;
-  min-inline-size: 0;
 }
-.media-composer__review:has(.media-composer__image) > textarea,
-.media-composer__review:has(.media-composer__image) > p {
-  grid-column: 1 / -1;
+.media-composer__review--image > p {
+  margin: 0;
 }
 .media-composer__sr-only {
   position: absolute;
@@ -661,22 +765,22 @@ watch(
 }
 .media-composer .media-composer__image {
   grid-column: 1;
-  grid-row: 1;
+  grid-row: 1 / span 3;
   position: relative;
-  justify-self: start;
   padding: 0;
-  inline-size: var(--space-16);
-  block-size: var(--space-16);
+  inline-size: 100%;
+  block-size: clamp(5rem, 22dvh, 9rem);
   overflow: hidden;
-  border: 0;
-  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
   cursor: zoom-in;
 }
 .media-composer__image img {
   display: block;
-  inline-size: var(--space-16);
-  block-size: var(--space-16);
-  object-fit: cover;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: contain;
 }
 .media-composer__image span {
   position: absolute;
@@ -819,6 +923,20 @@ textarea {
 @media (max-width: 480px) {
   .media-composer {
     padding: var(--space-3);
+  }
+}
+@media (max-width: 480px) and (min-height: 560px) {
+  .media-composer__review--image {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .media-composer .media-composer__image {
+    grid-row: auto;
+    block-size: clamp(6rem, 20dvh, 8rem);
+  }
+  .media-composer__review--image > .media-composer__file-heading,
+  .media-composer__review--image > textarea,
+  .media-composer__review--image > p {
+    grid-column: 1;
   }
 }
 @media (pointer: coarse) {

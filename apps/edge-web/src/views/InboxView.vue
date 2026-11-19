@@ -137,6 +137,7 @@ const conversationList = ref(null);
 const listSummary = ref(null);
 const moreConversationsButton = ref(null);
 const replyInput = ref(null);
+const conversationPane = ref(null);
 const shippingQuote = ref(null);
 const takeoverButton = ref(null);
 const nameInput = ref(null);
@@ -3226,6 +3227,7 @@ onBeforeUnmount(() => {
       </div>
 
       <section
+        ref="conversationPane"
         class="inbox-conversation"
         :aria-labelledby="active ? `conversation-${active.id}` : undefined"
         :aria-label="active ? undefined : 'Conversa selecionada'"
@@ -3776,6 +3778,7 @@ onBeforeUnmount(() => {
               :key="active.id"
               :conversation-id="active.id"
               :expected-version="active.version"
+              :drop-target="conversationPane"
               :disabled="busy || !canReply || active.channel === 'site_chat'"
               :unavailable="!canReply"
               reason-id="reply-help"

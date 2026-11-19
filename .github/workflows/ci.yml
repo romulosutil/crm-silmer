@@ -36,13 +36,38 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          has_changes() {
+            local base_ref="$1"
+            local head_ref="$2"
+            shift 2
+            ! git diff --quiet "$base_ref" "$head_ref" -- "$@"
+          }
+
           if [[ "$EVENT_NAME" != "pull_request" ]]; then
             # Master pushes only land fast-forward commits that already passed
-            # full PR E2E, Docker drills and PostgreSQL gates. Run static/unit/build
-            # validation plus the immutable OCI build, Trivy scan and GHCR publish.
+            # full PR E2E, Docker drills and PostgreSQL gates. Build and publish
+            # the immutable OCI images only when image-affecting files changed
+            # (or on initial push without a known previous commit).
+            before_sha="${{ github.event.before }}"
+            if [[ -z "$before_sha" || "$before_sha" =~ ^0+$ ]] || ! git cat-file -e "$before_sha^{commit}" 2>/dev/null || has_changes "$before_sha" "${{ github.sha }}" \
+              .dockerignore \
+              .github/workflows/ci.yml \
+              .github/workflows/promote-approved-sha.yml \
+              .node-version \
+              .nvmrc \
+              docker \
+              package.json \
+              package-lock.json \
+              scripts/build.mjs \
+              scripts/runtime-healthcheck.mjs; then
+              image_required=true
+            else
+              image_required=false
+            fi
             {
-              echo 'required=true'
+              echo "required=$image_required"
               echo 'e2e_required=false'
+              echo 'e2e_targets='
               echo 'audio_e2e_required=false'
               echo 'docker_drill_required=false'
               echo 'postgres_required=false'
@@ -50,11 +75,7 @@ jobs:
             exit 0
           fi
 
-          has_changes() {
-            ! git diff --quiet "$PR_BASE_SHA" "$PR_HEAD_SHA" -- "$@"
-          }
-
-          if has_changes \
+          if has_changes "$PR_BASE_SHA" "$PR_HEAD_SHA" \
             .dockerignore \
             .github/workflows/ci.yml \
             .github/workflows/promote-approved-sha.yml \
@@ -70,7 +91,7 @@ jobs:
             echo 'required=false' >> "$GITHUB_OUTPUT"
           fi
 
-          if has_changes \
+          if has_changes "$PR_BASE_SHA" "$PR_HEAD_SHA" \
             .github/workflows/ci.yml \
             apps/edge-web \
             playwright.config.js \
@@ -80,7 +101,7 @@ jobs:
             scripts/serve-edge.mjs \
             test/e2e; then
             echo 'e2e_required=true' >> "$GITHUB_OUTPUT"
-            if has_changes \
+            if has_changes "$PR_BASE_SHA" "$PR_HEAD_SHA" \
               .github/workflows/ci.yml \
               apps/edge-web \
               playwright.config.js \
@@ -102,7 +123,7 @@ jobs:
             echo 'e2e_targets=' >> "$GITHUB_OUTPUT"
           fi
 
-          if has_changes \
+          if has_changes "$PR_BASE_SHA" "$PR_HEAD_SHA" \
             .github/workflows/ci.yml \
             apps/edge-web/src/components/inbox/AudioRecorder.vue \
             apps/edge-web/src/components/inbox/MediaComposer.vue \
@@ -115,7 +136,7 @@ jobs:
             echo 'audio_e2e_required=false' >> "$GITHUB_OUTPUT"
           fi
 
-          if has_changes \
+          if has_changes "$PR_BASE_SHA" "$PR_HEAD_SHA" \
             .dockerignore \
             .github/workflows/ci.yml \
             docker \
@@ -129,7 +150,7 @@ jobs:
             echo 'docker_drill_required=false' >> "$GITHUB_OUTPUT"
           fi
 
-          if has_changes \
+          if has_changes "$PR_BASE_SHA" "$PR_HEAD_SHA" \
             .github/workflows/ci.yml \
             apps/api \
             apps/worker \

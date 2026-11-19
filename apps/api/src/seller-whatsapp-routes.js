@@ -144,9 +144,16 @@ export function registerSellerWhatsAppRoutes(api, service, contextFor) {
         return service.result(readControlResult(request.body), auth);
       },
     );
+    // Every personal event of every line is verified here, all from the one
+    // n8n egress IP. The per-line ingress ceiling is a 20 msg/s peak
+    // (seller-whatsapp.md, limites do piloto), so 60/min would drop events.
+    const ingressLimits = {
+      bodyLimit: limits.bodyLimit,
+      config: { rateLimit: { max: 1200, timeWindow: '1 minute' } },
+    };
     scope.post(
       '/api/v1/integrations/n8n/whatsapp-control/ingress/verify',
-      limits,
+      ingressLimits,
       async (request) => {
         const auth = await technical(request, 'whatsapp.control.read');
         const body = controlObject(request.body, [

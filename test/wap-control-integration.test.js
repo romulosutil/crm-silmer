@@ -767,6 +767,76 @@ test('WAP-E02: generated workflows are inactive/default-off, shared, authenticat
   }
 });
 
+test('WAP-E12: the Gateway reaches Evolution only over the fixed internal origin or https', () => {
+  const base = {
+    crmBaseUrl: 'https://crm.synthetic.invalid',
+    webhookCredentialId: 'webhook-basic',
+    crmCredentialId: 'crm-basic',
+    evolutionCredentialId: 'evolution-key',
+  };
+  const gatewayUrl = (/** @type {any} */ options) => {
+    const workflows = createWhatsAppControlWorkflows({ ...base, ...options });
+    const urls = Object.values(workflows).map(
+      (workflow) =>
+        workflow.nodes.find((node) => node.name === 'Gateway').parameters.url,
+    );
+    assert.equal(new Set(urls).size, 1);
+    return urls[0];
+  };
+  assert.equal(
+    gatewayUrl({ evolutionBaseUrl: 'http://schedule_silmer-evolution:8080' }),
+    'http://schedule_silmer-evolution:8080/silmer/whatsapp-control/execute',
+  );
+  assert.equal(
+    gatewayUrl({ evolutionBaseUrl: 'http://schedule_silmer-evolution:8080/' }),
+    'http://schedule_silmer-evolution:8080/silmer/whatsapp-control/execute',
+  );
+  assert.equal(
+    gatewayUrl({ evolutionBaseUrl: 'https://evolution.synthetic.invalid' }),
+    'https://evolution.synthetic.invalid/silmer/whatsapp-control/execute',
+  );
+  assert.equal(
+    gatewayUrl({
+      evolutionBaseUrl: 'http://wap-provider-fixture:8080',
+      crmBaseUrl: 'http://wap-control-fixture:3000',
+      allowSyntheticHttp: true,
+    }),
+    'http://wap-provider-fixture:8080/silmer/whatsapp-control/execute',
+  );
+  for (const evolutionBaseUrl of [
+    'http://schedule_silmer-evolution',
+    'http://schedule_silmer-evolution:80',
+    'http://schedule_silmer-evolution:8081',
+    'http://other-evolution:8080',
+    'http://schedule_silmer-evolution.:8080',
+    'http://user:pass@schedule_silmer-evolution:8080',
+    'http://user@schedule_silmer-evolution:8080',
+    'http://schedule_silmer-evolution:8080/x',
+    'http://schedule_silmer-evolution:8080/?q=1',
+    'http://schedule_silmer-evolution:8080/#h',
+    'ftp://schedule_silmer-evolution:8080',
+  ])
+    assert.throws(
+      () => createWhatsAppControlWorkflows({ ...base, evolutionBaseUrl }),
+      /WAP_WORKFLOW_CONFIGURATION_INVALID/u,
+      evolutionBaseUrl,
+    );
+  for (const options of [
+    { allowSyntheticHttp: false },
+    { allowSyntheticHttp: true },
+  ])
+    assert.throws(
+      () =>
+        createWhatsAppControlWorkflows({
+          ...base,
+          ...options,
+          crmBaseUrl: 'http://schedule_silmer-evolution:8080',
+          evolutionBaseUrl: 'http://schedule_silmer-evolution:8080',
+        }),
+      /WAP_WORKFLOW_CONFIGURATION_INVALID/u,
+    );
+});
+
 test('WAP-E12: webhook proof requires exactly connection plus message events', async () => {
   const runtime = createGenerationRuntime({
     enabled: true,

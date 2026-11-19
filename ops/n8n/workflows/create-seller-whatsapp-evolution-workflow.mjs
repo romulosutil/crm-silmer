@@ -102,57 +102,73 @@ export function convertObservedEvolutionEvent(
  * @param {any} source @param {Parameters<typeof createEvolutionWorkflow>[1] & {personalSendLineIds?:string[]}} options */
 export function createSellerWhatsAppEvolutionWorkflow(source, options) {
   const workflow = createEvolutionWorkflow(source, options);
-  if (options.personalInbound === true) {
-    const find = (/** @type {string} */ name) => {
-      const node = workflow.nodes.find(
-        (/** @type {any} */ item) => item.name === name,
-      );
-      if (!node) throw new Error(`EVOLUTION_NODE_MISSING: ${name}`);
-      return node;
-    };
-    const config = JSON.stringify({
-      personalInbound: true,
-      personalLineIds: options.personalLineIds,
+  if (options.personalInbound === true)
+    applyObservedOutbound(workflow, {
+      personalLineIds: /** @type {string[]} */ (options.personalLineIds),
+      baseUrl: options.baseUrl ?? 'http://schedule_silmer-evolution:8080',
     });
-    find(VALIDATE).parameters.jsCode =
-      `const general=${validateEvolutionEvent.toString()};const personal=${validatePersonalEvolutionEvent.toString()};const validate=${validateObservedEvolutionEvent.toString()};return $input.all().map((item,index)=>{const checked=validate(item.json,${config},personal,general);return checked?{json:checked,pairedItem:{item:index}}:null;}).filter(Boolean);`;
-    find(CONVERT).parameters.jsCode =
-      `const general=${convertEvolutionEvent.toString()};const personal=${convertPersonalEvolutionEvent.toString()};const convert=${convertObservedEvolutionEvent.toString()};const input=$('${VALIDATE}').item.json;return {json:convert(input,input.needs_lid?$json:null,${config},personal,general)};`;
-    const normalize = find(NORMALIZE);
-    normalize.parameters.jsCode = `if($json.external||(!$json.messages&&!$json.statuses))return [];${normalize.parameters.jsCode}`;
-    const prepare = 'Preparar saída observada (WAP)';
-    const record = 'CRM - Registrar saída observada (WAP)';
-    workflow.nodes.push(
-      {
-        ...structuredClone(normalize),
-        name: prepare,
-        id: 'wap-prepare-external',
-        parameters: {
-          mode: 'runOnceForEachItem',
-          jsCode: `const payload=$json.external;if(!payload)return [];return {json:{payload,idempotency_key:payload.event_id,correlation_id:String($execution.id).padStart(16,'0')}};`,
-        },
-      },
-      {
-        ...structuredClone(find('CRM - Registrar status de entrega (MVP)')),
-        name: record,
-        id: 'wap-record-external',
-        retryOnFail: false,
-      },
-    );
-    workflow.connections[CONVERT].main[0].push({
-      node: prepare,
-      type: 'main',
-      index: 0,
-    });
-    workflow.connections[prepare] = {
-      main: [[{ node: record, type: 'main', index: 0 }]],
-    };
-    attachObservedMedia(
-      workflow,
-      options.baseUrl ?? 'http://schedule_silmer-evolution:8080',
-    );
-  }
   return configurePersonalSend(workflow, options.personalSendLineIds ?? []);
+}
+
+/** WAP-E08/E12. Phone echoes (fromMe upserts) of a personal line become
+ * `message.external.sent` observations with their media, never inbound.
+ * Applied over a workflow that already carries applyPersonalInbound.
+ * crmBaseUrl, when given, replaces the `$env` CRM origin (blocked in n8n 2).
+ * @param {any} workflow @param {{personalLineIds:string[],baseUrl:string,crmBaseUrl?:string}} options */
+export function applyObservedOutbound(workflow, options) {
+  if (
+    workflow.nodes.some(
+      (/** @type {any} */ node) =>
+        node.name === 'Preparar saída observada (WAP)',
+    )
+  )
+    throw new Error('EVOLUTION_OBSERVED_ALREADY_APPLIED');
+  const find = (/** @type {string} */ name) => {
+    const node = workflow.nodes.find(
+      (/** @type {any} */ item) => item.name === name,
+    );
+    if (!node) throw new Error(`EVOLUTION_NODE_MISSING: ${name}`);
+    return node;
+  };
+  const config = JSON.stringify({
+    personalInbound: true,
+    personalLineIds: options.personalLineIds,
+  });
+  find(VALIDATE).parameters.jsCode =
+    `const general=${validateEvolutionEvent.toString()};const personal=${validatePersonalEvolutionEvent.toString()};const validate=${validateObservedEvolutionEvent.toString()};return $input.all().map((item,index)=>{const checked=validate(item.json,${config},personal,general);return checked?{json:checked,pairedItem:{item:index}}:null;}).filter(Boolean);`;
+  find(CONVERT).parameters.jsCode =
+    `const general=${convertEvolutionEvent.toString()};const personal=${convertPersonalEvolutionEvent.toString()};const convert=${convertObservedEvolutionEvent.toString()};const input=$('${VALIDATE}').item.json;return {json:convert(input,input.needs_lid?$json:null,${config},personal,general)};`;
+  const normalize = find(NORMALIZE);
+  normalize.parameters.jsCode = `if($json.external||(!$json.messages&&!$json.statuses))return [];${normalize.parameters.jsCode}`;
+  const prepare = 'Preparar saída observada (WAP)';
+  const record = 'CRM - Registrar saída observada (WAP)';
+  workflow.nodes.push(
+    {
+      ...structuredClone(normalize),
+      name: prepare,
+      id: 'wap-prepare-external',
+      parameters: {
+        mode: 'runOnceForEachItem',
+        jsCode: `const payload=$json.external;if(!payload)return [];return {json:{payload,idempotency_key:payload.event_id,correlation_id:String($execution.id).padStart(16,'0')}};`,
+      },
+    },
+    {
+      ...structuredClone(find('CRM - Registrar status de entrega (MVP)')),
+      name: record,
+      id: 'wap-record-external',
+      retryOnFail: false,
+    },
+  );
+  workflow.connections[CONVERT].main[0].push({
+    node: prepare,
+    type: 'main',
+    index: 0,
+  });
+  workflow.connections[prepare] = {
+    main: [[{ node: record, type: 'main', index: 0 }]],
+  };
+  attachObservedMedia(workflow, options.baseUrl, options.crmBaseUrl);
+  return workflow;
 }
 
 /** @param {any} response @param {string} kind @param {Function} [decode] */
@@ -221,8 +237,8 @@ if (
 }
 
 /** Reuse the authenticated provider read and the CRM multipart ingress.
- * @param {any} workflow @param {string} baseUrl */
-function attachObservedMedia(workflow, baseUrl) {
+ * @param {any} workflow @param {string} baseUrl @param {string} [crmBaseUrl] */
+function attachObservedMedia(workflow, baseUrl, crmBaseUrl) {
   const event = 'Preparar saída observada (WAP)';
   const record = 'CRM - Registrar saída observada (WAP)';
   const gate = 'Preparar mídia observada (WAP)';
@@ -294,7 +310,7 @@ function attachObservedMedia(workflow, baseUrl) {
       onError: 'continueErrorOutput',
       parameters: {
         ...crm.parameters,
-        url: `={{ $env.SILMER_PANEL_BASE_URL + '/api/v1/integrations/n8n/conversations/' + encodeURIComponent($json.conversation) + '/attachments' }}`,
+        url: `={{ ${crmBaseUrl ? JSON.stringify(crmBaseUrl) : '$env.SILMER_PANEL_BASE_URL'} + '/api/v1/integrations/n8n/conversations/' + encodeURIComponent($json.conversation) + '/attachments' }}`,
         contentType: 'multipart-form-data',
         specifyBody: undefined,
         jsonBody: undefined,

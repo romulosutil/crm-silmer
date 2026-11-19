@@ -5,6 +5,18 @@ const PREPARE_MEDIA = 'Preparar mensagem Evolution de midia (MVP)';
 const FAILURE = 'Falha de preflight da midia (MVP)';
 const COMMAND = `$('${RESERVE}').item.json.command`;
 
+/** Each anchor must exist exactly once, or the live journey drifted.
+ * @param {string} text @param {string|RegExp} anchor @param {string} replacement */
+function replaceOnce(text, anchor, replacement) {
+  const count =
+    typeof anchor === 'string'
+      ? text.split(anchor).length - 1
+      : [...text.matchAll(new RegExp(anchor.source, `${anchor.flags}g`))]
+          .length;
+  if (count !== 1) throw new Error('EVOLUTION_SEND_ANCHOR_INVALID');
+  return text.replace(anchor, replacement);
+}
+
 /** Extend the one panel transport. The CRM grants one final dispatch per
  * reservation, after all recipient and retained-media preparation succeeds.
  * @param {any} workflow @param {string[]} lineIds */
@@ -22,24 +34,33 @@ export function configurePersonalSend(workflow, lineIds) {
     return node;
   };
   const normalize = find('Normalizar comando do painel (MVP)');
-  normalize.parameters.jsCode = normalize.parameters.jsCode
-    .replace(
+  if (
+    normalize.parameters.jsCode.includes('payload.whatsapp_target') ||
+    workflow.nodes.some((/** @type {any} */ node) =>
+      /^Despacho pessoal de (?:text|media)\? \(WAP\)$/u.test(node.name),
+    )
+  )
+    throw new Error('EVOLUTION_SEND_ALREADY_CONFIGURED');
+  normalize.parameters.jsCode = replaceOnce(
+    replaceOnce(
+      normalize.parameters.jsCode,
       'const siteChat = ',
       `const target=payload.whatsapp_target;if(target&&(!${JSON.stringify(lineIds)}.includes(target.source?.lineId)||!/^\\d{8,15}$/.test(String(payload.to??'').replace(/^\\+/,''))||!/^[A-Za-z0-9_-]{1,64}$/.test(target.source?.instance??'')))return {json:{payload:{},kind:'invalid'}};\nconst ficha=Boolean(target&&payload.order_pdf&&payload.message?.type==='document'&&payload.message.mime_type==='application/pdf');\nconst siteChat = !target && `,
-    )
-    .replace(
-      "['text', 'image', 'audio', 'video'].includes(payload.message?.type)",
-      "(['text', 'image', 'audio', 'video'].includes(payload.message?.type)||ficha)",
-    );
+    ),
+    "['text', 'image', 'audio', 'video'].includes(payload.message?.type)",
+    "(['text', 'image', 'audio', 'video'].includes(payload.message?.type)||ficha)",
+  );
   if (!lineIds.length) return workflow;
 
   const bytes = find('Evolution - Preparar bytes humanos (MVP)');
-  bytes.parameters.jsCode = bytes.parameters.jsCode.replace(
+  bytes.parameters.jsCode = replaceOnce(
+    bytes.parameters.jsCode,
     "video: 'mp4'",
     "video: 'mp4', document: 'pdf'",
   );
   const prepareMedia = find(PREPARE_MEDIA);
-  prepareMedia.parameters.jsCode = prepareMedia.parameters.jsCode.replace(
+  prepareMedia.parameters.jsCode = replaceOnce(
+    prepareMedia.parameters.jsCode,
     "!['image','audio','video'].includes(expected.type)",
     "!['image','audio','video'].includes(expected.type)&&!(command.whatsapp_target&&command.order_pdf&&expected.type==='document'&&expected.mime_type==='application/pdf')",
   );
@@ -54,7 +75,8 @@ export function configurePersonalSend(workflow, lineIds) {
       )
     )
       continue;
-    node.parameters.jsCode = code.replace(
+    node.parameters.jsCode = replaceOnce(
+      code,
       /payload:\s*\{(?=[\s\S]*event_type:)/u,
       'payload: { ...(command.whatsapp_target ? {source: (({bindingId,lineId,accountId,generation})=>({bindingId,lineId,accountId,generation}))(command.whatsapp_target.source)} : {}),',
     );
@@ -147,15 +169,16 @@ export function configurePersonalSend(workflow, lineIds) {
       send.parameters.url = `={{ ${COMMAND}.whatsapp_target ? ${JSON.stringify(base)} + $('${validate}').item.json.instance : ${JSON.stringify(send.parameters.url)} }}`;
     } else {
       const prepared = `$('${PREPARE_MEDIA}').item.json`;
-      send.parameters.url = send.parameters.url
-        .replaceAll(
+      if (!send.parameters.url.includes('$json.evolution_endpoint'))
+        throw new Error('EVOLUTION_SEND_ANCHOR_INVALID');
+      send.parameters.url = replaceOnce(
+        send.parameters.url.replaceAll(
           '$json.evolution_endpoint',
           `${prepared}.evolution_endpoint`,
-        )
-        .replace(
-          /\+("\/[^"\n]+")(?=;\}\))/u,
-          `+(${COMMAND}.whatsapp_target ? '/'+$('${validate}').item.json.instance : $1)`,
-        );
+        ),
+        /\+("\/[^"\n]+")(?=;\}\))/u,
+        `+(${COMMAND}.whatsapp_target ? '/'+$('${validate}').item.json.instance : $1)`,
+      );
       send.parameters.jsonBody = `={{ ${prepared}.evolution_message }}`;
     }
   }

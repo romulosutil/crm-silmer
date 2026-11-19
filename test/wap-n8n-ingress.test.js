@@ -261,7 +261,7 @@ test('WAP-E04: personal message projection precedes persistence and removes gene
     accountId: randomUUID(),
     generation: 1,
   };
-  const path = 'silmer/seller-whatsapp/messages';
+  const path = 'silmer/seller-whatsapp/events';
   const instance = 'wap_synthetic_personal';
   const config = {
     ...env,
@@ -704,6 +704,238 @@ test('WAP-E01: verifier network/timeout/5xx failures are retryable 503 without l
     assert.equal(ctx.response.status, 403);
     assert.equal(ctx.response.text, 'WAP_INGRESS_DENIED');
   }
+});
+
+test('WAP-E12: seller events path keeps throttled or failing verification retryable and every denial 403', async () => {
+  const path = 'silmer/seller-whatsapp/events';
+  const origin = {
+    bindingId: randomUUID(),
+    lineId: randomUUID(),
+    accountId: randomUUID(),
+    generation: 4,
+  };
+  const instance = 'wap_0123456789abcdef0123456789abcdef';
+  const config = {
+    ...env,
+    SILMER_WAP_INGRESS_PATHS: JSON.stringify({ [path]: 'event' }),
+    SILMER_WAP_INGRESS_INSTANCES: `${instance},wap_fedcba9876543210fedcba9876543210`,
+    SILMER_WAP_INGRESS_VERIFY_URL:
+      'https://crm.synthetic.invalid/api/v1/integrations/n8n/whatsapp-control/ingress/verify',
+  };
+  const sender = '5511990000081@s.whatsapp.net';
+  const date = '2026-11-18T12:00:00.000Z';
+  // Live-shaped: the Evolution generation runtime forwards `data` as-is, and
+  // Baileys v7 sends participant: null on direct chats.
+  const receipt = {
+    event: 'messages.update',
+    instance,
+    source: origin,
+    sender,
+    date_time: date,
+    data: {
+      messageId: 'synthetic-row-id',
+      keyId: 'SYNTHETIC_RECEIPT',
+      remoteJid: '5511990000082@s.whatsapp.net',
+      fromMe: true,
+      participant: null,
+      status: 'DELIVERY_ACK',
+      instanceId: 'synthetic-instance-id',
+    },
+  };
+  const upsert = {
+    event: 'messages.upsert',
+    instance,
+    source: origin,
+    sender,
+    date_time: date,
+    data: {
+      key: {
+        id: 'SYNTHETIC_TEXT',
+        fromMe: false,
+        remoteJid: '5511990000082@s.whatsapp.net',
+        participant: null,
+      },
+      pushName: 'Synthetic',
+      messageType: 'conversation',
+      message: { conversation: 'Olá' },
+      messageTimestamp: 1794916800,
+      instanceId: 'synthetic-instance-id',
+    },
+  };
+  /** @param {any} body @param {any} [headers] */
+  const make = (body, headers) =>
+    context({
+      parameters: { path },
+      req: {
+        body: structuredClone(body),
+        ...(headers ? { headers } : {}),
+      },
+    });
+  const verified = async () =>
+    verificationResponse({ source: origin, instance });
+
+  const accepted = make(receipt);
+  let calls = 0;
+  assert.equal(
+    await protectIngress(
+      accepted,
+      config,
+      async (/** @type {string} */ url, /** @type {any} */ init) => {
+        calls++;
+        assert.equal(url, config.SILMER_WAP_INGRESS_VERIFY_URL);
+        assert.equal(init.headers['x-silmer-wap-generation-token'], token);
+        assert.deepEqual(JSON.parse(init.body), {
+          source: origin,
+          instance,
+          sender,
+        });
+        return verified();
+      },
+    ),
+    false,
+  );
+  assert.equal(calls, 1);
+  assert.deepEqual(accepted.req.body, {
+    event: 'messages.update',
+    instance,
+    source: origin,
+    sender,
+    date_time: date,
+    data: {
+      keyId: 'SYNTHETIC_RECEIPT',
+      remoteJid: '5511990000082@s.whatsapp.net',
+      status: 'DELIVERY_ACK',
+      fromMe: true,
+    },
+  });
+  assert.deepEqual(accepted.req.headers, {});
+
+  const message = make(upsert);
+  assert.equal(await protectIngress(message, config, verified), false);
+  assert.deepEqual(message.req.body.data.key, {
+    id: 'SYNTHETIC_TEXT',
+    remoteJid: '5511990000082@s.whatsapp.net',
+    fromMe: false,
+  });
+  assert.deepEqual(message.req.body.data.message, { conversation: 'Olá' });
+  for (const field of ['participantAlt', 'remoteJidAlt']) {
+    const nullable = make({
+      ...upsert,
+      data: { ...upsert.data, key: { ...upsert.data.key, [field]: null } },
+    });
+    assert.equal(await protectIngress(nullable, config, verified), false);
+    assert.equal(Object.hasOwn(nullable.req.body.data.key, field), false);
+  }
+
+  // Evolution retries only 5xx/network failures; a CRM 429 must not lose it.
+  for (const verify of [
+    async () => verificationResponse({ code: 'RATE_LIMITED' }, 429),
+    async () => verificationResponse({ code: 'UNAVAILABLE' }, 503),
+    async () => verificationResponse({}, 500),
+    async () => {
+      throw Object.assign(new Error(token), { name: 'TimeoutError' });
+    },
+  ]) {
+    const throttled = make(receipt);
+    assert.equal(await protectIngress(throttled, config, verify), true);
+    assert.equal(throttled.response.status, 503);
+    assert.equal(throttled.response.text, 'WAP_INGRESS_UNAVAILABLE');
+  }
+
+  // Stale generation, wrong token or binding mismatch are authoritative denials.
+  for (const status of [400, 401, 403, 404, 409]) {
+    const stale = make(receipt);
+    assert.equal(
+      await protectIngress(stale, config, async () =>
+        verificationResponse({ code: 'FORBIDDEN' }, status),
+      ),
+      true,
+    );
+    assert.equal(stale.response.status, 403, String(status));
+    assert.equal(stale.response.text, 'WAP_INGRESS_DENIED');
+  }
+
+  let reached = 0;
+  const counted = async () => {
+    reached++;
+    return verified();
+  };
+  const withoutToken = { 'x-wap-probe-token': transportToken };
+  const withoutSource = structuredClone(receipt);
+  delete (/** @type {any} */ (withoutSource).source);
+  for (const [body, headers] of /** @type {any[]} */ ([
+    [receipt, withoutToken],
+    [receipt, { 'x-silmer-wap-generation-token': 'short' }],
+    [receipt, { 'x-silmer-wap-generation-token': `${token}!` }],
+    [{ ...receipt, instance: 'wap_ffffffffffffffffffffffffffffffff' }],
+    [{ ...receipt, instance: 'wap_synthetic_personal' }],
+    [withoutSource],
+    [{ ...receipt, source: null }],
+    [{ ...receipt, source: { ...origin, generation: 0 } }],
+    [{ ...receipt, data: { ...receipt.data, fromMe: null } }],
+    [{ ...receipt, data: { ...receipt.data, participant: 42 } }],
+    [
+      {
+        ...upsert,
+        data: {
+          ...upsert.data,
+          key: { ...upsert.data.key, participant: {} },
+        },
+      },
+    ],
+    [{ ...receipt, sender: null }],
+  ])) {
+    const denied = make(body, headers);
+    assert.equal(await protectIngress(denied, config, counted), true);
+    assert.equal(denied.response.status, 403);
+    assert.equal(denied.response.text, 'WAP_INGRESS_DENIED');
+  }
+  assert.equal(reached, 0);
+});
+
+test('WAP-E12: control verification throttling is retryable, not a denial', async () => {
+  const path = 'silmer/seller-whatsapp/control';
+  const envelope = {
+    operationId: randomUUID(),
+    lineId: randomUUID(),
+    generation: 1,
+    reference: randomUUID(),
+    action: 'reconcile',
+  };
+  const config = {
+    ...env,
+    SILMER_WAP_INGRESS_PATHS: JSON.stringify({ [path]: 'control' }),
+    SILMER_WAP_CONTROL_VERIFY_URL:
+      'https://crm.synthetic.invalid/api/v1/integrations/n8n/whatsapp-control/verify',
+  };
+  const make = () =>
+    context({
+      parameters: { path, authentication: 'basicAuth' },
+      req: { body: { ...envelope } },
+    });
+  for (const [status, expected] of [
+    [429, 503],
+    [503, 503],
+    [403, 403],
+    [409, 403],
+  ]) {
+    const ctx = make();
+    assert.equal(
+      await protectIngress(ctx, config, async () =>
+        verificationResponse({ code: 'X' }, status),
+      ),
+      true,
+    );
+    assert.equal(ctx.response.status, expected, String(status));
+  }
+  const accepted = make();
+  assert.equal(
+    await protectIngress(accepted, config, async () =>
+      verificationResponse({ kind: 'control', envelope }),
+    ),
+    false,
+  );
+  assert.deepEqual(accepted.req.body, envelope);
 });
 
 test('WAP-E01: initial writer refuses unsafe manual, partial/retry, pinData and settings before first write', () => {

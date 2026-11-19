@@ -147,7 +147,8 @@ function eventBody(
       'participantAlt',
       'status',
     ]) {
-      if (rawKey[field] === undefined) continue;
+      // Baileys v7 sends participant: null on direct chats; null is absent.
+      if (rawKey[field] === undefined || rawKey[field] === null) continue;
       if (typeof rawKey[field] !== 'string' || rawKey[field].length > 512)
         denied();
       key[field] = rawKey[field];
@@ -307,7 +308,8 @@ async function verifySource(source, instance, token, env, fetchImpl, sender) {
   } catch {
     unavailable();
   }
-  if (response.status >= 500) unavailable();
+  // Throttling is temporary: Evolution retries only 5xx, never 4xx.
+  if (response.status >= 500 || response.status === 429) unavailable();
   if (response.status !== 200) denied();
   let bytes = 0;
   const chunks = [];
@@ -426,7 +428,8 @@ async function verifyControl(body, kind, env, fetchImpl) {
   } catch {
     unavailable();
   }
-  if (response.status >= 500) unavailable();
+  // Throttling is temporary: answer 503 so the caller may retry, not a denial.
+  if (response.status >= 500 || response.status === 429) unavailable();
   if (response.status !== 200) denied();
   let size = 0;
   const chunks = [];

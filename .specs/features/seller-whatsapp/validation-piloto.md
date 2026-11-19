@@ -52,12 +52,33 @@ conclusão" fez a publicação a pedido do proprietário e relatou:
 - no smoke de leitura, Inbox, Pedidos, resumo e Contatos responderam 200, e
   `/me/clients` respondeu `503 SELLER_CLIENTS_DISABLED`: todas as flags
   pessoais seguem desligadas;
-- **bloqueio:** o n8n de produção está em `n8nio/n8n:2.43.7`, mas
-  `ops/n8n/wap-ingress-Dockerfile` e `wap-ingress-patch.mjs` estão travados por
-  hash para a 2.38.7. Construir a imagem faria downgrade do n8n compartilhado, e
-  o patch precisa ser portado para a 2.43.7 antes do piloto. A imagem do
-  Evolution não foi trocada: a de produção corresponde ao `Dockerfile.inline`
-  de `732d0fe2` (EVOL-01), e o alvo é o de `ddc7a9a0`.
+- o n8n de produção estava em `n8nio/n8n:2.43.7`, e o patch WAP estava travado
+  por hash na 2.38.7. A PR 406 portou o patch para a 2.43.7 (master
+  `0ade5f2f`, evidência `ops/evolution/wap-provider-spike.n8n-2.43.7.evidence.json`
+  com `technicalGate` aprovado e `privacyFailures` vazio).
+
+Imagens WAP em produção desde cerca de 22h10 de 18/11, com todas as flags WAP
+desligadas (relato da mesma sessão):
+
+- Evolution: o Dockerfile inline passou de `732d0fe2` (EVOL-01) para o da
+  master (`ddc7a9a0`). O build imprimiu `WAP_EVOLUTION_GENERATION_PATCHED`. A
+  linha geral seguiu `open`, e nenhuma `SILMER_WAP_*` está definida. O dump
+  anterior ficou em `/tmp/pre-wap-evolution-2026-11-18.dump`, no container
+  `silmer-evolution-db`, que é efêmero; esse banco não tinha backup configurado
+  no EasyPanel.
+- n8n: a fonte passou de imagem `n8nio/n8n:2.43.7` para um Dockerfile inline
+  (base 2.43.7 por digest, com runtime e patch embutidos). O build imprimiu
+  `WAP_N8N_INGRESS_PATCHED`, `healthz` e readiness responderam 200, e o
+  workflow agendado rodou no container novo. O backup anterior é
+  `pre-wap-ingress-n8n-2.43.7-20261118`. Rollback: voltar a fonte para a imagem
+  `n8nio/n8n:2.43.7`. O Dockerfile inline do n8n ainda precisa ser versionado
+  no repositório, como o do Evolution.
+- Incidente fora do WAP: o merge do CP-T10 trouxe a expand `0084`, que não
+  tinha sido aplicada. O boot guard barrou os deploys novos, e o container do
+  `1489c2fe` serviu por cerca de 25 min, até a `0084` ser aplicada.
+- Ainda não feito: workflows WAP no n8n (o gerador altera o workflow principal
+  ativo do Evolution), flags e allowlist. Eles dependem das respostas do PO:
+  vendedores, visibilidade do Admin, F3 e cobrança.
 
 Decisões do PO no mesmo dia:
 
@@ -75,17 +96,17 @@ Decisões do PO no mesmo dia:
 
 O go/no-go está no [roteiro](../../../docs/runbooks/seller-whatsapp.md#gono-go-antes-do-primeiro-efeito-real).
 
-| Gate                                                                  | Estado    | Bloqueio / dono                                                              |
-| --------------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------- |
-| CI verde do HEAD da PR e merge linear                                 | feito     | PR 398 mesclada por rebase, master `1489c2fe`                                |
-| SHA/digest, `/api/health/ready`, migrações `0077`–`0083`              | feito     | expand antes do merge, contract `0081` depois; health 200 (seção Publicação) |
-| Imagens Evolution/n8n com patches WAP por digest                      | bloqueado | n8n de produção em 2.43.7; patch WAP travado na 2.38.7 precisa ser portado   |
-| Código no mesmo celular (WAP-E01/T01-01)                              | pendente  | aberto desde E01; sem ele não há autonomia mobile                            |
-| Decisões F3 (trava pós-restore) e F4 (limite por usuário)             | pendente  | Tech Lead/PO, [validation-etapa1](validation-etapa1.md#findings)             |
-| Restore remoto, RPO/RTO e banco do n8n                                | pendente  | DevOps, [recovery](../../../ops/recovery/RUNBOOK.md)                         |
-| SHA de rollback, varredura de base dos logs, allowlist só no ambiente | pendente  | DevOps/Privacidade, itens 7–9 do go/no-go                                    |
-| Números dedicados, cliente sintético e janela                         | pendente  | Operação                                                                     |
-| Autorizações do PO, da Operação, da Privacidade e Financeira          | pendente  | PO, Operação, Privacidade e Financeiro; cada uma por escrito                 |
+| Gate                                                                  | Estado   | Bloqueio / dono                                                                                   |
+| --------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------- |
+| CI verde do HEAD da PR e merge linear                                 | feito    | PR 398 mesclada por rebase, master `1489c2fe`                                                     |
+| SHA/digest, `/api/health/ready`, migrações `0077`–`0083`              | feito    | expand antes do merge, contract `0081` depois; health 200 (seção Publicação)                      |
+| Imagens Evolution/n8n com patches WAP por digest                      | feito    | em produção desde 18/11, flags WAP desligadas; workflows WAP e Dockerfile inline do n8n pendentes |
+| Código no mesmo celular (WAP-E01/T01-01)                              | pendente | aberto desde E01; sem ele não há autonomia mobile                                                 |
+| Decisões F3 (trava pós-restore) e F4 (limite por usuário)             | pendente | Tech Lead/PO, [validation-etapa1](validation-etapa1.md#findings)                                  |
+| Restore remoto, RPO/RTO e banco do n8n                                | pendente | DevOps, [recovery](../../../ops/recovery/RUNBOOK.md)                                              |
+| SHA de rollback, varredura de base dos logs, allowlist só no ambiente | pendente | DevOps/Privacidade, itens 7–9 do go/no-go                                                         |
+| Números dedicados, cliente sintético e janela                         | pendente | Operação                                                                                          |
+| Autorizações do PO, da Operação, da Privacidade e Financeira          | pendente | PO, Operação, Privacidade e Financeiro; cada uma por escrito                                      |
 
 ## Ensaio local integrado
 

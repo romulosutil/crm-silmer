@@ -606,15 +606,18 @@ exceto o BCS-07, instabilidade anterior dos diálogos de cobrança no tema
 escuro. Fica para o PO a política da lista de Pedidos para clientes de linha
 pessoal (F12).
 
-Integração real (19/11, branch `claude/wap-e12-live-wiring`): `c8915dc6`
+Integração real (19/11, branch `claude/wap-e12-live-wiring`): `cfa3d998`
 deixa as linhas pessoais levarem `messages.upsert` e `messages.update` pelo
-Evolution, e não só `connection.update`; `9b7554f8` dá à verificação do
-ingresso pessoal um limite próprio de 1200/min; `8925c221` aceita o Evolution
+Evolution, e não só `connection.update`; `84eda252` dá à verificação do
+ingresso pessoal um limite próprio de 1200/min; `b25880c9` aceita o Evolution
 interno por `http`, troca o `429` do CRM por `503` no ingresso do n8n e cria o
-build de produção dos workflows. O ensaio local não pegou essas lacunas porque
-usava stubs para o HTTP do Evolution. Suíte completa: 2.989 testes, 2.928
-aprovados, zero falhas e 61 skips. Controle em PostgreSQL live 1/1, ensaio do
-piloto 11/11 e drill de recovery 7/7. Sequência operacional na
+build de produção dos workflows. Depois da revisão adversarial, `536cdb77`
+(limite por linha, prefixos exatos, LID, eco de mídia) e `ee31d0f0` (retenção
+das linhas pessoais, ajustes por conexão, egress do Evolution travado). O
+ensaio local não pegou essas lacunas porque usava stubs para o HTTP do
+Evolution. Em PostgreSQL 17 local: controle 1/1, ingresso 9/9, acesso
+10/10, drill de recovery 7/7, integração E08 7/7, E07 1/1 e ensaio do piloto
+11/11, todos sem skips. Sequência operacional na
 [ativação em produção](../../../docs/runbooks/seller-whatsapp.md#ativação-em-produção-piloto-de-um-vendedor);
 nada foi executado em ambiente real.
 

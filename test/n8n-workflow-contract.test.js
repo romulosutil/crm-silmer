@@ -610,7 +610,7 @@ test('decision normalizer applies the handoff rules of ADR 009', async () => {
           message_cap: 15,
           turn: 3,
           name_asks: 2,
-          current_occurred_at: '2026-10-29T13:00:00.000Z',
+          clock_at: '2026-10-29T13:00:00.000Z',
           ...context,
         },
       },
@@ -1474,7 +1474,7 @@ async function rhythmDecision(
         // ADR 024: the name was asked at the greeting and right after; the
         // points are what these tests exercise.
         name_asks: 2,
-        current_occurred_at: '2026-10-29T13:00:00.000Z',
+        clock_at: '2026-10-29T13:00:00.000Z',
         ...context,
       },
     },

@@ -106,22 +106,22 @@ autorizam ampliação. As lacunas estão em
 
 ## Checklist de publicação e piloto
 
-| Item                                                           | Estado   | Evidência / responsável                                                                          |
-| -------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------ |
-| Flags default off e allowlist fail-closed em todos os serviços | local    | teste de prontidão; suítes por fronteira                                                         |
-| Limites numéricos por usuário/serviço                          | local    | ensaio de capacidade; não é capacidade de produção                                               |
-| Matriz da spec, ACL, replay/SSE, QR sem persistência           | local    | validation-etapa1                                                                                |
-| Desligamento, fases e restore sintéticos                       | local    | drill 7/7 ×3                                                                                     |
-| Ensaio integrado do piloto (T05-05/06/07)                      | local    | ensaio 11/11 ×3; [validation-piloto](../../.specs/features/seller-whatsapp/validation-piloto.md) |
-| Trava de envio pós-restore no código                           | pendente | P1, decisão de Tech Lead/PO antes do piloto                                                      |
-| Limite de envio por usuário                                    | pendente | P1 de capacidade, Backend antes de ampliar além de 2                                             |
-| CI verde do HEAD da PR                                         | pendente | GitHub Actions da PR 398                                                                         |
-| Imagens Evolution/n8n com patch e digest                       | pendente | DevOps                                                                                           |
-| Spike de provedor e código no mesmo celular (WAP-E01)          | pendente | E01 aberto; WAP-T05-06 no E12                                                                    |
-| Pareamento mobile, sincronização e eco reais                   | pendente | WAP-E12                                                                                          |
-| JID da resposta = `+E164` gravado (gate do primeiro envio)     | pendente | WAP-E12                                                                                          |
-| Restore remoto, RPO/RTO e banco do n8n                         | pendente | DevOps, [recovery](../../ops/recovery/RUNBOOK.md)                                                |
-| Aprovação operacional, financeira e de Privacidade             | pendente | PO, Operação e Privacidade                                                                       |
+| Item                                                           | Estado    | Evidência / responsável                                                                                                                                          |
+| -------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Flags default off e allowlist fail-closed em todos os serviços | local     | teste de prontidão; suítes por fronteira                                                                                                                         |
+| Limites numéricos por usuário/serviço                          | local     | ensaio de capacidade; não é capacidade de produção                                                                                                               |
+| Matriz da spec, ACL, replay/SSE, QR sem persistência           | local     | validation-etapa1                                                                                                                                                |
+| Desligamento, fases e restore sintéticos                       | local     | drill 7/7 ×3                                                                                                                                                     |
+| Ensaio integrado do piloto (T05-05/06/07)                      | local     | ensaio 11/11 ×3; [validation-piloto](../../.specs/features/seller-whatsapp/validation-piloto.md)                                                                 |
+| Trava de envio pós-restore no código                           | pendente  | P1, decisão de Tech Lead/PO antes do piloto                                                                                                                      |
+| Limite de envio por usuário                                    | pendente  | P1 de capacidade, Backend antes de ampliar além de 2                                                                                                             |
+| CI verde, merge e migrações em produção                        | feito     | PR 398 em `1489c2fe`; expand `0080`/`0082`/`0083`, contract `0081`; [publicação](../../.specs/features/seller-whatsapp/validation-piloto.md#publicação-18112026) |
+| Imagens Evolution/n8n com patch e digest                       | bloqueado | n8n de produção 2.43.7; portar `wap-ingress-patch.mjs` (travado na 2.38.7) antes do piloto                                                                       |
+| Spike de provedor e código no mesmo celular (WAP-E01)          | pendente  | E01 aberto; WAP-T05-06 no E12                                                                                                                                    |
+| Pareamento mobile, sincronização e eco reais                   | pendente  | WAP-E12                                                                                                                                                          |
+| JID da resposta = `+E164` gravado (gate do primeiro envio)     | pendente  | WAP-E12                                                                                                                                                          |
+| Restore remoto, RPO/RTO e banco do n8n                         | pendente  | DevOps, [recovery](../../ops/recovery/RUNBOOK.md)                                                                                                                |
+| Aprovação operacional, financeira e de Privacidade             | pendente  | PO, Operação e Privacidade                                                                                                                                       |
 
 ## Roteiro do piloto (WAP-E12)
 
@@ -173,6 +173,11 @@ nenhum deles pode ser trocado por outro.
 10. Autorizações explícitas do PO, da Operação, da Privacidade e, para a
     cobrança, do Financeiro. Cada uma nomeia vendedores, números, janela e
     ações permitidas.
+
+Escopo decidido pelo PO em 18/11: o piloto não exige o Pedido passivo (P2
+com cliente que procura primeiro). Basta o cliente ser criado ou vinculado e
+ficar ligado à conversa, ao vendedor e ao Pedido; P2 pode partir de uma
+conversa iniciada pelo vendedor (primeiro envio, P4).
 
 ### Passos
 

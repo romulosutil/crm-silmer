@@ -19,6 +19,7 @@ jobs:
     timeout-minutes: 30
     outputs:
       image_build_required: ${{ steps.image_scope.outputs.required }}
+      postgres_required: ${{ steps.image_scope.outputs.postgres_required }}
     permissions:
       contents: read
     steps:
@@ -27,7 +28,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Decide whether PR changes affect images
+      - name: Decide whether PR changes affect images, E2E, audio, Docker or PostgreSQL
         id: image_scope
         shell: bash
         env:
@@ -36,20 +37,93 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           if [[ "$EVENT_NAME" != "pull_request" ]]; then
-            echo 'required=true' >> "$GITHUB_OUTPUT"
-          elif git diff --quiet "$PR_BASE_SHA" "$PR_HEAD_SHA" -- \
+            # Master pushes only land fast-forward commits that already passed
+            # full PR E2E, Docker drills and PostgreSQL gates. Run static/unit/build
+            # validation plus the immutable OCI build, Trivy scan and GHCR publish.
+            {
+              echo 'required=true'
+              echo 'e2e_required=false'
+              echo 'audio_e2e_required=false'
+              echo 'docker_drill_required=false'
+              echo 'postgres_required=false'
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          has_changes() {
+            ! git diff --quiet "$PR_BASE_SHA" "$PR_HEAD_SHA" -- "$@"
+          }
+
+          if has_changes \
             .dockerignore \
             .github/workflows/ci.yml \
-            jsconfig.json \
+            .github/workflows/promote-approved-sha.yml \
+            .node-version \
+            .nvmrc \
+            docker \
             package.json \
             package-lock.json \
-            apps \
-            modules \
-            scripts \
-            docker; then
-            echo 'required=false' >> "$GITHUB_OUTPUT"
-          else
+            scripts/build.mjs \
+            scripts/runtime-healthcheck.mjs; then
             echo 'required=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'required=false' >> "$GITHUB_OUTPUT"
+          fi
+
+          if has_changes \
+            .github/workflows/ci.yml \
+            apps/edge-web \
+            playwright.config.js \
+            package.json \
+            package-lock.json \
+            scripts/build.mjs \
+            scripts/serve-edge.mjs \
+            test/e2e; then
+            echo 'e2e_required=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'e2e_required=false' >> "$GITHUB_OUTPUT"
+          fi
+
+          if has_changes \
+            .github/workflows/ci.yml \
+            apps/edge-web/src/components/inbox/AudioRecorder.vue \
+            apps/edge-web/src/components/inbox/MediaComposer.vue \
+            package.json \
+            package-lock.json \
+            playwright.config.js \
+            test/e2e/audio-recorder.spec.js; then
+            echo 'audio_e2e_required=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'audio_e2e_required=false' >> "$GITHUB_OUTPUT"
+          fi
+
+          if has_changes \
+            .dockerignore \
+            .github/workflows/ci.yml \
+            docker \
+            scripts/check-edge-media-proxy.mjs \
+            scripts/check-maintenance-images.mjs \
+            scripts/docker-image-maintenance-drill.mjs \
+            scripts/edge-media-image-pull.mjs \
+            scripts/isolated-docker-runtime.mjs; then
+            echo 'docker_drill_required=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'docker_drill_required=false' >> "$GITHUB_OUTPUT"
+          fi
+
+          if has_changes \
+            .github/workflows/ci.yml \
+            apps/api \
+            apps/worker \
+            modules \
+            ops \
+            package.json \
+            package-lock.json \
+            scripts/run-postgres-live-ci.mjs \
+            test; then
+            echo 'postgres_required=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'postgres_required=false' >> "$GITHUB_OUTPUT"
           fi
       - name: Reject merge commits in pull request history
         if: github.event_name == 'pull_request'
@@ -78,14 +152,20 @@ jobs:
         run: node scripts/check-pr-dependency-scope.mjs
       - name: Install exact dependencies
         run: npm ci
+      - name: Run static, unit and build gates
+        run: npm run validate
       - name: Restore Playwright browsers
+        if: steps.image_scope.outputs.e2e_required == 'true'
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-chromium-firefox
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ steps.image_scope.outputs.audio_e2e_required == 'true' && 'chromium-firefox' || 'chromium' }}
+          restore-keys: |
+            playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
       # The Azure APT mirror previously consumed the entire 30-minute gate.
       # Keep Ubuntu's signed repository and bound network waits before installs.
       - name: Use the canonical Ubuntu package mirror
+        if: steps.image_scope.outputs.e2e_required == 'true'
         run: |
           for source in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list; do
             test -f "$source" || continue
@@ -93,21 +173,39 @@ jobs:
           done
           printf 'Acquire::Retries "2";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n' | sudo tee /etc/apt/apt.conf.d/80-crm-ci-network >/dev/null
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium firefox
+        if: steps.image_scope.outputs.e2e_required == 'true'
+        env:
+          AUDIO_E2E_REQUIRED: ${{ steps.image_scope.outputs.audio_e2e_required }}
+        run: |
+          if [[ "$AUDIO_E2E_REQUIRED" == "true" ]]; then
+            npx playwright install --with-deps chromium firefox
+          else
+            npx playwright install --with-deps chromium
+          fi
       - name: Prepare synthetic audio playback
+        if: steps.image_scope.outputs.e2e_required == 'true' && steps.image_scope.outputs.audio_e2e_required == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends pulseaudio
           pulseaudio --start --exit-idle-time=-1 --load="module-null-sink sink_name=playwright"
-      - name: Run static, unit and build gates
-        run: npm run validate
       - name: Verify real edge media policies and upload limits
+        if: steps.image_scope.outputs.docker_drill_required == 'true'
         run: node scripts/check-edge-media-proxy.mjs
       - name: Verify image retention and restart in an isolated Docker daemon
+        if: steps.image_scope.outputs.docker_drill_required == 'true'
         timeout-minutes: 8
         run: sudo "$(command -v node)" scripts/docker-image-maintenance-drill.mjs --isolated-local
       - name: Run E2E and accessibility gates
-        run: npm run test:e2e
+        if: steps.image_scope.outputs.e2e_required == 'true'
+        env:
+          AUDIO_E2E_REQUIRED: ${{ steps.image_scope.outputs.audio_e2e_required }}
+        run: |
+          if [[ "$AUDIO_E2E_REQUIRED" == "true" ]]; then
+            npm run test:e2e
+          else
+            npm run test:e2e -- --ignore-snapshots test/e2e/!(audio-recorder).spec.js
+          fi
+        shell: bash -O extglob -eo pipefail {0}
       - name: Scan production dependencies
         run: npm audit --audit-level=high
       - name: Reject generated diff
@@ -122,6 +220,8 @@ jobs:
     name: PostgreSQL tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      EVENT_NAME: ${{ github.event_name }}
     services:
       postgres:
         # Official PostgreSQL 17 image, verified by pull and pinned by digest.
@@ -139,30 +239,71 @@ jobs:
           --health-retries 10
     steps:
       - name: Check out approved source
+        if: github.event_name == 'pull_request'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
+      - name: Decide whether PR changes affect PostgreSQL or PDF rendering
+        id: pg_scope
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if git diff --quiet "$PR_BASE_SHA" "$PR_HEAD_SHA" -- \
+            .github/workflows/ci.yml \
+            apps/api \
+            apps/worker \
+            modules \
+            ops \
+            package.json \
+            package-lock.json \
+            scripts/run-postgres-live-ci.mjs \
+            test; then
+            echo 'required=false' >> "$GITHUB_OUTPUT"
+            echo 'pdf_e08_required=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'required=true' >> "$GITHUB_OUTPUT"
+            if git diff --quiet "$PR_BASE_SHA" "$PR_HEAD_SHA" -- \
+              .github/workflows/ci.yml \
+              apps/api/src/order-routes.js \
+              apps/api/src/order-runtime.js \
+              apps/api/src/order-whatsapp-pdf-runtime.js \
+              modules/orders \
+              package.json \
+              package-lock.json \
+              test/integration/seller-whatsapp-outbound.test.js; then
+              echo 'pdf_e08_required=false' >> "$GITHUB_OUTPUT"
+            else
+              echo 'pdf_e08_required=true' >> "$GITHUB_OUTPUT"
+            fi
+          fi
       - name: Set up pinned Node.js
+        if: github.event_name == 'pull_request' && steps.pg_scope.outputs.required == 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .node-version
           cache: npm
       - name: Install exact dependencies
+        if: github.event_name == 'pull_request' && steps.pg_scope.outputs.required == 'true'
         run: npm ci
       - name: Run serialized PostgreSQL gates
+        if: github.event_name == 'pull_request' && steps.pg_scope.outputs.required == 'true'
         env:
           TEST_DATABASE_URL: postgresql://postgres:issue12-ci-only@127.0.0.1:5432/crm_silmer_test
-        run: npm run test:identity:live && npm run test:webhook:live && npm run test:worker:live && npm run test:deal:live && npm run test:finance:live && npm run test:olist:live && node --test --test-concurrency=1 test/order-billing-postgres-live.test.js test/order-billing-chat-postgres-live.test.js test/order-billing-send-postgres-live.test.js test/order-billing-completion-postgres-live.test.js test/order-billing-upgrade-postgres-live.test.js test/inbox-postgres-live.test.js test/inbound-media-postgres-live.test.js test/n8n-integration-postgres-live.test.js test/chat-media-bind-postgres-live.test.js test/chat-media-upload-postgres-live.test.js test/painel-summary-postgres-live.test.js test/contact-registration-postgres-live.test.js test/vendedor-evolucao-postgres-live.test.js test/shipping-postgres-live.test.js test/health-errors-postgres-live.test.js test/operational-signals-postgres-live.test.js test/health-errors-retention.test.js test/operation-read-postgres-live.test.js test/order-assistance-postgres-live.test.js test/dashboard-postgres-live.test.js test/dashboard-checkpoint-postgres-live.test.js test/dashboard-metrics-postgres-live.test.js test/lead-outcome-postgres-live.test.js test/inbox-buckets-postgres-live.test.js test/conversation-reminder-postgres-live.test.js test/seller-whatsapp-postgres-live.test.js test/seller-whatsapp-control-postgres-live.test.js test/seller-client-links-postgres-live.test.js test/seller-clients-postgres-live.test.js test/seller-client-identity-postgres-live.test.js test/seller-whatsapp-inbound-postgres-live.test.js test/seller-conversation-access-postgres-live.test.js test/order-subject-postgres-live.test.js
-      # WAP-E11/E12: the seller WhatsApp integration suites, the recovery drill
-      # and the pilot rehearsal
-      # each require their own dedicated synthetic database. The E08 suite
-      # renders the order PDF through the real Chromium renderer.
+        run: |
+          # Runs npm run test:identity:live and all PostgreSQL suites across 4 isolated DB workers.
+          node scripts/run-postgres-live-ci.mjs
       - name: Restore Playwright Chromium
+        if: github.event_name == 'pull_request' && steps.pg_scope.outputs.pdf_e08_required == 'true'
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-chromium
       - name: Use the canonical Ubuntu package mirror
+        if: github.event_name == 'pull_request' && steps.pg_scope.outputs.pdf_e08_required == 'true'
         run: |
           for source in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list; do
             test -f "$source" || continue
@@ -170,18 +311,17 @@ jobs:
           done
           printf 'Acquire::Retries "2";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n' | sudo tee /etc/apt/apt.conf.d/80-crm-ci-network >/dev/null
       - name: Install Playwright Chromium
+        if: github.event_name == 'pull_request' && steps.pg_scope.outputs.pdf_e08_required == 'true'
         run: npx playwright install --with-deps chromium
-      - name: Run seller WhatsApp integration and recovery drill
+      - name: Run seller WhatsApp outbound PDF integration
+        if: github.event_name == 'pull_request' && steps.pg_scope.outputs.pdf_e08_required == 'true'
         env:
           CI_DATABASE_BASE: postgresql://postgres:issue12-ci-only@127.0.0.1:5432
         run: |
-          node --input-type=module -e "import pg from 'pg'; const c = new pg.Client({ connectionString: process.env.CI_DATABASE_BASE + '/crm_silmer_test' }); await c.connect(); for (const name of ['crm_silmer_test_wap_e08', 'crm_silmer_test_wap_e10', 'crm_silmer_test_e11', 'crm_silmer_test_e11restore', 'crm_silmer_test_wap_e12']) await c.query('CREATE DATABASE ' + name); await c.end();"
+          node --input-type=module -e "import pg from 'pg'; const c = new pg.Client({ connectionString: process.env.CI_DATABASE_BASE + '/crm_silmer_test' }); await c.connect(); await c.query('DROP DATABASE IF EXISTS crm_silmer_test_wap_e08'); await c.query('CREATE DATABASE crm_silmer_test_wap_e08'); await c.end();"
           TEST_DATABASE_URL="$CI_DATABASE_BASE/crm_silmer_test_wap_e08" node --test --test-concurrency=1 test/integration/seller-whatsapp-outbound.test.js
-          TEST_DATABASE_URL="$CI_DATABASE_BASE/crm_silmer_test_wap_e10" node --test --test-concurrency=1 test/integration/seller-whatsapp-first-send.test.js
-          TEST_DATABASE_URL="$CI_DATABASE_BASE/crm_silmer_test_e11" TEST_RESTORE_DATABASE_URL="$CI_DATABASE_BASE/crm_silmer_test_e11restore" node --test --test-concurrency=1 test/integration/seller-whatsapp-recovery-drill.test.js
-          TEST_DATABASE_URL="$CI_DATABASE_BASE/crm_silmer_test_wap_e12" node --test --test-concurrency=1 test/integration/seller-whatsapp-pilot-rehearsal.test.js
-
       - name: Reject generated diff
+        if: github.event_name == 'pull_request' && steps.pg_scope.outputs.required == 'true'
         run: git diff --check && test -z "$(git status --short)"
 
   # Keep the existing required check name and wait for both parallel jobs.

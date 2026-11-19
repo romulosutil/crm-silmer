@@ -3,6 +3,12 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+import {
+  SHARD_0_EXACT_DB,
+  SHARD_1_PARALLEL,
+  SHARD_2_PARALLEL,
+} from '../scripts/run-postgres-live-ci.mjs';
+
 const bash =
   process.platform === 'win32' ? 'C:/Program Files/Git/bin/bash.exe' : 'bash';
 const digest = `sha256:${'a'.repeat(64)}`;
@@ -115,3 +121,27 @@ for (const path of [
     }
   });
 }
+
+test('PostgreSQL CI runner partitions live suites across isolated databases without duplicates', () => {
+  const allSuites = [
+    ...SHARD_0_EXACT_DB,
+    ...SHARD_1_PARALLEL,
+    ...SHARD_2_PARALLEL,
+  ];
+  assert.equal(
+    new Set(allSuites).size,
+    allSuites.length,
+    'every live PostgreSQL suite must run at most once per CI job',
+  );
+  for (const suite of [...SHARD_1_PARALLEL, ...SHARD_2_PARALLEL]) {
+    const content = readFileSync(
+      new URL(`../${suite}`, import.meta.url),
+      'utf8',
+    );
+    assert.doesNotMatch(
+      content,
+      /assert\.equal\([^;]*['"]\/?crm_silmer_test['"]/u,
+      `${suite} runs on a sharded database and must not require the exact crm_silmer_test name`,
+    );
+  }
+});

@@ -92,7 +92,6 @@ jobs:
           fi
 
           if has_changes "$PR_BASE_SHA" "$PR_HEAD_SHA" \
-            .github/workflows/ci.yml \
             apps/edge-web \
             playwright.config.js \
             package.json \
@@ -102,7 +101,6 @@ jobs:
             test/e2e; then
             echo 'e2e_required=true' >> "$GITHUB_OUTPUT"
             if has_changes "$PR_BASE_SHA" "$PR_HEAD_SHA" \
-              .github/workflows/ci.yml \
               apps/edge-web \
               playwright.config.js \
               package.json \
@@ -124,7 +122,6 @@ jobs:
           fi
 
           if has_changes "$PR_BASE_SHA" "$PR_HEAD_SHA" \
-            .github/workflows/ci.yml \
             apps/edge-web/src/components/inbox/AudioRecorder.vue \
             apps/edge-web/src/components/inbox/MediaComposer.vue \
             package.json \
@@ -138,7 +135,6 @@ jobs:
 
           if has_changes "$PR_BASE_SHA" "$PR_HEAD_SHA" \
             .dockerignore \
-            .github/workflows/ci.yml \
             docker \
             scripts/check-edge-media-proxy.mjs \
             scripts/check-maintenance-images.mjs \

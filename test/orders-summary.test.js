@@ -76,11 +76,13 @@ test('Postgres sales summary aggregates all orders before any list pagination', 
   // PNL-05: the days are grouped in the same statement, not one per day.
   assert.equal(queries.length, 1);
   // Painel: the period is a pair of São Paulo days bound as parameters.
+  // WAP-07/08: without a reader nothing is narrowed (the fifth value).
   assert.deepEqual(values[0], [
     '2026-10-01',
     '2026-10-15',
     '2026-10-09',
     '2026-10-15',
+    null,
   ]);
   assert.match(queries[0], /order_date BETWEEN \$1::date AND \$2::date/u);
   assert.match(queries[0], /order_date BETWEEN \$3::date AND \$4::date/u);

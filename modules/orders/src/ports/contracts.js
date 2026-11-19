@@ -51,6 +51,7 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  *   origin?: 'atendimento'|'loja', cursor?: string|null, limit: number,
  *   cancellation?: 'active'|'cancelled'|'all',
  *   owner?: {userId: string, conversationIds: string[]},
+ *   visibilityActorId?: string,
  * }} OrderListQuery
  *
  * ADR 028: the store order recorded by the n8n checkout workflow. The
@@ -115,7 +116,7 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  *   daily: OrdersSoldDay[],
  * }} OrdersSummary
  *
- * @typedef {{from: string, to: string, dailyFrom: string, dailyTo: string}} OrdersSummaryQuery
+ * @typedef {{from: string, to: string, dailyFrom: string, dailyTo: string, visibilityActorId?: string|null}} OrdersSummaryQuery
  *
  * ADR 031: the first print of a store order's ficha, signed by a person.
  * @typedef {{
@@ -164,13 +165,13 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  *   savePriceBreakdown?(input: any, transaction?: any): Promise<any>,
  *   saveFreight?(order: Order, options: FreightWriteOptions): Promise<Order>,
  *   createPending(input: CreatePendingOrderInput): Promise<Order>,
- *   findById(orderId: string): Promise<Order|null>,
+ *   findById(orderId: string, reader?: {visibilityActorId?: string|null}): Promise<Order|null>,
  *   findPendingByConversation(conversationId: string): Promise<Order|null>,
  *   bindSubject?(order: Order, subjectId: string): Promise<Order>,
  *   listByConversation(conversationId: string): Promise<Order[]>,
  *   list(query: OrderListQuery): Promise<OrderPage>,
  *   summary(query: OrdersSummaryQuery): Promise<OrdersSummary>,
- *   openDeliveries(): Promise<Order[]>,
+ *   openDeliveries(reader?: {visibilityActorId?: string|null}): Promise<Order[]>,
  *   recordFirstPrint(input: RecordFirstPrintInput): Promise<{recorded: boolean, order: Order}>,
  *   saveSection(order: Order, options: OrderWriteOptions): Promise<Order>,
  *   saveStatus(order: Order, options: OrderWriteOptions): Promise<Order>,
@@ -214,7 +215,7 @@ export function assertOrderRepositoryContract(repository) {
  * Validates the parts of a list query both adapters interpret identically.
  *
  * @param {OrderListQuery} query
- * @returns {{status: OrderStatus|undefined, numberSequence: number|undefined, conversationIds: string[]|undefined, contactIds: string[]|undefined, phoneDigests: string[]|undefined, storeNumber: string|undefined, origin: 'atendimento'|'loja'|undefined, owner: {userId: string, conversationIds: string[]}|undefined, cancellation: 'active'|'cancelled'|'all', after: {updatedAt: string, id: string}|null, limit: number}}
+ * @returns {{status: OrderStatus|undefined, numberSequence: number|undefined, conversationIds: string[]|undefined, contactIds: string[]|undefined, phoneDigests: string[]|undefined, storeNumber: string|undefined, origin: 'atendimento'|'loja'|undefined, owner: {userId: string, conversationIds: string[]}|undefined, cancellation: 'active'|'cancelled'|'all', after: {updatedAt: string, id: string}|null, limit: number, visibilityActorId: string|undefined}}
  */
 export function readOrderListQuery(query) {
   const {
@@ -229,6 +230,7 @@ export function readOrderListQuery(query) {
     phoneDigests,
     status,
     storeNumber,
+    visibilityActorId,
   } = query;
   if (!['active', 'cancelled', 'all'].includes(cancellation)) {
     throw new OrderInputError('cancellation is invalid', ['cancellation']);
@@ -273,6 +275,12 @@ export function readOrderListQuery(query) {
   if (storeNumber !== undefined && !STORE_NUMBER.test(storeNumber)) {
     throw new TypeError('storeNumber must be LJ- and eight hex digits');
   }
+  if (
+    visibilityActorId !== undefined &&
+    (typeof visibilityActorId !== 'string' || visibilityActorId === '')
+  ) {
+    throw new TypeError('visibilityActorId must name a user');
+  }
   if (origin !== undefined && !ORDER_ORIGINS.includes(origin)) {
     throw new OrderInputError('origin is invalid', ['origin']);
   }
@@ -298,6 +306,7 @@ export function readOrderListQuery(query) {
     phoneDigests,
     status,
     storeNumber,
+    visibilityActorId,
   };
 }
 

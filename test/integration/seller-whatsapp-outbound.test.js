@@ -727,7 +727,11 @@ test(
           url: `${path}?expectedVersion=1`,
           headers: { cookie: 'session=b' },
         });
-        assert.equal(crossSeller.statusCode, 403);
+        // WAP-07/08 (PO, 18/11/2026): A's private client's order is not
+        // found for B, so no masked number or preparation reaches B.
+        assert.equal(crossSeller.statusCode, 404, crossSeller.body);
+        assert.equal(crossSeller.json().error.code, 'ORDER_NOT_FOUND');
+        assert.doesNotMatch(crossSeller.body, /0188|0088/u);
         const intent = {
           method: /** @type {const} */ ('POST'),
           url: path,

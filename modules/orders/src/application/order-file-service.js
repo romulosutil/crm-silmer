@@ -62,7 +62,7 @@ function sha256Hex(content) {
  * @param {{
  *   files: OrderFileRepository,
  *   storage: ObjectStorage,
- *   orders: {findById(orderId: string): Promise<{id: string, status: string, conversationId: string|null, manualOwnerId?: string|null, origin?: string, cancelledAt?: string|null}|null>},
+ *   orders: {findById(orderId: string, reader?: {visibilityActorId?: string}): Promise<{id: string, status: string, conversationId: string|null, manualOwnerId?: string|null, origin?: string, cancelledAt?: string|null}|null>},
  *   authorizeOwnership: (input: {actor: OrderActor, conversationId: string|null, order: {conversationId: string|null, manualOwnerId?: string|null}}) => Promise<void>,
  *   clock?: () => Date,
  *   idFactory?: () => string,
@@ -73,9 +73,19 @@ export function createOrderFileService(dependencies) {
   const clock = dependencies.clock ?? (() => new Date());
   const idFactory = dependencies.idFactory ?? (() => `file-${randomUUID()}`);
 
-  /** @param {string} orderId */
-  async function requireOrder(orderId) {
-    const order = await orders.findById(orderId);
+  /**
+   * WAP-07/08: with a person, an order whose Contact that person may not read
+   * is absent (404), so its files are too.
+   *
+   * @param {string} orderId @param {OrderActor} [actor]
+   */
+  async function requireOrder(orderId, actor) {
+    const order = await orders.findById(
+      orderId,
+      actor?.kind === 'human' && actor.id
+        ? { visibilityActorId: actor.id }
+        : {},
+    );
     if (!order) throw new OrderNotFoundError();
     return order;
   }
@@ -83,7 +93,7 @@ export function createOrderFileService(dependencies) {
   /** @param {OrderActor} actor @param {string} orderId */
   async function requireEditable(actor, orderId) {
     if (actor?.kind !== 'human' || !actor.id) throw new OrderForbiddenError();
-    const order = await requireOrder(orderId);
+    const order = await requireOrder(orderId, actor);
     // ADR 027: a store order takes no art file, whoever asks.
     requireUnlocked(order);
     await authorizeOwnership({
@@ -126,9 +136,9 @@ export function createOrderFileService(dependencies) {
   }
 
   return Object.freeze({
-    /** @param {string} orderId */
-    async list(orderId) {
-      await requireOrder(orderId);
+    /** @param {string} orderId @param {OrderActor} [actor] */
+    async list(orderId, actor) {
+      await requireOrder(orderId, actor);
       return list(orderId);
     },
 
@@ -208,8 +218,9 @@ export function createOrderFileService(dependencies) {
       return { files: await list(input.orderId) };
     },
 
-    /** @param {string} orderId @param {string} fileId */
-    async openContent(orderId, fileId) {
+    /** @param {string} orderId @param {string} fileId @param {OrderActor} [actor] */
+    async openContent(orderId, fileId, actor) {
+      if (actor) await requireOrder(orderId, actor);
       const file = await requireFile(orderId, fileId);
       const object = await storage.getObject(file.objectKey);
       if (!object) {
@@ -218,8 +229,9 @@ export function createOrderFileService(dependencies) {
       return { file, ...object };
     },
 
-    /** @param {string} orderId @param {string} fileId */
-    async openThumbnail(orderId, fileId) {
+    /** @param {string} orderId @param {string} fileId @param {OrderActor} [actor] */
+    async openThumbnail(orderId, fileId, actor) {
+      if (actor) await requireOrder(orderId, actor);
       const file = await requireFile(orderId, fileId);
       const object = file.thumbnailKey
         ? await storage.getObject(file.thumbnailKey)

@@ -11,7 +11,7 @@ import {
   OlistError,
   olistSettings,
 } from '@crm-silmer/olist';
-import { operationalDay } from '@crm-silmer/orders';
+import { operationalDay, orderReadable } from '@crm-silmer/orders';
 
 /** Local human command only. T08 owns dispatch. Current authority, receipt,
  * snapshot, outbox, audit and idempotency completion share one SQL client.
@@ -125,10 +125,16 @@ export function createOlistExportCommand(
             assertOlistOrderCommercialRead(actor);
             // Orders mutations lock conversation before order. Prelock it here
             // so snapshot reads never invert that order or upgrade a shared lock.
+            // WAP-07/08: a seller never sends the order of a Contact that
+            // seller may not read; it is not found, as in the preview.
             const order = (
               await tx.query(
-                'SELECT number,conversation_id FROM crm.orders WHERE id=$1',
-                [input.orderId],
+                `SELECT number,conversation_id FROM crm.orders WHERE id=$1
+                   AND ($2::text IS NULL OR ${orderReadable('orders', '$2')})`,
+                [
+                  input.orderId,
+                  actor.functionName === 'Vendedor' ? actor.id : null,
+                ],
               )
             ).rows[0];
             if (!order) throw new OlistError('ORDER_NOT_FOUND', 404);

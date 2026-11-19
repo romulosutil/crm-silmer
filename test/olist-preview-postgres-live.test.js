@@ -1285,6 +1285,60 @@ else
         },
       );
       await t.test(
+        'WAP-07/08 (F12): another seller never previews, projects or finds the order of a private wallet client',
+        async () => {
+          const f = await fixture({ status: 'confirmado' });
+          await pool.query(
+            'UPDATE crm.contacts SET wallet_created=true WHERE id=$1',
+            [f.contactId],
+          );
+          /** @param {string} sellerId */
+          const link = (sellerId) =>
+            pool.query(
+              `INSERT INTO crm.seller_client_links(id,seller_id,contact_id,provenance,status,version,created_by,updated_by,created_at,updated_at)
+               VALUES($1,$2,$3,'explicit_link','active',1,$2,$2,$4,$4)`,
+              [randomUUID(), sellerId, f.contactId, NOW],
+            );
+          await link(f.actors.owner.actor.id);
+          const before = await counts();
+          const number = (
+            await pool.query('SELECT number FROM crm.orders WHERE id=$1', [
+              f.orderId,
+            ])
+          ).rows[0].number;
+          for (const attempt of [
+            () => f.runtime.preview(f.input),
+            () => f.runtime.project(f.input),
+            () => f.runtime.lookup({ ...f.input, query: number }),
+            () => f.runtime.lookup({ ...f.input, query: f.orderId }),
+          ])
+            await assert.rejects(attempt(), (/** @type {any} */ error) => {
+              assert.equal(error.code, 'ORDER_NOT_FOUND');
+              assert.doesNotMatch(
+                JSON.stringify(error),
+                /Comprador|7253|52998224725/u,
+              );
+              return true;
+            });
+          assert.equal(f.calls.length, 0, 'no ERP read for a hidden order');
+          assert.deepEqual(await counts(), before);
+          // Financeiro keeps the company-wide panel read.
+          assert.equal(
+            (
+              await f.runtime.project({
+                ...f.actors.finance,
+                orderId: f.orderId,
+              })
+            ).orderId,
+            f.orderId,
+          );
+          // In the seller's wallet the same order previews again.
+          await link(f.actors.seller.actor.id);
+          const preview = await f.runtime.preview(f.input);
+          assert.equal(preview.eligible, true, JSON.stringify(preview.issues));
+        },
+      );
+      await t.test(
         'channel phone and legal name remain sufficient when manual contact name and phone are absent',
         async () => {
           const f = await fixture();

@@ -48,6 +48,18 @@ function fixture() {
         };
       if (sql.includes('SELECT function_name FROM crm.user_functions'))
         return { rows: [{ function_name: state.role }] };
+      // WAP-07/08: the order of a private client is absent for a seller
+      // outside the wallet who is not its seller, as SQL decides.
+      if (sql.startsWith('SELECT id FROM crm.orders WHERE id=$1'))
+        return {
+          rows:
+            state.personal &&
+            !state.linked &&
+            state.owner !== values[1] &&
+            !state.capabilities.includes('COMMERCIAL_ADMIN')
+              ? []
+              : [{ id: 'order' }],
+        };
       if (sql.includes('SELECT 1 FROM crm.user_capabilities'))
         return {
           rows: state.capabilities.includes('COMMERCIAL_ADMIN') ? [{}] : [],
@@ -158,8 +170,6 @@ function fixture() {
         });
         return { rows: [] };
       }
-      if (sql.startsWith('SELECT id FROM crm.orders WHERE id=$1'))
-        return { rows: [{ id: 'order' }] };
       if (
         sql.startsWith('SELECT id FROM crm.shipping_quotes WHERE order_id=$1')
       )
@@ -439,6 +449,13 @@ test('WAP-T02-06: revoked personal link hides chat references and denies quote/s
   await assert.rejects(runtime.quote(INPUT), { code: 'FORBIDDEN' });
   await assert.rejects(runtime.select(selection), { code: 'FORBIDDEN' });
   assert.equal(state.calls, 1);
+  // WAP-07/08: once the order is another seller's, a seller outside the
+  // wallet gets the order and its estimate as not found.
+  state.owner = 'other-seller';
+  await assert.rejects(runtime.read({ actor: INPUT.actor, orderId: 'order' }), {
+    statusCode: 404,
+    code: 'ORDER_NOT_FOUND',
+  });
   state.linked = true;
   state.owner = null;
   assert.equal(

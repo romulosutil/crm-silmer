@@ -37,6 +37,7 @@ export { PostgresFinanceRepository } from './adapters/postgres-finance-repositor
 export { InMemoryOrderRepository } from './adapters/in-memory-order-repository.js';
 export { PostgresOrderConversationPort } from './adapters/postgres-order-conversation-port.js';
 export { PostgresOrderRepository } from './adapters/postgres-order-repository.js';
+export { orderReadable } from './adapters/order-contact-access.js';
 export { PostgresOrderFileRepository } from './adapters/postgres-order-file-repository.js';
 export {
   InMemoryObjectStorage,

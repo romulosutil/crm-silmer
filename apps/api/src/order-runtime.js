@@ -590,7 +590,8 @@ export function createOrderRuntime(options) {
     },
     ensurePendingFromIntent: service.ensurePendingFromIntent,
     projectAgentBriefing: service.projectAgentBriefing,
-    summary: service.summary,
+    /** @param {{period?: unknown}} [input] @param {any} [actor] */
+    summary: (input, actor) => service.summary(input, actor),
 
     /**
      * PCL-10/PCL-11 behind the conversation version the seller saw; an
@@ -665,7 +666,8 @@ export function createOrderRuntime(options) {
       );
     },
 
-    priceBreakdown: service.priceBreakdown,
+    /** @param {string} orderId @param {any} [actor] */
+    priceBreakdown: (orderId, actor) => service.priceBreakdown(orderId, actor),
     /** @param {OrderCommand & {orderId: string, value: unknown, expectedVersion: number}} input */
     async savePriceBreakdown(input) {
       await service.assertPriceBreakdownAccess(input);
@@ -817,9 +819,9 @@ export function createOrderRuntime(options) {
       );
     },
 
-    /** @param {string} orderId */
-    async listFiles(orderId) {
-      return presentFiles(await requireFiles().list(orderId));
+    /** @param {string} orderId @param {any} [actor] */
+    async listFiles(orderId, actor) {
+      return presentFiles(await requireFiles().list(orderId, actor));
     },
 
     /**
@@ -876,6 +878,7 @@ export function createOrderRuntime(options) {
       const opened = await requireFiles().openContent(
         input.orderId,
         input.fileId,
+        input.actor,
       );
       await options.auditTrail.append({
         action: 'order.file.download',
@@ -888,9 +891,9 @@ export function createOrderRuntime(options) {
       return opened;
     },
 
-    /** @param {string} orderId @param {string} fileId */
-    async openFileThumbnail(orderId, fileId) {
-      return requireFiles().openThumbnail(orderId, fileId);
+    /** @param {string} orderId @param {string} fileId @param {any} [actor] */
+    async openFileThumbnail(orderId, fileId, actor) {
+      return requireFiles().openThumbnail(orderId, fileId, actor);
     },
 
     /**
@@ -908,7 +911,9 @@ export function createOrderRuntime(options) {
 
     /** @param {string} orderId @param {any} [actor] */
     async get(orderId, actor) {
-      return { order: await presentOne(await service.get(orderId), actor) };
+      return {
+        order: await presentOne(await service.get(orderId, actor), actor),
+      };
     },
 
     /** @param {Parameters<typeof service.list>[0]} [filters] @param {any} [actor] */

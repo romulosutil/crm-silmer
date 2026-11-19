@@ -32,7 +32,7 @@ import {
   statusEventType,
 } from '../ports/contracts.js';
 import { decryptJson, encryptJson } from './envelope.js';
-import { contactReadable } from './order-contact-access.js';
+import { contactReadable, orderReadable } from './order-contact-access.js';
 
 /**
  * @typedef {import('../ports/contracts.js').Order} Order
@@ -850,11 +850,17 @@ export class PostgresOrderRepository {
     });
   }
 
-  /** @param {string} orderId */
-  async findById(orderId) {
+  /**
+   * With a `visibilityActorId` (WAP-07/08) an order whose Contact that reader
+   * may not read is absent, exactly as an unknown id.
+   *
+   * @param {string} orderId @param {{visibilityActorId?: string|null}} [reader]
+   */
+  async findById(orderId, reader = {}) {
     const result = await this.#database.query(
-      `SELECT ${ORDER_COLUMNS} FROM crm.orders WHERE id = $1`,
-      [orderId],
+      `SELECT ${ORDER_COLUMNS} FROM crm.orders WHERE id = $1
+         AND ($2::text IS NULL OR ${orderReadable('orders', '$2')})`,
+      [orderId, reader?.visibilityActorId ?? null],
     );
     return result.rows[0] ? this.#map(result.rows[0]) : null;
   }
@@ -864,6 +870,8 @@ export class PostgresOrderRepository {
    * @returns {Promise<import('../ports/contracts.js').OrdersSummary>}
    */
   async summary(query) {
+    // WAP-07/08: a seller's figures leave out the orders they may not read.
+    const visible = `($5::text IS NULL OR ${orderReadable('orders', '$5')})`;
     const result = await this.#database.query(
       `SELECT
          count(*) FILTER (WHERE status = 'confirmado')::integer AS confirmed_count,
@@ -883,11 +891,17 @@ export class PostgresOrderRepository {
                        coalesce(sum(final_amount_cents), 0)::bigint AS sold_amount_cents
                 FROM crm.orders
                 WHERE NOT is_test AND status = 'confirmado' AND cancelled_at IS NULL
-                  AND order_date BETWEEN $3::date AND $4::date
+                  AND order_date BETWEEN $3::date AND $4::date AND ${visible}
                 GROUP BY order_date) sold) AS daily
        FROM crm.orders
-       WHERE NOT is_test AND cancelled_at IS NULL`,
-      [query.from, query.to, query.dailyFrom, query.dailyTo],
+       WHERE NOT is_test AND cancelled_at IS NULL AND ${visible}`,
+      [
+        query.from,
+        query.to,
+        query.dailyFrom,
+        query.dailyTo,
+        query.visibilityActorId ?? null,
+      ],
     );
     const row = result.rows[0];
     const confirmedCount = Number(row.confirmed_count);
@@ -923,12 +937,15 @@ export class PostgresOrderRepository {
    * The promised day lives in the encrypted ficha, so the rows are read
    * whole; the set stays small because delivering an order leaves it.
    */
-  async openDeliveries() {
+  /** @param {{visibilityActorId?: string|null}} [reader] */
+  async openDeliveries(reader = {}) {
     const result = await this.#database.query(
       `SELECT ${ORDER_COLUMNS} FROM crm.orders
        WHERE status = 'confirmado' AND origin = 'atendimento' AND cancelled_at IS NULL
          AND delivered_on IS NULL AND NOT is_test
+         AND ($1::text IS NULL OR ${orderReadable('orders', '$1')})
        ORDER BY number_sequence`,
+      [reader?.visibilityActorId ?? null],
     );
     return result.rows.map((row) => this.#map(row));
   }
@@ -1079,6 +1096,7 @@ export class PostgresOrderRepository {
       phoneDigests,
       status,
       storeNumber,
+      visibilityActorId,
     } = readOrderListQuery(query);
     /** @type {unknown[]} */
     const values = [];
@@ -1127,6 +1145,9 @@ export class PostgresOrderRepository {
     }
     if (cancellation !== 'all')
       scope = `${scope} AND cancelled_at IS ${cancellation === 'cancelled' ? 'NOT ' : ''}NULL`;
+    // WAP-07/08: in the scope, so the counts and the cursor see the same set.
+    if (visibilityActorId !== undefined)
+      scope = `${scope} AND ${orderReadable('orders', bind(visibilityActorId))}`;
 
     const counted = await this.#database.query(
       `SELECT status, count(*)::integer AS total FROM crm.orders

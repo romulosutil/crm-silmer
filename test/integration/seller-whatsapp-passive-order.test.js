@@ -325,7 +325,9 @@ test(
       [B, contactId],
     );
     await denied(await write(mobile, orderPath(convB), buyB.body, buyB.key));
-    await assertForeignOrder(mobile, orderA);
+    // WAP-07/08: without B's wallet link the Contact is private to A, so
+    // A's order is not found for B; B, as its seller, keeps its own order.
+    await assertForeignOrder(mobile, orderA, false);
     const retained = (
       await json(await read(mobile, `${origin}/api/v1/orders/${orderB.id}`))
     ).order;
@@ -546,11 +548,21 @@ async function denied(response, inactive = false) {
   assert.deepEqual(privateFields, {});
 }
 
-/** @param {Page} page @param {any} expected */
-async function assertForeignOrder(page, expected) {
-  // The existing order.read capability permits this standalone detail.
-  // Commercial management and private Inbox context have separate guards.
+/** @param {Page} page @param {any} expected @param {boolean} [visible] */
+async function assertForeignOrder(page, expected, visible = true) {
+  // While the shared Contact is in the reader's wallet, order.read permits
+  // this standalone detail; commercial management and private Inbox context
+  // have separate guards. Out of the wallet the order is not found (WAP-07/08).
   const path = `${origin}/api/v1/orders/${expected.id}`;
+  if (!visible) {
+    const hidden = await read(page, path);
+    assert.equal(hidden.status(), 404);
+    assert.deepEqual(await hidden.json(), {
+      error: { code: 'ORDER_NOT_FOUND' },
+    });
+    await denied(await read(page, `${path}/receipt`));
+    return;
+  }
   const { order } = await json(await read(page, path));
   assert.equal(order.id, expected.id);
   assert.equal(order.number, expected.number);

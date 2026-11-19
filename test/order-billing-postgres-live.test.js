@@ -318,6 +318,35 @@ if (!connectionString) {
       false,
     );
   });
+  test('WAP-07/08: the billing of a private wallet client is not found for another seller', async () => {
+    const orderId = await seed(pool);
+    const contact = (
+      await pool.query('SELECT contact_id FROM crm.orders WHERE id=$1', [
+        orderId,
+      ])
+    ).rows[0].contact_id;
+    await pool.query(
+      'UPDATE crm.contacts SET wallet_created=true WHERE id=$1',
+      [contact],
+    );
+    await pool.query(
+      `INSERT INTO crm.seller_client_links(id,seller_id,contact_id,provenance,status,version,created_by,updated_by,created_at,updated_at)
+       VALUES($1,$2,$3,'explicit_link','active',1,$2,$2,$4,$4)`,
+      [randomUUID(), SELLER.id, contact, current],
+    );
+    const own = await command(runtime, orderId);
+    await assert.rejects(runtime.get({ actor: OTHER, orderId }), {
+      code: 'ORDER_NOT_FOUND',
+    });
+    await assert.rejects(runtime.configure({ ...own, actor: OTHER }), {
+      code: 'ORDER_NOT_FOUND',
+    });
+    for (const actor of [SELLER, ADMIN])
+      assert.equal(
+        (await runtime.get({ actor, orderId })).billing.orderVersion,
+        own.expectedVersion,
+      );
+  });
   test('COB-02/11: pending, store, minimum and legacy paid records cannot start billing', async () => {
     /** @type {[any,string][]} */
     const cases = [

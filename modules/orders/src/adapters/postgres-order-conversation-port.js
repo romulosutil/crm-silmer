@@ -3,7 +3,7 @@ import {
   contactConversationVisible,
 } from '@crm-silmer/contacts';
 import { randomUUID } from 'node:crypto';
-import { contactReadable } from './order-contact-access.js';
+import { contactReadable, orderReadable } from './order-contact-access.js';
 
 import { decryptContactIdentityEnvelope } from '@crm-silmer/contacts/identity-envelope';
 import { contactPhoneHash, normalizeContactPhone } from '@crm-silmer/contacts';
@@ -452,7 +452,10 @@ export class PostgresOrderConversationPort {
     );
   }
 
-  /** The list search includes a manual order even without a conversation. */
+  /** The list search includes a manual order even without a conversation.
+   * WAP-07/08: every branch, the name one included, keeps to the Contacts
+   * with an order the reader may read (the Contact rule, or the reader is
+   * that order's seller); the order list applies the same rule again. */
   /** @param {string} query @param {any} [reader] */
   async searchContactIds(query, reader = {}) {
     const text = String(query).trim();
@@ -463,7 +466,11 @@ export class PostgresOrderConversationPort {
       : null;
     const result = await this.#database.query(
       `SELECT contact.id FROM crm.contacts AS contact
-       WHERE contact.display_name ILIKE $1 ESCAPE '\\'
+       WHERE ($3::text IS NULL OR EXISTS (
+           SELECT 1 FROM crm.orders contact_order
+           WHERE contact_order.contact_id = contact.id
+             AND ${orderReadable('contact_order', '$3')}))
+         AND (contact.display_name ILIKE $1 ESCAPE '\\'
           OR ($2::text IS NOT NULL AND (
             contact.contact_phone_hash = $2
             OR EXISTS (
@@ -486,7 +493,7 @@ export class PostgresOrderConversationPort {
                 AND identity.current_contact_id = contact.id
                 AND ($3::text IS NULL OR ${contactConversationVisible('conversation', '$3')})
             )
-          ))
+          )))
        ORDER BY contact.id`,
       [
         `%${text.replace(/[\\%_]/gu, '\\$&')}%`,

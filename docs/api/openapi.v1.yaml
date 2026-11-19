@@ -3375,6 +3375,11 @@ paths:
         página. OLIST-T23: `cancellation` seleciona active (padrão), cancelled
         ou all; o mesmo universo é filtrado antes das contagens e paginação.
         O status comercial continua pendente/confirmado mesmo no histórico cancelado.
+        WAP-07/08: só entram pedidos cujo Contact o leitor pode ler (regra de
+        GET /contacts/{contactId}; COMMERCIAL_ADMIN vê todos) ou dos quais ele é
+        o vendedor (responsável manual, atendente da conversa ou vendedor da
+        confirmação), no mesmo SQL de
+        busca, contagens e cursor; pedido da loja não tem Contact e entra.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/HumanReadOrigin'
@@ -3467,7 +3472,7 @@ paths:
     post:
       operationId: searchOrdersPrivate
       summary: Busca privada de pedidos, inclusive por telefone completo
-      description: Ação order.read. Telefone é comparado por HMAC nas fontes disponíveis; a consulta exige sessão, Origin e CSRF e não pode ser armazenada em cache.
+      description: Ação order.read. Telefone é comparado por HMAC nas fontes disponíveis; a consulta exige sessão, Origin e CSRF e não pode ser armazenada em cache. WAP-07/08 - nome, telefone e número só acham pedidos cujo Contact o leitor pode ler ou dos quais ele é o vendedor, como em GET /orders.
       security: [{ sessionCookie: [], csrfHeader: [] }]
       parameters:
         - $ref: '#/components/parameters/Origin'
@@ -3547,7 +3552,7 @@ paths:
     get:
       operationId: getOrder
       summary: Retorna um pedido com a ficha completa
-      description: Ação order.read. Preserva a consulta de pedidos cancelados e seus snapshots, motivo, autoria, histórico e pagamento no escopo comercial anterior.
+      description: Ação order.read. Preserva a consulta de pedidos cancelados e seus snapshots, motivo, autoria, histórico e pagamento no escopo comercial anterior. WAP-07/08 - um pedido cujo Contact o leitor não pode ler (cliente privado da carteira de outro vendedor) e do qual ele não é o vendedor responde 404 ORDER_NOT_FOUND, sem nome nem id; o mesmo vale para impressão, PDF, recibo, composição, arquivos, cobrança, frete, Olist e para os comandos por id.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderId'

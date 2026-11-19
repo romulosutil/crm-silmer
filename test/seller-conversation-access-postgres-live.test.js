@@ -58,6 +58,8 @@ test(
     const sellerA = 'scope-a-' + prefix;
     const sellerB = 'scope-b-' + prefix;
     const admin = 'scope-admin-' + prefix;
+    // WAP-07/08: a seller with no wallet link and no order of this client.
+    const stranger = 'scope-stranger-' + prefix;
     const actor = (/** @type {string} */ id) => ({
       id,
       kind: 'human',
@@ -96,7 +98,7 @@ test(
     });
     try {
       await migrate(pool, { migrations: await loadMigrations() });
-      for (const id of [sellerA, sellerB, admin]) {
+      for (const id of [sellerA, sellerB, admin, stranger]) {
         await pool.query(
           "INSERT INTO crm.users(id,email,password_hash,name) VALUES($1,$2,'$argon2id$synthetic','Synthetic scope')",
           [id, id + '@example.test'],
@@ -373,7 +375,11 @@ test(
           'denial must happen before any file or RustFS read',
         );
       }
-      async function commercialWithoutChat() {
+      /** WAP-07/08: the order's seller and a reader with the Contact in the
+       * wallet keep the commercial detail without chat; any other seller
+       * gets 404 (Tech Lead, 18/11/2026).
+       * @param {boolean} [contactVisible] */
+      async function commercialWithoutChat(contactVisible = true) {
         assert.deepEqual(
           await orderPort.readVisibleConversationIds([own.id], currentActor),
           new Set(),
@@ -383,9 +389,16 @@ test(
           url: `/api/v1/orders/${order.id}`,
           headers: { cookie: 'crm_session=synthetic' },
         });
-        assert.equal(commercial.statusCode, 200);
-        assert.equal(commercial.json().order.conversationId, null);
-        assert.equal(commercial.json().order.lastMessage, null);
+        if (contactVisible) {
+          assert.equal(commercial.statusCode, 200);
+          assert.equal(commercial.json().order.conversationId, null);
+          assert.equal(commercial.json().order.lastMessage, null);
+        } else {
+          assert.equal(commercial.statusCode, 404);
+          assert.deepEqual(commercial.json(), {
+            error: { code: 'ORDER_NOT_FOUND' },
+          });
+        }
         const throughConversation = await api.inject({
           method: 'GET',
           url: `/api/v1/conversations/${own.id}/order`,
@@ -747,7 +760,11 @@ test(
             { code: 'INVALID_CURSOR' },
           );
           await denyBothMedia();
+          // Commercial visibility survives: A still sells this order.
           await commercialWithoutChat();
+          currentActor = actor(stranger);
+          await commercialWithoutChat(false);
+          currentActor = actor(sellerA);
           await assert.rejects(inbox.get(own.id, reader(sellerA)), {
             code: 'CONVERSATION_NOT_FOUND',
           });

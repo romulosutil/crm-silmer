@@ -15,6 +15,7 @@ import {
   billingUrl,
   decryptOrderPrivateJson,
   encryptOrderPrivateJson,
+  orderReadable,
 } from '@crm-silmer/orders';
 
 /** @param {unknown} value */
@@ -75,12 +76,16 @@ async function actorFor(client, supplied, write) {
   return actor;
 }
 /** Conversation before order matches the commercial writer's lock order.
- * @param {any} client @param {string} orderId */
-async function lockOrder(client, orderId) {
+ * WAP-07/08: with a reader, an order whose Contact that person may not read
+ * is not found, for its billing reads and commands alike.
+ * @param {any} client @param {string} orderId @param {string|null} [readerId] */
+async function lockOrder(client, orderId, readerId = null) {
   const before = (
-    await client.query('SELECT conversation_id FROM crm.orders WHERE id=$1', [
-      orderId,
-    ])
+    await client.query(
+      `SELECT conversation_id FROM crm.orders WHERE id=$1
+         AND ($2::text IS NULL OR ${orderReadable('orders', '$2')})`,
+      [orderId, readerId],
+    )
   ).rows[0];
   if (!before) throw new BillingError(404, 'ORDER_NOT_FOUND');
   let owner = null;
@@ -473,7 +478,11 @@ export function createOrderBillingRuntime(database, options) {
     return database.transaction(async (/** @type {any} */ client) => {
       await options.billingChat?.lockOrder?.(client, input.orderId);
       const actor = await actorFor(client, input.actor, true);
-      const order = await lockOrder(client, billingIdentifier(input.orderId));
+      const order = await lockOrder(
+        client,
+        billingIdentifier(input.orderId),
+        actor.id,
+      );
       if (!owns(actor, order)) throw new BillingError(403, 'FORBIDDEN');
       const plan = await planFor(client, order.id);
       const bound = {
@@ -578,7 +587,7 @@ export function createOrderBillingRuntime(database, options) {
         const actor = await actorFor(client, input.actor, false);
         return view(
           client,
-          await lockOrder(client, billingIdentifier(input.orderId)),
+          await lockOrder(client, billingIdentifier(input.orderId), actor.id),
           actor,
         );
       });

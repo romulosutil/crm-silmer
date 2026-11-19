@@ -76,9 +76,30 @@ desligadas (relato da mesma sessão):
 - Incidente fora do WAP: o merge do CP-T10 trouxe a expand `0084`, que não
   tinha sido aplicada. O boot guard barrou os deploys novos, e o container do
   `1489c2fe` serviu por cerca de 25 min, até a `0084` ser aplicada.
-- Ainda não feito: workflows WAP no n8n (o gerador altera o workflow principal
-  ativo do Evolution), flags e allowlist. Eles dependem das respostas do PO:
-  vendedores, visibilidade do Admin, F3 e cobrança.
+- Ainda não feito: imagens reconstruídas com as correções abaixo, workflows WAP
+  no n8n, flags e allowlist. A sequência está na
+  [ativação em produção](../../../docs/runbooks/seller-whatsapp.md#ativação-em-produção-piloto-de-um-vendedor).
+  Ela depende das respostas do PO: vendedores, visibilidade do Admin, F3 e
+  cobrança.
+
+**Integração real (19/11).** Ao preparar a instalação, três lacunas impediam o
+piloto, todas corrigidas no branch `claude/wap-e12-live-wiring`:
+
+- o Evolution só deixava sair `connection.update` das linhas pessoais; sem
+  `messages.upsert` e `messages.update`, não havia entrada, eco nem recibo
+  (`c8915dc6`);
+- o controle não alcançava o Evolution interno, que só responde por `http`; o
+  Gateway exigia `https` (`8925c221`);
+- não havia build de produção dos workflows a partir do principal vivo
+  (`8925c221`, `ops/n8n/build-wap-production-workflows.mjs`).
+
+Duas falhas de borda também foram corrigidas. A verificação do ingresso
+pessoal dividia o limite técnico de 60/min, insuficiente para o tráfego de um
+único IP do n8n; ela passou a ter 1200/min (`9b7554f8`). E o ingresso do n8n
+transformava um `429` do CRM em `403` permanente, perdendo o evento; agora
+devolve `503`, e o Evolution tenta de novo (`8925c221`). O ensaio local usava
+stubs para o HTTP do Evolution e, por isso, não pegou nenhuma delas. Nada
+disso foi executado em ambiente real.
 
 Decisões do PO no mesmo dia:
 
@@ -96,17 +117,17 @@ Decisões do PO no mesmo dia:
 
 O go/no-go está no [roteiro](../../../docs/runbooks/seller-whatsapp.md#gono-go-antes-do-primeiro-efeito-real).
 
-| Gate                                                                  | Estado   | Bloqueio / dono                                                                                   |
-| --------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------- |
-| CI verde do HEAD da PR e merge linear                                 | feito    | PR 398 mesclada por rebase, master `1489c2fe`                                                     |
-| SHA/digest, `/api/health/ready`, migrações `0077`–`0083`              | feito    | expand antes do merge, contract `0081` depois; health 200 (seção Publicação)                      |
-| Imagens Evolution/n8n com patches WAP por digest                      | feito    | em produção desde 18/11, flags WAP desligadas; workflows WAP e Dockerfile inline do n8n pendentes |
-| Código no mesmo celular (WAP-E01/T01-01)                              | pendente | aberto desde E01; sem ele não há autonomia mobile                                                 |
-| Decisões F3 (trava pós-restore) e F4 (limite por usuário)             | pendente | Tech Lead/PO, [validation-etapa1](validation-etapa1.md#findings)                                  |
-| Restore remoto, RPO/RTO e banco do n8n                                | pendente | DevOps, [recovery](../../../ops/recovery/RUNBOOK.md)                                              |
-| SHA de rollback, varredura de base dos logs, allowlist só no ambiente | pendente | DevOps/Privacidade, itens 7–9 do go/no-go                                                         |
-| Números dedicados, cliente sintético e janela                         | pendente | Operação                                                                                          |
-| Autorizações do PO, da Operação, da Privacidade e Financeira          | pendente | PO, Operação, Privacidade e Financeiro; cada uma por escrito                                      |
+| Gate                                                                  | Estado   | Bloqueio / dono                                                                                 |
+| --------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------- |
+| CI verde do HEAD da PR e merge linear                                 | feito    | PR 398 mesclada por rebase, master `1489c2fe`                                                   |
+| SHA/digest, `/api/health/ready`, migrações `0077`–`0083`              | feito    | expand antes do merge, contract `0081` depois; health 200 (seção Publicação)                    |
+| Imagens Evolution/n8n com patches WAP por digest                      | pendente | as de 18/11 não têm as correções de 19/11; reconstruir a partir de `claude/wap-e12-live-wiring` |
+| Código no mesmo celular (WAP-E01/T01-01)                              | pendente | aberto desde E01; sem ele não há autonomia mobile                                               |
+| Decisões F3 (trava pós-restore) e F4 (limite por usuário)             | pendente | Tech Lead/PO, [validation-etapa1](validation-etapa1.md#findings)                                |
+| Restore remoto, RPO/RTO e banco do n8n                                | pendente | DevOps, [recovery](../../../ops/recovery/RUNBOOK.md)                                            |
+| SHA de rollback, varredura de base dos logs, allowlist só no ambiente | pendente | DevOps/Privacidade, itens 7–9 do go/no-go                                                       |
+| Números dedicados, cliente sintético e janela                         | pendente | Operação                                                                                        |
+| Autorizações do PO, da Operação, da Privacidade e Financeira          | pendente | PO, Operação, Privacidade e Financeiro; cada uma por escrito                                    |
 
 ## Ensaio local integrado
 
@@ -291,3 +312,6 @@ live minimizada.
 | `5131192f` | E09/E12   | E12-12 e selo verde: aviso de linha caída, banner               |
 | `2dddd6f7` | E12       | E12-14: asserção com escopo da suíte                            |
 | `d8477e7e` | E05       | E12-13: Criar pedido espera a leitura dos Assuntos              |
+| `c8915dc6` | Evolution | linhas pessoais levam mensagens e recibos                       |
+| `9b7554f8` | E04       | limite próprio para a verificação do ingresso pessoal           |
+| `8925c221` | n8n       | build de produção dos workflows; Evolution interno; 429 → 503   |

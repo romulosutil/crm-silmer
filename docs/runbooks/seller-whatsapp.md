@@ -101,8 +101,148 @@ autorizam ampliação. As lacunas estão em
 4. Imagens Evolution/n8n com os patches WAP, com as flags desligadas.
    Workflows candidatos ficam inativos e não são copiados à mão.
 5. Flags por allowlist, conforme a [implantação em fases](seller-whatsapp-recovery.md#implantação-em-fases).
+   A sequência operacional exata está em
+   [ativação em produção](#ativação-em-produção-piloto-de-um-vendedor).
 6. Rollback: desligar as flags. Binário só para um SHA da tabela de
    [rollback](seller-whatsapp-recovery.md#rollback-de-binário).
+
+## Ativação em produção (piloto de um vendedor)
+
+Sequência para ligar **um** vendedor em produção, um passo por vez. Ela não
+autoriza nada sozinha: cada passo real depende da autorização do
+[go/no-go](#gono-go-antes-do-primeiro-efeito-real). Qualquer condição de
+abortar aplica o [congelamento](#congelamento-e-reconciliação) e, se preciso,
+o [rollback](#rollback-da-ativação). IDs de vendedor, linha, instância e
+credencial ficam só no EasyPanel e na cópia privada do operador, nunca em
+diff, ticket ou relatório. A evidência segue a regra
+[minimizada](#evidência-minimizada).
+
+| Passo | Ação                                                                                                                                                                                                                                                                                                                                                                                                 | Conferência                                                                                                                                                      | Abortar quando                                                                                           |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| 0     | Pré-requisitos. Master com `c8915dc6`, `9b7554f8` e `8925c221` implantada (API, worker e edge no SHA). Nova imagem do Evolution (`ops/evolution/Dockerfile.inline` re-renderizado) e do n8n (`ops/n8n/wap-ingress-Dockerfile.inline` re-renderizado), com todas as flags desligadas. `pg_dump` do `silmer-evolution-db` (sem backup no EasyPanel) e backup do banco do n8n. Smoke da linha geral     | `/api/health/ready` 200 no SHA. Build do Evolution imprime `WAP_EVOLUTION_GENERATION_PATCHED`, e o do n8n, `WAP_N8N_INGRESS_PATCHED`. Dumps conferidos. Smoke ok | SHA divergente, marcador ausente, dump faltando ou regressão da linha geral                              |
+| 1     | Credenciais n8n: Basic do gatilho de controle (= `N8N_COMMAND_CLIENT_ID`/`_SECRET` da API e do worker); Basic do CRM `AUTOMATION_EXECUTOR` (= `CRM_AUTOMATION_CLIENT_*`, ações `whatsapp.control.read`, `.reserve` e `.result`); header `apikey` do Evolution (= `AUTHENTICATION_API_KEY`); header `X-Silmer-Evolution-Token` dos eventos (credencial existente)                                     | Anotar só os IDs das quatro credenciais, na cópia privada                                                                                                        | Segredo divergente do serviço de origem ou ação faltando no executor                                     |
+| 2     | **Só a API** (o worker segue com `SELLER_WHATSAPP_CONTROL_ENABLED=false`): `SELLER_WHATSAPP_CONTROL_ENABLED=true`, `SELLER_WHATSAPP_SELLER_IDS=["<id do vendedor>"]`, `SELLER_WHATSAPP_GENERAL_NUMBER_DIGEST`, `N8N_WAP_CONTROL_URL` e `N8N_WAP_CHALLENGE_URL` (`https://<n8n>/webhook/silmer/seller-whatsapp/control` e `…/challenge`), `SELLER_WHATSAPP_WEBHOOK_URL` (`…/events`). Reiniciar a API | Boot e `/api/health/ready` 200. Só o worker consome a fila `whatsapp_control` e roda a varredura; por isso o job do passo 3 fica pendente                        | Boot recusado ou outro vendedor aceito                                                                   |
+| 3     | O vendedor clica **Conectar** uma vez, em chamada com o operador, e não clica mais nada                                                                                                                                                                                                                                                                                                              | A tela mostra a linha em preparação                                                                                                                              | Clicou em Desconectar: isso cria uma operação de logout pendente                                         |
+| 4     | SQL somente leitura (abaixo) em `crm.seller_whatsapp_lines`, `crm.seller_whatsapp_operations` e `crm.outbox_jobs`                                                                                                                                                                                                                                                                                    | Linha `preparing`, operação `connect` `pending`, job `whatsapp.control.deliver` `pending`                                                                        | Qualquer outro estado, mais de uma operação ou mais de um job                                            |
+| 5     | Exportar o workflow principal `k7tI6T4RhQPyJkn9` atual (cópia privada, fora do repositório) e rodar o build (abaixo)                                                                                                                                                                                                                                                                                 | Código de saída 0, cinco arquivos e hashes impressos. `crmBaseUrl` igual à origem dos nós CRM do export                                                          | Qualquer código `WAP_BUILD_*` ou `EVOLUTION_SEND_*`                                                      |
+| 6     | n8n: variáveis do `summary.json` (`environment.n8n`) mais `SILMER_WAP_INGRESS_VERIFY_BASIC` (valor completo `Basic …` do `AUTOMATION_EXECUTOR`). Reiniciar. Importar `control`, `challenge` e `inbound` **pelo editor** (novo workflow → importar arquivo → salvar). Ativar os três. **Não** aplicar `main-personal-send` no piloto                                                                  | Boot e `healthz` 200. Os três salvam e ativam. O workflow principal segue igual                                                                                  | `WAP_WORKFLOW_WRITE_DENIED` (env errada), boot recusado ou workflow principal alterado                   |
+| 7     | Evolution: `SILMER_WAP_GENERATION_ENABLED=true`, `SILMER_WAP_GENERATION_INSTANCES=<instância>`, `SILMER_WAP_CONTROL_ENABLED=true` e `SILMER_WAP_CONTROL_WEBHOOK_URL` idêntico, byte a byte, a `SELLER_WHATSAPP_WEBHOOK_URL`. Conferir tudo com o `summary.json` **antes**: env inválida derruba o boot do Evolution e a linha geral. Reiniciar; a linha geral cai por instantes                      | Boot do Evolution, linha geral `open` e smoke da linha geral                                                                                                     | Boot recusado ou linha geral sem voltar                                                                  |
+| 8     | Repetir o SQL do passo 4. Worker: espelhar as variáveis WAP da API, incluindo a allowlist, e reiniciar                                                                                                                                                                                                                                                                                               | Antes: igual ao passo 4. Depois: o job pendente é entregue e a linha fica `awaiting_pairing`                                                                     | Estado divergente antes do worker; depois, operação `failed_before_effect`, `unknown` ou linha `blocked` |
+| 9     | O vendedor pede o QR e pareia. O QR fica em outra tela: o código no mesmo celular não está provado                                                                                                                                                                                                                                                                                                   | A varredura marca a linha `connected`                                                                                                                            | Número divergente, recusa do desafio ou linha `blocked`                                                  |
+| 10    | Ligar o restante por fase, um passo por vez: `SELLER_CLIENTS_*`, depois `SELLER_WHATSAPP_INBOUND_*` e, por último, `ORDER_SUBJECT_*`. `SELLER_WHATSAPP_SEND_*` e `SELLER_WHATSAPP_FIRST_SEND_ENABLED` ficam desligadas no piloto inicial                                                                                                                                                             | Em cada fase, outro vendedor segue recusado                                                                                                                      | Outro vendedor aceito em qualquer fase                                                                   |
+
+O envio pessoal exige o `main-personal-send`, com smoke próprio da linha
+geral, e fica para depois. O primeiro envio exige o gate do JID
+([saídas](seller-whatsapp-outbound.md)).
+
+SQL dos passos 4 e 8, somente leitura. Registre só prefixos de 8 caracteres:
+
+```sql
+SELECT l.id, l.instance_name, l.state AS line_state,
+       o.action, o.state AS operation_state,
+       j.job_type, j.status AS job_status
+  FROM crm.seller_whatsapp_lines l
+  JOIN crm.seller_whatsapp_operations o ON o.line_id = l.id
+  LEFT JOIN crm.outbox_jobs j ON j.whatsapp_operation_id = o.id
+ WHERE l.seller_id = '<id do vendedor>'
+ ORDER BY o.created_at DESC;
+```
+
+Build do passo 5, com saída fora do repositório:
+
+```sh
+node ops/n8n/build-wap-production-workflows.mjs <export.json> <config.json> <dir-fora-do-repo>
+```
+
+`config.json`, com valores sintéticos. O operador troca pelos reais só na
+cópia privada:
+
+```json
+{
+  "lineIds": ["00000000-0000-4000-8000-000000000001"],
+  "instances": ["wap_00000000000000000000000000000001"],
+  "crmBaseUrl": "https://<crm>",
+  "evolutionBaseUrl": "http://schedule_silmer-evolution:8080",
+  "n8nBaseUrl": "https://<n8n>",
+  "sellerWhatsAppWebhookUrl": "https://<n8n>/webhook/silmer/seller-whatsapp/events",
+  "evolutionControlWebhookUrl": "https://<n8n>/webhook/silmer/seller-whatsapp/events",
+  "credentials": {
+    "controlWebhookBasic": { "id": "synthetic-control-basic", "name": "..." },
+    "crmBasic": { "id": "synthetic-crm-basic", "name": "..." },
+    "evolutionApiHeader": { "id": "synthetic-evolution-api", "name": "..." },
+    "evolutionEventsHeader": {
+      "id": "synthetic-evolution-events",
+      "name": "..."
+    }
+  },
+  "personalSendLineIds": []
+}
+```
+
+- `lineIds` e `instances` vêm do SQL do passo 4. No piloto,
+  `personalSendLineIds` fica vazio.
+- `crmBaseUrl` precisa ser a origem que os nós CRM do principal vivo já usam.
+  Confira no export. O CRM aceita só `https`; o Evolution aceita só a origem
+  interna acima.
+- As duas URLs de webhook precisam ser iguais a
+  `<n8nBaseUrl>/webhook/silmer/seller-whatsapp/events`.
+
+O build grava, sem sobrescrever, `control.json`, `challenge.json`,
+`inbound.json`, `main-personal-send.json` e `summary.json`. Todos saem
+inativos. O `summary.json` traz as variáveis propostas para API, worker, n8n e
+Evolution, validadas pelos loaders reais, e a lista dos segredos que não
+mudam. A allowlist de vendedores sai como placeholder. Recusas, só com código
+fixo:
+
+| Código                                | Causa                                                                      |
+| ------------------------------------- | -------------------------------------------------------------------------- |
+| `WAP_BUILD_USAGE`                     | argumentos diferentes de três                                              |
+| `WAP_BUILD_OUTPUT_IN_REPO`            | diretório de saída dentro do repositório                                   |
+| `WAP_BUILD_OUTPUT_EXISTS`             | diretório de saída já existe                                               |
+| `WAP_BUILD_CONFIG_INVALID`            | chave desconhecida, URL fora do formato ou credencial inválida             |
+| `WAP_BUILD_LINE_INVALID`              | `lineIds` vazio, repetido ou fora do formato; envio para linha não listada |
+| `WAP_BUILD_INSTANCE_INVALID`          | `instances` vazio, repetido ou fora de `wap_` + 32 hex                     |
+| `WAP_BUILD_WEBHOOK_URL_MISMATCH`      | URLs de webhook diferentes do caminho de eventos do n8n                    |
+| `WAP_BUILD_MAIN_INVALID`              | export sem `nodes` ou `connections` válidos                                |
+| `WAP_BUILD_MAIN_ID_MISMATCH`          | export de outro workflow                                                   |
+| `WAP_BUILD_MAIN_NOT_ADAPTED`          | principal sem os nós do Evolution, ou ainda com WAHA/WPPConnect            |
+| `WAP_BUILD_MAIN_ALREADY_WAP`          | principal já tem nós `(WAP)`                                               |
+| `WAP_BUILD_CRM_ORIGIN_MISMATCH`       | `crmBaseUrl` diferente da origem dos nós CRM do principal                  |
+| `WAP_BUILD_EVOLUTION_ORIGIN_MISMATCH` | nó do Evolution fora de `evolutionBaseUrl`                                 |
+| `WAP_BUILD_INBOUND_UNSAFE`            | inbound com envio, gatilho extra, `$env`, nó de IA ou referência solta     |
+| `WAP_BUILD_ENVIRONMENT_INVALID`       | variáveis propostas recusadas por um loader ou pela sonda do ingresso      |
+| `EVOLUTION_SEND_*`                    | âncoras do envio pessoal ausentes ou repetidas no principal                |
+| `WAP_BUILD_FAILED`                    | qualquer outra falha; o build não ecoa entrada, caminho nem causa          |
+
+No passo 6, as variáveis do n8n são `SILMER_WAP_INGRESS_ENABLED=true`,
+`SILMER_WAP_INGRESS_PATHS` (mapa JSON dos três caminhos para `control`,
+`challenge` e `event`), `SILMER_WAP_INGRESS_INSTANCES`,
+`SILMER_WAP_CONTROL_VERIFY_URL`
+(`https://<crm>/api/v1/integrations/n8n/whatsapp-control/verify`),
+`SILMER_WAP_INGRESS_VERIFY_URL` (`…/whatsapp-control/ingress/verify`) e
+`SILMER_WAP_INGRESS_VERIFY_BASIC`. O import é pelo editor porque só o
+salvamento pelo editor passa pelo guard de escrita.
+
+### Riscos operacionais
+
+- O vínculo de geração fica em memória no Evolution. Qualquer reinício ou
+  redeploy do Evolution exige novo pareamento. Prepare todos os vendedores
+  antes de um único reinício.
+- Instância criada antes de `c8915dc6` tem o webhook antigo e fica `blocked`
+  na reconciliação. Ela precisa reconectar.
+- Mensagens enviadas pelo CRM não geram eco `messages.upsert`
+  (`emitOwnEvents: false`). A confirmação vem do HTTP e dos recibos.
+- Evento de geração antiga é recusado com `403` no ingresso do n8n. O
+  `409 WHATSAPP_GENERATION_STALE` do CRM é a segunda barreira.
+- A retenção do Evolution (`retention.cjs`) só expira a instância geral.
+  Mensagens pessoais no banco do Evolution não expiram (pendente).
+- O cliente de controle tem timeout fixo de 15 s.
+
+### Rollback da ativação
+
+1. Desligar as flags na ordem do [desligamento](seller-whatsapp-recovery.md#desligamento).
+2. Desativar os três workflows (`control`, `challenge` e `inbound`).
+3. Voltar as imagens do Evolution e do n8n para as anteriores.
 
 ## Checklist de publicação e piloto
 
@@ -116,7 +256,7 @@ autorizam ampliação. As lacunas estão em
 | Trava de envio pós-restore no código                           | pendente | P1, decisão de Tech Lead/PO antes do piloto                                                                                                                      |
 | Limite de envio por usuário                                    | pendente | P1 de capacidade, Backend antes de ampliar além de 2                                                                                                             |
 | CI verde, merge e migrações em produção                        | feito    | PR 398 em `1489c2fe`; expand `0080`/`0082`/`0083`, contract `0081`; [publicação](../../.specs/features/seller-whatsapp/validation-piloto.md#publicação-18112026) |
-| Imagens Evolution/n8n com patch e digest                       | feito    | em produção desde 18/11 com flags desligadas (PR 406 portou o n8n para 2.43.7); workflows WAP pendentes                                                          |
+| Imagens Evolution/n8n com patch e digest                       | pendente | as de 18/11 (flags desligadas, PR 406 na 2.43.7) não têm `c8915dc6`/`8925c221`; reconstruir, ver [ativação](#ativação-em-produção-piloto-de-um-vendedor)         |
 | Spike de provedor e código no mesmo celular (WAP-E01)          | pendente | E01 aberto; WAP-T05-06 no E12                                                                                                                                    |
 | Pareamento mobile, sincronização e eco reais                   | pendente | WAP-E12                                                                                                                                                          |
 | JID da resposta = `+E164` gravado (gate do primeiro envio)     | pendente | WAP-E12                                                                                                                                                          |
@@ -153,8 +293,9 @@ nenhum deles pode ser trocado por outro.
    e `/api/health/ready` em 200 pelo edge
    ([health](../../EASYPANEL-TOPOLOGY.md)). Migrações expand até `0083`, e contract `0081` só
    depois dos leitores compatíveis.
-3. Imagens Evolution 2.3.7 e n8n 2.38.7 com os patches WAP, por digest. As
-   flags começam desligadas, e os workflows candidatos ficam inativos até o passo 5.
+3. Imagens Evolution 2.3.7 e n8n 2.43.7 com os patches WAP, por digest,
+   reconstruídas com `c8915dc6` e `8925c221`. As flags começam desligadas, e
+   os workflows candidatos ficam inativos até o passo 5.
 4. Smoke da linha geral sem regressão (entrada, Pedido manual e envio).
 5. Flags ligadas por fase e por allowlist, um vendedor por vez:
    [implantação em fases](seller-whatsapp-recovery.md#implantação-em-fases).
@@ -181,19 +322,19 @@ conversa iniciada pelo vendedor (primeiro envio, P4).
 
 ### Passos
 
-| Passo | Item     | Ação real                                                                                                              | Resultado esperado                                                                                                                                                                                                  |
-| ----- | -------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P1    | T05-06   | A pareia por QR, em outra tela. B pareia por **código no mesmo celular**.                                              | Uma linha por vendedor. Desafio só na resposta síncrona. Nenhum QR ou código em banco, log ou captura                                                                                                               |
-| P1    | T05-06   | Número errado, número já em uso pelo outro vendedor, desafio expirado e repetição do desafio                           | Recusa fixa sem bytes de desafio. A linha não fica `connected` com o número divergente                                                                                                                              |
-| P1    | T05-06   | Logout pelo aparelho e reconexão. Depois, callback e evento da geração antiga                                          | Nova geração. Callback repetido: `200 duplicate`. Resultado novo da geração antiga: `200 stale`, linha inalterada. Despacho ou geração divergente: `403`. Evento de entrada antigo: `409 WHATSAPP_GENERATION_STALE` |
-| P2    | T05-05   | O cliente sintético escreve para A. A assume como titular humano e cria o Pedido no Assunto alvo. Depois, abre a ficha | Pendente numerado no Contact, conversa, Assunto e responsável corretos. Repetir a chave não duplica                                                                                                                 |
-| P2    | T05-05   | A desconecta a linha. Depois, replay do mesmo evento e tentativa de B ou C pelo ID direto                              | Pedido e ficha continuam legíveis para A. Nenhuma duplicata. B e C negados sem vazar metadados                                                                                                                      |
-| P3    | T05-06   | Tráfego pelo CRM e pelo aparelho nas duas linhas: texto, mídia, recibos e eco antes do HTTP                            | Uma mensagem por efeito, na conversa da linha certa. Recibos aplicados                                                                                                                                              |
-| P3    | T05-06   | Queda do provedor ou do n8n durante um envio                                                                           | `outcome_unknown` reconciliado por leitura. Nenhum reenvio cego                                                                                                                                                     |
-| P4    | T05-07   | B vincula o mesmo Contact e edita outro campo. Depois, uma edição concorrente no mesmo campo                           | Mesmo `contactId`. Conflito `409` só no campo disputado. Histórias privadas por carteira                                                                                                                            |
-| P4    | T05-07   | B envia a primeira mensagem individual, sem inbound prévio. O cliente sintético responde                               | Resposta na conversa de B, mesmo Contact. **JID da resposta = `+E164` gravado** (gate do primeiro envio)                                                                                                            |
-| P4    | T05-07   | Cobrança sintética do Pedido de A, linha offline logo após o envio, callback repetido                                  | Um único comando e um único recebimento. A cobrança sai pela linha de A. Snapshots do Pedido inalterados                                                                                                            |
-| P5    | encerrar | Desligar as flags pela ordem do [desligamento](seller-whatsapp-recovery.md#desligamento)                               | Efeitos novos bloqueados. Histórico, ledger e ACL preservados                                                                                                                                                       |
+| Passo | Item     | Ação real                                                                                                              | Resultado esperado                                                                                                                                                                                                                                             |
+| ----- | -------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1    | T05-06   | A pareia por QR, em outra tela. B pareia por **código no mesmo celular**.                                              | Uma linha por vendedor. Desafio só na resposta síncrona. Nenhum QR ou código em banco, log ou captura                                                                                                                                                          |
+| P1    | T05-06   | Número errado, número já em uso pelo outro vendedor, desafio expirado e repetição do desafio                           | Recusa fixa sem bytes de desafio. A linha não fica `connected` com o número divergente                                                                                                                                                                         |
+| P1    | T05-06   | Logout pelo aparelho e reconexão. Depois, callback e evento da geração antiga                                          | Nova geração. Callback repetido: `200 duplicate`. Resultado novo da geração antiga: `200 stale`, linha inalterada. Despacho ou geração divergente: `403`. Evento de entrada antigo: `403` no ingresso do n8n, `409 WHATSAPP_GENERATION_STALE` se chegar ao CRM |
+| P2    | T05-05   | O cliente sintético escreve para A. A assume como titular humano e cria o Pedido no Assunto alvo. Depois, abre a ficha | Pendente numerado no Contact, conversa, Assunto e responsável corretos. Repetir a chave não duplica                                                                                                                                                            |
+| P2    | T05-05   | A desconecta a linha. Depois, replay do mesmo evento e tentativa de B ou C pelo ID direto                              | Pedido e ficha continuam legíveis para A. Nenhuma duplicata. B e C negados sem vazar metadados                                                                                                                                                                 |
+| P3    | T05-06   | Tráfego pelo CRM e pelo aparelho nas duas linhas: texto, mídia, recibos e eco antes do HTTP                            | Uma mensagem por efeito, na conversa da linha certa. Recibos aplicados                                                                                                                                                                                         |
+| P3    | T05-06   | Queda do provedor ou do n8n durante um envio                                                                           | `outcome_unknown` reconciliado por leitura. Nenhum reenvio cego                                                                                                                                                                                                |
+| P4    | T05-07   | B vincula o mesmo Contact e edita outro campo. Depois, uma edição concorrente no mesmo campo                           | Mesmo `contactId`. Conflito `409` só no campo disputado. Histórias privadas por carteira                                                                                                                                                                       |
+| P4    | T05-07   | B envia a primeira mensagem individual, sem inbound prévio. O cliente sintético responde                               | Resposta na conversa de B, mesmo Contact. **JID da resposta = `+E164` gravado** (gate do primeiro envio)                                                                                                                                                       |
+| P4    | T05-07   | Cobrança sintética do Pedido de A, linha offline logo após o envio, callback repetido                                  | Um único comando e um único recebimento. A cobrança sai pela linha de A. Snapshots do Pedido inalterados                                                                                                                                                       |
+| P5    | encerrar | Desligar as flags pela ordem do [desligamento](seller-whatsapp-recovery.md#desligamento)                               | Efeitos novos bloqueados. Histórico, ledger e ACL preservados                                                                                                                                                                                                  |
 
 ### Congelamento e reconciliação
 

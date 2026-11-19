@@ -33,15 +33,15 @@ ou estado, TTL, aba oculta ou troca de identidade.
 
 Configuração de servidor, **sem valores reais neste documento**:
 
-| Variável                                                        | Uso                                                                                                                                            |
-| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SELLER_WHATSAPP_CONTROL_ENABLED`                               | `false` por omissão; somente `true`/`false`                                                                                                    |
-| `SELLER_WHATSAPP_SELLER_IDS`                                    | JSON com IDs privados explícitos de titulares autorizados                                                                                      |
-| `CONTACT_IDENTITY_ENVELOPE_KEY` / `CONTACT_IDENTITY_LOOKUP_KEY` | Chaves existentes de 32 bytes em Base64; envelopes e digest chaveado                                                                           |
-| `SELLER_WHATSAPP_GENERAL_NUMBER_DIGEST`                         | Digest da linha geral pelo helper existente `contactPhoneHash`, número normalizado sem `+`; registro compartilha unicidade com linhas pessoais |
-| `N8N_WAP_CONTROL_URL` / `N8N_WAP_CHALLENGE_URL`                 | Webhooks HTTPS privados `/webhook/silmer/seller-whatsapp/control` e `/challenge`                                                               |
-| `N8N_COMMAND_CLIENT_ID` / `N8N_COMMAND_CLIENT_SECRET`           | Basic existente para API/worker → webhook n8n                                                                                                  |
-| `SELLER_WHATSAPP_WEBHOOK_URL`                                   | URL HTTPS privada do ingresso pessoal n8n, derivada no servidor                                                                                |
+| Variável                                                        | Uso                                                                                                                                                              |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SELLER_WHATSAPP_CONTROL_ENABLED`                               | `false` por omissão; somente `true`/`false`                                                                                                                      |
+| `SELLER_WHATSAPP_SELLER_IDS`                                    | JSON com IDs privados explícitos de titulares autorizados                                                                                                        |
+| `CONTACT_IDENTITY_ENVELOPE_KEY` / `CONTACT_IDENTITY_LOOKUP_KEY` | Chaves existentes de 32 bytes em Base64; envelopes e digest chaveado                                                                                             |
+| `SELLER_WHATSAPP_GENERAL_NUMBER_DIGEST`                         | Digest da linha geral pelo helper existente `contactPhoneHash`, número normalizado sem `+`; registro compartilha unicidade com linhas pessoais                   |
+| `N8N_WAP_CONTROL_URL` / `N8N_WAP_CHALLENGE_URL`                 | Webhooks HTTPS privados `/webhook/silmer/seller-whatsapp/control` e `/challenge`                                                                                 |
+| `N8N_WAP_CLIENT_ID` / `N8N_WAP_CLIENT_SECRET`                   | Basic próprio do controle WAP, API/worker → webhooks control/challenge; segredo de 32 a 1024 caracteres. Não reaproveita `N8N_COMMAND_CLIENT_*` do panel-command |
+| `SELLER_WHATSAPP_WEBHOOK_URL`                                   | URL HTTPS privada do ingresso pessoal n8n, derivada no servidor                                                                                                  |
 
 O perfil n8n exige o patch pré-persistência de E01, flags de não salvar sucesso,
 erro, manual ou progresso e `pinData` vazio; sem error workflow. A allowlist de

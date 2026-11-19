@@ -40,8 +40,8 @@ export function createWhatsAppControlJobHandler(options) {
           allowlist: [envelope.lineId],
           controlEndpoint: env.N8N_WAP_CONTROL_URL ?? '',
           challengeEndpoint: env.N8N_WAP_CHALLENGE_URL ?? '',
-          clientId: env.N8N_COMMAND_CLIENT_ID ?? '',
-          clientSecret: env.N8N_COMMAND_CLIENT_SECRET ?? '',
+          clientId: env.N8N_WAP_CLIENT_ID ?? '',
+          clientSecret: env.N8N_WAP_CLIENT_SECRET ?? '',
         });
       if (!(await context.markEffectStarted({ provider: 'n8n' })))
         return {
@@ -92,8 +92,8 @@ export function createWhatsAppControlWorkerRuntime(options) {
       allowlist: [],
       controlEndpoint: environment.N8N_WAP_CONTROL_URL ?? '',
       challengeEndpoint: environment.N8N_WAP_CHALLENGE_URL ?? '',
-      clientId: environment.N8N_COMMAND_CLIENT_ID ?? '',
-      clientSecret: environment.N8N_COMMAND_CLIENT_SECRET ?? '',
+      clientId: environment.N8N_WAP_CLIENT_ID ?? '',
+      clientSecret: environment.N8N_WAP_CLIENT_SECRET ?? '',
     });
   const repository =
     options.repository ??

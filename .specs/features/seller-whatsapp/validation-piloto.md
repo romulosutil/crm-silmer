@@ -136,8 +136,26 @@ voltam: perda aceita no piloto.
   (sem credencial: `403`); o workflow agendado rodou com sucesso às 04:00:33Z, já
   no container novo. Rollback: o Dockerfile de `247cc9fb`.
 
-Todas as flags WAP seguem desligadas. Próximo passo: escolher o vendedor e ligar
-o controle só na API (passo 2 do roteiro).
+Todas as flags WAP seguem desligadas.
+
+**Passo 2, primeira tentativa (19/11), revertida.** O PO escolheu um vendedor
+para o piloto (o ID fica só no env do EasyPanel). Foram acrescentados à API a
+allowlist, o digest da linha geral (HMAC do número com a chave de lookup da
+própria API, conferido no console), as três URLs do n8n e, como dizia o roteiro,
+a credencial Basic do panel-command (`N8N_COMMAND_CLIENT_*`). O boot novo foi
+recusado: esse segredo tem 13 caracteres, e o cliente de controle exige 32 ou
+mais (`WHATSAPP_CONTROL_CONFIGURATION_INVALID`, reproduzido no console). O
+EasyPanel manteve o container antigo; a tela do vendedor mostrava "A conexão
+pessoal não está disponível". Nenhuma linha foi criada. O controle voltou para
+`false`, a credencial copiada saiu, e um container novo subiu com esse env, para
+não travar os próximos deploys. A allowlist, o digest e as URLs continuam no env,
+inertes com o controle desligado.
+
+Correção: o controle WAP passa a usar uma credencial própria
+(`N8N_WAP_CLIENT_ID`/`N8N_WAP_CLIENT_SECRET`, segredo novo com 32 caracteres ou
+mais) na API e no worker, sem tocar no panel-command da linha geral. O roteiro
+agora manda conferir o container novo depois de cada reinício. Próximo passo:
+implantar essa mudança e repetir o passo 2 com a credencial nova.
 
 Decisões do PO no mesmo dia:
 

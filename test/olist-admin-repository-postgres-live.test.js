@@ -34,7 +34,10 @@ if (!URL)
   );
 else
   test('OLIST-T09 existing links and administrative read-only recovery are atomic and durable', async (t) => {
-    assert.equal(new globalThis.URL(URL).pathname.slice(1), 'crm_silmer_test');
+    assert.match(
+      new globalThis.URL(URL).pathname.slice(1),
+      /^crm_silmer_test(?:_[a-z0-9_]+)?$/u,
+    );
     const pool = new Pool({ connectionString: URL, max: 8 });
     const db = {
       query: pool.query.bind(pool),

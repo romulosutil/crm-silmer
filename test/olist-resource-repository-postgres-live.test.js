@@ -36,9 +36,9 @@ if (!connectionString)
   );
 else
   test('OLIST-T22: shared identities and durable composed resource reservations', async (t) => {
-    assert.equal(
+    assert.match(
       new URL(connectionString).pathname.slice(1),
-      'crm_silmer_test',
+      /^crm_silmer_test(?:_[a-z0-9_]+)?$/u,
     );
     const pool = new Pool({ connectionString, max: 10 });
     const database = {

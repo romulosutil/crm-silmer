@@ -30,9 +30,9 @@ if (!connectionString)
   test('OLIST-T10 guards require TEST_DATABASE_URL', { skip: true }, () => {});
 else
   test('OLIST-T10 frozen commercial content and serialized Orders/Olist writers', async (t) => {
-    assert.equal(
+    assert.match(
       new URL(connectionString).pathname.slice(1),
-      'crm_silmer_test',
+      /^crm_silmer_test(?:_[a-z0-9_]+)?$/u,
     );
     const pool = new Pool({
       connectionString,

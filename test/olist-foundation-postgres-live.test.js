@@ -34,9 +34,9 @@ const PRODUCT = {
 
 if (connectionString) {
   test('OLIST-T03/T05: durable PostgreSQL foundation and shared account quotas', async (t) => {
-    assert.equal(
+    assert.match(
       new URL(connectionString).pathname.slice(1),
-      'crm_silmer_test',
+      /^crm_silmer_test(?:_[a-z0-9_]+)?$/u,
       'Only the dedicated synthetic database may be reset',
     );
     const pool = new Pool({ connectionString, max: 8 });

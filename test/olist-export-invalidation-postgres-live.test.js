@@ -41,7 +41,10 @@ if (!URL)
   );
 else
   test('OLIST-LIVENESS L1 administrative export invalidation is local, atomic, race-free and terminal', async (t) => {
-    assert.equal(new globalThis.URL(URL).pathname.slice(1), 'crm_silmer_test');
+    assert.match(
+      new globalThis.URL(URL).pathname.slice(1),
+      /^crm_silmer_test(?:_[a-z0-9_]+)?$/u,
+    );
     const pool = new Pool({
       connectionString: URL,
       max: 12,

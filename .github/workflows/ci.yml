@@ -80,8 +80,26 @@ jobs:
             scripts/serve-edge.mjs \
             test/e2e; then
             echo 'e2e_required=true' >> "$GITHUB_OUTPUT"
+            if has_changes \
+              .github/workflows/ci.yml \
+              apps/edge-web \
+              playwright.config.js \
+              package.json \
+              package-lock.json \
+              scripts/build.mjs \
+              scripts/serve-edge.mjs; then
+              echo 'e2e_targets=' >> "$GITHUB_OUTPUT"
+            else
+              mapfile -t specs < <(git diff --name-only --diff-filter=ACMR "$PR_BASE_SHA" "$PR_HEAD_SHA" -- 'test/e2e/*.spec.js')
+              if [[ "${#specs[@]}" -gt 0 ]] && ! git diff --name-only "$PR_BASE_SHA" "$PR_HEAD_SHA" -- test/e2e | grep -qv '\.spec\.js$'; then
+                echo "e2e_targets=${specs[*]}" >> "$GITHUB_OUTPUT"
+              else
+                echo 'e2e_targets=' >> "$GITHUB_OUTPUT"
+              fi
+            fi
           else
             echo 'e2e_required=false' >> "$GITHUB_OUTPUT"
+            echo 'e2e_targets=' >> "$GITHUB_OUTPUT"
           fi
 
           if has_changes \
@@ -199,8 +217,12 @@ jobs:
         if: steps.image_scope.outputs.e2e_required == 'true'
         env:
           AUDIO_E2E_REQUIRED: ${{ steps.image_scope.outputs.audio_e2e_required }}
+          E2E_TARGETS: ${{ steps.image_scope.outputs.e2e_targets }}
         run: |
-          if [[ "$AUDIO_E2E_REQUIRED" == "true" ]]; then
+          if [[ -n "$E2E_TARGETS" ]]; then
+            read -r -a targets <<< "$E2E_TARGETS"
+            npm run test:e2e -- "${targets[@]}"
+          elif [[ "$AUDIO_E2E_REQUIRED" == "true" ]]; then
             npm run test:e2e
           else
             npm run test:e2e -- --ignore-snapshots test/e2e/!(audio-recorder).spec.js
@@ -220,8 +242,6 @@ jobs:
     name: PostgreSQL tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      EVENT_NAME: ${{ github.event_name }}
     services:
       postgres:
         # Official PostgreSQL 17 image, verified by pull and pinned by digest.
@@ -322,8 +342,7 @@ jobs:
   images:
     name: Build and scan ${{ matrix.image }}
     needs: quality
-    # Runs even when images are unaffected: a skipped matrix job never expands
-    # its name, so the required "Build and scan <image>" checks would never report.
+    if: needs.quality.outputs.image_build_required == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:

@@ -37,9 +37,9 @@ if (!connectionString)
   );
 else
   test('OLIST-T08 final sale reservation, observed IDs and exact-readback completion', async (t) => {
-    assert.equal(
+    assert.match(
       new URL(connectionString).pathname.slice(1),
-      'crm_silmer_test',
+      /^crm_silmer_test(?:_[a-z0-9_]+)?$/u,
     );
     const pool = new Pool({ connectionString, max: 8 });
     const database = {

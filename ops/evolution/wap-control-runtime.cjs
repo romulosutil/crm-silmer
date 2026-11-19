@@ -26,6 +26,10 @@ function equal(left, right) {
   return a.length > 0 && a.length === b.length && timingSafeEqual(a, b);
 }
 // WAP-E12: lifecycle plus inbound/echo (upsert) and receipts (update).
+// Challenge budget: Evolution's own connect waits 2 s, then up to 8 s of
+// polling at 500 ms; the CRM client aborts the whole n8n chain at 15 s.
+const CHALLENGE_WAIT_MS = 8000;
+const CHALLENGE_POLL_MS = 500;
 const WEBHOOK_EVENTS = Object.freeze([
   'CONNECTION_UPDATE',
   'MESSAGES_UPSERT',
@@ -140,6 +144,7 @@ function createControlAdapter({
   generationRuntime,
   fetchImpl = globalThis.fetch,
   clock = () => new Date(),
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 } = {}) {
   const config = configuration(env);
   // Serializes only in-process calls. The authoritative one-shot reservation is
@@ -243,9 +248,23 @@ function createControlAdapter({
             body.challenge.mode === 'code'
               ? `?number=${encodeURIComponent(body.expectedNumber.replace(/^\+/, ''))}`
               : '';
-          const result = await http(`/instance/connect/${name}${suffix}`);
-          const value =
-            body.challenge.mode === 'code' ? result.pairingCode : result.base64;
+          const read = (/** @type {any} */ result) =>
+            body.challenge.mode === 'code'
+              ? result?.pairingCode
+              : result?.base64;
+          // Evolution 2.3.7 starts the socket on a 'close' instance, waits a
+          // fixed 2 s and returns whatever QR exists; the QR (and the pairing
+          // code) is rendered asynchronously and may still be missing. While
+          // the instance is 'connecting', connect only reads the current QR
+          // (no second socket), so poll it within a bound the CRM can await.
+          let value = read(await http(`/instance/connect/${name}${suffix}`));
+          const deadline = clock().getTime() + CHALLENGE_WAIT_MS;
+          while (typeof value !== 'string' && clock().getTime() < deadline) {
+            await sleep(CHALLENGE_POLL_MS);
+            const state = await http(`/instance/connectionState/${name}`);
+            if (state?.instance?.state !== 'connecting') break;
+            value = read(await http(`/instance/connect/${name}${suffix}`));
+          }
           if (
             typeof value !== 'string' ||
             (body.challenge.mode === 'code'

@@ -186,6 +186,17 @@ inicial abaixo.
   `src/api/routes/settings.router.ts`, `src/api/services/settings.service.ts`,
   `src/api/services/channel.service.ts` (`setSettings`/`findSettings`) e
   `src/validate/settings.schema.ts`.
+- Desafio (QR ou código): no Evolution 2.3.7, `GET /instance/connect/:name`
+  numa instância `close` abre o socket, espera 2 s fixos e devolve o QR que
+  existir; o QR e o código de pareamento nascem de forma assíncrona e podem
+  ainda faltar (`{ count: 0 }`). Em `connecting`, o mesmo endpoint só lê o QR
+  atual, sem abrir outro socket. O gateway relê o estado e o QR a cada 500 ms
+  por até 8 s; se o estado sair de `connecting` ou o prazo acabar, o resultado
+  é `WAP_CONTROL_UNKNOWN`. O orçamento cabe nos 15 s do cliente do CRM. Visto
+  no piloto de 19/11: sem essa espera, o primeiro QR falhou, e a reconciliação
+  levou a linha a `disconnected`. Fonte 2.3.7:
+  `src/api/controllers/instance.controller.ts` (`connectToWhatsapp`) e
+  `whatsapp.baileys.service.ts` (`connectionUpdate`, `get qrCode()`).
 - Egress: `privacy.cjs` exige o literal `false` em `RABBITMQ_ENABLED`,
   `SQS_ENABLED`, `KAFKA_ENABLED`, `NATS_ENABLED`, `PUSHER_ENABLED`,
   `S3_ENABLED`, `CHATWOOT_ENABLED`, `TYPEBOT_ENABLED`, `OPENAI_ENABLED`,

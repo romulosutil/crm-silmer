@@ -148,6 +148,7 @@ async function main() {
   const extraDatabases = [
     'crm_silmer_test_s1',
     'crm_silmer_test_s2',
+    'crm_silmer_test_wap_e08',
     'crm_silmer_test_wap_e10',
     'crm_silmer_test_e11',
     'crm_silmer_test_e11restore',
@@ -169,7 +170,7 @@ async function main() {
   // - Worker A: exact-db suites on crm_silmer_test
   // - Worker B: regex-db shard 1 on crm_silmer_test_s1
   // - Worker C: regex-db shard 2 on crm_silmer_test_s2
-  // - Worker D: dedicated WAP E10/E11/E12 integration & recovery drill suites
+  // - Worker D: dedicated WAP E08/E10/E11/E12 integration & recovery drill suites
   await Promise.all([
     runNodeTests('shard-0 (crm_silmer_test)', SHARD_0_EXACT_DB, {
       TEST_DATABASE_URL: dbUrlFor('crm_silmer_test'),
@@ -181,6 +182,11 @@ async function main() {
       TEST_DATABASE_URL: dbUrlFor('crm_silmer_test_s2'),
     }),
     (async () => {
+      await runNodeTests(
+        'wap-e08 (crm_silmer_test_wap_e08)',
+        ['test/integration/seller-whatsapp-outbound.test.js'],
+        { TEST_DATABASE_URL: dbUrlFor('crm_silmer_test_wap_e08') },
+      );
       await runNodeTests(
         'wap-e10 (crm_silmer_test_wap_e10)',
         ['test/integration/seller-whatsapp-first-send.test.js'],

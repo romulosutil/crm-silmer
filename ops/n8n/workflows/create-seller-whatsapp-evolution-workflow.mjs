@@ -347,4 +347,51 @@ function attachObservedMedia(workflow, baseUrl, crmBaseUrl) {
     workflow.connections[name] = {
       main: [[{ node: steps[index + 1], type: 'main', index: 0 }]],
     };
+  // WAP-E12. Evolution waits 30 s for the webhook; the record is the durable
+  // fact, so answer it before the ≤16 MB fetch and upload. A record failure
+  // still fails the execution (500) and Evolution retries. executionOrder v1
+  // runs sibling branches top to bottom by canvas y: the ack sits above.
+  const ack = 'Confirmar saída observada (WAP)';
+  const gateNode = find(gate);
+  workflow.nodes.push({
+    ...structuredClone(find('Evolution - Confirmar recebimento durável (MVP)')),
+    name: ack,
+    id: 'wap-observed-ack',
+    position: [gateNode.position[0] + 240, gateNode.position[1] - 240],
+  });
+  workflow.connections[record].main[0].unshift({
+    node: ack,
+    type: 'main',
+    index: 0,
+  });
+  // After the ack a media failure is no retry: report it as the inbound image
+  // path does, unbound, since the CRM accepts no workflow.failed on a personal
+  // conversation.
+  const failure = 'Preparar falha de mídia observada (WAP)';
+  const report = 'CRM - Registrar falha de mídia observada (WAP)';
+  find(prepare).onError = 'continueErrorOutput';
+  workflow.nodes.push(
+    code(
+      failure,
+      'wap-observed-media-failure',
+      `const executionId=String($execution.id);if(!/^[A-Za-z0-9_-]{1,128}$/.test(executionId))throw new Error('EVOLUTION_MEDIA_EXECUTION_INVALID');const eventId='observed-media-failed:'+executionId;return {json:{payload:{schema_version:'1.0',event_id:eventId,event_type:'workflow.failed',occurred_at:new Date().toISOString(),conversation_id:null,failure:{code:'INBOUND_MEDIA_STORE_FAILED'}},idempotency_key:eventId,correlation_id:executionId.padStart(16,'0')}};`,
+    ),
+    {
+      ...structuredClone(find(record)),
+      name: report,
+      id: 'wap-observed-media-failure-crm',
+      retryOnFail: false,
+      onError: 'continueRegularOutput',
+    },
+  );
+  for (const name of [fetch, decode, digest, prepare, upload])
+    workflow.connections[name] = {
+      main: [
+        workflow.connections[name]?.main?.[0] ?? [],
+        [{ node: failure, type: 'main', index: 0 }],
+      ],
+    };
+  workflow.connections[failure] = {
+    main: [[{ node: report, type: 'main', index: 0 }]],
+  };
 }

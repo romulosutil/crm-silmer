@@ -669,6 +669,161 @@ test('WAP-E08 personal fromMe upsert projects an external fact and no inbound', 
   assert.ok(attachment.parameters.url.includes('/attachments'));
   assert.equal(attachment.retryOnFail, false);
 });
+
+test('WAP-E12: an observed send is acknowledged once recorded; media failures reach a failure event', () => {
+  const candidate = createSellerWhatsAppEvolutionWorkflow(JSON.parse(before), {
+    ...config,
+    personalInbound: true,
+    personalLineIds: ['00000001-0000-4000-8000-000000000002'],
+    webhookPath: 'silmer/seller-whatsapp/events',
+  });
+  const byName = new Map(
+    candidate.nodes.map((/** @type {any} */ node) => [node.name, node]),
+  );
+  /** @param {string} name @param {number} [output] */
+  const next = (name, output = 0) =>
+    (candidate.connections[name]?.main?.[output] ?? []).map(
+      (/** @type {any} */ edge) => edge.node,
+    );
+  const ack = 'Confirmar saída observada (WAP)';
+  const gate = 'Preparar mídia observada (WAP)';
+  const failure = 'Preparar falha de mídia observada (WAP)';
+  const report = 'CRM - Registrar falha de mídia observada (WAP)';
+  // Evolution's webhook gets its 202 before the ≤16 MB fetch and upload.
+  assert.deepEqual(next('CRM - Registrar saída observada (WAP)'), [ack, gate]);
+  const respond = byName.get(ack);
+  assert.equal(respond.type, 'n8n-nodes-base.respondToWebhook');
+  assert.deepEqual(
+    respond.parameters,
+    byName.get('Evolution - Confirmar recebimento durável (MVP)').parameters,
+  );
+  assert.equal(respond.parameters.options.responseCode, 202);
+  assert.deepEqual(next(ack), []);
+  // executionOrder v1 runs sibling branches top to bottom by canvas y.
+  assert.ok(respond.position[1] < byName.get(gate).position[1]);
+  // The record itself keeps failing the execution, so Evolution retries.
+  assert.equal(
+    byName.get('CRM - Registrar saída observada (WAP)').onError,
+    undefined,
+  );
+  for (const name of [
+    'Evolution - Buscar mídia observada (WAP)',
+    'Validar mídia observada (WAP)',
+    'Crypto - SHA256 mídia observada (WAP)',
+    'Preparar anexo observado (WAP)',
+    'CRM - Anexar mídia observada (WAP)',
+  ]) {
+    assert.equal(byName.get(name).onError, 'continueErrorOutput', name);
+    assert.deepEqual(next(name, 1), [failure], name);
+  }
+  assert.deepEqual(next(failure), [report]);
+  const sink = byName.get(report);
+  assert.equal(sink.onError, 'continueRegularOutput');
+  assert.equal(sink.retryOnFail, false);
+  assert.deepEqual(
+    { ...sink.parameters, headerParameters: undefined },
+    {
+      ...byName.get('CRM - Registrar saída observada (WAP)').parameters,
+      headerParameters: undefined,
+    },
+  );
+  // Round-trip out of the vm realm before deep comparison.
+  const prepared = JSON.parse(
+    JSON.stringify(
+      vm.runInNewContext(`(()=>{${byName.get(failure).parameters.jsCode}})()`, {
+        $execution: { id: '4242' },
+      }).json,
+    ),
+  );
+  // The image path's event, but unbound: the CRM accepts no workflow.failed
+  // on a personal conversation.
+  assert.deepEqual(prepared.payload.failure, {
+    code: 'INBOUND_MEDIA_STORE_FAILED',
+  });
+  assert.equal(prepared.payload.event_type, 'workflow.failed');
+  assert.equal(prepared.payload.conversation_id, null);
+  assert.equal(prepared.payload.source, undefined);
+  assert.equal(prepared.idempotency_key, prepared.payload.event_id);
+  assert.equal(prepared.correlation_id, '0000000000004242');
+  assert.throws(
+    () =>
+      vm.runInNewContext(`(()=>{${byName.get(failure).parameters.jsCode}})()`, {
+        $execution: { id: 'bad id' },
+      }),
+    /EVOLUTION_MEDIA_EXECUTION_INVALID/u,
+  );
+});
+
+test('WAP-E12: "message yourself" over the own LID is ignored, never an identity failure', () => {
+  const source = {
+    bindingId: '00000001-0000-4000-8000-000000000001',
+    lineId: '00000001-0000-4000-8000-000000000002',
+    accountId: '00000001-0000-4000-8000-000000000003',
+    generation: 1,
+  };
+  const options = {
+    ...config,
+    personalInbound: true,
+    personalLineIds: [source.lineId],
+  };
+  const own = config.ownNumber + '@s.whatsapp.net';
+  /** @param {boolean} fromMe @param {string} alternate */
+  const selfChat = (fromMe, alternate = own) => {
+    const raw = event({ source });
+    raw.data.key = {
+      ...raw.data.key,
+      fromMe,
+      remoteJid: '123456789012345@lid',
+      remoteJidAlt: alternate,
+    };
+    return raw;
+  };
+  const receipt = ack({
+    remoteJid: '123456789012345@lid',
+    remoteJidAlt: own,
+  });
+  receipt.source = source;
+  // Personal inbound, observed outbound and a receipt in the self chat.
+  assert.equal(validatePersonalEvolutionEvent(selfChat(false), options), null);
+  assert.equal(validateObservedEvolutionEvent(selfChat(true), options), null);
+  assert.equal(validatePersonalEvolutionEvent(receipt, options), null);
+  assert.equal(validateObservedEvolutionEvent(receipt, options), null);
+  // A LID chat whose alternate is another phone still flows.
+  const other = '5511000000001@s.whatsapp.net';
+  assert.equal(
+    convertPersonalEvolutionEvent(
+      validatePersonalEvolutionEvent(selfChat(false, other), options),
+      null,
+      options,
+    ).messages[0].from,
+    '5511000000001',
+  );
+  assert.equal(
+    convertObservedEvolutionEvent(
+      validateObservedEvolutionEvent(selfChat(true, other), options),
+      null,
+      options,
+    ).external.to,
+    '+5511000000001',
+  );
+  // The node code the workflow actually runs drops the item (no n8n 500).
+  const candidate = createSellerWhatsAppEvolutionWorkflow(JSON.parse(before), {
+    ...options,
+    webhookPath: 'silmer/seller-whatsapp/events',
+  });
+  const validate = candidate.nodes.find(
+    (/** @type {any} */ node) =>
+      node.name === 'Evolution - Validar origem (MVP)',
+  );
+  /** @param {any} raw */
+  const run = (raw) =>
+    vm.runInNewContext(`(()=>{${validate.parameters.jsCode}})()`, {
+      $input: { all: () => [{ json: raw }] },
+    });
+  assert.deepEqual(run(selfChat(true)), []);
+  assert.deepEqual(run(selfChat(false)), []);
+  assert.equal(run(selfChat(true, other)).length, 1);
+});
 /** @param {string} name @param {number} [output] */
 const targets = (name, output = 0) =>
   (workflow.connections[name]?.main?.[output] ?? []).map(

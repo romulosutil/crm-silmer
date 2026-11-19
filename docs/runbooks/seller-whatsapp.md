@@ -83,9 +83,14 @@ Nenhuma fase teve deadlock, falha de serialização ou timeout de pool.
 Na Inbox, uma resposta nova depois de um envio `outcome_unknown` gera outro
 comando. O comando incerto nunca é reenviado e segue aberto para
 reconciliação (ensaio do WAP-E12). Rate limits existentes são por IP e por
-processo, não por usuário. Os limites
-sem código restringem o piloto a dois vendedores sob observação. Eles não
-autorizam ampliação. As lacunas estão em
+processo, não por usuário. A exceção é a verificação de ingresso pessoal
+(`…/whatsapp-control/ingress/verify`): 1200/min por vínculo
+(`X-Correlation-Id`, igual ao `bindingId`; sem ele, ou malformado, vale o
+balde do IP) dentro de um teto de 6000/min por IP, que só conta pedidos já
+admitidos pelo vínculo. O CRM responde 429, o n8n devolve 503 ao Evolution e
+o Evolution tenta de novo 3 vezes em cerca de 20 s, dentro da mesma janela.
+Os limites sem código restringem o piloto a dois vendedores sob observação.
+Eles não autorizam ampliação. As lacunas estão em
 [validation-etapa1](../../.specs/features/seller-whatsapp/validation-etapa1.md#findings).
 
 ## Ordem de publicação
@@ -194,25 +199,25 @@ Evolution, validadas pelos loaders reais, e a lista dos segredos que não
 mudam. A allowlist de vendedores sai como placeholder. Recusas, só com código
 fixo:
 
-| Código                                | Causa                                                                      |
-| ------------------------------------- | -------------------------------------------------------------------------- |
-| `WAP_BUILD_USAGE`                     | argumentos diferentes de três                                              |
-| `WAP_BUILD_OUTPUT_IN_REPO`            | diretório de saída dentro do repositório                                   |
-| `WAP_BUILD_OUTPUT_EXISTS`             | diretório de saída já existe                                               |
-| `WAP_BUILD_CONFIG_INVALID`            | chave desconhecida, URL fora do formato ou credencial inválida             |
-| `WAP_BUILD_LINE_INVALID`              | `lineIds` vazio, repetido ou fora do formato; envio para linha não listada |
-| `WAP_BUILD_INSTANCE_INVALID`          | `instances` vazio, repetido ou fora de `wap_` + 32 hex                     |
-| `WAP_BUILD_WEBHOOK_URL_MISMATCH`      | URLs de webhook diferentes do caminho de eventos do n8n                    |
-| `WAP_BUILD_MAIN_INVALID`              | export sem `nodes` ou `connections` válidos                                |
-| `WAP_BUILD_MAIN_ID_MISMATCH`          | export de outro workflow                                                   |
-| `WAP_BUILD_MAIN_NOT_ADAPTED`          | principal sem os nós do Evolution, ou ainda com WAHA/WPPConnect            |
-| `WAP_BUILD_MAIN_ALREADY_WAP`          | principal já tem nós `(WAP)`                                               |
-| `WAP_BUILD_CRM_ORIGIN_MISMATCH`       | `crmBaseUrl` diferente da origem dos nós CRM do principal                  |
-| `WAP_BUILD_EVOLUTION_ORIGIN_MISMATCH` | nó do Evolution fora de `evolutionBaseUrl`                                 |
-| `WAP_BUILD_INBOUND_UNSAFE`            | inbound com envio, gatilho extra, `$env`, nó de IA ou referência solta     |
-| `WAP_BUILD_ENVIRONMENT_INVALID`       | variáveis propostas recusadas por um loader ou pela sonda do ingresso      |
-| `EVOLUTION_SEND_*`                    | âncoras do envio pessoal ausentes ou repetidas no principal                |
-| `WAP_BUILD_FAILED`                    | qualquer outra falha; o build não ecoa entrada, caminho nem causa          |
+| Código                                | Causa                                                                                                                                                                                                           |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WAP_BUILD_USAGE`                     | argumentos diferentes de três                                                                                                                                                                                   |
+| `WAP_BUILD_OUTPUT_IN_REPO`            | diretório de saída dentro do repositório                                                                                                                                                                        |
+| `WAP_BUILD_OUTPUT_EXISTS`             | diretório de saída já existe                                                                                                                                                                                    |
+| `WAP_BUILD_CONFIG_INVALID`            | chave desconhecida, URL fora do formato ou credencial inválida                                                                                                                                                  |
+| `WAP_BUILD_LINE_INVALID`              | `lineIds` vazio, repetido ou fora do formato; envio para linha não listada                                                                                                                                      |
+| `WAP_BUILD_INSTANCE_INVALID`          | `instances` vazio, repetido ou fora de `wap_` + 32 hex                                                                                                                                                          |
+| `WAP_BUILD_WEBHOOK_URL_MISMATCH`      | URLs de webhook diferentes do caminho de eventos do n8n                                                                                                                                                         |
+| `WAP_BUILD_MAIN_INVALID`              | export sem `nodes` ou `connections` válidos                                                                                                                                                                     |
+| `WAP_BUILD_MAIN_ID_MISMATCH`          | export de outro workflow                                                                                                                                                                                        |
+| `WAP_BUILD_MAIN_NOT_ADAPTED`          | principal sem os nós do Evolution, ou ainda com WAHA/WPPConnect                                                                                                                                                 |
+| `WAP_BUILD_MAIN_ALREADY_WAP`          | principal já tem nós `(WAP)`                                                                                                                                                                                    |
+| `WAP_BUILD_CRM_ORIGIN_MISMATCH`       | nó CRM cujo prefixo literal da URL não começa com `crmBaseUrl` + `/api/`                                                                                                                                        |
+| `WAP_BUILD_EVOLUTION_ORIGIN_MISMATCH` | nó do Evolution cujo prefixo literal sai de `evolutionBaseUrl`                                                                                                                                                  |
+| `WAP_BUILD_INBOUND_UNSAFE`            | inbound com envio, gatilho extra, `$env`, nó de IA ou referência solta; URL com credencial cujo prefixo não se prova (fallback, ternário, template); leitura do Evolution que não seja a da instância de origem |
+| `WAP_BUILD_ENVIRONMENT_INVALID`       | variáveis propostas recusadas por um loader ou pela sonda do ingresso                                                                                                                                           |
+| `EVOLUTION_SEND_*`                    | âncoras do envio pessoal ausentes ou repetidas no principal                                                                                                                                                     |
+| `WAP_BUILD_FAILED`                    | qualquer outra falha; o build não ecoa entrada, caminho nem causa                                                                                                                                               |
 
 No passo 6, as variáveis do n8n são `SILMER_WAP_INGRESS_ENABLED=true`,
 `SILMER_WAP_INGRESS_PATHS` (mapa JSON dos três caminhos para `control`,

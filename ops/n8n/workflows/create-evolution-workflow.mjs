@@ -331,6 +331,16 @@ export function validatePersonalEvolutionEvent(
     session: event.instance,
     ownNumber,
   });
+  // WAP-E12: "message yourself" over the own LID (chat is the own LID, its
+  // alternate the own phone) is no conversation. Ignore it, as the general
+  // validator ignores the own phone as chat, instead of an identity failure
+  // that n8n answers 500 and Evolution retries.
+  if (
+    validated &&
+    String(validated.chat).endsWith('@lid') &&
+    validated.provider_phone === ownNumber
+  )
+    return null;
   return validated
     ? {
         ...validated,

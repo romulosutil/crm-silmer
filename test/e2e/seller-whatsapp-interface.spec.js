@@ -862,6 +862,61 @@ test('recarregar a página renova com o desafio informado pelo GET', async ({
   });
 });
 
+test('desafio substituído em outra aba desaparece e devolve o foco', async ({
+  page,
+}) => {
+  const { server, commands, reset } = await pairing(page);
+  await page.goto('/conta');
+  const beforeChallenge = { line: server.line, challenge: server.challenge };
+  const showQr = page.getByRole('button', { name: 'Mostrar QR' });
+  await showQr.click();
+  const qr = page.getByRole('img', { name: 'QR para conectar seu WhatsApp' });
+  const close = page.getByRole('button', { name: 'Fechar desafio' });
+  await expect(qr).toBeVisible();
+  await close.focus();
+
+  const currentLine = server.line;
+  const currentChallenge = server.challenge;
+  Object.assign(server, beforeChallenge);
+  await reset();
+  await expect(qr).toBeVisible();
+
+  server.line = { ...currentLine, version: currentLine.version + 1 };
+  server.challenge = { ...currentChallenge, id: 'challenge-other-tab' };
+  await reset();
+
+  await expect(qr).toHaveCount(0, { timeout: 5000 });
+  await expect(showQr).toBeFocused();
+  await expect(showQr).toBeDisabled();
+  expect(commands).toHaveLength(1);
+});
+
+test('relógio adiantado no celular respeita o prazo do código informado pelo servidor', async ({
+  page,
+}) => {
+  await pairing(page);
+  const serverNow = Date.now();
+  await page.clock.setSystemTime(serverNow + 5 * 60_000);
+  await page.route('**/api/v1/me/whatsapp/pairing-challenge', (route) =>
+    route.fulfill({
+      headers: { date: new Date(serverNow).toUTCString() },
+      json: {
+        challengeId: 'challenge-synthetic',
+        operationId: 'operation-synthetic',
+        generation: 1,
+        mode: 'code',
+        value: 'TEST-CODE',
+        version: 3,
+        expiresAt: new Date(serverNow + 30000).toISOString(),
+      },
+    }),
+  );
+
+  await page.goto('/conta');
+  await page.getByRole('button', { name: 'Mostrar código' }).click();
+  await expect(page.getByText('TEST-CODE')).toBeVisible({ timeout: 2000 });
+});
+
 test('teclado mantém o foco ao pedir e ao fechar o desafio', async ({
   page,
 }) => {

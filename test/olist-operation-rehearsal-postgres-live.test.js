@@ -1039,10 +1039,11 @@ else
             products: 0,
             sales: 0,
           });
-          // Replaying the delivery posts nothing.
+          // Replaying the delivery posts nothing. Schedule it against the
+          // worker's simulated clock so a slow first delivery cannot hide it.
           await q(
-            "UPDATE crm.outbox_jobs SET status='pending',completed_at=NULL,available_at=now()-interval '1 second' WHERE olist_export_id=$1",
-            [order.exportId],
+            "UPDATE crm.outbox_jobs SET status='pending',completed_at=NULL,available_at=$2 WHERE olist_export_id=$1",
+            [order.exportId, new Date(clock.ms)],
           );
           assert.equal(await drain(runtime), 1);
           assert.equal(erp.totalPosts(), 3);

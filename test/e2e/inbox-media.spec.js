@@ -450,6 +450,146 @@ for (const [kind, fixture] of [
   });
 }
 
+/**
+ * @param {import('@playwright/test').Locator} target
+ * @param {'paste'|'dragenter'|'drop'} type
+ * @param {string[]} names
+ */
+async function transferImages(target, type, names) {
+  const png = await readFile('test/fixtures/media-composer.png');
+  return target.evaluate(
+    (element, { type, names, bytes }) => {
+      const transfer = new globalThis.DataTransfer();
+      for (const name of names) {
+        transfer.items.add(
+          new globalThis.File([new Uint8Array(bytes)], name, {
+            type: 'image/png',
+          }),
+        );
+      }
+      const options = { bubbles: true, cancelable: true };
+      const event =
+        type === 'paste'
+          ? new globalThis.ClipboardEvent(type, {
+              ...options,
+              clipboardData: transfer,
+            })
+          : new globalThis.DragEvent(type, {
+              ...options,
+              dataTransfer: transfer,
+            });
+      element.dispatchEvent(event);
+      return event.defaultPrevented;
+    },
+    { type, names, bytes: [...png] },
+  );
+}
+
+for (const gesture of ['paste', 'drop']) {
+  test(`MED-33/34 ${gesture} previews a full image and sends only after review`, async ({
+    page,
+  }) => {
+    const state = await setup(page);
+    const reply = page.getByRole('textbox', { name: 'Responder', exact: true });
+    await reply.fill('Resposta em rascunho');
+    const thread = page.locator('.thread');
+    if (gesture === 'drop') {
+      expect(
+        await transferImages(thread, 'dragenter', ['referencia.png']),
+      ).toBe(true);
+      await expect(page.getByText('Solte o arquivo para anexar')).toBeVisible();
+    }
+    const target = gesture === 'paste' ? reply : thread;
+    expect(
+      await transferImages(target, gesture === 'paste' ? 'paste' : 'drop', [
+        'referencia.png',
+      ]),
+    ).toBe(true);
+    await expect(page.getByText('Solte o arquivo para anexar')).toHaveCount(0);
+    const preview = page.getByAltText('Prévia do anexo');
+    await expect(preview).toBeVisible();
+    await expect(preview).toHaveCSS('object-fit', 'contain');
+    expect((await preview.boundingBox())?.height).toBeGreaterThanOrEqual(80);
+    const caption = page.getByRole('textbox', { name: 'Legenda' });
+    await expect(caption).toBeFocused();
+    await caption.fill('Legenda da referência');
+    const send = page.getByRole('button', {
+      name: 'Enviar anexo',
+      exact: true,
+    });
+    await expect(send).toBeEnabled();
+    expect(state.uploads).toHaveLength(1);
+    expect(
+      state.uploads[0].postDataBuffer()?.includes('filename="referencia.png"'),
+    ).toBe(true);
+    expect(state.sends).toHaveLength(0);
+    await send.click();
+    await expect(
+      page.getByText('Legenda da referência', { exact: true }),
+    ).toBeVisible();
+    expect(state.sends).toHaveLength(1);
+    expect(state.sends[0].postDataJSON()).toMatchObject({
+      messageType: 'image',
+      content: {
+        mediaId: 'media-conversation-1',
+        caption: 'Legenda da referência',
+      },
+    });
+    await expect(reply).toHaveValue('Resposta em rascunho');
+  });
+}
+
+test('MED-33 keeps text paste native, rejects multiple images and preserves the selected draft', async ({
+  page,
+}) => {
+  const state = await setup(page);
+  const reply = page.getByRole('textbox', { name: 'Responder', exact: true });
+  expect(
+    await reply.evaluate((element) => {
+      const data = new globalThis.DataTransfer();
+      data.setData('text/plain', 'Texto copiado');
+      return element.dispatchEvent(
+        new globalThis.ClipboardEvent('paste', {
+          clipboardData: data,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    }),
+  ).toBe(true);
+  expect(
+    await transferImages(reply, 'paste', ['primeira.png', 'segunda.png']),
+  ).toBe(true);
+  await expect(
+    page.getByRole('region', { name: 'Anexar mídia' }).getByRole('alert'),
+  ).toContainText('Selecione apenas um arquivo.');
+  expect(state.uploads).toHaveLength(0);
+  await transferImages(reply, 'paste', ['original.png']);
+  const caption = page.getByRole('textbox', { name: 'Legenda' });
+  await caption.fill('Legenda preservada');
+  expect(
+    await transferImages(page.locator('.thread'), 'drop', ['outra.png']),
+  ).toBe(true);
+  await expect(page.getByText('original.png', { exact: true })).toBeVisible();
+  await expect(caption).toHaveValue('Legenda preservada');
+  expect(state.uploads).toHaveLength(1);
+  expect(state.sends).toHaveLength(0);
+});
+
+test('MED-33 does not upload a pasted or dropped image when the seller cannot reply', async ({
+  page,
+}) => {
+  const state = await setup(page, { otherOwner: true });
+  const composer = page.getByRole('region', { name: 'Anexar mídia' });
+  await transferImages(composer, 'paste', ['bloqueada.png']);
+  expect(
+    await transferImages(page.locator('.thread'), 'drop', ['bloqueada.png']),
+  ).toBe(true);
+  await expect(page.getByAltText('Prévia do anexo')).toHaveCount(0);
+  expect(state.uploads).toHaveLength(0);
+  expect(state.sends).toHaveLength(0);
+});
+
 test('MED-08 other owner disables attachments and microphone while preserving history', async ({
   page,
 }) => {

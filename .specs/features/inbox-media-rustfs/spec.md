@@ -142,6 +142,8 @@ ações separadas. O vendedor deve revisar e enviar em um composer integrado.
 1. WHEN o vendedor seleciona um arquivo permitido ou para uma gravação válida THEN a UI SHALL iniciar automaticamente o upload e a validação do rascunho, mostrar progresso na prévia e permitir envio explícito somente após ready, sem criar mensagem automaticamente (MED-30).
 2. WHILE o vendedor compõe uma resposta THEN a UI SHALL apresentar uma barra integrada com Anexar arquivo, Gravar áudio e um único envio contextual, controles no tema do site com área mínima de 44 pixels, foco visível e layout sem sobreposição em telas estreitas (MED-31).
 3. IF a API recusa upload, validação ou envio THEN a UI SHALL informar o motivo de forma compreensível, preservar o rascunho enquanto a conversa permanecer autorizada e oferecer repetição idempotente ou substituição apropriada ao erro (MED-32).
+4. WHEN o vendedor cola uma imagem JPEG/PNG no compositor ou solta um arquivo sobre a conversa em que pode responder THEN a UI SHALL aplicar a mesma seleção e validação do clipe, manter o texto da resposta e aguardar envio explícito (MED-33). IF o gesto contém mais de um arquivo elegível, a conversa não pode enviar ou já há anexo selecionado THEN não deve iniciar outro upload. A colagem de texto continua nativa.
+5. WHEN o vendedor seleciona uma imagem THEN a UI SHALL apresentar a imagem inteira sem recorte em uma prévia redimensionável com legenda, remoção e ampliação por teclado (MED-34).
 
 **Independent Test**: selecionar imagem, áudio e vídeo ou parar uma captura;
 observar upload automático, legenda editável durante validação, nenhum POST de
@@ -233,6 +235,8 @@ envio/callback n8n remoto continuam abertos. Nenhum requisito Verified global.
 | MED-30         | Validação automática  | Execute | In Progress | T25,T24,T28,T29            |
 | MED-31         | Composer integrado    | Execute | In Progress | T25,T24                    |
 | MED-32         | Erro recuperável      | Execute | In Progress | T25,T26,T27,T24            |
+| MED-33         | Colar e soltar anexo  | Execute | Complete    | T33                        |
+| MED-34         | Prévia de imagem      | Execute | Complete    | T33                        |
 
 Coverage: 32 total, 32 mapped to tasks, 0 unmapped. Nenhum requisito Verified.
 

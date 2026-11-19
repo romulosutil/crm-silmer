@@ -85,6 +85,11 @@ os containers, preservando os dados locais, use `npm run dev:down`. Um
 porta/origem podem ser ajustados somente para a sessão atual com `API_HOST`,
 `API_PORT`, `DEV_HOST`, `DEV_PORT` e `API_ORIGIN`. Esse fluxo é exclusivamente de desenvolvimento. No Windows, acesse essas portas localmente; produção mantém o deploy automático atual por GitHub → EasyPanel, com imagens por digest e gates operacionais.
 
+O fluxo padrão mantém os anexos do chat desativados. Para testar anexos
+com validação e armazenamento locais, execute `npm run dev:media` e abra
+`http://127.0.0.1:4193`. O perfil usa banco, armazenamento e n8n próprios.
+Veja [o runbook de mídia](docs/runbooks/rustfs-chat-media.md#perfil-docker-local-opt-in).
+
 Na primeira execução, abra `http://127.0.0.1:5678`, crie o proprietário local,
 abra o workflow `LOCAL | Silmer | Fluxo completo sem WhatsApp`, vincule uma
 credencial OpenAI ao nó `OpenAI - Modelo do MVP` e ative-o. O workflow simula

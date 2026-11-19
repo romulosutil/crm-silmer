@@ -11,6 +11,7 @@ const props = defineProps({
   unavailable: { type: Boolean, default: false },
   reasonId: { type: String, default: '' },
   orderTools: { type: Boolean, default: false },
+  dropTarget: { type: HTMLElement, default: null },
 });
 const emit = defineEmits(['sent', 'sending-change']);
 const startButton = ref(null),
@@ -226,6 +227,7 @@ onBeforeUnmount(clear);
       :unavailable="unavailable"
       :reason-id="reasonId"
       :order-tools="orderTools"
+      :drop-target="dropTarget"
       @sending-change="sendingChanged"
       @recording-dismissed="recordingDismissed"
       @sent="sent"

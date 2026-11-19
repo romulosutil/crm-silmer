@@ -494,16 +494,18 @@ test('reconexão exige comando explícito e falha de desafio não repete efeito'
     });
   });
   await page.goto('/conta');
-  await page.getByLabel('Número com código do país').fill('5511999990000');
-  await page.getByRole('button', { name: 'Conectar WhatsApp' }).click();
+  // WAP-E12: the server already holds this line's number; no retyping.
+  await expect(page.getByText('Reconectar o número ••••0000')).toBeVisible();
+  await expect(page.getByLabel('Número com código do país')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Conectar WhatsApp', exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole('button', { name: 'Reconectar WhatsApp' }).click();
   await expect(
     page.getByRole('button', { name: 'Mostrar código' }),
   ).toBeVisible();
   expect(commands).toHaveLength(1);
-  expect(commands[0].body).toEqual({
-    expectedNumber: '5511999990000',
-    expectedVersion: 5,
-  });
+  expect(commands[0].body).toEqual({ expectedVersion: 5 });
   expect(commands[0].key).toMatch(/^[a-f0-9-]{36}$/u);
   await page.getByRole('button', { name: 'Mostrar código' }).click();
   await expect(page.getByRole('alert')).toContainText(
@@ -518,6 +520,43 @@ test('reconexão exige comando explícito e falha de desafio não repete efeito'
     expectedVersion: 6,
     generation: 3,
     mode: 'code',
+  });
+});
+
+test('primeira conexão sem linha pede o número com código do país', async ({
+  page,
+}) => {
+  await installMocks(page, {}, { fixedClock: false });
+  const line = {
+    id: null,
+    state: 'not_configured',
+    version: 0,
+    generation: 0,
+    maskedNumber: null,
+  };
+  /** @type {any[]} */
+  const commands = [];
+  await page.route('**/api/v1/me/whatsapp', (route) =>
+    route.fulfill({ json: { line, challenge: null, available: true } }),
+  );
+  await page.route('**/api/v1/me/whatsapp/connect', (route) => {
+    commands.push(route.request().postDataJSON());
+    return route.fulfill({ status: 202, json: {} });
+  });
+  await page.goto('/conta');
+  const field = page.getByLabel('Número com código do país');
+  await expect(field).toBeVisible();
+  await expect(field).toHaveAttribute('required', '');
+  await expect(
+    page.getByRole('button', { name: 'Reconectar WhatsApp' }),
+  ).toHaveCount(0);
+  await axeEverywhere(page);
+  await field.fill('5511999990000');
+  await page.keyboard.press('Enter');
+  await expect.poll(() => commands.length).toBe(1);
+  expect(commands[0]).toEqual({
+    expectedNumber: '5511999990000',
+    expectedVersion: 0,
   });
 });
 
@@ -685,6 +724,17 @@ async function pairing(page, initial = {}) {
         },
       })
       .catch(() => {});
+  });
+  await page.route('**/api/v1/me/whatsapp/connect', async (route) => {
+    commands.push({ path: 'connect', body: route.request().postDataJSON() });
+    await gate;
+    server.line = {
+      ...server.line,
+      state: 'preparing',
+      version: server.line.version + 1,
+      generation: server.line.generation + 1,
+    };
+    await route.fulfill({ status: 202, json: {} }).catch(() => {});
   });
   await page.route('**/api/v1/me/whatsapp/disconnect', (route) => {
     commands.push({ path: 'disconnect', body: route.request().postDataJSON() });
@@ -861,7 +911,7 @@ test('cancelar pelo teclado devolve o foco ao botão do desafio', async ({
 test('linha bloqueada explica o motivo e permite desconectar', async ({
   page,
 }) => {
-  const { commands } = await pairing(page, {
+  const { commands, hold } = await pairing(page, {
     line: {
       id: 'line-synthetic',
       state: 'blocked',
@@ -875,7 +925,7 @@ test('linha bloqueada explica o motivo e permite desconectar', async ({
   await expect(page.getByText('Bloqueado · ••••0778')).toBeVisible();
   await expect(
     page.getByText(
-      'O número conectado não é o informado. Desconecte e conecte de novo com o número certo.',
+      'O número conectado não é o cadastrado. Desconecte e reconecte pelo celular com o número cadastrado.',
     ),
   ).toBeVisible();
   await axeEverywhere(page);
@@ -888,6 +938,30 @@ test('linha bloqueada explica o motivo e permite desconectar', async ({
       body: { expectedVersion: 7, expectedGeneration: 2 },
     },
   ]);
-  await expect(page.getByLabel('Número com código do país')).toBeVisible();
+  // WAP-E12: the disconnected line reconnects its stored number.
+  await expect(page.getByLabel('Número com código do país')).toHaveCount(0);
+  await expect(page.getByText('Reconectar o número ••••0778')).toBeVisible();
+  const reconnect = page.getByRole('button', { name: 'Reconectar WhatsApp' });
+  await expect(reconnect).toBeVisible();
   expect(await focusedTag(page)).not.toBe('BODY');
+  await axeEverywhere(page);
+  let release = () => {};
+  hold(
+    new Promise((resolve) => {
+      release = () => resolve(undefined);
+    }),
+  );
+  await reconnect.focus();
+  await page.keyboard.press('Enter');
+  await expect(reconnect).toHaveAttribute('aria-disabled', 'true');
+  await expect(reconnect).toBeFocused();
+  // A second Enter while busy sends nothing.
+  await page.keyboard.press('Enter');
+  release();
+  await expect(page.getByText('Preparando · ••••0778')).toBeVisible();
+  await expect(reconnect).toHaveCount(0);
+  expect(await focusedTag(page)).not.toBe('BODY');
+  expect(commands.slice(1)).toEqual([
+    { path: 'connect', body: { expectedVersion: 8 } },
+  ]);
 });

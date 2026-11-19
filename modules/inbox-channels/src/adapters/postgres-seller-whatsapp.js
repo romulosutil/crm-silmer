@@ -346,8 +346,13 @@ export class PostgresSellerWhatsAppRepository {
     )
       fail('INVALID_REQUEST', 400);
     const key = id(input.idempotencyKey);
+    // WAP-E12: an absent number means "reconnect the stored one". It enters
+    // the fingerprint as null, so the same key with and without a number is a
+    // different body (IDEMPOTENCY_KEY_REUSED), and a replay of either repeats.
     const expectedNumber =
-      input.action === 'connect' ? phone(input.expectedNumber) : null;
+      input.action === 'connect' && input.expectedNumber !== undefined
+        ? phone(input.expectedNumber)
+        : null;
     const fingerprint = sha(
       JSON.stringify({
         action: input.action,
@@ -359,6 +364,9 @@ export class PostgresSellerWhatsAppRepository {
     return this.#transaction(async (client) => {
       await this.#owner(client, input.actorId);
       let line = await this.#line(client, input.actorId);
+      // The first connection is the only one that must name its number.
+      if (!line && input.action === 'connect' && !expectedNumber)
+        fail('INVALID_REQUEST', 400);
       const revokedReplay = (
         await client.query(
           'SELECT * FROM crm.seller_whatsapp_revocations WHERE actor_id=$1 AND idempotency_key=$2',

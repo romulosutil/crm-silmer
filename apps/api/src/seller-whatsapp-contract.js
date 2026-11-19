@@ -84,16 +84,22 @@ export function challengeMetadata(value) {
 /** @param {any} body @param {'connect'|'disconnect'|'challenge'} action */
 export function readHumanControl(body, action) {
   if (action === 'connect') {
-    controlObject(body, ['expectedNumber', 'expectedVersion']);
+    // WAP-E12: the number is required only for the first connection. An
+    // existing line reconnects its stored number (the server keeps it
+    // encrypted); a present number must still match that line's digest.
+    controlObject(
+      body,
+      ['expectedNumber', 'expectedVersion'],
+      ['expectedVersion'],
+    );
+    const expectedVersion = controlVersion(body.expectedVersion);
+    if (!('expectedNumber' in body)) return { expectedVersion };
     if (
       typeof body.expectedNumber !== 'string' ||
       !/^\+?[1-9][0-9]{7,14}$/u.test(body.expectedNumber)
     )
       throw whatsappControlError();
-    return {
-      expectedNumber: body.expectedNumber,
-      expectedVersion: controlVersion(body.expectedVersion),
-    };
+    return { expectedNumber: body.expectedNumber, expectedVersion };
   }
   if (action === 'disconnect') {
     controlObject(body, ['expectedVersion', 'expectedGeneration']);

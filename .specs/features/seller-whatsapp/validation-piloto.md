@@ -327,6 +327,16 @@ respostas além da própria chamada de desafio.
 | E12-12 | P2   | Linha pessoal caída ainda convidava a enviar (WAP-11); banner de onboarding para quem já conectou          | corrigido, `5131192f`              |
 | E12-13 | P2   | Criar pedido apertado antes da leitura dos Assuntos era recusado sem abrir o diálogo (intermitente no E2E) | corrigido, `d8477e7e`              |
 | E12-14 | P3   | Asserção nova listava conversas de outra suíte no banco compartilhado do CI e falhava ao decifrar          | corrigido, `2dddd6f7`              |
+| E12-15 | P2   | Linha desconectada pedia o número de novo para reconectar, embora o servidor já o tivesse (relato do PO)   | corrigido neste PR (ver abaixo)    |
+
+**E12-15 (19/11/2026):** em Meu WhatsApp, uma linha `disconnected` mostrava
+o número mascarado e, logo abaixo, o campo "Número com código do país". Como a
+linha nunca troca de número, redigitar só confirmava o que o servidor já sabia.
+Agora a tela mostra "Reconectar o número" com o final mascarado e o botão
+**Reconectar WhatsApp**, que envia só `expectedVersion`. A primeira conexão
+continua pedindo o número. Contrato e idempotência na nota WAP-E12 do
+[design](design.md); testes de rota, PostgreSQL real e E2E com axe. Evidência
+local, não live.
 
 Abertos, sem bloquear o piloto:
 

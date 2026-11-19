@@ -148,7 +148,7 @@ paths:
     post:
       operationId: connectPersonalWhatsApp
       summary: Reservar preparação da própria linha no ledger
-      description: WAP-E02/WAP-02/04/10. Titular, instância e destino derivados no servidor. Não ativa a linha nem entrega desafio. Idempotency-Key UUID; corpo máximo 8 KiB.
+      description: WAP-E02/WAP-02/04/10/E12. Titular, instância e destino derivados no servidor. Não ativa a linha nem entrega desafio. `expectedNumber` só é obrigatório na primeira conexão (sem linha → 400 sem ele); linha existente reconecta o número guardado, nunca devolvido ao cliente, e um número presente que difira do da linha recusa com 409 WHATSAPP_LINE_CONFLICT. A impressão digital de idempotência inclui o número (ou sua ausência), então a mesma chave com e sem número conflita. Idempotency-Key UUID; corpo máximo 8 KiB.
       security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
       parameters: [{ $ref: '#/components/parameters/Origin' }]
       requestBody:

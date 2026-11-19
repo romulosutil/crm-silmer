@@ -46,6 +46,13 @@ const labels = {
 // Challenge states the server has not confirmed by a read yet (WAP-03).
 const UNCONFIRMED = ['reserved', 'dispatching', 'delivered', 'unknown'];
 const line = computed(() => state.value?.line);
+// WAP-E12: an existing line keeps its number on the server (encrypted), so a
+// disconnected line reconnects it without retyping; only the first connection
+// asks for the number.
+const reconnecting = computed(
+  () =>
+    line.value?.state === 'disconnected' && Boolean(line.value.maskedNumber),
+);
 const operation = computed(
   () => state.value?.operation ?? line.value?.operation,
 );
@@ -172,10 +179,12 @@ async function control(action) {
   busy.value = true;
   const body =
     action === 'connect'
-      ? {
-          expectedNumber: number.value.trim(),
-          expectedVersion: line.value.version,
-        }
+      ? reconnecting.value
+        ? { expectedVersion: line.value.version }
+        : {
+            expectedNumber: number.value.trim(),
+            expectedVersion: line.value.version,
+          }
       : {
           expectedVersion: line.value.version,
           expectedGeneration: line.value.generation,
@@ -362,8 +371,8 @@ onBeforeUnmount(() => {
         A conexão pessoal não está disponível para sua conta.
       </p>
       <p v-if="state.available && line.state === 'blocked'">
-        O número conectado não é o informado. Desconecte e conecte de novo com o
-        número certo.
+        O número conectado não é o cadastrado. Desconecte e reconecte pelo
+        celular com o número cadastrado.
       </p>
       <form
         v-if="
@@ -372,20 +381,30 @@ onBeforeUnmount(() => {
         "
         @submit.prevent="control('connect')"
       >
-        <label for="personal-whatsapp-number">Número com código do país</label>
-        <input
-          id="personal-whatsapp-number"
-          v-model="number"
-          type="tel"
-          autocomplete="tel"
-          required
-          pattern="\+?[1-9][0-9]{7,14}"
-        />
+        <p v-if="reconnecting" id="personal-whatsapp-reconnect">
+          Reconectar o número {{ line.maskedNumber }}
+        </p>
+        <template v-else>
+          <label for="personal-whatsapp-number"
+            >Número com código do país</label
+          >
+          <input
+            id="personal-whatsapp-number"
+            v-model="number"
+            type="tel"
+            autocomplete="tel"
+            required
+            pattern="\+?[1-9][0-9]{7,14}"
+          />
+        </template>
         <button
           type="submit"
+          :aria-describedby="
+            reconnecting ? 'personal-whatsapp-reconnect' : undefined
+          "
           :aria-disabled="busy || Boolean(uncertain) ? 'true' : undefined"
         >
-          Conectar WhatsApp
+          {{ reconnecting ? 'Reconectar WhatsApp' : 'Conectar WhatsApp' }}
         </button>
       </form>
       <template v-if="state.available && line.state === 'awaiting_pairing'">

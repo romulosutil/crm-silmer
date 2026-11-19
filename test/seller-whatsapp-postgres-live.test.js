@@ -352,6 +352,84 @@ if (!url) {
       );
 
       await t.test(
+        'WAP-E12 reconnects the stored number without retyping it; first connection still needs one',
+        async () => {
+          await reset();
+          // First connection without a number is a malformed request.
+          await assert.rejects(
+            submit({ expectedNumber: undefined }),
+            (/** @type {any} */ error) =>
+              error.code === 'INVALID_REQUEST' && error.statusCode === 400,
+          );
+          assert.equal(
+            (await repository.get({ actorId: A })).line.state,
+            'not_configured',
+          );
+          const current = await prepared();
+          const disconnected = await repository.submit({
+            actorId: A,
+            action: 'disconnect',
+            expectedVersion: current.line.version,
+            expectedGeneration: current.line.generation,
+            idempotencyKey: randomUUID(),
+            correlationId: randomUUID(),
+          });
+          await result(await reserve(disconnected.operation));
+          const own = await repository.get({ actorId: A });
+          assert.equal(own.line.state, 'disconnected');
+          // A present but different number still conflicts, as before.
+          await assert.rejects(
+            submit({
+              expectedNumber: '5511990000002',
+              expectedVersion: own.line.version,
+            }),
+            rejects('WHATSAPP_LINE_CONFLICT'),
+          );
+          const key = randomUUID();
+          const reconnect = {
+            expectedNumber: undefined,
+            expectedVersion: own.line.version,
+            idempotencyKey: key,
+          };
+          const reconnected = await submit(reconnect);
+          assert.equal(reconnected.line.state, 'preparing');
+          assert.equal(reconnected.line.generation, own.line.generation + 1);
+          assert.equal(reconnected.line.maskedNumber, own.line.maskedNumber);
+          assert.equal(JSON.stringify(reconnected).includes(NUMBER), false);
+          // Same key and same body (no number) replays without a new effect.
+          assert.equal(
+            (await submit(reconnect)).operation.id,
+            reconnected.operation.id,
+          );
+          // Same key with a body that now carries the number is another body.
+          await assert.rejects(
+            submit({ ...reconnect, expectedNumber: NUMBER }),
+            rejects('IDEMPOTENCY_KEY_REUSED'),
+          );
+          assert.equal(
+            (
+              await pool.query(
+                "SELECT count(*)::int AS n FROM crm.seller_whatsapp_operations WHERE action='connect' AND idempotency_key=$1",
+                [key],
+              )
+            ).rows[0].n,
+            1,
+          );
+          // n8n still receives the stored number, decrypted only server-side.
+          const dispatch = await reserve(reconnected.operation);
+          assert.equal(dispatch.expectedNumber, NUMBER);
+          assert.equal(
+            (
+              await pool.query(
+                "SELECT count(*)::int AS n FROM crm.whatsapp_number_reservations WHERE kind='personal'",
+              )
+            ).rows[0].n,
+            1,
+          );
+        },
+      );
+
+      await t.test(
         'idempotent replay revalidates current actor, conflicts on changed body and never dispatches twice',
         async () => {
           await reset();

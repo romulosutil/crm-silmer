@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import {
   buildWapProductionWorkflows,
+  insideRepository,
   nodeReferences,
   probeIngressEnvironment,
   reachableNodes,
@@ -242,6 +243,50 @@ test('WAP-E12: inbound is one authenticated hook with no bot, chat, error trigge
   assert.equal(built.summary.inbound.removed.triggersAndOtherWebhooks, 3);
 });
 
+test('WAP-E12: the inbound acks an observed send once recorded and reports media failures', () => {
+  const inbound = built.inbound;
+  const byName = new Map(
+    inbound.nodes.map((/** @type {any} */ n) => [n.name, n]),
+  );
+  /** @param {string} name @param {number} [output] */
+  const next = (name, output = 0) =>
+    (inbound.connections[name]?.main?.[output] ?? []).map(
+      (/** @type {any} */ edge) => edge.node,
+    );
+  const ack = 'Confirmar saída observada (WAP)';
+  const gate = 'Preparar mídia observada (WAP)';
+  assert.deepEqual(next('CRM - Registrar saída observada (WAP)'), [ack, gate]);
+  assert.equal(byName.get(ack).type, 'n8n-nodes-base.respondToWebhook');
+  assert.ok(byName.get(ack).position[1] < byName.get(gate).position[1]);
+  for (const name of [
+    'Evolution - Buscar mídia observada (WAP)',
+    'Validar mídia observada (WAP)',
+    'Crypto - SHA256 mídia observada (WAP)',
+    'Preparar anexo observado (WAP)',
+    'CRM - Anexar mídia observada (WAP)',
+  ])
+    assert.deepEqual(
+      next(name, 1),
+      ['Preparar falha de mídia observada (WAP)'],
+      name,
+    );
+  const report = byName.get('CRM - Registrar falha de mídia observada (WAP)');
+  assert.deepEqual(next('Preparar falha de mídia observada (WAP)'), [
+    report.name,
+  ]);
+  assert.equal(
+    report.parameters.url,
+    '={{ "https://crm.invalid" + "/api/v1/integrations/n8n/events" }}',
+  );
+  assert.deepEqual(report.credentials, {
+    httpBasicAuth: { id: 'cred-crm-basic', name: 'CRM AUTOMATION_EXECUTOR' },
+  });
+  const workflowKey = report.parameters.headerParameters.parameters.find(
+    (/** @type {any} */ h) => h.name.toLowerCase() === 'x-silmer-workflow-key',
+  );
+  assert.equal(workflowKey.value, 'seller-whatsapp-inbound');
+});
+
 test('WAP-E12: the main keeps every untouched node and gains exactly the dispatch gates', () => {
   const input = main();
   const send = built['main-personal-send'];
@@ -434,6 +479,118 @@ test('WAP-E12: the build refuses unsafe inputs before producing anything', () =>
   refused(foreign, config(), /WAP_BUILD_CRM_ORIGIN_MISMATCH/u);
 });
 
+test('WAP-E12: credential origins are proved by the literal URL prefix, not a substring', () => {
+  /** @param {string} name @param {string} url */
+  const withUrl = (name, url) => {
+    const workflow = main();
+    const node = workflow.nodes.find((/** @type {any} */ n) => n.name === name);
+    assert.ok(node, name);
+    node.parameters.url = url;
+    return workflow;
+  };
+  const crmNode = 'CRM - Registrar inbound (MVP)';
+  const mediaNode = 'Inbox - Imagem recebida - Consultar URL';
+  const evolution = 'http://schedule_silmer-evolution:8080';
+  for (const [name, url, code] of /** @type {[string,string,RegExp][]} */ ([
+    // A fallback, ternary, call or template can hide another origin.
+    [
+      crmNode,
+      '={{ $json.h || "https://crm.invalid/api/v1/integrations/n8n/messages/inbound" }}',
+      /WAP_BUILD_INBOUND_UNSAFE/u,
+    ],
+    [
+      crmNode,
+      '={{ "https://crm.invalid/api/v1/x" + "" ? $json.u : "" }}',
+      /WAP_BUILD_INBOUND_UNSAFE/u,
+    ],
+    [
+      crmNode,
+      '={{ "https://crm.invalid/api/".replace("crm", $json.h) }}',
+      /WAP_BUILD_CRM_ORIGIN_MISMATCH/u,
+    ],
+    [
+      crmNode,
+      '={{ `https://crm.invalid/api/${$json.p}` }}',
+      /WAP_BUILD_INBOUND_UNSAFE/u,
+    ],
+    [
+      crmNode,
+      '=https://crm.invalid/api/{{ $json.p }}',
+      /WAP_BUILD_INBOUND_UNSAFE/u,
+    ],
+    // The CRM origin must be the literal prefix, followed by /api/.
+    [
+      crmNode,
+      '={{ "https://evil.invalid/x?" + "https://crm.invalid/" }}',
+      /WAP_BUILD_CRM_ORIGIN_MISMATCH/u,
+    ],
+    [
+      crmNode,
+      '={{ "https://crm.invalid" + $json.path }}',
+      /WAP_BUILD_CRM_ORIGIN_MISMATCH/u,
+    ],
+    [
+      crmNode,
+      'https://crm.invalid.evil.invalid/api/v1/integrations/n8n/events',
+      /WAP_BUILD_CRM_ORIGIN_MISMATCH/u,
+    ],
+    // Evolution reads only through the authenticated origin instance.
+    [
+      mediaNode,
+      `={{ "${evolution}/chat/getBase64FromMediaMessage/silmer" }}`,
+      /WAP_BUILD_INBOUND_UNSAFE/u,
+    ],
+    [
+      mediaNode,
+      `={{ "${evolution}/chat/getBase64FromMediaMessage/" + "silmer" }}`,
+      /WAP_BUILD_INBOUND_UNSAFE/u,
+    ],
+    [
+      mediaNode,
+      `={{ "${evolution}/chat/getBase64FromMediaMessage/" + $json.instance }}`,
+      /WAP_BUILD_INBOUND_UNSAFE/u,
+    ],
+    [
+      mediaNode,
+      '={{ "http://evolution.invalid:8080/chat/getBase64FromMediaMessage/" + $json.instance }}',
+      /WAP_BUILD_EVOLUTION_ORIGIN_MISMATCH/u,
+    ],
+  ]))
+    assert.throws(
+      () => buildWapProductionWorkflows(withUrl(name, url), config()),
+      code,
+      url,
+    );
+  // The accepted shapes: a static URL, and an expression whose leading string
+  // literals already spell <crm>/api/ before any dynamic operand.
+  for (const url of [
+    'https://crm.invalid/api/v1/integrations/n8n/messages/inbound',
+    '={{ "https://crm.invalid" + "/api/v1/integrations/n8n/messages/inbound" }}',
+    "={{ 'https://crm.invalid/api/v1/x/' + encodeURIComponent($json.id) }}",
+  ])
+    assert.doesNotThrow(
+      () => buildWapProductionWorkflows(withUrl(crmNode, url), config()),
+      url,
+    );
+  const urls = built.inbound.nodes
+    .filter(
+      (/** @type {any} */ n) =>
+        n.type === 'n8n-nodes-base.httpRequest' &&
+        n.parameters.genericAuthType === 'httpHeaderAuth',
+    )
+    .map((/** @type {any} */ n) => n.parameters.url)
+    .sort();
+  const origin = "$('Evolution - Validar origem (MVP)').item.json.instance";
+  assert.deepEqual(
+    urls,
+    [
+      `={{ "${evolution}/chat/findMessages/" + ${origin} }}`,
+      `={{ "${evolution}/chat/getBase64FromMediaMessage/" + ${origin} }}`,
+      `={{ "${evolution}/chat/getBase64FromMediaMessage/" + $json.payload.instance }}`,
+    ].sort(),
+  );
+});
+
 test('WAP-E12: CLI writes only a fresh directory outside the repo and prints no ids', () => {
   const base = mkdtempSync(path.join(tmpdir(), 'wap-build-'));
   try {
@@ -489,6 +646,14 @@ test('WAP-E12: CLI writes only a fresh directory outside the repo and prints no 
       [mainPath, configPath, path.join(root, 'ops', `x-${process.pid}`)],
       'WAP_BUILD_OUTPUT_IN_REPO',
     );
+    // A folder whose name only starts with '..' is still inside. The main
+    // path does not exist, so a missed refusal fails before any write.
+    const dotted = path.join(root, `..wap-out-${process.pid}`);
+    refused(
+      [path.join(base, 'missing.json'), configPath, dotted],
+      'WAP_BUILD_OUTPUT_IN_REPO',
+    );
+    assert.equal(existsSync(dotted), false);
     refused([mainPath, configPath], 'WAP_BUILD_USAGE');
     const other = path.join(base, 'other.json');
     writeFileSync(other, JSON.stringify({ ...main(), id: 'other' }));
@@ -547,5 +712,38 @@ test('WAP-E12: CLI writes only a fresh directory outside the repo and prints no 
     );
   } finally {
     rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test('WAP-E12: the output check folds only real parent segments as outside', () => {
+  const repo = mkdtempSync(path.join(tmpdir(), 'wap-repo-'));
+  try {
+    for (const inside of [
+      repo,
+      path.join(repo, '..wap-out'),
+      path.join(repo, '...'),
+      path.join(repo, 'ops', '..x'),
+      path.join(repo, 'a', '..', 'b'),
+    ])
+      assert.equal(insideRepository(inside, repo), true, inside);
+    for (const outside of [
+      path.dirname(repo),
+      path.join(path.dirname(repo), 'sibling'),
+      path.join(repo, '..', 'other'),
+      `${repo}-out`,
+    ])
+      assert.equal(insideRepository(outside, repo), false, outside);
+    if (process.platform === 'win32') {
+      assert.equal(insideRepository(repo.toUpperCase(), repo), true);
+      const drive = /^[A-Za-z]:/u.exec(repo)?.[0];
+      const other = drive?.toUpperCase() === 'Z:' ? 'Y:' : 'Z:';
+      assert.equal(
+        insideRepository(other + repo.slice(2), repo),
+        false,
+        'another drive',
+      );
+    }
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
   }
 });

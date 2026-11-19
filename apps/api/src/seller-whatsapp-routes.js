@@ -1,4 +1,4 @@
-import rateLimit from '@fastify/rate-limit';
+import rateLimit, { normalizeIP } from '@fastify/rate-limit';
 import { authorizeRequest } from './n8n-routes.js';
 import {
   controlObject,
@@ -9,6 +9,10 @@ import {
   readControlResult,
   whatsappControlError as error,
 } from './seller-whatsapp-contract.js';
+
+// The controlId shape; only a well-formed binding id earns its own budget.
+const BINDING =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 /** WAP-E02. Registration is unconditional; absent configuration fails closed.
  * @param {import('fastify').FastifyInstance} api @param {any} service @param {Function} contextFor */
@@ -145,11 +149,41 @@ export function registerSellerWhatsAppRoutes(api, service, contextFor) {
       },
     );
     // Every personal event of every line is verified here, all from the one
-    // n8n egress IP. The per-line ingress ceiling is a 20 msg/s peak
-    // (seller-whatsapp.md, limites do piloto), so 60/min would drop events.
+    // n8n egress IP. A CRM 429 reaches Evolution as 503 (the n8n ingress maps
+    // it) and Evolution retries 3 times 5-10 s apart, about 20 s, all inside
+    // one window: a budget shared by every line would lose a burst. Each
+    // binding (X-Correlation-Id, pinned to source.bindingId below) gets the
+    // per-line 20 msg/s peak (seller-whatsapp.md, limites do piloto); a
+    // missing or malformed header shares the IP budget. 6000/min per IP is
+    // five lines at peak, over the pilot's two, and bounds a flood that
+    // rotates ids; only requests the binding budget admitted count toward it.
+    const ingressPerIp = scope.createRateLimit({
+      max: 6000,
+      timeWindow: '1 minute',
+    });
     const ingressLimits = {
       bodyLimit: limits.bodyLimit,
-      config: { rateLimit: { max: 1200, timeWindow: '1 minute' } },
+      config: {
+        rateLimit: {
+          max: 1200,
+          timeWindow: '1 minute',
+          keyGenerator: (/** @type {any} */ request) => {
+            const ip = normalizeIP(request.ip);
+            const binding = request.headers['x-correlation-id'];
+            return typeof binding === 'string' && BINDING.test(binding)
+              ? `${ip}|${binding.toLowerCase()}`
+              : ip;
+          },
+        },
+      },
+      /** @param {any} request @param {any} reply */
+      preValidation: async (request, reply) => {
+        const limit = await ingressPerIp(request);
+        if (!limit.isAllowed && limit.isExceeded) {
+          reply.header('retry-after', limit.ttlInSeconds);
+          throw error('RATE_LIMITED', 429);
+        }
+      },
     };
     scope.post(
       '/api/v1/integrations/n8n/whatsapp-control/ingress/verify',

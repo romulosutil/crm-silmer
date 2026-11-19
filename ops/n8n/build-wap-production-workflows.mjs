@@ -294,6 +294,49 @@ function prune(workflow, keep) {
   );
 }
 
+/** The literal prefix an n8n URL parameter is guaranteed to start with, or
+ * null when that cannot be proved. A static value is its own prefix. An
+ * expression must be exactly `={{ … }}` whose top level is operands joined
+ * by `+` only (no `||`, `?:`, `,`, templates or other operators); the prefix
+ * is the concatenation of its leading plain string literals.
+ * @param {unknown} raw @returns {string|null} */
+export function literalUrlPrefix(raw) {
+  if (typeof raw !== 'string') return null;
+  if (!raw.startsWith('=')) return raw.includes('{{') ? null : raw;
+  const body = /^=\{\{([\s\S]*)\}\}$/u.exec(raw)?.[1];
+  if (body === undefined || body.includes('`')) return null;
+  const operands = [''];
+  let depth = 0;
+  for (let index = 0; index < body.length; index++) {
+    const char = body[index];
+    if (char === '"' || char === "'") {
+      const end = body.indexOf(char, index + 1);
+      const literal = body.slice(index, end + 1);
+      if (end < 0 || /[\\\r\n]/u.test(literal)) return null;
+      operands[operands.length - 1] += literal;
+      index = end;
+    } else if ('([{'.includes(char)) {
+      depth++;
+      operands[operands.length - 1] += char;
+    } else if (')]}'.includes(char)) {
+      if (--depth < 0) return null;
+      operands[operands.length - 1] += char;
+    } else if (depth > 0 || /[\w$.\s]/u.test(char))
+      operands[operands.length - 1] += char;
+    else if (char === '+') operands.push('');
+    else return null;
+  }
+  if (depth !== 0) return null;
+  let prefix = '';
+  for (const operand of operands.map((o) => o.trim())) {
+    if (!operand) return null;
+    const literal = /^(["'])([^"']*)\1$/u.exec(operand);
+    if (!literal) break;
+    prefix += literal[2];
+  }
+  return prefix;
+}
+
 /** @param {any} main @param {ReturnType<typeof readConfig>} config */
 function buildInbound(main, config) {
   const workflow = structuredClone(main);
@@ -327,6 +370,15 @@ function buildInbound(main, config) {
   const added = workflow.nodes.filter(
     (/** @type {any} */ n) => !original.has(n.name),
   ).length;
+  const origin = `$('${VALIDATE}').item.json.instance`;
+  const chat = (/** @type {string} */ route) =>
+    JSON.stringify(`${config.evolution}/chat/${route}/`);
+  const evolutionReads = new Set([
+    `={{ ${chat('findMessages')} + ${origin} }}`,
+    `={{ ${chat('getBase64FromMediaMessage')} + ${origin} }}`,
+    // Observed media: payload.instance is the validated origin instance.
+    `={{ ${chat('getBase64FromMediaMessage')} + $json.payload.instance }}`,
+  ]);
 
   for (const node of workflow.nodes) {
     node.id = randomUUID();
@@ -351,16 +403,22 @@ function buildInbound(main, config) {
       url.includes('/message/')
     )
       refuse('WAP_BUILD_INBOUND_UNSAFE');
+    const prefix = literalUrlPrefix(url);
     if (node.parameters.genericAuthType === 'httpBasicAuth') {
-      if (
-        !url.includes(config.crm + '/') &&
-        !url.includes(JSON.stringify(config.crm))
-      )
+      // The CRM credential goes only where the literal prefix is <crm>/api/.
+      if (prefix === null) refuse('WAP_BUILD_INBOUND_UNSAFE');
+      if (!prefix.startsWith(`${config.crm}/api/`))
         refuse('WAP_BUILD_CRM_ORIGIN_MISMATCH');
       node.credentials = { httpBasicAuth: config.credentials.crmBasic };
     } else if (node.parameters.genericAuthType === 'httpHeaderAuth') {
-      if (!url.startsWith(`={{ "${config.evolution}/chat/`))
-        refuse('WAP_BUILD_EVOLUTION_ORIGIN_MISMATCH');
+      // The Evolution key goes only to the reads applyPersonalInbound and
+      // applyObservedOutbound write, each bound to the origin instance.
+      if (!evolutionReads.has(url))
+        refuse(
+          prefix !== null && !prefix.startsWith(`${config.evolution}/`)
+            ? 'WAP_BUILD_EVOLUTION_ORIGIN_MISMATCH'
+            : 'WAP_BUILD_INBOUND_UNSAFE',
+        );
       node.credentials = {
         httpHeaderAuth: config.credentials.evolutionApiHeader,
       };
@@ -702,14 +760,17 @@ export function buildWapProductionWorkflows(main, rawConfig) {
   return { ...workflows, summary };
 }
 
-/** @param {string} target @param {string} repository */
-function insideRepository(target, repository) {
+/** Outside only through a real `..` segment or another root/drive (absolute
+ * relative path); a name such as `..wap-out` is a folder inside.
+ * @param {string} target @param {string} repository */
+export function insideRepository(target, repository) {
   const fold = (/** @type {string} */ p) =>
     process.platform === 'win32' ? p.toLowerCase() : p;
   const relative = path.relative(fold(repository), fold(target));
-  return (
-    relative === '' ||
-    (!relative.startsWith('..') && !path.isAbsolute(relative))
+  return !(
+    relative === '..' ||
+    relative.startsWith('..' + path.sep) ||
+    path.isAbsolute(relative)
   );
 }
 

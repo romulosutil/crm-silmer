@@ -540,7 +540,7 @@ test('WAP-E02: reconciliation reads status, actual owner identity and exact webh
   );
 });
 
-test('WAP-E12: reconcile and reconnect agree when an unpaired socket is not loaded', async () => {
+test('WAP-E12: reconnect writes only after the retained unpaired instance is loaded idle', async () => {
   /** @param {any} row @param {any} state @param {'connect'|'reconcile'} action */
   const run = async (
     row,
@@ -597,7 +597,7 @@ test('WAP-E12: reconcile and reconnect agree when an unpaired socket is not load
   );
   const reconnect = await run(
     { connectionStatus: 'connecting', ownerJid: null },
-    undefined,
+    { instance: { instanceName: 'synthetic-one', state: 'close' } },
     'connect',
   );
   assert.deepEqual(await reconnect.result, {
@@ -613,6 +613,13 @@ test('WAP-E12: reconcile and reconnect agree when an unpaired socket is not load
       { path: '/webhook/set/synthetic-one', method: 'POST' },
     ],
   );
+  const unloaded = await run(
+    { connectionStatus: 'connecting', ownerJid: null },
+    undefined,
+    'connect',
+  );
+  await assert.rejects(unloaded.result, /WAP_CONTROL_UNKNOWN/u);
+  assert.ok(unloaded.calls.every(({ method }) => method === 'GET'));
   // A paired owner, a claimed open socket or an unreadable reply stay uncertain.
   for (const [row, state] of [
     [
@@ -700,6 +707,7 @@ test('WAP-E12: every connect, including reuse of a closed instance, reapplies an
     calls.map((call) => call.path),
     [
       '/instance/fetchInstances',
+      '/instance/connectionState/synthetic-one',
       '/settings/set/synthetic-one',
       '/settings/find/synthetic-one',
       '/webhook/set/synthetic-one',
@@ -707,8 +715,8 @@ test('WAP-E12: every connect, including reuse of a closed instance, reapplies an
       '/instance/connectionState/synthetic-one',
     ],
   );
-  assert.equal(calls[1].init.method, 'POST');
-  assert.deepEqual(JSON.parse(calls[1].init.body), settingsBody);
+  assert.equal(calls[2].init.method, 'POST');
+  assert.deepEqual(JSON.parse(calls[2].init.body), settingsBody);
 });
 
 test('WAP-E12: drifted or unreadable settings fail connect closed before the webhook is enabled', async () => {
@@ -764,6 +772,8 @@ test('WAP-E12: drifted or unreadable settings fail connect closed before the web
           return response([
             { name: 'synthetic-one', connectionStatus: 'close' },
           ]);
+        if (path.includes('/instance/connectionState/'))
+          return response({ instance: { state: 'close' } });
         if (path.includes('/settings/set/')) return refused;
         return assert.fail(`no call after a refused settings write: ${path}`);
       },

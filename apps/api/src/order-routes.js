@@ -113,11 +113,16 @@ export function registerOrderRoutes(
       if (query.period !== undefined && !SUMMARY_PERIODS.has(query.period)) {
         throw new OrderRequestError(400, 'INVALID_FILTER');
       }
-      await authorizeRead(request, orders);
+      const access = await authorizeRead(request, orders);
       privateReadHeaders(reply);
       return reply
         .code(200)
-        .send(await orders.summary({ period: query.period ?? 'hoje' }));
+        .send(
+          await orders.summary(
+            { period: query.period ?? 'hoje' },
+            access.actor,
+          ),
+        );
     }),
   );
   api.get('/api/v1/orders', async (request, reply) =>
@@ -238,7 +243,7 @@ export function registerOrderRoutes(
         throw new OrderRequestError(400, 'INVALID_REQUEST');
       }
       const principal = await authorizeRead(request, orders, 'order.print');
-      const { order } = await orders.get(orderId);
+      const { order } = await orders.get(orderId, principal.actor);
       if (order.status !== 'confirmado') {
         throw new OrderRequestError(409, 'ORDER_NOT_CONFIRMED');
       }
@@ -375,7 +380,7 @@ export function registerOrderRoutes(
                     : null,
                 );
           const principal = await authorizeRead(request, orders, 'order.print');
-          const { order } = await orders.get(orderId);
+          const { order } = await orders.get(orderId, principal.actor);
           if (
             expectedVersion !== null &&
             Number(order.version) !== expectedVersion
@@ -405,8 +410,8 @@ export function registerOrderRoutes(
           }
           const pdf = await pdfRenderer(html);
           if (expectedVersion !== null) {
-            await authorizeRead(request, orders, 'order.print');
-            const { order: current } = await orders.get(orderId);
+            const again = await authorizeRead(request, orders, 'order.print');
+            const { order: current } = await orders.get(orderId, again.actor);
             if (
               Number(current.version) !== expectedVersion ||
               current.status !== 'confirmado'
@@ -532,9 +537,11 @@ export function registerOrderRoutes(
         'ORDER_ID',
       );
       rejectUnknownKeys(requireObject(request.query ?? {}), []);
-      await authorizeRead(request, orders);
+      const access = await authorizeRead(request, orders);
       reply.header('cache-control', 'private, no-store');
-      return reply.code(200).send(await orders.priceBreakdown(orderId));
+      return reply
+        .code(200)
+        .send(await orders.priceBreakdown(orderId, access.actor));
     }),
   );
   api.post('/api/v1/orders/:orderId/price-breakdown', async (request, reply) =>
@@ -779,6 +786,10 @@ export function registerOrderRoutes(
         contextFor,
         'order.milestones',
       );
+      // WAP-07/08: an order this person may not read is not found here
+      // either; the shape check then reads the stored conversation, which
+      // the presented order hides when its chat is not this person's.
+      await orders.get(orderId, command.actor);
       const current = (await orders.get(orderId)).order;
       if (
         (current.origin !== 'loja' &&
@@ -889,9 +900,11 @@ function registerOrderFileRoutes(api, orders, contextFor) {
     respond(reply, async () => {
       const params = requireObject(request.params);
       const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
-      await authorizeRead(request, orders);
+      const access = await authorizeRead(request, orders);
       privateReadHeaders(reply);
-      return reply.code(200).send(await orders.listFiles(orderId));
+      return reply
+        .code(200)
+        .send(await orders.listFiles(orderId, access.actor));
     }),
   );
 
@@ -928,8 +941,12 @@ function registerOrderFileRoutes(api, orders, contextFor) {
         const params = requireObject(request.params);
         const orderId = requireIdentifier(params.orderId, 'ORDER_ID');
         const fileId = requireIdentifier(params.fileId, 'FILE_ID');
-        await authorizeRead(request, orders);
-        const opened = await orders.openFileThumbnail(orderId, fileId);
+        const access = await authorizeRead(request, orders);
+        const opened = await orders.openFileThumbnail(
+          orderId,
+          fileId,
+          access.actor,
+        );
         // A file id never changes its bytes, so the browser may keep it.
         reply.header('cache-control', 'private, max-age=86400, immutable');
         reply.header('vary', 'Origin, Cookie');

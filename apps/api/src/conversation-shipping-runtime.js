@@ -9,6 +9,7 @@ import { authorize } from '@crm-silmer/identity-access';
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import { contactConversationVisible } from '@crm-silmer/contacts';
 import { lockConversationAccess } from '@crm-silmer/inbox-channels';
+import { orderReadable } from '@crm-silmer/orders';
 
 export class ConversationShippingError extends Error {
   /** @param {number} statusCode @param {string} code */
@@ -509,9 +510,12 @@ export function createConversationShippingRuntime(database, options) {
       return database.transaction(async (/** @type {any} */ client) => {
         const actor = await actorFor(client, input.actor, 'order.read');
         const orderId = identifier(input.orderId);
+        // WAP-07/08: the estimate of an order whose Contact this seller may
+        // not read is not found, like the order itself.
         const order = await client.query(
-          'SELECT id FROM crm.orders WHERE id=$1',
-          [orderId],
+          `SELECT id FROM crm.orders WHERE id=$1
+             AND ${orderReadable('orders', '$2')}`,
+          [orderId, actor.id],
         );
         if (!order.rows[0])
           throw new ConversationShippingError(404, 'ORDER_NOT_FOUND');

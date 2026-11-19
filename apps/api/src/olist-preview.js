@@ -1,5 +1,6 @@
 import {
   PostgresOrderRepository,
+  orderReadable,
   orderSourceView,
   operationalDay,
 } from '@crm-silmer/orders';
@@ -81,9 +82,13 @@ export function createOlistPreview(database, options) {
         [config.accountKey],
       );
       const settingsRow = settingsRows.rows[0];
+      // WAP-07/08 (F12): a seller never reviews, checks or sends the order of
+      // a Contact that seller may not read; it is not found, before any
+      // buyer data is decrypted. Financeiro keeps its company-wide review.
       const orderRows = await tx.query(
-        'SELECT id,cancelled_at FROM crm.orders WHERE id=$1 FOR SHARE',
-        [input.orderId],
+        `SELECT id,cancelled_at FROM crm.orders WHERE id=$1
+           AND ($2::text IS NULL OR ${orderReadable('orders', '$2')}) FOR SHARE`,
+        [input.orderId, actor.functionName === 'Vendedor' ? actor.id : null],
       );
       if (!orderRows.rows[0]) throw new OlistError('ORDER_NOT_FOUND', 404);
       if (orderRows.rows[0].cancelled_at)

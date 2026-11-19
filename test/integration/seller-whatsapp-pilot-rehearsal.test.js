@@ -84,9 +84,10 @@ const { createGenerationRuntime } = /** @type {any} */ (
 //   cannot link it and registering its phone conflicts without candidates.
 //   The SAME Contact shared by A and B (T05-07) is therefore a common Clientes
 //   Contact that both link explicitly, as ADR 090 and the E03 runbook allow.
-// - B reading A's Pedido by direct ID follows the E07 contract: the
-//   standalone detail is readable through order.read, but conversation,
-//   Subject, receipt and edits stay denied.
+// - B reading A's Pedido by direct ID follows the PO rule of 18/11/2026
+//   (WAP-07/08): the order of A's private client is not found for B, by id,
+//   in the list and by its number; conversation, Subject, receipt and edits
+//   stay denied.
 // - an Inbox reply after an outcome_unknown send is a NEW command (the
 //   "1 unsettled send" limit is the first-send pendingSend); the uncertain
 //   command is never re-dispatched.
@@ -1327,15 +1328,24 @@ test(
             R.convA,
             R.subjectA,
           ]);
-          // E07 contract: order.read shows the standalone detail only.
-          const foreign = body(
-            await as(who, 'GET', `/api/v1/orders/${R.orderA.id}`),
+          // WAP-07/08 (PO, 18/11/2026): the order of A's private client is
+          // not found for B or C, by id, in the list or by its number.
+          const foreign = await as(who, 'GET', `/api/v1/orders/${R.orderA.id}`);
+          assert.equal(foreign.statusCode, 404, foreign.body);
+          assert.deepEqual(JSON.parse(foreign.body), {
+            error: { code: 'ORDER_NOT_FOUND' },
+          });
+          denied(foreign, [...secrets, R.orderA.id]);
+          const listed = body(
+            await as(
+              who,
+              'GET',
+              `/api/v1/orders?q=${encodeURIComponent(R.orderA.number)}`,
+            ),
             200,
-          ).order;
-          assert.equal(foreign.conversationId, null);
-          assert.equal(foreign.originSubjectId, null);
-          assert.equal(foreign.receiptAvailable, false);
-          assert.equal(JSON.stringify(foreign).includes(R.convA), false);
+          );
+          assert.deepEqual(listed.items, []);
+          assert.equal(JSON.stringify(listed).includes(R.orderA.id), false);
           denied(
             await as(who, 'GET', `/api/v1/orders/${R.orderA.id}/receipt`),
             secrets,

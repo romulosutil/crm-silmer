@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { createCipheriv, randomBytes, randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { Pool } from 'pg';
 import {
@@ -17,6 +17,11 @@ import { encryptJson } from '../modules/orders/src/adapters/envelope.js';
 import { syntheticItems, syntheticArtwork } from './fixtures/order-items.js';
 import { fixturePricing } from './fixtures/size-pricing.js';
 import { createSubjectService } from '../modules/inbox-channels/src/application/subject-service.js';
+import { InMemoryObjectStorage } from '../modules/orders/src/adapters/in-memory-order-files.js';
+import {
+  contactPhoneHash,
+  normalizeContactPhone,
+} from '../modules/contacts/src/domain/contact-details.js';
 
 const url = process.env.TEST_DATABASE_URL;
 const KEY = Buffer.alloc(32, 57);
@@ -1029,10 +1034,28 @@ else {
             { code: 'FORBIDDEN' },
           );
           // Commercial visibility stays independent; revoking chat never rewrites it.
+          // WAP-07/08 (Tech Lead, 18/11/2026): the order's own seller keeps it.
           assert.equal(
             (await runtime().get(first.order.id, seller)).order.id,
             first.order.id,
           );
+          assert.equal(
+            (await runtime().get(first.order.id, other)).order.id,
+            first.order.id,
+          );
+          // A seller who never owned it and has no wallet link does not.
+          const stranger = { ...seller, id: 'subject-stranger' };
+          await pool.query(
+            `INSERT INTO crm.users(id,email,password_hash,name) VALUES($1,'subject-stranger@example.test','$argon2id$synthetic','Estranho Sintético')`,
+            [stranger.id],
+          );
+          await pool.query(
+            "INSERT INTO crm.user_functions(user_id,function_name) VALUES($1,'Vendedor')",
+            [stranger.id],
+          );
+          await assert.rejects(runtime().get(first.order.id, stranger), {
+            code: 'ORDER_NOT_FOUND',
+          });
           assert.equal(
             (
               await pool.query(
@@ -1430,6 +1453,309 @@ else {
           const general = await standalone(intruder, generalContact);
           assert.equal(general.contactId, generalContact);
           assert.equal(await manualOrders(privateContact), 2);
+        },
+      );
+      await t.test(
+        'WAP-07/08: a private client order is absent from every read of another seller',
+        async () => {
+          // Users from P1-1: another seller and an Admin.
+          const intruder = {
+            id: 'acl-intruder',
+            kind: 'human',
+            functionName: 'Vendedor',
+            capabilities: [],
+          };
+          const admin = {
+            ...intruder,
+            id: 'acl-admin',
+            capabilities: ['COMMERCIAL_ADMIN'],
+          };
+          const NAME = 'Cliente Carteira Sigilosa';
+          const PHONE = '11977776666';
+          const privateContact = await conversation('vis-private');
+          await personalLine(seller.id, 'vis-private', privateContact);
+          await pool.query(
+            'UPDATE crm.contacts SET display_name=$2,contact_phone_hash=$3 WHERE id=$1',
+            [
+              privateContact,
+              NAME,
+              contactPhoneHash(
+                /** @type {string} */ (normalizeContactPhone(PHONE)),
+                KEY,
+              ),
+            ],
+          );
+          await conversation('vis-general');
+          const files = new InMemoryObjectStorage();
+          /** @param {any} actor */
+          const as = (actor) =>
+            createOrderApiRuntime(database, {
+              access: {
+                authorizeRead: async () => ({ actor }),
+                authorizeWrite: async () => ({ actor }),
+              },
+              environment,
+              storage: files,
+            });
+          const conversationOrder = (
+            await as(seller).createManual(command('vis-private'))
+          ).order;
+          const manualOrder = await as(seller).createForContact({
+            actor: seller,
+            contactId: privateContact,
+            idempotencyKey: randomUUID(),
+            correlationId: randomUUID(),
+          });
+          const generalOrder = (
+            await as(seller).createManual(command('vis-general'))
+          ).order;
+          const hiddenIds = [conversationOrder.id, manualOrder.id];
+          // The search decrypts each identity; give this suite's identities
+          // real envelopes, the private one carrying the client's phone.
+          for (const row of (
+            await pool.query(
+              'SELECT id,external_identity_lookup_hash FROM crm.contact_identities',
+            )
+          ).rows) {
+            const iv = randomBytes(12);
+            const cipher = createCipheriv('aes-256-gcm', KEY, iv);
+            cipher.setAAD(
+              Buffer.from(
+                JSON.stringify([
+                  'crm.contact_identities',
+                  1,
+                  row.external_identity_lookup_hash,
+                ]),
+              ),
+            );
+            const ciphertext = Buffer.concat([
+              cipher.update(
+                JSON.stringify({
+                  displayHandle: null,
+                  externalIdentityId:
+                    row.id === 'identity-vis-private'
+                      ? `55${PHONE}`
+                      : '5521900000000',
+                }),
+              ),
+              cipher.final(),
+            ]);
+            await pool.query(
+              'UPDATE crm.contact_identities SET identity_envelope=$2::jsonb WHERE id=$1',
+              [
+                row.id,
+                JSON.stringify({
+                  algorithm: 'AES-256-GCM',
+                  keyVersion: 1,
+                  version: 1,
+                  iv: iv.toString('base64'),
+                  tag: cipher.getAuthTag().toString('base64'),
+                  ciphertext: ciphertext.toString('base64'),
+                }),
+              ],
+            );
+          }
+          /** @param {any} actor @param {Record<string, unknown>} [filters] */
+          const everyPage = async (actor, filters = {}) => {
+            /** @type {string[]} */
+            const ids = [];
+            let cursor = null;
+            let counts;
+            do {
+              const page = await as(actor).list(
+                { ...filters, limit: 2, ...(cursor ? { cursor } : {}) },
+                actor,
+              );
+              counts = page.counts;
+              ids.push(...page.items.map((/** @type {any} */ o) => o.id));
+              cursor = page.nextCursor;
+            } while (cursor);
+            return { counts, ids };
+          };
+          const forIntruder = await everyPage(intruder);
+          const forAdmin = await everyPage(admin);
+          const forOwner = await everyPage(seller);
+          // Pages walk the same set the counts describe, with no repeats.
+          for (const view of [forIntruder, forAdmin, forOwner]) {
+            assert.equal(new Set(view.ids).size, view.ids.length);
+            assert.equal(
+              view.ids.length,
+              view.counts.pendente + view.counts.confirmado,
+            );
+          }
+          for (const id of hiddenIds) {
+            assert.ok(!forIntruder.ids.includes(id));
+            assert.ok(forAdmin.ids.includes(id));
+            assert.ok(forOwner.ids.includes(id));
+          }
+          assert.ok(forIntruder.ids.includes(generalOrder.id));
+          // Earlier private clients of this suite are hidden as well; the
+          // intruder reads a subset of the Admin's orders, and each order the
+          // intruder misses is one whose Contact has no general-line identity
+          // and no wallet link of the intruder.
+          assert.ok(forIntruder.ids.every((id) => forAdmin.ids.includes(id)));
+          const missing = forAdmin.ids.filter(
+            (id) => !forIntruder.ids.includes(id),
+          );
+          assert.equal(
+            forAdmin.counts.pendente +
+              forAdmin.counts.confirmado -
+              forIntruder.counts.pendente -
+              forIntruder.counts.confirmado,
+            missing.length,
+          );
+          const unexplained = (
+            await pool.query(
+              `SELECT orders.id FROM crm.orders orders
+               JOIN crm.contacts contact ON contact.id=orders.contact_id
+               WHERE orders.id=ANY($1::text[]) AND (EXISTS (
+                 SELECT 1 FROM crm.seller_client_links link
+                 WHERE link.contact_id=contact.id AND link.seller_id=$2
+                   AND link.status='active') OR EXISTS (
+                 SELECT 1 FROM crm.contact_identities identity
+                 WHERE identity.current_contact_id=contact.id
+                   AND identity.provider_account_id='subject-account'))`,
+              [missing, intruder.id],
+            )
+          ).rows;
+          assert.deepEqual(unexplained, []);
+          // Name, phone and number searches find nothing for the intruder.
+          for (const q of [
+            'Sigilosa',
+            PHONE,
+            conversationOrder.number,
+            manualOrder.number,
+          ]) {
+            const hidden = await as(intruder).list({ q }, intruder);
+            assert.deepEqual(
+              hidden.items.map((/** @type {any} */ o) => o.id),
+              [],
+              q,
+            );
+            assert.deepEqual(hidden.counts, { confirmado: 0, pendente: 0 }, q);
+          }
+          for (const actor of [seller, admin]) {
+            const found = await as(actor).list({ q: 'Sigilosa' }, actor);
+            assert.deepEqual(
+              found.items.map((/** @type {any} */ o) => o.id).sort(),
+              [...hiddenIds].sort(),
+            );
+            const byPhone = await as(actor).list({ q: PHONE }, actor);
+            assert.ok(
+              byPhone.items.some(
+                (/** @type {any} */ o) => o.id === manualOrder.id,
+              ),
+            );
+          }
+          // Detail, sub-resources and commands answer as for an unknown id.
+          for (const id of hiddenIds) {
+            const runtime = as(intruder);
+            for (const read of [
+              () => runtime.get(id, intruder),
+              () => runtime.priceBreakdown(id, intruder),
+              () => runtime.listFiles(id, intruder),
+              () => runtime.getReceipt(id, intruder),
+              () =>
+                runtime.patchSection({
+                  actor: intruder,
+                  correlationId: randomUUID(),
+                  expectedVersion: 1,
+                  idempotencyKey: randomUUID(),
+                  orderId: id,
+                  section: 'observations',
+                  value: [],
+                }),
+              () =>
+                runtime.confirm({
+                  actor: intruder,
+                  correlationId: randomUUID(),
+                  expectedVersion: 1,
+                  idempotencyKey: randomUUID(),
+                  orderId: id,
+                  paymentCondition: 'pix',
+                }),
+              () =>
+                runtime.cancel({
+                  actor: intruder,
+                  correlationId: randomUUID(),
+                  expectedVersion: 1,
+                  idempotencyKey: randomUUID(),
+                  orderId: id,
+                  reason: 'Motivo sintético',
+                }),
+              () =>
+                runtime.setFreight({
+                  actor: intruder,
+                  correlationId: randomUUID(),
+                  expectedVersion: 1,
+                  freightCents: 100,
+                  idempotencyKey: randomUUID(),
+                  orderId: id,
+                }),
+            ])
+              await assert.rejects(read(), { code: 'ORDER_NOT_FOUND' });
+            for (const actor of [seller, admin])
+              assert.equal((await as(actor).get(id, actor)).order.id, id);
+          }
+          assert.equal(
+            (await as(intruder).get(generalOrder.id, intruder)).order.id,
+            generalOrder.id,
+          );
+          // The Painel figures leave the hidden orders out for the intruder.
+          const [intruderSummary, adminSummary] = await Promise.all([
+            as(intruder).summary({ period: 'hoje' }, intruder),
+            as(admin).summary({ period: 'hoje' }, admin),
+          ]);
+          assert.equal(
+            adminSummary.pendingCount - intruderSummary.pendingCount,
+            forAdmin.counts.pendente - forIntruder.counts.pendente,
+          );
+          assert.ok(
+            adminSummary.pendingCount - intruderSummary.pendingCount >=
+              hiddenIds.length,
+          );
+          // HTTP: 404 ORDER_NOT_FOUND bodies, no name, no id echoed.
+          const api = createApi({}, { orders: as(intruder) });
+          try {
+            for (const request of [
+              { method: 'GET', url: `/api/v1/orders/${manualOrder.id}` },
+              { method: 'GET', url: `/api/v1/orders/${manualOrder.id}/print` },
+              { method: 'GET', url: `/api/v1/orders/${manualOrder.id}/pdf` },
+              {
+                method: 'GET',
+                url: `/api/v1/orders/${manualOrder.id}/price-breakdown`,
+              },
+              { method: 'GET', url: `/api/v1/orders/${manualOrder.id}/files` },
+              {
+                method: 'PATCH',
+                url: `/api/v1/orders/${manualOrder.id}/sections/observations`,
+                headers: { 'idempotency-key': randomUUID() },
+                payload: { expectedVersion: 1, value: [] },
+              },
+            ]) {
+              const response = await api.inject(/** @type {any} */ (request));
+              assert.equal(response.statusCode, 404, request.url);
+              assert.deepEqual(response.json(), {
+                error: { code: 'ORDER_NOT_FOUND' },
+              });
+              assert.doesNotMatch(response.body, /Sigilosa|Sintético/u);
+            }
+            for (const request of [
+              { method: 'GET', url: '/api/v1/orders?q=Sigilosa' },
+              {
+                method: 'POST',
+                url: '/api/v1/orders/search',
+                payload: { q: PHONE },
+              },
+            ]) {
+              const response = await api.inject(/** @type {any} */ (request));
+              assert.equal(response.statusCode, 200, response.body);
+              assert.deepEqual(response.json().items, []);
+              assert.doesNotMatch(response.body, /Sigilosa/u);
+            }
+          } finally {
+            await api.close();
+          }
         },
       );
     } finally {

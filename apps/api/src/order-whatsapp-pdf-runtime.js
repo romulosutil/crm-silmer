@@ -8,6 +8,7 @@ import {
   snapshotWhatsAppTarget,
 } from '@crm-silmer/n8n-integration';
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
+import { orderReadable } from '@crm-silmer/orders';
 
 /** @param {number} statusCode @param {string} code */
 const refusal = (statusCode, code) =>
@@ -31,10 +32,13 @@ export function createOrderWhatsAppPdfRuntime(
   async function current(client, input) {
     if (input.actor?.kind !== 'human' || !allowed.has(input.actor.id))
       throw refusal(403, 'FORBIDDEN');
+    // WAP-07/08: an order whose Contact this seller may not read is not found.
     const found = (
-      await client.query('SELECT conversation_id FROM crm.orders WHERE id=$1', [
-        input.orderId,
-      ])
+      await client.query(
+        `SELECT conversation_id FROM crm.orders WHERE id=$1
+           AND ${orderReadable('orders', '$2')}`,
+        [input.orderId, input.actor.id],
+      )
     ).rows[0];
     if (!found) throw refusal(404, 'ORDER_NOT_FOUND');
     const conversationId = found.conversation_id;

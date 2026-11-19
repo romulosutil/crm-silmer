@@ -1,6 +1,7 @@
 import { createOlistAdministration } from './olist-administration.js';
 import { createOlistExportCommand } from './olist-export-command.js';
 import { createOlistPreview } from './olist-preview.js';
+import { orderReadable } from '@crm-silmer/orders';
 import {
   PostgresIdempotencyRecordStore,
   fingerprintCommand,
@@ -118,9 +119,12 @@ export function createOlistApiRuntime(database, options) {
         input.action ?? 'olist.read',
         clock(),
       );
+      // WAP-07/08: a seller's Olist panel never names an order whose Contact
+      // that seller may not read; Financeiro keeps its company-wide reach.
       const { rows } = await client.query(
-        'SELECT o.id,o.number,o.status,o.manual_owner_id,c.assigned_user_id FROM crm.orders o LEFT JOIN crm.conversations c ON c.id=o.conversation_id WHERE o.id=$1',
-        [input.orderId],
+        `SELECT o.id,o.number,o.status,o.manual_owner_id,c.assigned_user_id FROM crm.orders o LEFT JOIN crm.conversations c ON c.id=o.conversation_id WHERE o.id=$1
+           AND ($2::text IS NULL OR ${orderReadable('o', '$2')})`,
+        [input.orderId, actor.functionName === 'Vendedor' ? actor.id : null],
       );
       const order = rows[0];
       if (!order) throw new OlistError('ORDER_NOT_FOUND', 404);
@@ -257,10 +261,16 @@ export function createOlistApiRuntime(database, options) {
         throw new OlistError('INVALID_REQUEST', 400);
       const orderId = await database.transaction(
         async (/** @type {any} */ client) => {
-          await lockOlistActor(client, input, 'olist.export', clock());
+          const actor = await lockOlistActor(
+            client,
+            input,
+            'olist.export',
+            clock(),
+          );
           const { rows } = await client.query(
-            'SELECT id FROM crm.orders WHERE number=$1 OR id=$1',
-            [query],
+            `SELECT id FROM crm.orders WHERE (number=$1 OR id=$1)
+               AND ($2::text IS NULL OR ${orderReadable('orders', '$2')})`,
+            [query, actor.functionName === 'Vendedor' ? actor.id : null],
           );
           if (rows.length !== 1) throw new OlistError('ORDER_NOT_FOUND', 404);
           return rows[0].id;

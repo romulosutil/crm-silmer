@@ -76,6 +76,22 @@ import {
  * }} OrderServiceOptions
  */
 
+/**
+ * WAP-07/08 (PO, 18/11/2026): what a person reads of the orders. An order
+ * whose Contact this person may not read is absent from every read and
+ * command, as an unknown id (404); the repository applies the Contact rule
+ * in SQL, with COMMERCIAL_ADMIN reading every order. Without a person (the
+ * agent, internal projections) nothing is narrowed.
+ *
+ * @param {{kind?: string, id?: string}|null|undefined} actor
+ * @returns {{visibilityActorId?: string}}
+ */
+function readerOf(actor) {
+  return actor?.kind === 'human' && typeof actor.id === 'string' && actor.id
+    ? { visibilityActorId: actor.id }
+    : {};
+}
+
 /** @param {unknown} value @param {string} name */
 function requireId(value, name) {
   if (typeof value !== 'string' || value.trim() === '') {
@@ -376,7 +392,7 @@ export function createOrderService(options) {
         'expectedVersion',
       ]);
     }
-    const order = await repository.findById(orderId);
+    const order = await repository.findById(orderId, readerOf(input.actor));
     if (!order) throw new OrderNotFoundError();
     // ADR 027: a store order is locked for everyone, owner or not.
     requireUnlocked(order);
@@ -559,12 +575,12 @@ export function createOrderService(options) {
    * The open deliveries with their promised day, earliest first. Orders
    * without a promised day (store orders, older fichas) are left out.
    *
-   * @param {Date} now
+   * @param {Date} now @param {{visibilityActorId?: string}} [reader]
    */
-  async function promisedDeliveries(now) {
+  async function promisedDeliveries(now, reader = {}) {
     const today = operationalDay(now);
     const dueSoonUntil = shiftDay(today, DUE_SOON_DAYS - 1);
-    const deliveries = (await repository.openDeliveries())
+    const deliveries = (await repository.openDeliveries(reader))
       .map((order) => ({ day: promisedDeliveryOn(order), order }))
       .filter(
         /** @returns {entry is {day: string, order: Order}} */
@@ -591,7 +607,10 @@ export function createOrderService(options) {
      * @param {string} orderId @param {OrderActor} actor */
     async getForReceipt(orderId, actor) {
       if (actor?.kind !== 'human' || !actor.id) throw new OrderForbiddenError();
-      const order = await repository.findById(requireId(orderId, 'orderId'));
+      const order = await repository.findById(
+        requireId(orderId, 'orderId'),
+        readerOf(actor),
+      );
       if (!order) throw new OrderNotFoundError();
       if (!(actor.capabilities ?? []).includes('COMMERCIAL_ADMIN')) {
         if (order.origin === 'loja') throw new OrderForbiddenError();
@@ -603,6 +622,7 @@ export function createOrderService(options) {
     async assertCancellationAccess(input) {
       const order = await repository.findById(
         requireId(input.orderId, 'orderId'),
+        readerOf(input.actor),
       );
       if (!order) throw new OrderNotFoundError();
       if (order.origin === 'loja') {
@@ -629,9 +649,13 @@ export function createOrderService(options) {
      * São Paulo days and are worked out here, so every screen agrees on what
      * "hoje" is.
      *
-     * @param {{period?: unknown}} [input]
+     * WAP-07/08: with a person, the figures and the delivery counts leave out
+     * the orders that person may not read, as the lists they open do.
+     *
+     * @param {{period?: unknown}} [input] @param {any} [actor]
      */
-    async summary(input = {}) {
+    async summary(input = {}, actor = undefined) {
+      const reader = readerOf(actor);
       const now = clock();
       const period = summaryPeriod(
         /** @type {any} */ (input.period ?? 'hoje'),
@@ -648,8 +672,9 @@ export function createOrderService(options) {
           dailyTo: period.to,
           from: period.from,
           to: period.to,
+          ...reader,
         }),
-        promisedDeliveries(now),
+        promisedDeliveries(now, reader),
       ]);
       const { daily: soldDays, ...figures } = totals;
       const sold = new Map((soldDays ?? []).map((entry) => [entry.day, entry]));
@@ -889,6 +914,7 @@ export function createOrderService(options) {
     async assertPriceBreakdownAccess(input) {
       const order = await repository.findById(
         requireId(input.orderId, 'orderId'),
+        readerOf(input.actor),
       );
       if (!order) throw new OrderNotFoundError();
       if (order.origin === 'loja') {
@@ -903,9 +929,12 @@ export function createOrderService(options) {
       await repository.assertPriceBreakdownAccess(input);
     },
 
-    /** @param {string} orderId */
-    async priceBreakdown(orderId) {
-      const order = await repository.findById(requireId(orderId, 'orderId'));
+    /** @param {string} orderId @param {any} [actor] */
+    async priceBreakdown(orderId, actor) {
+      const order = await repository.findById(
+        requireId(orderId, 'orderId'),
+        readerOf(actor),
+      );
       if (!order) throw new OrderNotFoundError();
       const records = repository.readPriceBreakdowns
         ? await repository.readPriceBreakdowns([order])
@@ -914,9 +943,12 @@ export function createOrderService(options) {
     },
 
     /** Internal reader for the authorized Olist preview boundary; not an HTTP route.
-     * @param {string} orderId */
-    async sourceForOlist(orderId) {
-      const order = await repository.findById(requireId(orderId, 'orderId'));
+     * @param {string} orderId @param {any} [actor] */
+    async sourceForOlist(orderId, actor) {
+      const order = await repository.findById(
+        requireId(orderId, 'orderId'),
+        readerOf(actor),
+      );
       if (!order) throw new OrderNotFoundError();
       const sources = repository.readPriceBreakdowns
         ? await repository.readPriceBreakdowns([order])
@@ -934,9 +966,12 @@ export function createOrderService(options) {
       );
     },
 
-    /** @param {string} orderId */
-    async get(orderId) {
-      const order = await repository.findById(requireId(orderId, 'orderId'));
+    /** @param {string} orderId @param {any} [actor] */
+    async get(orderId, actor) {
+      const order = await repository.findById(
+        requireId(orderId, 'orderId'),
+        readerOf(actor),
+      );
       if (!order) throw new OrderNotFoundError();
       return readOne(order);
     },
@@ -962,6 +997,12 @@ export function createOrderService(options) {
           throw new OrderInputError(`${key} is not allowed`, [key]);
         }
       }
+      // WAP-07/08: the reader's Contact rule narrows the page, its counts
+      // and its cursor alike (`reader.actorId`, set by the API runtime).
+      const listReader =
+        typeof reader?.actorId === 'string' && reader.actorId
+          ? { visibilityActorId: reader.actorId }
+          : {};
       if (input.q !== undefined && typeof input.q !== 'string') {
         throw new OrderInputError('q must be text', ['q']);
       }
@@ -980,7 +1021,7 @@ export function createOrderService(options) {
         ) {
           throw new OrderInputError('delivery is invalid', ['delivery']);
         }
-        const deliveries = await promisedDeliveries(clock());
+        const deliveries = await promisedDeliveries(clock(), listReader);
         const matching =
           input.delivery === 'overdue'
             ? deliveries.overdue
@@ -999,6 +1040,7 @@ export function createOrderService(options) {
         cursor: input.cursor ?? null,
         limit: input.limit ?? DEFAULT_ORDER_PAGE_SIZE,
         status: /** @type {any} */ (input.status),
+        ...listReader,
       };
       if (input.origin !== undefined) {
         query.origin = /** @type {any} */ (input.origin);
@@ -1168,6 +1210,7 @@ export function createOrderService(options) {
     async assertFreightAccess(input) {
       const order = await repository.findById(
         requireId(input.orderId, 'orderId'),
+        readerOf(input.actor),
       );
       if (!order) throw new OrderNotFoundError();
       requireUnlocked(order);
@@ -1285,7 +1328,7 @@ export function createOrderService(options) {
       if (input.actor?.kind !== 'human' || !input.actor.id) {
         throw new OrderForbiddenError('A human actor is required');
       }
-      const orders = (await repository.openDeliveries())
+      const orders = (await repository.openDeliveries(readerOf(input.actor)))
         .filter(
           (order) =>
             order.conversationId === null &&

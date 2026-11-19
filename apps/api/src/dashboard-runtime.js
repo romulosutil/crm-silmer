@@ -11,6 +11,7 @@ import {
 } from '@crm-silmer/integration-reliability';
 import {
   operationalDay,
+  orderReadable,
   PostgresOrderRepository,
   promisedDeliveryOn,
 } from '@crm-silmer/orders';
@@ -501,6 +502,8 @@ export function createDashboardRuntime(database, options) {
              LEFT JOIN crm.dashboard_action_decisions d ON d.user_id=$1 AND d.action_id='order:' || o.id
              WHERE o.origin='atendimento' AND NOT o.is_test AND o.cancelled_at IS NULL
                AND (o.manual_owner_id=$1 OR c.assigned_user_id=$1)
+               -- WAP-07/08: never a client this person may not read.
+               AND ${orderReadable('o', '$1')}
                AND (o.status='pendente' OR (o.status='confirmado' AND
                     (o.paid_on IS NULL OR o.finance_payment_review_required OR o.delivered_on IS NULL)))
              ORDER BY CASE WHEN o.status='confirmado' THEN 0 ELSE 1 END,o.created_at,o.id`,

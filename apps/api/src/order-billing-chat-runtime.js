@@ -21,6 +21,7 @@ import {
   billingSplit,
   decryptOrderPrivateJson,
   billingUrl,
+  orderReadable,
 } from '@crm-silmer/orders';
 import {
   billingChatError as error,
@@ -274,10 +275,12 @@ export function createOrderBillingChatRuntime(database, options) {
       capabilities: grants.map((/** @type {any} */ g) => g.capability),
     };
     authorize(actor, write ? 'billing.manage' : 'billing.read');
+    // WAP-07/08: an order whose Contact this person may not read is not found.
     const before = (
       await client.query(
-        'SELECT conversation_id,contact_id FROM crm.orders WHERE id=$1',
-        [identifier(input.orderId)],
+        `SELECT conversation_id,contact_id FROM crm.orders WHERE id=$1
+           AND ${orderReadable('orders', '$2')}`,
+        [identifier(input.orderId), actor.id],
       )
     ).rows[0];
     if (!before) throw error('ORDER_NOT_FOUND', 404);

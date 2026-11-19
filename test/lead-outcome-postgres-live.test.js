@@ -995,6 +995,7 @@ test(
           (await leads.detail({ actor: admin, conversationId: personal })).note,
           NOTE,
         );
+        // The order's seller keeps the commercial estimate without chat.
         const commercial = (
           await shipping.read({ actor: seller, orderId: row.id })
         ).quote;
@@ -1005,10 +1006,16 @@ test(
           'UPDATE crm.conversations SET assigned_user_id=NULL WHERE id=$1',
           [quotedConversation],
         );
-        assert.equal(
-          (await shipping.read({ actor: other, orderId: row.id })).quote
-            .conversationId,
-          null,
+        // WAP-07/08: a seller who never sold it and has no wallet link for
+        // this private client gets the order and its estimate as not found.
+        await assert.rejects(shipping.read({ actor: other, orderId: row.id }), {
+          statusCode: 404,
+          code: 'ORDER_NOT_FOUND',
+        });
+        assert.deepEqual(
+          (await shipping.read({ actor: admin, orderId: row.id })).quote
+            .services,
+          quote.services,
         );
         assert.equal(
           (await shipping.read({ actor: admin, orderId: row.id })).quote

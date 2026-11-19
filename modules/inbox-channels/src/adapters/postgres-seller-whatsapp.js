@@ -1041,10 +1041,16 @@ export class PostgresSellerWhatsAppRepository {
               [line.id, line.generation],
             )
           ).rows[0];
+          // The challenge response can be lost when the socket opens without
+          // issuing new pairing material. The live socket binding below still
+          // has to attest that this generation reached the provider.
           const attemptedChallenge = (
             await client.query(
-              "SELECT id FROM crm.seller_whatsapp_challenges WHERE line_id=$1 AND generation=$2 AND state IN ('dispatching','delivered','resolved') LIMIT 1",
-              [line.id, line.generation],
+              `SELECT id FROM crm.seller_whatsapp_challenges
+               WHERE line_id=$1 AND generation=$2 AND operation_id=$3
+                 AND state IN ('dispatching','delivered','resolved','unknown')
+               LIMIT 1`,
+              [line.id, line.generation, op.id],
             )
           ).rows[0];
           if (

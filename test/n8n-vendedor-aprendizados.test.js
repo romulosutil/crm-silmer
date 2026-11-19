@@ -115,7 +115,7 @@ function shirtWithout(...without) {
     fabrics: 'algodão',
     artwork_locations: 'frente',
     artwork_status: 'cliente envia a arte',
-    needed_by: '20/11',
+    needed_by: '20/03',
   };
   for (const field of without) delete briefing[field];
   return briefing;

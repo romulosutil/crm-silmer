@@ -262,6 +262,65 @@ export function reachableNodes(workflow, start) {
   return reached;
 }
 
+/** Lays a generated workflow out left to right so the editor shows the flow
+ * instead of nodes stacked on one point: x by longest-path depth from the
+ * trigger(s), y by order inside each column (stable on the source position).
+ * Only positions change; names, ids, parameters and connections stay.
+ * @param {any} workflow */
+export function layoutWorkflow(workflow) {
+  const STEP_X = 280;
+  const STEP_Y = 180;
+  const depth = new Map();
+  const triggers = workflow.nodes.filter(
+    (/** @type {any} */ node) =>
+      !Object.values(workflow.connections).some((/** @type {any} */ kinds) =>
+        Object.values(kinds).some((/** @type {any} */ outputs) =>
+          outputs.some((/** @type {any} */ edges) =>
+            (edges ?? []).some((/** @type {any} */ e) => e.node === node.name),
+          ),
+        ),
+      ),
+  );
+  // Longest path from a trigger, so every edge of a DAG points right. A cycle
+  // cannot push a node past the node count.
+  for (const node of triggers) depth.set(node.name, 0);
+  const limit = workflow.nodes.length;
+  for (let pass = 0; pass < limit; pass += 1) {
+    let changed = false;
+    for (const [name, kinds] of Object.entries(workflow.connections)) {
+      if (!depth.has(name)) continue;
+      for (const outputs of Object.values(/** @type {any} */ (kinds)))
+        for (const edges of /** @type {any[]} */ (outputs))
+          for (const edge of edges ?? []) {
+            const next = Math.min(depth.get(name) + 1, limit);
+            if ((depth.get(edge.node) ?? -1) < next) {
+              depth.set(edge.node, next);
+              changed = true;
+            }
+          }
+    }
+    if (!changed) break;
+  }
+  const columns = new Map();
+  for (const node of workflow.nodes) {
+    const column = depth.get(node.name) ?? 0;
+    if (!columns.has(column)) columns.set(column, []);
+    columns.get(column).push(node);
+  }
+  for (const [column, nodes] of columns) {
+    nodes.sort(
+      (/** @type {any} */ a, /** @type {any} */ b) =>
+        (a.position?.[1] ?? 0) - (b.position?.[1] ?? 0) ||
+        (a.position?.[0] ?? 0) - (b.position?.[0] ?? 0) ||
+        a.name.localeCompare(b.name),
+    );
+    nodes.forEach((/** @type {any} */ node, /** @type {number} */ row) => {
+      node.position = [column * STEP_X, row * STEP_Y];
+    });
+  }
+  return workflow;
+}
+
 /** Names referenced through `$('Name')` in code and expressions.
  * @param {any} workflow */
 export function nodeReferences(workflow) {
@@ -731,6 +790,10 @@ export function buildWapProductionWorkflows(main, rawConfig) {
     ...(send ? { 'main-personal-send': send } : {}),
   };
   const scoped = { control, challenge, inbound: inbound.workflow };
+  // The generators place nodes on shared points (control/challenge at the
+  // origin, observed-outbound clones on their source). The main draft keeps
+  // the live layout untouched.
+  for (const workflow of Object.values(scoped)) layoutWorkflow(workflow);
   const summary = {
     schemaVersion: 1,
     task: 'WAP-E12',

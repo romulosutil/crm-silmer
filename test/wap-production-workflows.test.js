@@ -116,6 +116,37 @@ test('WAP-E12: every output is inactive, unpinned and the WAP set keeps no execu
   }
 });
 
+test('WAP-E12: imported workflows open laid out, with no two nodes on one point', () => {
+  for (const name of ['control', 'challenge', 'inbound']) {
+    const workflow = /** @type {any} */ (built)[name];
+    const points = workflow.nodes.map(
+      (/** @type {any} */ n) => `${n.position[0]},${n.position[1]}`,
+    );
+    assert.equal(new Set(points).size, points.length, name);
+    // Every edge flows left to right or stays in its column.
+    const x = new Map(
+      workflow.nodes.map((/** @type {any} */ n) => [n.name, n.position[0]]),
+    );
+    for (const [from, kinds] of Object.entries(workflow.connections))
+      for (const outputs of Object.values(/** @type {any} */ (kinds)))
+        for (const edges of outputs)
+          for (const edge of edges ?? [])
+            if (edge.node !== from)
+              assert.ok(
+                x.get(edge.node) >= x.get(from) ||
+                  /** @type {any} */ (kinds).main === undefined,
+                `${name}: ${from} -> ${edge.node}`,
+              );
+  }
+  // The main draft keeps the live layout.
+  const input = new Map(
+    main().nodes.map((/** @type {any} */ n) => [n.name, n.position]),
+  );
+  for (const node of built['main-personal-send'].nodes)
+    if (input.has(node.name))
+      assert.deepEqual(node.position, input.get(node.name), node.name);
+});
+
 test('WAP-E12: Guard admits only the configured lines and the Gateway stays internal', () => {
   for (const kind of /** @type {const} */ (['control', 'challenge'])) {
     const workflow = built[kind];

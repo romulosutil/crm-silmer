@@ -1291,6 +1291,40 @@ if (!url) {
       );
 
       await t.test(
+        'an open socket can resolve an uncertain challenge only with current pairing proof',
+        async () => {
+          for (const [bindingVerified, expectedState] of [
+            [true, 'connected'],
+            [false, 'blocked'],
+          ]) {
+            await reset();
+            const current = await prepared();
+            const pending = await challenge(current, { mode: 'code' });
+            await repository.reserveChallenge(pending);
+            const completion = await repository.finishChallenge({
+              ...pending,
+              delivered: false,
+              uncertain: true,
+            });
+            assert.equal(completion.state, 'unknown');
+            assert.equal(completion.deliverable, false);
+            const read = await reserve(current.operation, {
+              action: 'reconcile',
+            });
+            await result(read, {
+              providerState: 'open',
+              confirmedNumber: NUMBER,
+              bindingVerified,
+            });
+            assert.equal(
+              (await repository.get({ actorId: A })).line.state,
+              expectedState,
+            );
+          }
+        },
+      );
+
+      await t.test(
         'disable a completed connected line or an in-flight challenge fences reconnection until cleanup',
         async () => {
           for (const connected of [false, true]) {

@@ -100,6 +100,9 @@ e corpo diferente conflita.
    marcar `connected`. Um socket antigo aberto ou binding apenas preparado não
    comprovam conexão. Número divergente ou prova incompleta
    bloqueia. Nenhum pedido/envio/IA é disparado ao conectar.
+   Se o socket abrir antes de devolver QR ou código, a resposta do desafio
+   fica incerta. A leitura posterior ainda pode concluir o desafio da mesma
+   operação quando comprovar `open`, o número exato, o webhook e o binding.
    Após o vínculo no aparelho, o Baileys pede uma reinicialização `515`.
    O callback do socket atual pode continuar uma única vez na mesma geração,
    após salvar as credenciais, e o novo socket precisa capturar o binding.

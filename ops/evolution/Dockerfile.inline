@@ -82,10 +82,27 @@ function validateEnvironment(env) {
     DOCKER_ENV: 'true',
     TZ: 'UTC',
     DATABASE_SAVE_DATA_NEW_MESSAGE: 'true',
+    // WAP-E12: every Evolution 2.3.7 egress integration is pinned off. They
+    // must be present: an absent flag would leave the decision to upstream.
+    RABBITMQ_ENABLED: 'false',
+    SQS_ENABLED: 'false',
+    KAFKA_ENABLED: 'false',
+    NATS_ENABLED: 'false',
+    PUSHER_ENABLED: 'false',
+    S3_ENABLED: 'false',
+    CHATWOOT_ENABLED: 'false',
+    TYPEBOT_ENABLED: 'false',
+    OPENAI_ENABLED: 'false',
+    DIFY_ENABLED: 'false',
+    N8N_ENABLED: 'false',
+    EVOAI_ENABLED: 'false',
+    FLOWISE_ENABLED: 'false',
+    PROVIDER_ENABLED: 'false',
   };
   for (const [key, value] of Object.entries(required)) {
     if (env[key] !== value) fail('EVOLUTION_PROFILE_CONFIGURATION_INVALID');
   }
+  if (env.SENTRY_DSN) fail('EVOLUTION_PROFILE_CONFIGURATION_INVALID');
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(env.SILMER_EVOLUTION_INSTANCE || '')) {
     fail('EVOLUTION_INSTANCE_CONFIGURATION_INVALID');
   }
@@ -202,10 +219,14 @@ function installRuntimeProtection(env = process.env) {
     return result;
   };
   const { PrismaClient } = require('@prisma/client');
-  const { scheduleRetention } = require('./silmer-retention.cjs');
+  const {
+    scheduleRetention,
+    retentionInstances,
+  } = require('./silmer-retention.cjs');
   const prisma = new PrismaClient({ log: [] });
+  // WAP-E12: same seven-day policy for the general and personal instances.
   scheduleRetention(prisma, {
-    instance: env.SILMER_EVOLUTION_INSTANCE,
+    instances: retentionInstances(env),
     report: (code) => safeOutput(`${code}\n`),
   });
 }
@@ -239,20 +260,47 @@ COPY <<'SILMER_RETENTION_EOF' /evolution/silmer-retention.cjs
 
 const RETENTION_SECONDS = 7 * 24 * 60 * 60;
 const RETENTION_INTERVAL_MS = 60 * 60 * 1000;
+const ID = /^[A-Za-z0-9_-]{1,64}$/;
 
-async function purgeExpiredMessages(prisma, { instance, now = Date.now() }) {
+function invalid() {
+  throw new Error('EVOLUTION_RETENTION_CONFIGURATION_INVALID');
+}
+
+// WAP-E12: the general transport plus every personal instance the generation
+// allowlist names. Listed instances stay covered after a rollback to
+// generation off, so their rows still age out. Mirrors the generation runtime:
+// literal flag, IDs only, no duplicates, enabled requires a list.
+function retentionInstances(env) {
+  const flag = env.SILMER_WAP_GENERATION_ENABLED;
+  const raw = env.SILMER_WAP_GENERATION_INSTANCES ?? '';
+  const personal = raw === '' ? [] : raw.split(',');
+  const instances = [env.SILMER_EVOLUTION_INSTANCE, ...personal];
   if (
-    !/^[A-Za-z0-9_-]{1,64}$/.test(instance || '') ||
+    (flag !== undefined && !['true', 'false'].includes(flag)) ||
+    (flag === 'true' && !personal.length) ||
+    instances.some((name) => typeof name !== 'string' || !ID.test(name)) ||
+    new Set(instances).size !== instances.length
+  )
+    invalid();
+  return instances;
+}
+
+async function purgeExpiredMessages(prisma, { instances, now = Date.now() }) {
+  if (
+    !Array.isArray(instances) ||
+    !instances.length ||
+    instances.some((name) => typeof name !== 'string' || !ID.test(name)) ||
+    new Set(instances).size !== instances.length ||
     !Number.isFinite(now) ||
     now <= RETENTION_SECONDS * 1000
-  ) {
-    throw new Error('EVOLUTION_RETENTION_CONFIGURATION_INVALID');
-  }
+  )
+    invalid();
   // Only the dedicated transport's Message rows are eligible. Official schema
   // cascades MessageUpdate and Media; Instance/Session are never mutation targets.
+  // One parameterised Prisma statement; names are bound values, never SQL text.
   return prisma.message.deleteMany({
     where: {
-      Instance: { is: { name: instance } },
+      Instance: { is: { name: { in: [...instances] } } },
       messageTimestamp: { lt: Math.floor(now / 1000) - RETENTION_SECONDS },
     },
   });
@@ -260,14 +308,14 @@ async function purgeExpiredMessages(prisma, { instance, now = Date.now() }) {
 
 function scheduleRetention(
   prisma,
-  { instance, report, schedule = setInterval },
+  { instances, report, schedule = setInterval },
 ) {
   let running = false;
   const tick = async () => {
     if (running) return;
     running = true;
     try {
-      await purgeExpiredMessages(prisma, { instance });
+      await purgeExpiredMessages(prisma, { instances });
       report('EVOLUTION_RETENTION_COMPLETED');
     } catch {
       report('EVOLUTION_RETENTION_FAILED');
@@ -283,6 +331,7 @@ function scheduleRetention(
 module.exports = {
   RETENTION_SECONDS,
   RETENTION_INTERVAL_MS,
+  retentionInstances,
   purgeExpiredMessages,
   scheduleRetention,
 };
@@ -293,7 +342,7 @@ if (require.main === module) {
     const prisma = new PrismaClient({ log: [] });
     try {
       await purgeExpiredMessages(prisma, {
-        instance: process.env.SILMER_EVOLUTION_INSTANCE,
+        instances: retentionInstances(process.env),
       });
       process.stdout.write('EVOLUTION_RETENTION_COMPLETED\n');
     } catch {
@@ -657,6 +706,33 @@ function verifiedWebhook(webhook, expectedUrl) {
     WEBHOOK_EVENTS.every((event) => webhook.events.includes(event))
   );
 }
+// WAP-E12: Evolution 2.3.7 SettingsDto (POST /settings/set/:name, schema
+// requires the six booleans). Applied on every connect, not only at create:
+// a reused instance keeps whatever it had. Empty msgCall/wavoipToken clear an
+// automatic call reply and the wavoip socket, both outbound traffic.
+const SETTINGS = Object.freeze({
+  rejectCall: false,
+  msgCall: '',
+  groupsIgnore: true,
+  alwaysOnline: false,
+  readMessages: false,
+  readStatus: false,
+  syncFullHistory: false,
+  wavoipToken: '',
+});
+// GET /settings/find/:name returns the stored row flat, or null when absent.
+function verifiedSettings(settings) {
+  return (
+    settings !== null &&
+    typeof settings === 'object' &&
+    !Array.isArray(settings) &&
+    Object.entries(SETTINGS).every(([field, expected]) =>
+      typeof expected === 'boolean'
+        ? settings[field] === expected
+        : (settings[field] ?? '') === '',
+    )
+  );
+}
 function configuration(env) {
   const enabled = env.SILMER_WAP_CONTROL_ENABLED === 'true';
   if (
@@ -871,6 +947,10 @@ function createControlAdapter({
             if (created?.instance?.instanceName !== body.instance)
               throw new Error('WAP_CONTROL_UNKNOWN');
           }
+          // Settings are proven before the webhook can carry any event.
+          await http(`/settings/set/${name}`, 'POST', { ...SETTINGS });
+          if (!verifiedSettings(await http(`/settings/find/${name}`)))
+            throw new Error('WAP_CONTROL_UNKNOWN');
           await http(`/webhook/set/${name}`, 'POST', {
             webhook: {
               enabled: true,
@@ -919,10 +999,15 @@ function createControlAdapter({
         if (own.length !== 1) throw new Error('WAP_CONTROL_UNKNOWN');
         const state = await http(`/instance/connectionState/${name}`);
         const webhook = await http(`/webhook/find/${name}`);
+        const settings = await http(`/settings/find/${name}`);
         const providerState = state?.instance?.state;
         if (!['open', 'close', 'connecting'].includes(providerState))
           throw new Error('WAP_CONTROL_UNKNOWN');
-        const webhookVerified = verifiedWebhook(webhook, config.webhook);
+        // WAP-E12: the CRM contract has one routing proof; drifted settings
+        // withhold it exactly like a drifted webhook (reconcile -> blocked).
+        const webhookVerified =
+          verifiedWebhook(webhook, config.webhook) &&
+          verifiedSettings(settings);
         const jid = /^([1-9][0-9]{7,14})@s\.whatsapp\.net$/.exec(
           own[0].ownerJid || '',
         );

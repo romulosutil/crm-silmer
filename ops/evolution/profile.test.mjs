@@ -203,7 +203,7 @@ test('retention deletes only older transport messages for the selected instance 
         filter = where;
         const eligible = rows.filter(
           (row) =>
-            row.instance === where.Instance.is.name &&
+            where.Instance.is.name.in.includes(row.instance) &&
             row.timestamp < where.messageTimestamp.lt,
         );
         return { count: eligible.length, ids: eligible.map((row) => row.id) };
@@ -221,17 +221,17 @@ test('retention deletes only older transport messages for the selected instance 
     },
   };
   assert.deepEqual(
-    await purgeExpiredMessages(prisma, { instance: 'silmer', now }),
+    await purgeExpiredMessages(prisma, { instances: ['silmer'], now }),
     { count: 1, ids: ['old-own'] },
   );
   assert.deepEqual(filter, {
-    Instance: { is: { name: 'silmer' } },
+    Instance: { is: { name: { in: ['silmer'] } } },
     messageTimestamp: { lt: cutoff },
   });
   for (const args of [
-    { instance: '' },
-    { instance: 'bad/path' },
-    { instance: 'silmer', now: Number.NaN },
+    { instances: [''] },
+    { instances: ['bad/path'] },
+    { instances: ['silmer'], now: Number.NaN },
   ]) {
     await assert.rejects(
       () => purgeExpiredMessages(prisma, args),
@@ -258,7 +258,7 @@ test('hourly retention suppresses overlapping work and reports fixed failure cod
     },
   };
   const job = scheduleRetention(prisma, {
-    instance: 'silmer',
+    instances: ['silmer'],
     report: (code) => reports.push(code),
     schedule(_handler, milliseconds) {
       assert.equal(milliseconds, RETENTION_INTERVAL_MS);

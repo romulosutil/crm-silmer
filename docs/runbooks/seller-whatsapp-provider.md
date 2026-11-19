@@ -150,6 +150,53 @@ usa `emitOwnEvents:false`); sua confirmação vem do resultado HTTP e dos
 recibos `messages.update`. Evento de geração antiga é recusado com 403 fixo no
 ingresso n8n; o 409 `WHATSAPP_GENERATION_STALE` do CRM é a segunda barreira.
 
+**Reconexão: eventos em voo da geração anterior são perdidos (WAP-E12).** Na
+2.3.7 (`src/api/integrations/channel/whatsapp/whatsapp.baileys.service.ts`), o
+`BaileysMessageProcessor` (rxjs `concatMap` com retry) é montado, mas a única
+chamada `processMessage` está comentada em `eventHandler`; `messages.upsert`
+é tratado diretamente em `client.ev.process`, encadeado na promise
+`eventProcessingQueue` da instância, que sobrevive à troca de socket. Um evento
+capturado na geração N que ainda esteja nessa fila, ou em retry HTTP, quando a
+geração N+1 é instalada sai com o `source` N e recebe 403 no ingresso (409 no
+CRM). Não há backfill nem reenvio: a mensagem fica só no aparelho do vendedor.
+É perda aceita para o piloto; não reprocessar manualmente nem relaxar a
+recusa por geração para recuperá-la.
+
+**Retenção, ajustes e egress (WAP-E12).** Substituem o item 3 do resultado
+inicial abaixo.
+
+- Retenção: o expurgo de sete dias de `retention.cjs` (no boot, `--once`, e a
+  cada hora) cobre `SILMER_EVOLUTION_INSTANCE` e toda instância listada em
+  `SILMER_WAP_GENERATION_INSTANCES`, em um único `deleteMany` Prisma com
+  `name IN (...)` parametrizado, sem SQL bruto. A lista continua coberta com a
+  geração desligada, para que as linhas envelheçam após rollback; só remover um
+  nome da lista sete dias depois do logout da instância. Nome fora de
+  `[A-Za-z0-9_-]{1,64}`, duplicado ou igual à instância geral, flag não literal
+  ou `true` com lista vazia falham com `EVOLUTION_RETENTION_CONFIGURATION_INVALID`
+  e o boot para.
+- Ajustes: em todo connect (criação ou reuso de instância `close`), o gateway
+  envia `POST /settings/set/:name` com `rejectCall=false`, `msgCall=''`,
+  `groupsIgnore=true`, `alwaysOnline=false`, `readMessages=false`,
+  `readStatus=false`, `syncFullHistory=false`, `wavoipToken=''` e confere
+  `GET /settings/find/:name` campo a campo **antes** de configurar o webhook.
+  Divergência, `null` ou erro termina em `WAP_CONTROL_UNKNOWN`, sem webhook. A
+  reconciliação relê os ajustes; divergência retira `webhookVerified` como um
+  webhook divergente (resultado `blocked`). `msgCall` e `wavoipToken` vazios
+  impedem resposta automática a chamadas e o socket wavoip. Fontes 2.3.7:
+  `src/api/routes/settings.router.ts`, `src/api/services/settings.service.ts`,
+  `src/api/services/channel.service.ts` (`setSettings`/`findSettings`) e
+  `src/validate/settings.schema.ts`.
+- Egress: `privacy.cjs` exige o literal `false` em `RABBITMQ_ENABLED`,
+  `SQS_ENABLED`, `KAFKA_ENABLED`, `NATS_ENABLED`, `PUSHER_ENABLED`,
+  `S3_ENABLED`, `CHATWOOT_ENABLED`, `TYPEBOT_ENABLED`, `OPENAI_ENABLED`,
+  `DIFY_ENABLED`, `N8N_ENABLED`, `EVOAI_ENABLED`, `FLOWISE_ENABLED` e
+  `PROVIDER_ENABLED` (nomes de `src/config/env.config.ts` na 2.3.7), e
+  `SENTRY_DSN` ausente ou vazio. **Antes de rebuildar a imagem, o operador
+  precisa acrescentar as 14 variáveis com `false` no ambiente Evolution do
+  EasyPanel**: ausente ou outro valor faz o boot falhar com
+  `EVOLUTION_PROFILE_INVALID`, e a linha geral também fica fora do ar. Os
+  valores estão em [environment.env.example](../../ops/evolution/environment.env.example).
+
 | Configuração                    | Default / uso na prova                                                         |
 | ------------------------------- | ------------------------------------------------------------------------------ |
 | SILMER_WAP_GENERATION_ENABLED   | ausente/false; true só no processo de rehearsal                                |
@@ -293,7 +340,8 @@ permanece inalterado; na instância pessoal eles são o eco WAP-09 descrito em
 ensaio, nunca webhook de eventos; o wrapper continua recusando QR/histórico e
 limpando `apikey`. A instância pessoal é criada com `groupsIgnore=true` e
 `readMessages`, `readStatus`, `syncFullHistory`, `alwaysOnline` e `rejectCall`
-em `false` (campos do `InstanceDto` da 2.3.7), e o webhook é configurado e
+em `false` (campos do `InstanceDto` da 2.3.7), reaplicados e conferidos por
+`/settings/set` e `/settings/find` em todo connect, e o webhook é configurado e
 conferido com exatamente `CONNECTION_UPDATE`, `MESSAGES_UPSERT` e
 `MESSAGES_UPDATE`, `byEvents=false` e `base64=false`.
 

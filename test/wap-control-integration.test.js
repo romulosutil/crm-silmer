@@ -62,6 +62,19 @@ const privateInput = {
 /** @param {any} value @param {number} [status] */
 const response = (value, status = 200) =>
   new globalThis.Response(JSON.stringify(value), { status });
+// WAP-E12: Evolution 2.3.7 SettingsDto applied on every connect.
+const settingsBody = Object.freeze({
+  rejectCall: false,
+  msgCall: '',
+  groupsIgnore: true,
+  alwaysOnline: false,
+  readMessages: false,
+  readStatus: false,
+  syncFullHistory: false,
+  wavoipToken: '',
+});
+// GET /settings/find/:name returns the stored row flat (channel.service.ts).
+const settingsRow = Object.freeze({ ...settingsBody });
 /** @param {any} [extra] */
 const clientOptions = (extra = {}) => ({
   enabled: true,
@@ -266,6 +279,7 @@ test('WAP-E02: gateway adapter only prepares a single opaque account and discard
           { instance: { instanceName: 'synthetic-one' }, hash: token },
           201,
         );
+      if (path.includes('/settings/find/')) return response(settingsRow);
       if (path.includes('/webhook/find/'))
         return response({
           enabled: true,
@@ -291,11 +305,15 @@ test('WAP-E02: gateway adapter only prepares a single opaque account and discard
     [
       '/instance/fetchInstances',
       '/instance/create',
+      '/settings/set/synthetic-one',
+      '/settings/find/synthetic-one',
       '/webhook/set/synthetic-one',
       '/webhook/find/synthetic-one',
       '/instance/connectionState/synthetic-one',
     ],
   );
+  assert.equal(calls[2].init.method, 'POST');
+  assert.deepEqual(JSON.parse(calls[2].init.body), settingsBody);
   assert.equal(JSON.parse(calls[1].init.body).qrcode, false);
   // WAP-E12: Evolution 2.3.7 instance settings applied at create time.
   assert.deepEqual(JSON.parse(calls[1].init.body), {
@@ -309,7 +327,7 @@ test('WAP-E02: gateway adapter only prepares a single opaque account and discard
     alwaysOnline: false,
     rejectCall: false,
   });
-  assert.deepEqual(JSON.parse(calls[2].init.body), {
+  assert.deepEqual(JSON.parse(calls[4].init.body), {
     webhook: {
       enabled: true,
       url: webhookUrl,
@@ -395,6 +413,7 @@ test('WAP-E02: reconciliation reads status, actual owner identity and exact webh
       calls.push({ path, method: init.method });
       if (path.includes('connectionState'))
         return response({ instance: { state: 'open' } });
+      if (path.includes('settings/find')) return response(settingsRow);
       if (path.includes('webhook/find'))
         return response({
           enabled: true,
@@ -428,11 +447,182 @@ test('WAP-E02: reconciliation reads status, actual owner identity and exact webh
       confirmedNumber: '+5511000000001',
     },
   );
-  assert.equal(calls.length, 3);
+  assert.deepEqual(
+    calls.map((call) => call.path),
+    [
+      '/instance/fetchInstances',
+      '/instance/connectionState/synthetic-one',
+      '/webhook/find/synthetic-one',
+      '/settings/find/synthetic-one',
+    ],
+  );
   assert.equal(
     calls.every((call) => call.method === 'GET'),
     true,
   );
+});
+
+/** Every observed settings row that must not count as verified. */
+const DRIFTED_SETTINGS = [
+  null,
+  {},
+  [],
+  // Booleans must be observed exactly; a missing one is not proof.
+  ...Object.entries(settingsRow)
+    .filter(([, value]) => typeof value === 'boolean')
+    .flatMap(([field, value]) => [
+      { ...settingsRow, [field]: undefined },
+      { ...settingsRow, [field]: !value },
+      { ...settingsRow, [field]: String(value) },
+    ]),
+  // An automatic call reply or a wavoip token is outbound traffic.
+  { ...settingsRow, msgCall: 'synthetic-auto-reply' },
+  { ...settingsRow, wavoipToken: 'synthetic-wavoip-token' },
+];
+
+test('WAP-E12: every connect, including reuse of a closed instance, reapplies and verifies the instance settings', async () => {
+  /** @type {any[]} */ const calls = [];
+  const adapter = createControlAdapter({
+    env,
+    generationRuntime: createGenerationRuntime({
+      enabled: true,
+      instances: ['synthetic-one'],
+    }),
+    fetchImpl: async (/** @type {any} */ url, /** @type {any} */ init) => {
+      const path = new URL(url).pathname;
+      calls.push({ path, init });
+      if (path === '/instance/fetchInstances')
+        return response([{ name: 'synthetic-one', connectionStatus: 'close' }]);
+      if (path.includes('/settings/set/'))
+        return response(
+          {
+            settings: { instanceName: 'synthetic-one', settings: settingsBody },
+          },
+          201,
+        );
+      if (path.includes('/settings/find/'))
+        return response({ ...settingsRow, msgCall: null, wavoipToken: null });
+      if (path.includes('/webhook/find/'))
+        return response({
+          enabled: true,
+          url: webhookUrl,
+          webhookByEvents: false,
+          webhookBase64: false,
+          events: ['CONNECTION_UPDATE', 'MESSAGES_UPSERT', 'MESSAGES_UPDATE'],
+        });
+      if (path.includes('/instance/connectionState/'))
+        return response({ instance: { state: 'close' } });
+      return response({ enabled: true }, 201);
+    },
+  });
+  assert.equal((await adapter.execute(privateInput)).webhookVerified, true);
+  assert.deepEqual(
+    calls.map((call) => call.path),
+    [
+      '/instance/fetchInstances',
+      '/settings/set/synthetic-one',
+      '/settings/find/synthetic-one',
+      '/webhook/set/synthetic-one',
+      '/webhook/find/synthetic-one',
+      '/instance/connectionState/synthetic-one',
+    ],
+  );
+  assert.equal(calls[1].init.method, 'POST');
+  assert.deepEqual(JSON.parse(calls[1].init.body), settingsBody);
+});
+
+test('WAP-E12: drifted or unreadable settings fail connect closed before the webhook is enabled', async () => {
+  for (const observed of DRIFTED_SETTINGS) {
+    /** @type {string[]} */ const paths = [];
+    const adapter = createControlAdapter({
+      env,
+      generationRuntime: createGenerationRuntime({
+        enabled: true,
+        instances: ['synthetic-one'],
+      }),
+      fetchImpl: async (/** @type {any} */ url) => {
+        const path = new URL(url).pathname;
+        paths.push(path);
+        if (path === '/instance/fetchInstances') return response([]);
+        if (path === '/instance/create')
+          return response({ instance: { instanceName: 'synthetic-one' } }, 201);
+        if (path.includes('/settings/find/')) return response(observed);
+        if (path.includes('/webhook/find/'))
+          return response({
+            enabled: true,
+            url: webhookUrl,
+            webhookByEvents: false,
+            webhookBase64: false,
+            events: ['CONNECTION_UPDATE', 'MESSAGES_UPSERT', 'MESSAGES_UPDATE'],
+          });
+        if (path.includes('/instance/connectionState/'))
+          return response({ instance: { state: 'close' } });
+        return response({ ok: true }, 201);
+      },
+    });
+    await assert.rejects(
+      adapter.execute(privateInput),
+      /WAP_CONTROL_UNKNOWN/u,
+      JSON.stringify(observed),
+    );
+    assert.equal(
+      paths.some((path) => path.startsWith('/webhook/')),
+      false,
+      JSON.stringify(observed),
+    );
+  }
+  // A refused settings write (upstream 4xx/5xx or {error:true}) is also unknown.
+  for (const refused of [
+    response({ error: true }, 201),
+    response({ status: 400 }, 400),
+  ]) {
+    const adapter = createControlAdapter({
+      env,
+      fetchImpl: async (/** @type {any} */ url) => {
+        const path = new URL(url).pathname;
+        if (path === '/instance/fetchInstances')
+          return response([
+            { name: 'synthetic-one', connectionStatus: 'close' },
+          ]);
+        if (path.includes('/settings/set/')) return refused;
+        return assert.fail(`no call after a refused settings write: ${path}`);
+      },
+    });
+    await assert.rejects(adapter.execute(privateInput), /WAP_CONTROL_UNKNOWN/u);
+  }
+});
+
+test('WAP-E12: reconciliation re-reads settings and never verifies drifted ones', async () => {
+  for (const observed of DRIFTED_SETTINGS) {
+    const adapter = createControlAdapter({
+      env,
+      fetchImpl: async (/** @type {any} */ url, /** @type {any} */ init) => {
+        assert.equal(init.method, 'GET');
+        const path = new URL(url).pathname;
+        if (path.includes('fetchInstances'))
+          return response([
+            { name: 'synthetic-one', ownerJid: '5511000000001@s.whatsapp.net' },
+          ]);
+        if (path.includes('connectionState'))
+          return response({ instance: { state: 'open' } });
+        if (path.includes('settings/find')) return response(observed);
+        return response({
+          enabled: true,
+          url: webhookUrl,
+          webhookByEvents: false,
+          webhookBase64: false,
+          events: ['CONNECTION_UPDATE', 'MESSAGES_UPSERT', 'MESSAGES_UPDATE'],
+        });
+      },
+    });
+    const result = await adapter.execute({
+      ...privateInput,
+      action: 'reconcile',
+      source: null,
+      generationToken: null,
+    });
+    assert.equal(result.webhookVerified, false, JSON.stringify(observed));
+  }
 });
 
 test('WAP-E02: missing identity or webhook proof never claims a confirmed connection', async () => {
@@ -869,6 +1059,7 @@ test('WAP-E12: webhook proof requires exactly connection plus message events', a
           return response([{ name: 'synthetic-one' }]);
         if (path.includes('connectionState'))
           return response({ instance: { state: 'close' } });
+        if (path.includes('settings/find')) return response(settingsRow);
         return response({
           enabled: true,
           url: webhookUrl,

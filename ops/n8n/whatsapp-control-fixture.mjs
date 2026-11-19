@@ -109,7 +109,11 @@ createServer(async (req, res) => {
         }),
       );
     }
-    if (req.url?.startsWith('/instance/') || req.url?.startsWith('/webhook/')) {
+    if (
+      req.url?.startsWith('/instance/') ||
+      req.url?.startsWith('/webhook/') ||
+      req.url?.startsWith('/settings/')
+    ) {
       if (!equal(req.headers.apikey, config.gatewayKey)) throw new Error();
       const path = req.url.split('?')[0];
       if (path === '/instance/fetchInstances')
@@ -161,6 +165,15 @@ createServer(async (req, res) => {
       }
       if (path.startsWith('/webhook/find/'))
         return res.end(JSON.stringify(record.webhook));
+      // Evolution 2.3.7: set returns 201; find returns the flat Setting row.
+      if (path.startsWith('/settings/set/') && req.method === 'POST') {
+        record.settings = await body(req);
+        return res
+          .writeHead(201)
+          .end(JSON.stringify({ settings: { settings: record.settings } }));
+      }
+      if (path.startsWith('/settings/find/'))
+        return res.end(JSON.stringify(record.settings ?? null));
       if (path.startsWith('/instance/connectionState/'))
         return res.end(
           JSON.stringify({ instance: { state: record.state || 'close' } }),

@@ -43,6 +43,33 @@ function verifiedWebhook(webhook, expectedUrl) {
     WEBHOOK_EVENTS.every((event) => webhook.events.includes(event))
   );
 }
+// WAP-E12: Evolution 2.3.7 SettingsDto (POST /settings/set/:name, schema
+// requires the six booleans). Applied on every connect, not only at create:
+// a reused instance keeps whatever it had. Empty msgCall/wavoipToken clear an
+// automatic call reply and the wavoip socket, both outbound traffic.
+const SETTINGS = Object.freeze({
+  rejectCall: false,
+  msgCall: '',
+  groupsIgnore: true,
+  alwaysOnline: false,
+  readMessages: false,
+  readStatus: false,
+  syncFullHistory: false,
+  wavoipToken: '',
+});
+// GET /settings/find/:name returns the stored row flat, or null when absent.
+function verifiedSettings(settings) {
+  return (
+    settings !== null &&
+    typeof settings === 'object' &&
+    !Array.isArray(settings) &&
+    Object.entries(SETTINGS).every(([field, expected]) =>
+      typeof expected === 'boolean'
+        ? settings[field] === expected
+        : (settings[field] ?? '') === '',
+    )
+  );
+}
 function configuration(env) {
   const enabled = env.SILMER_WAP_CONTROL_ENABLED === 'true';
   if (
@@ -257,6 +284,10 @@ function createControlAdapter({
             if (created?.instance?.instanceName !== body.instance)
               throw new Error('WAP_CONTROL_UNKNOWN');
           }
+          // Settings are proven before the webhook can carry any event.
+          await http(`/settings/set/${name}`, 'POST', { ...SETTINGS });
+          if (!verifiedSettings(await http(`/settings/find/${name}`)))
+            throw new Error('WAP_CONTROL_UNKNOWN');
           await http(`/webhook/set/${name}`, 'POST', {
             webhook: {
               enabled: true,
@@ -305,10 +336,15 @@ function createControlAdapter({
         if (own.length !== 1) throw new Error('WAP_CONTROL_UNKNOWN');
         const state = await http(`/instance/connectionState/${name}`);
         const webhook = await http(`/webhook/find/${name}`);
+        const settings = await http(`/settings/find/${name}`);
         const providerState = state?.instance?.state;
         if (!['open', 'close', 'connecting'].includes(providerState))
           throw new Error('WAP_CONTROL_UNKNOWN');
-        const webhookVerified = verifiedWebhook(webhook, config.webhook);
+        // WAP-E12: the CRM contract has one routing proof; drifted settings
+        // withhold it exactly like a drifted webhook (reconcile -> blocked).
+        const webhookVerified =
+          verifiedWebhook(webhook, config.webhook) &&
+          verifiedSettings(settings);
         const jid = /^([1-9][0-9]{7,14})@s\.whatsapp\.net$/.exec(
           own[0].ownerJid || '',
         );

@@ -115,7 +115,8 @@ e corpo diferente conflita.
    reiniciar/apagar instância, repetir create/logout/connect ou consumir revisão
    inbound. Reconciliação antiga não supera observação mais recente.
    No boot do Evolution, uma instância allowlisted com status persistido
-   `connecting` e sem titular é carregada em memória sem iniciar um socket.
+   `connecting` é carregada em memória sem iniciar um socket, mesmo se o
+   registro ainda tiver o titular de uma sessão anterior.
    A reconexão exige `connectionState` explicitamente `close` antes de
    reaplicar e conferir os ajustes e o webhook. O desafio autorizado instala
    a prova de geração antes de criar o socket. Se a instância ainda não

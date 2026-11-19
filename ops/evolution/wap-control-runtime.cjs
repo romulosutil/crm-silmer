@@ -306,10 +306,11 @@ function createControlAdapter({
           const existing = own[0];
           if (
             existing &&
-            existing.connectionStatus !== 'close' &&
-            (existing.connectionStatus !== 'connecting' || existing.ownerJid)
+            !['close', 'connecting'].includes(existing.connectionStatus)
           )
             throw new Error('WAP_CONTROL_UNKNOWN');
+          // An expired QR can leave a stored 'connecting' row with the last
+          // owner. Require an explicit live 'close' before changing settings.
           if (
             existing &&
             (await http(`/instance/connectionState/${name}`))?.instance

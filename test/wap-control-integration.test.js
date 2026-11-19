@@ -606,7 +606,7 @@ test('WAP-E12: reconciliation preserves pairing while the 515 successor is start
   });
 });
 
-test('WAP-E12: reconnect writes only after the retained unpaired instance is loaded idle', async () => {
+test('WAP-E12: reconnect writes only after the retained instance is loaded idle', async () => {
   /** @param {any} row @param {any} state @param {'connect'|'reconcile'} action */
   const run = async (
     row,
@@ -661,24 +661,36 @@ test('WAP-E12: reconnect writes only after the retained unpaired instance is loa
     unpaired.calls.every((call) => call.method === 'GET'),
     true,
   );
-  const reconnect = await run(
-    { connectionStatus: 'connecting', ownerJid: null },
-    { instance: { instanceName: 'synthetic-one', state: 'close' } },
-    'connect',
-  );
-  assert.deepEqual(await reconnect.result, {
-    outcome: 'succeeded',
-    providerState: 'close',
-    webhookVerified: true,
-    bindingVerified: false,
-  });
-  assert.deepEqual(
-    reconnect.calls.filter(({ method }) => method !== 'GET'),
-    [
-      { path: '/settings/set/synthetic-one', method: 'POST' },
-      { path: '/webhook/set/synthetic-one', method: 'POST' },
-    ],
-  );
+  const retainedOwner = '5511000000001@s.whatsapp.net';
+  for (const ownerJid of [null, retainedOwner]) {
+    const reconnect = await run(
+      { connectionStatus: 'connecting', ownerJid },
+      { instance: { instanceName: 'synthetic-one', state: 'close' } },
+      'connect',
+    );
+    assert.deepEqual(await reconnect.result, {
+      outcome: 'succeeded',
+      providerState: 'close',
+      webhookVerified: true,
+      bindingVerified: false,
+    });
+    assert.deepEqual(
+      reconnect.calls.filter(({ method }) => method !== 'GET'),
+      [
+        { path: '/settings/set/synthetic-one', method: 'POST' },
+        { path: '/webhook/set/synthetic-one', method: 'POST' },
+      ],
+    );
+  }
+  for (const state of ['open', 'connecting']) {
+    const active = await run(
+      { connectionStatus: 'connecting', ownerJid: retainedOwner },
+      { instance: { instanceName: 'synthetic-one', state } },
+      'connect',
+    );
+    await assert.rejects(active.result, /WAP_CONTROL_UNKNOWN/u);
+    assert.ok(active.calls.every(({ method }) => method === 'GET'));
+  }
   const unloaded = await run(
     { connectionStatus: 'connecting', ownerJid: null },
     undefined,
@@ -686,12 +698,13 @@ test('WAP-E12: reconnect writes only after the retained unpaired instance is loa
   );
   await assert.rejects(unloaded.result, /WAP_CONTROL_UNKNOWN/u);
   assert.ok(unloaded.calls.every(({ method }) => method === 'GET'));
-  // A paired owner, a claimed open socket or an unreadable reply stay uncertain.
+  // A retained owner with a missing state, a claimed open socket or an
+  // unreadable reply stay uncertain.
   for (const [row, state] of [
     [
       {
         connectionStatus: 'connecting',
-        ownerJid: '5511000000001@s.whatsapp.net',
+        ownerJid: retainedOwner,
       },
     ],
     [{ connectionStatus: 'open', ownerJid: null }],

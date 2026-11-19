@@ -494,8 +494,10 @@ function createGenerationRuntime(options = {}) {
   return Object.freeze({
     // Load a retained unpaired instance as idle. Only the authorized challenge
     // can bind its next socket, and the binding does not survive a restart.
-    deferUnpairedStartup(instance, state, owner) {
-      return enabled && selected(instance) && state === 'connecting' && !owner;
+    deferPairingStartup(instance, state) {
+      // The owner can survive a previous login or an expired QR. A stored
+      // 'connecting' row still needs an explicit pairing request at boot.
+      return enabled && selected(instance) && state === 'connecting';
     },
     // Trusted in-process control hook. E01 exercises it only from the rehearsal.
     // No HTTP route, mutation from provider payload, or implicit reconnect binding.
@@ -1029,10 +1031,11 @@ function createControlAdapter({
           const existing = own[0];
           if (
             existing &&
-            existing.connectionStatus !== 'close' &&
-            (existing.connectionStatus !== 'connecting' || existing.ownerJid)
+            !['close', 'connecting'].includes(existing.connectionStatus)
           )
             throw new Error('WAP_CONTROL_UNKNOWN');
+          // An expired QR can leave a stored 'connecting' row with the last
+          // owner. Require an explicit live 'close' before changing settings.
           if (
             existing &&
             (await http(`/instance/connectionState/${name}`))?.instance
@@ -1252,7 +1255,7 @@ export function patchEvolutionGeneration(bundle) {
     ],
     [
       's.connectionStatus==="open"||s.connectionStatus==="connecting"?(this.logger.info(`Auto-connecting instance',
-      `(s.connectionStatus==="open"||s.connectionStatus==="connecting")&&!${runtime}.deferUnpairedStartup(s.instanceName,s.connectionStatus,s.ownerJid)?(this.logger.info(\`Auto-connecting instance`,
+      `(s.connectionStatus==="open"||s.connectionStatus==="connecting")&&!${runtime}.deferPairingStartup(s.instanceName,s.connectionStatus)?(this.logger.info(\`Auto-connecting instance`,
     ],
     [
       'eventHandler(){this.client.ev.process(async e=>{',

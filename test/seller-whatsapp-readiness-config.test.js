@@ -275,8 +275,8 @@ function controlEnvironment(extra = {}) {
       'https://n8n.synthetic.invalid/webhook/silmer/seller-whatsapp/control',
     N8N_WAP_CHALLENGE_URL:
       'https://n8n.synthetic.invalid/webhook/silmer/seller-whatsapp/challenge',
-    N8N_COMMAND_CLIENT_ID: 'synthetic-client',
-    N8N_COMMAND_CLIENT_SECRET: 's'.repeat(40),
+    N8N_WAP_CLIENT_ID: 'synthetic-client',
+    N8N_WAP_CLIENT_SECRET: 's'.repeat(40),
     ...extra,
   };
 }
@@ -368,6 +368,33 @@ test('WAP-T05-01 API and worker control runtimes stay closed off and refuse unsa
     'https://n8n.synthetic.invalid/webhook/silmer/seller-whatsapp/control#x',
   ]) {
     const environment = controlEnvironment({ N8N_WAP_CONTROL_URL: endpoint });
+    assert.throws(
+      () => createSellerWhatsAppRuntime(untouched, { access, environment }),
+      /WHATSAPP_CONTROL_CONFIGURATION_INVALID/u,
+    );
+    assert.throws(
+      () =>
+        createWhatsAppControlWorkerRuntime({
+          database: untouched,
+          environment,
+          WorkerRuntime: class {},
+        }),
+      /WHATSAPP_CONTROL_CONFIGURATION_INVALID/u,
+    );
+  }
+  // The control client has its own Basic credential: the panel-command one
+  // (N8N_COMMAND_CLIENT_*) is never read for WAP, and a short secret refuses.
+  for (const credential of [
+    {
+      N8N_WAP_CLIENT_ID: undefined,
+      N8N_WAP_CLIENT_SECRET: undefined,
+      N8N_COMMAND_CLIENT_ID: 'panel-command',
+      N8N_COMMAND_CLIENT_SECRET: 'p'.repeat(40),
+    },
+    { N8N_WAP_CLIENT_SECRET: 's'.repeat(13) },
+    { N8N_WAP_CLIENT_ID: 'with:colon' },
+  ]) {
+    const environment = controlEnvironment(credential);
     assert.throws(
       () => createSellerWhatsAppRuntime(untouched, { access, environment }),
       /WHATSAPP_CONTROL_CONFIGURATION_INVALID/u,

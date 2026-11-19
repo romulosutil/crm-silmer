@@ -16,8 +16,8 @@ export function sellerWhatsAppClientOptions(env) {
   return {
     controlEndpoint: env.N8N_WAP_CONTROL_URL ?? '',
     challengeEndpoint: env.N8N_WAP_CHALLENGE_URL ?? '',
-    clientId: env.N8N_COMMAND_CLIENT_ID ?? '',
-    clientSecret: env.N8N_COMMAND_CLIENT_SECRET ?? '',
+    clientId: env.N8N_WAP_CLIENT_ID ?? '',
+    clientSecret: env.N8N_WAP_CLIENT_SECRET ?? '',
   };
 }
 

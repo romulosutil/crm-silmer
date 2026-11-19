@@ -70,15 +70,15 @@ const PRIVACY = {
 const SELLER_IDS_PLACEHOLDER = '["REPLACE_WITH_SELLER_ID"]';
 const SECRETS = {
   api: [
-    'N8N_COMMAND_CLIENT_ID',
-    'N8N_COMMAND_CLIENT_SECRET',
+    'N8N_WAP_CLIENT_ID',
+    'N8N_WAP_CLIENT_SECRET',
     'CONTACT_IDENTITY_ENVELOPE_KEY',
     'CONTACT_IDENTITY_LOOKUP_KEY',
     'SELLER_WHATSAPP_GENERAL_NUMBER_DIGEST',
   ],
   worker: [
-    'N8N_COMMAND_CLIENT_ID',
-    'N8N_COMMAND_CLIENT_SECRET',
+    'N8N_WAP_CLIENT_ID',
+    'N8N_WAP_CLIENT_SECRET',
     'CONTACT_IDENTITY_ENVELOPE_KEY',
     'CONTACT_IDENTITY_LOOKUP_KEY',
     'SELLER_WHATSAPP_GENERAL_NUMBER_DIGEST',
@@ -88,8 +88,8 @@ const SECRETS = {
 };
 // Synthetic stand-ins used only to run the real validators; never emitted.
 const SYNTHETIC_SECRETS = {
-  N8N_COMMAND_CLIENT_ID: 'synthetic-build-client',
-  N8N_COMMAND_CLIENT_SECRET: 's'.repeat(40),
+  N8N_WAP_CLIENT_ID: 'synthetic-build-client',
+  N8N_WAP_CLIENT_SECRET: 's'.repeat(40),
   CONTACT_IDENTITY_ENVELOPE_KEY: Buffer.alloc(32, 1).toString('base64'),
   CONTACT_IDENTITY_LOOKUP_KEY: Buffer.alloc(32, 2).toString('base64'),
   SELLER_WHATSAPP_GENERAL_NUMBER_DIGEST: 'a'.repeat(64),
@@ -568,8 +568,8 @@ function environment(config, workflows) {
       allowlist: [],
       controlEndpoint: workerEnv.N8N_WAP_CONTROL_URL,
       challengeEndpoint: workerEnv.N8N_WAP_CHALLENGE_URL,
-      clientId: workerEnv.N8N_COMMAND_CLIENT_ID,
-      clientSecret: workerEnv.N8N_COMMAND_CLIENT_SECRET,
+      clientId: workerEnv.N8N_WAP_CLIENT_ID,
+      clientSecret: workerEnv.N8N_WAP_CLIENT_SECRET,
     });
     const evolutionEnv = { ...evolution, ...SYNTHETIC_SECRETS };
     const control = evolutionControl.configuration(evolutionEnv);

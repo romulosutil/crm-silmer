@@ -540,6 +540,72 @@ test('WAP-E02: reconciliation reads status, actual owner identity and exact webh
   );
 });
 
+test('WAP-E12: reconciliation preserves pairing while the 515 successor is starting', async () => {
+  const instance = 'synthetic-one';
+  const runtime = createGenerationRuntime({
+    enabled: true,
+    instances: [instance],
+  });
+  runtime.bindNextSocket(instance, source, token);
+  const socket = {};
+  const context = runtime.captureSocket(instance, socket);
+  let state = 'close';
+  /** @type {Record<string, unknown>} */
+  const reads = {
+    '/instance/fetchInstances': [
+      {
+        name: instance,
+        connectionStatus: 'connecting',
+        ownerJid: '5511000000001@s.whatsapp.net',
+      },
+    ],
+    [`/settings/find/${instance}`]: settingsRow,
+    [`/webhook/find/${instance}`]: {
+      enabled: true,
+      url: webhookUrl,
+      webhookByEvents: false,
+      webhookBase64: false,
+      events: ['CONNECTION_UPDATE', 'MESSAGES_UPSERT', 'MESSAGES_UPDATE'],
+    },
+  };
+  const adapter = createControlAdapter({
+    env,
+    generationRuntime: runtime,
+    fetchImpl: async (
+      /** @type {URL} */ url,
+      /** @type {RequestInit} */ init,
+    ) => {
+      assert.equal(init.method, 'GET');
+      if (url.pathname.includes('/connectionState/'))
+        return response({ instance: { state } });
+      assert.ok(Object.hasOwn(reads, url.pathname));
+      return response(reads[url.pathname]);
+    },
+  });
+  const input = { ...privateInput, action: 'reconcile' };
+  let during;
+  await runtime.wrap(context, () =>
+    runtime.continueAfterPairing(instance, socket, 515, async () => {
+      during = await adapter.execute(input);
+      runtime.captureSocket(instance, {});
+    }),
+  )();
+  assert.deepEqual(during, {
+    outcome: 'reconciled',
+    providerState: 'connecting',
+    webhookVerified: true,
+    bindingVerified: false,
+  });
+  state = 'open';
+  assert.deepEqual(await adapter.execute(input), {
+    outcome: 'reconciled',
+    providerState: 'open',
+    webhookVerified: true,
+    bindingVerified: true,
+    confirmedNumber: '+5511000000001',
+  });
+});
+
 test('WAP-E12: reconnect writes only after the retained unpaired instance is loaded idle', async () => {
   /** @param {any} row @param {any} state @param {'connect'|'reconcile'} action */
   const run = async (

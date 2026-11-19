@@ -100,6 +100,13 @@ e corpo diferente conflita.
    marcar `connected`. Um socket antigo aberto ou binding apenas preparado não
    comprovam conexão. Número divergente ou prova incompleta
    bloqueia. Nenhum pedido/envio/IA é disparado ao conectar.
+   Após o vínculo no aparelho, o Baileys pede uma reinicialização `515`.
+   O callback do socket atual pode continuar uma única vez na mesma geração,
+   após salvar as credenciais, e o novo socket precisa capturar o binding.
+   Durante essa troca, a leitura de `close` conserva `awaiting_pairing`
+   até o resultado do novo socket. Um callback antigo não recebe a geração
+   seguinte e qualquer reparação após reinício do processo exige comando
+   explícito. [Sequência de vínculo no Baileys](https://github.com/WhiskeySockets/Baileys/blob/master/src/Socket/socket.ts).
 5. Timeout, resposta ambígua ou queda depois do fence mantêm incerteza. Worker e
    sweep recuperam por `reconcile`, que só lê estado/identidade/webhook/ajustes. Não
    reiniciar/apagar instância, repetir create/logout/connect ou consumir revisão

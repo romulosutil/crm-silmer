@@ -469,12 +469,16 @@ function createGenerationRuntime(options = {}) {
     reject('WAP_GENERATION_CONFIG_INVALID');
   const allowlist = new Set(instances);
   const local = new AsyncLocalStorage();
+  const handoffScope = new AsyncLocalStorage();
   const pending = new Map();
   const sockets = new WeakMap();
   const secrets = new WeakMap();
   const latest = new Map();
   const currentBindings = new Map();
   const capturedByInstance = new Map();
+  const activeSockets = new WeakMap();
+  const handoffs = new Map();
+  const attemptedHandoffs = new WeakSet();
   const usedBindings = new Set();
   const usedTokenHashes = new Set();
   const selected = (instance) => allowlist.has(instance);
@@ -500,7 +504,8 @@ function createGenerationRuntime(options = {}) {
       const snapshot = immutableSource(source);
       if (typeof token !== 'string' || !/^[A-Za-z0-9_-]{32,128}$/.test(token))
         reject('WAP_GENERATION_TOKEN_INVALID');
-      if (pending.has(instance)) reject('WAP_GENERATION_BINDING_PENDING');
+      if (pending.has(instance) || handoffs.has(instance))
+        reject('WAP_GENERATION_BINDING_PENDING');
       const previous = latest.get(instance);
       if (
         previous &&
@@ -527,6 +532,7 @@ function createGenerationRuntime(options = {}) {
     // Reasserting the exact binding does not replace the captured socket source.
     ensureBinding(instance, source, token) {
       requireSelected(instance);
+      if (handoffs.has(instance)) reject('WAP_GENERATION_BINDING_PENDING');
       const snapshot = immutableSource(source);
       const current = currentBindings.get(instance);
       if (
@@ -552,8 +558,10 @@ function createGenerationRuntime(options = {}) {
       requireSelected(instance);
       const snapshot = immutableSource(source);
       const captured = capturedByInstance.get(instance);
+      const socket = captured && activeSockets.get(captured);
       return Boolean(
-        captured &&
+        socket &&
+        handoffs.get(instance)?.socket !== socket &&
         typeof token === 'string' &&
         Object.keys(snapshot).every(
           (key) => captured.source[key] === snapshot[key],
@@ -561,6 +569,40 @@ function createGenerationRuntime(options = {}) {
         createHash('sha256').update(token).digest('hex') ===
           createHash('sha256').update(secrets.get(captured)).digest('hex'),
       );
+    },
+    pairingHandoffPending(instance) {
+      return handoffs.has(instance);
+    },
+    async continueAfterPairing(instance, socket, reason, reconnect) {
+      if (!selected(instance)) return reconnect(false);
+      requireSelected(instance);
+      const context = sockets.get(socket);
+      if (
+        reason !== 515 ||
+        !context ||
+        context !== local.getStore() ||
+        context !== capturedByInstance.get(instance) ||
+        context !== currentBindings.get(instance) ||
+        socket !== activeSockets.get(context) ||
+        handoffs.has(instance) ||
+        attemptedHandoffs.has(context)
+      )
+        return;
+
+      // Baileys requires a replacement socket after linking. Reuse only the
+      // existing authenticated binding from this active socket, once.
+      const handoff = { instance, socket, context };
+      attemptedHandoffs.add(context);
+      handoffs.set(instance, handoff);
+      try {
+        await handoffScope.run(handoff, () => reconnect(true));
+      } catch {
+        // Native async event callbacks cannot propagate an unhandled rejection.
+      } finally {
+        if (activeSockets.get(context) === socket)
+          capturedByInstance.delete(instance);
+        handoffs.delete(instance);
+      }
     },
     captureSocket(instance, socket) {
       const existing =
@@ -574,14 +616,27 @@ function createGenerationRuntime(options = {}) {
       if (existing) {
         return existing;
       }
-      // A native reconnect has already allocated a different socket. Failure to
-      // capture it must not leave the previous socket as proof of connection.
-      // Existing callbacks still retain their immutable context in sockets/local.
-      capturedByInstance.delete(instance);
-      const context = pending.get(instance);
-      if (!context) reject('WAP_GENERATION_BINDING_REQUIRED');
-      pending.delete(instance);
+      const handoff = handoffScope.getStore();
+      let context;
+      if (handoff) {
+        if (
+          handoff.instance !== instance ||
+          handoffs.get(instance) !== handoff ||
+          activeSockets.get(handoff.context) !== handoff.socket
+        )
+          reject('WAP_GENERATION_BINDING_REQUIRED');
+        context = handoff.context;
+      } else {
+        // Older native callbacks cannot consume a pending explicit binding.
+        if (handoffs.has(instance) || local.getStore())
+          reject('WAP_GENERATION_BINDING_REQUIRED');
+        capturedByInstance.delete(instance);
+        context = pending.get(instance);
+        if (!context) reject('WAP_GENERATION_BINDING_REQUIRED');
+        pending.delete(instance);
+      }
       sockets.set(socket, context);
+      activeSockets.set(context, socket);
       capturedByInstance.set(instance, context);
       return context;
     },
@@ -914,6 +969,11 @@ function createControlAdapter({
         )
           denied();
       }
+      if (
+        body.action !== 'reconcile' &&
+        generationRuntime?.pairingHandoffPending?.(body.instance)
+      )
+        throw new Error('WAP_CONTROL_UNKNOWN');
       if (inFlight.has(body.instance)) denied();
       inFlight.add(body.instance);
       const name = encodeURIComponent(body.instance);
@@ -1046,12 +1106,17 @@ function createControlAdapter({
             bindingVerified: false,
           };
         if (own.length !== 1) throw new Error('WAP_CONTROL_UNKNOWN');
+        const handoff = generationRuntime?.pairingHandoffPending?.(body.instance);
         const state = await http(`/instance/connectionState/${name}`);
         const webhook = await http(`/webhook/find/${name}`);
         const settings = await http(`/settings/find/${name}`);
-        const providerState = unpairedWithoutSocket(own[0], state)
+        const observedState = unpairedWithoutSocket(own[0], state)
           ? 'close'
           : state?.instance?.state;
+        const providerState = observedState === 'close' &&
+          (handoff || generationRuntime?.pairingHandoffPending?.(body.instance))
+          ? 'connecting'
+          : observedState;
         if (!['open', 'close', 'connecting'].includes(providerState))
           throw new Error('WAP_CONTROL_UNKNOWN');
         // WAP-E12: the CRM contract has one routing proof; drifted settings
@@ -1181,6 +1246,10 @@ export function patchEvolutionGeneration(bundle) {
   const runtime = `require(${JSON.stringify(WAP_GENERATION_RUNTIME_PATH)})`;
   const replacements = [
     [PRISMA_CREDENTIAL_WRITER, patchedPrismaCredentialWriter()],
+    [
+      'await this.connectToWhatsapp(this.phoneNumber)',
+      `await ${runtime}.continueAfterPairing(this.instanceName,this.client,i,async save=>{if(save)await this.instance.authState.saveCreds();return this.connectToWhatsapp(this.phoneNumber)})`,
+    ],
     [
       's.connectionStatus==="open"||s.connectionStatus==="connecting"?(this.logger.info(`Auto-connecting instance',
       `(s.connectionStatus==="open"||s.connectionStatus==="connecting")&&!${runtime}.deferUnpairedStartup(s.instanceName,s.connectionStatus,s.ownerJid)?(this.logger.info(\`Auto-connecting instance`,

@@ -606,13 +606,13 @@ exceto o BCS-07, instabilidade anterior dos diálogos de cobrança no tema
 escuro. Fica para o PO a política da lista de Pedidos para clientes de linha
 pessoal (F12).
 
-Integração real (19/11, branch `claude/wap-e12-live-wiring`): `cfa3d998`
+Integração real (19/11, branch `claude/wap-e12-live-wiring`): `a3ee53f6`
 deixa as linhas pessoais levarem `messages.upsert` e `messages.update` pelo
-Evolution, e não só `connection.update`; `84eda252` dá à verificação do
-ingresso pessoal um limite próprio de 1200/min; `b25880c9` aceita o Evolution
+Evolution, e não só `connection.update`; `ac3b4087` dá à verificação do
+ingresso pessoal um limite próprio de 1200/min; `1f222818` aceita o Evolution
 interno por `http`, troca o `429` do CRM por `503` no ingresso do n8n e cria o
-build de produção dos workflows. Depois da revisão adversarial, `536cdb77`
-(limite por linha, prefixos exatos, LID, eco de mídia) e `ee31d0f0` (retenção
+build de produção dos workflows. Depois da revisão adversarial, `f991d551`
+(limite por linha, prefixos exatos, LID, eco de mídia) e `3c933542` (retenção
 das linhas pessoais, ajustes por conexão, egress do Evolution travado). O
 ensaio local não pegou essas lacunas porque usava stubs para o HTTP do
 Evolution. Em PostgreSQL 17 local: controle 1/1, ingresso 9/9, acesso

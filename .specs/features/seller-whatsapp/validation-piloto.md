@@ -76,8 +76,8 @@ desligadas (relato da mesma sessão):
 - Incidente fora do WAP: o merge do CP-T10 trouxe a expand `0084`, que não
   tinha sido aplicada. O boot guard barrou os deploys novos, e o container do
   `1489c2fe` serviu por cerca de 25 min, até a `0084` ser aplicada.
-- Ainda não feito: imagens reconstruídas com as correções abaixo, workflows WAP
-  no n8n, flags e allowlist. A sequência está na
+- Ainda não feito: workflows WAP no n8n, flags e allowlist (as imagens foram
+  reconstruídas no passo 0, abaixo). A sequência está na
   [ativação em produção](../../../docs/runbooks/seller-whatsapp.md#ativação-em-produção-piloto-de-um-vendedor).
   Ela depende das respostas do PO: vendedores, visibilidade do Admin, F3 e
   cobrança.
@@ -87,31 +87,57 @@ piloto, todas corrigidas no branch `claude/wap-e12-live-wiring`:
 
 - o Evolution só deixava sair `connection.update` das linhas pessoais; sem
   `messages.upsert` e `messages.update`, não havia entrada, eco nem recibo
-  (`cfa3d998`);
+  (`a3ee53f6`);
 - o controle não alcançava o Evolution interno, que só responde por `http`; o
-  Gateway exigia `https` (`b25880c9`);
+  Gateway exigia `https` (`1f222818`);
 - não havia build de produção dos workflows a partir do principal vivo
-  (`b25880c9`, `ops/n8n/build-wap-production-workflows.mjs`).
+  (`1f222818`, `ops/n8n/build-wap-production-workflows.mjs`).
 
 Duas falhas de borda também foram corrigidas. A verificação do ingresso
 pessoal dividia o limite técnico de 60/min, insuficiente para o tráfego de um
-único IP do n8n; ela passou a ter 1200/min (`84eda252`). E o ingresso do n8n
+único IP do n8n; ela passou a ter 1200/min (`ac3b4087`). E o ingresso do n8n
 transformava um `429` do CRM em `403` permanente, perdendo o evento; agora
-devolve `503`, e o Evolution tenta de novo (`b25880c9`). O ensaio local usava
+devolve `503`, e o Evolution tenta de novo (`1f222818`). O ensaio local usava
 stubs para o HTTP do Evolution e, por isso, não pegou nenhuma delas. Nada
 disso foi executado em ambiente real.
 
 A revisão adversarial do branch não achou P0. Foram corrigidos: retenção das
 linhas pessoais no banco do Evolution (antes só a geral expirava), ajustes da
 instância reaplicados e conferidos a cada conexão, integrações de saída do
-Evolution travadas em `false` (`ee31d0f0`); limite da verificação por linha,
+Evolution travadas em `false` (`3c933542`); limite da verificação por linha,
 com teto por IP, saída do build fora do repositório, prefixo exato das URLs do
 ingresso, "mensagem para si mesmo" por LID ignorada e confirmação antecipada do
-eco de mídia (`536cdb77`). Ficam abertos, em P3: o evento de falha de imagem do
+eco de mídia (`f991d551`). Ficam abertos, em P3: o evento de falha de imagem do
 ingresso pessoal, provavelmente recusado em silêncio pelo CRM (anterior a este
 branch), e "mensagem para si mesmo" por LID sem número alternativo. Eventos da
 geração anterior que ainda estejam a caminho numa reconexão são recusados e não
 voltam: perda aceita no piloto.
+
+**Passo 0 da ativação (19/11, cerca de 00h50 BRT).** PR 411 mesclada
+(`829e20e7`); API, worker e edge implantados nesse SHA, `/api/health/ready` 200. Com autorização do proprietário, nesta ordem:
+
+- env do Evolution: 12 das 14 integrações de saída já estavam `false`;
+  `NATS_ENABLED` e `PROVIDER_ENABLED` foram acrescentadas como `false`.
+  `SENTRY_DSN` já estava vazio. Nenhuma `SILMER_WAP_*` definida;
+- backups: `pg_dump` do `silmer-evolution-db` em
+  `/var/lib/postgresql/data/pre-wap-e12-20261119.dump`, no volume de dados do
+  banco (cerca de 396 KB, 217 entradas no índice), e backup manual
+  `pre-wap-e12-live-wiring-20261119` do `n8n-db`, concluído;
+- Evolution: o Dockerfile inline em produção era byte a byte o de `247cc9fb` e
+  foi trocado pelo da master (`ops/evolution/Dockerfile.inline`, conferido por
+  hash). O build imprimiu `WAP_EVOLUTION_GENERATION_PATCHED` e terminou com
+  sucesso. O boot registrou `EVOLUTION_PROFILE_VALIDATED`, `DATABASE_READY` e
+  `RETENTION_COMPLETED`; a linha geral voltou `open`. Rollback: o Dockerfile de
+  `247cc9fb`;
+- n8n: o Dockerfile inline em produção era o de `247cc9fb` e foi trocado pelo da
+  master (`ops/n8n/wap-ingress-Dockerfile.inline`, conferido por hash). O build
+  imprimiu `WAP_N8N_INGRESS_PATCHED` e terminou com sucesso. `healthz` e
+  readiness 200; o webhook geral de eventos do Evolution segue roteado
+  (sem credencial: `403`); o workflow agendado rodou com sucesso às 04:00:33Z, já
+  no container novo. Rollback: o Dockerfile de `247cc9fb`.
+
+Todas as flags WAP seguem desligadas. Próximo passo: escolher o vendedor e ligar
+o controle só na API (passo 2 do roteiro).
 
 Decisões do PO no mesmo dia:
 
@@ -129,17 +155,17 @@ Decisões do PO no mesmo dia:
 
 O go/no-go está no [roteiro](../../../docs/runbooks/seller-whatsapp.md#gono-go-antes-do-primeiro-efeito-real).
 
-| Gate                                                                  | Estado   | Bloqueio / dono                                                                                 |
-| --------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------- |
-| CI verde do HEAD da PR e merge linear                                 | feito    | PR 398 mesclada por rebase, master `1489c2fe`                                                   |
-| SHA/digest, `/api/health/ready`, migrações `0077`–`0083`              | feito    | expand antes do merge, contract `0081` depois; health 200 (seção Publicação)                    |
-| Imagens Evolution/n8n com patches WAP por digest                      | pendente | as de 18/11 não têm as correções de 19/11; reconstruir a partir de `claude/wap-e12-live-wiring` |
-| Código no mesmo celular (WAP-E01/T01-01)                              | pendente | aberto desde E01; sem ele não há autonomia mobile                                               |
-| Decisões F3 (trava pós-restore) e F4 (limite por usuário)             | pendente | Tech Lead/PO, [validation-etapa1](validation-etapa1.md#findings)                                |
-| Restore remoto, RPO/RTO e banco do n8n                                | pendente | DevOps, [recovery](../../../ops/recovery/RUNBOOK.md)                                            |
-| SHA de rollback, varredura de base dos logs, allowlist só no ambiente | pendente | DevOps/Privacidade, itens 7–9 do go/no-go                                                       |
-| Números dedicados, cliente sintético e janela                         | pendente | Operação                                                                                        |
-| Autorizações do PO, da Operação, da Privacidade e Financeira          | pendente | PO, Operação, Privacidade e Financeiro; cada uma por escrito                                    |
+| Gate                                                                  | Estado   | Bloqueio / dono                                                              |
+| --------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------- |
+| CI verde do HEAD da PR e merge linear                                 | feito    | PR 398 mesclada por rebase, master `1489c2fe`                                |
+| SHA/digest, `/api/health/ready`, migrações `0077`–`0083`              | feito    | expand antes do merge, contract `0081` depois; health 200 (seção Publicação) |
+| Imagens Evolution/n8n com patches WAP por digest                      | feito    | reconstruídas em 19/11 com a master `829e20e7` (passo 0); flags desligadas   |
+| Código no mesmo celular (WAP-E01/T01-01)                              | pendente | aberto desde E01; sem ele não há autonomia mobile                            |
+| Decisões F3 (trava pós-restore) e F4 (limite por usuário)             | pendente | Tech Lead/PO, [validation-etapa1](validation-etapa1.md#findings)             |
+| Restore remoto, RPO/RTO e banco do n8n                                | pendente | DevOps, [recovery](../../../ops/recovery/RUNBOOK.md)                         |
+| SHA de rollback, varredura de base dos logs, allowlist só no ambiente | pendente | DevOps/Privacidade, itens 7–9 do go/no-go                                    |
+| Números dedicados, cliente sintético e janela                         | pendente | Operação                                                                     |
+| Autorizações do PO, da Operação, da Privacidade e Financeira          | pendente | PO, Operação, Privacidade e Financeiro; cada uma por escrito                 |
 
 ## Ensaio local integrado
 
@@ -324,9 +350,9 @@ live minimizada.
 | `5131192f` | E09/E12   | E12-12 e selo verde: aviso de linha caída, banner               |
 | `2dddd6f7` | E12       | E12-14: asserção com escopo da suíte                            |
 | `d8477e7e` | E05       | E12-13: Criar pedido espera a leitura dos Assuntos              |
-| `cfa3d998` | Evolution | linhas pessoais levam mensagens e recibos                       |
-| `84eda252` | E04       | limite próprio para a verificação do ingresso pessoal           |
-| `b25880c9` | n8n       | build de produção dos workflows; Evolution interno; 429 → 503   |
-| `a979731c` | E12       | sequência de ativação do piloto em produção                     |
-| `536cdb77` | n8n/E04   | QA: limite por linha, prefixos exatos, LID, eco de mídia        |
-| `ee31d0f0` | Evolution | QA: retenção pessoal, ajustes por conexão, egress travado       |
+| `a3ee53f6` | Evolution | linhas pessoais levam mensagens e recibos                       |
+| `ac3b4087` | E04       | limite próprio para a verificação do ingresso pessoal           |
+| `1f222818` | n8n       | build de produção dos workflows; Evolution interno; 429 → 503   |
+| `f694eb8f` | E12       | sequência de ativação do piloto em produção                     |
+| `f991d551` | n8n/E04   | QA: limite por linha, prefixos exatos, LID, eco de mídia        |
+| `3c933542` | Evolution | QA: retenção pessoal, ajustes por conexão, egress travado       |

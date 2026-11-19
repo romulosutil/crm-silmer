@@ -1,7 +1,13 @@
 // WAP-E02 / WAP-T01-04. Generates reviewable, inactive shared workflows only.
 // Credentials are n8n references. No phone, QR, code or secret is embedded.
-/** @param {string} raw @param {boolean} synthetic */
-function origin(raw, synthetic) {
+// WAP-E12: in production Evolution listens only on the internal docker
+// network, so the Gateway may use exactly this plain-http origin (port
+// included). The CRM stays https-only.
+export const INTERNAL_EVOLUTION_ORIGINS = Object.freeze([
+  'http://schedule_silmer-evolution:8080',
+]);
+/** @param {string} raw @param {boolean} synthetic @param {readonly string[]} [internal] */
+function origin(raw, synthetic, internal = []) {
   let url;
   try {
     url = new URL(raw);
@@ -10,6 +16,7 @@ function origin(raw, synthetic) {
   }
   if (
     (url.protocol !== 'https:' &&
+      !(url.protocol === 'http:' && internal.includes(url.origin)) &&
       !(
         synthetic &&
         url.protocol === 'http:' &&
@@ -51,6 +58,7 @@ export function createWhatsAppControlWorkflows(options) {
   const evolution = origin(
     options.evolutionBaseUrl,
     options.allowSyntheticHttp === true,
+    INTERNAL_EVOLUTION_ORIGINS,
   );
   return { control: build('control'), challenge: build('challenge') };
 

@@ -285,7 +285,7 @@ test('WAP-E04: one allowlisted personal workflow preserves origin and has no aut
     ...config,
     personalInbound: true,
     personalLineIds: [origin.lineId],
-    webhookPath: 'silmer/seller-whatsapp/messages',
+    webhookPath: 'silmer/seller-whatsapp/events',
   });
   const personalConfig = {
     ...config,
@@ -375,6 +375,44 @@ test('WAP-E04: one allowlisted personal workflow preserves origin and has no aut
   assert.throws(
     () => createEvolutionWorkflow(source, { ...config, personalInbound: true }),
     /EVOLUTION_PERSONAL_ALLOWLIST_REQUIRED/u,
+  );
+  // WAP-E12: the scope guard keys on this exact name; no default overwrites it.
+  assert.equal(candidate.name, 'Silmer seller WhatsApp inbound');
+  const webhook = candidate.nodes.find(
+    (/** @type {any} */ n) => n.type === 'n8n-nodes-base.webhook',
+  );
+  assert.equal(webhook.parameters.path, 'silmer/seller-whatsapp/events');
+  for (const type of [
+    'n8n-nodes-base.errorTrigger',
+    '@n8n/n8n-nodes-langchain.chatTrigger',
+  ])
+    assert.equal(
+      candidate.nodes.some((/** @type {any} */ n) => n.type === type),
+      false,
+      type,
+    );
+  const names = new Set(candidate.nodes.map((/** @type {any} */ n) => n.name));
+  for (const name of Object.keys(candidate.connections))
+    assert.ok(names.has(name), name);
+  const identified = createEvolutionWorkflow(source, {
+    ...config,
+    personalInbound: true,
+    personalLineIds: [origin.lineId],
+    webhookPath: 'silmer/seller-whatsapp/events',
+    workflowId: 'synthetic-personal-id',
+  });
+  assert.equal(identified.name, 'Silmer seller WhatsApp inbound');
+  assert.equal(identified.settings.errorWorkflow, undefined);
+  assert.throws(
+    () =>
+      createEvolutionWorkflow(source, {
+        ...config,
+        personalInbound: true,
+        personalLineIds: [origin.lineId],
+        webhookPath: 'silmer/seller-whatsapp/events',
+        workflowName: 'Vendedor Silmer — Evolution Baileys',
+      }),
+    /EVOLUTION_PERSONAL_NAME_FIXED/u,
   );
 });
 const nodes = new Map(
@@ -616,7 +654,7 @@ test('WAP-E08 personal fromMe upsert projects an external fact and no inbound', 
   assert.equal(result.external.command_id, undefined);
   const candidate = createSellerWhatsAppEvolutionWorkflow(JSON.parse(before), {
     ...options,
-    webhookPath: 'silmer/seller-whatsapp/messages',
+    webhookPath: 'silmer/seller-whatsapp/events',
   });
   const observed =
     candidate.connections['Preparar saída observada (WAP)'].main[0];

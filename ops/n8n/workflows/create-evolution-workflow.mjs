@@ -546,6 +546,116 @@ export function restoreEvolutionTransportSource(current, baseline) {
   return result;
 }
 
+export const PERSONAL_INBOUND_NAME = 'Silmer seller WhatsApp inbound';
+export const PERSONAL_EVENTS_PATH = 'silmer/seller-whatsapp/events';
+const EVENTS_WEBHOOK = 'WhatsApp - Receber eventos (MVP)';
+const ROUTER = 'Rotear conversa registrada (MVP)';
+const ASSISTANCE = 'Acompanhar intenção de compra? (OA)';
+const MEDIA_READ =
+  /^(https?:\/\/[^/\s"'`]+)\/chat\/getBase64FromMediaMessage\/[A-Za-z0-9_-]{1,64}$/u;
+
+/** WAP-E04/E12. Personal inbound over an Evolution-adapted journey: one
+ * allowlisted webhook, origin carried end to end, no bot reply, no Order
+ * Assistance and no persistence. Shared by the candidate generator and the
+ * production build; the input workflow is mutated and returned.
+ * @param {any} workflow
+ * @param {{config:{baseUrl:string,personalInbound:true,personalLineIds:string[],[key:string]:any},webhookPath:string}} options */
+export function applyPersonalInbound(workflow, options) {
+  const config = options.config;
+  const webhookPath = options.webhookPath;
+  if (
+    config?.personalInbound !== true ||
+    !Array.isArray(config.personalLineIds) ||
+    !config.personalLineIds.length ||
+    config.personalLineIds.some(
+      (/** @type {string} */ id) => !/^[a-f0-9-]{36}$/i.test(id),
+    ) ||
+    typeof config.baseUrl !== 'string' ||
+    typeof webhookPath !== 'string' ||
+    !webhookPath.startsWith('silmer/seller-whatsapp/')
+  )
+    throw new Error('EVOLUTION_PERSONAL_ALLOWLIST_REQUIRED');
+  const find = (/** @type {string} */ name) => {
+    const node = workflow.nodes.find(
+      (/** @type {any} */ item) => item.name === name,
+    );
+    if (!node) throw new Error('EVOLUTION_NODE_MISSING: ' + name);
+    return node;
+  };
+  if (
+    workflow.nodes.filter((/** @type {any} */ n) => n.name === VALIDATE)
+      .length !== 1
+  )
+    throw new Error('EVOLUTION_WORKFLOW_NOT_ADAPTED');
+  const baseUrl = config.baseUrl.replace(/\/$/, '');
+  const configured = JSON.stringify(config);
+  find(VALIDATE).parameters.jsCode =
+    `const general = ${validateEvolutionEvent.toString()};const validate = ${validatePersonalEvolutionEvent.toString()};return $input.all().map((item,index)=>{const checked=validate(item.json,${configured},general);return checked?{json:checked,pairedItem:{item:index}}:null;}).filter(Boolean);`;
+  find(CONVERT).parameters.jsCode =
+    `const general=${convertEvolutionEvent.toString()};const convert=${convertPersonalEvolutionEvent.toString()};const input=$('${VALIDATE}').item.json;return {json:convert(input,input.needs_lid?$json:null,${configured},general)};`;
+  // One shared personal-ingress workflow; account/instance come only from the
+  // generation authenticated by the patched pre-persistence n8n boundary.
+  workflow.name = PERSONAL_INBOUND_NAME;
+  workflow.settings = {
+    ...workflow.settings,
+    saveDataSuccessExecution: 'none',
+    saveDataErrorExecution: 'none',
+    saveManualExecutions: false,
+    saveExecutionProgress: false,
+  };
+  delete workflow.settings.errorWorkflow;
+  workflow.pinData = {};
+  for (const node of workflow.nodes)
+    for (const header of node.parameters?.headerParameters?.parameters ?? []) {
+      if (String(header.name).toLowerCase() === 'x-silmer-workflow-key')
+        header.value = 'seller-whatsapp-inbound';
+      if (String(header.name).toLowerCase() === 'x-silmer-workflow-version')
+        header.value = '1.0';
+    }
+  // An adapted journey still listens on the general path; move that one hook.
+  find(EVENTS_WEBHOOK).parameters.path = webhookPath;
+  const removed = new Set(
+    workflow.nodes
+      .filter(
+        (/** @type {any} */ node) =>
+          (node.type === 'n8n-nodes-base.webhook' &&
+            node.parameters?.path !== webhookPath) ||
+          node.type === 'n8n-nodes-base.errorTrigger' ||
+          node.type === '@n8n/n8n-nodes-langchain.chatTrigger',
+      )
+      .map((/** @type {any} */ node) => node.name),
+  );
+  workflow.nodes = workflow.nodes.filter(
+    (/** @type {any} */ node) => !removed.has(node.name),
+  );
+  for (const name of removed) delete workflow.connections[name];
+  find(LOOKUP).parameters.url =
+    `={{ ${JSON.stringify(baseUrl + '/chat/findMessages/')} + $('${VALIDATE}').item.json.instance }}`;
+  // Media is read from the authenticated origin instance, never the general one.
+  for (const node of workflow.nodes) {
+    const match = MEDIA_READ.exec(node.parameters?.url ?? '');
+    if (match)
+      node.parameters.url = `={{ ${JSON.stringify(baseUrl + '/chat/getBase64FromMediaMessage/')} + $('${VALIDATE}').item.json.instance }}`;
+  }
+  const normalizer = find(NORMALIZE);
+  normalizer.parameters.jsCode = `const projected=(()=>{${normalizer.parameters.jsCode}})();projected.json.source={...$json.source};return projected;`;
+  for (const name of [
+    'Preparar inbound CRM (MVP)',
+    'Preparar status de entrega (MVP)',
+  ]) {
+    const node = find(name);
+    node.parameters.jsCode = `const projected=(()=>{${node.parameters.jsCode}})();if(!projected.json)return projected;const source=$('${NORMALIZE}').item.json.source;if(!source)throw new Error('EVOLUTION_SOURCE_MISMATCH');projected.json.payload.source=source;projected.json.idempotency_key=source.accountId+':'+projected.json.idempotency_key;projected.json.payload.event_id=source.accountId+':'+projected.json.payload.event_id;${name === 'Preparar inbound CRM (MVP)' ? "projected.json.payload.provider='evolution';projected.json.payload.metadata={provider_account_id:source.accountId};" : ''}return projected;`;
+  }
+  const router = find(ROUTER);
+  for (const rule of router.parameters.rules.values)
+    for (const condition of rule.conditions.conditions)
+      condition.leftValue = "={{ 'no_action' }}";
+  for (const edges of workflow.connections[INBOUND]?.main ?? [])
+    for (let index = edges.length - 1; index >= 0; index--)
+      if (edges[index].node === ASSISTANCE) edges.splice(index, 1);
+  return workflow;
+}
+
 /** Produce a separate inactive candidate; the supplied Meta export is immutable.
  * @param {any} source
  * @param {{ownNumber:string,baseUrl?:string,session?:string,apiCredentialId?:string,apiCredentialName?:string,webhookCredentialId?:string,webhookCredentialName?:string,webhookPath?:string,workflowVersion?:string,workflowId?:string,workflowName?:string,transportBaseline?:any,personalInbound?:boolean,personalLineIds?:string[]}} options
@@ -662,9 +772,8 @@ export function createEvolutionWorkflow(source, options) {
     return node;
   };
   const configured = JSON.stringify(config);
-  find(VALIDATE).parameters.jsCode = config.personalInbound
-    ? `const general = ${validateEvolutionEvent.toString()};const validate = ${validatePersonalEvolutionEvent.toString()};return $input.all().map((item,index)=>{const checked=validate(item.json,${configured},general);return checked?{json:checked,pairedItem:{item:index}}:null;}).filter(Boolean);`
-    : `const validate = ${validateEvolutionEvent.toString()};\nreturn $input.all().map((item,index)=>{const checked=validate(item.json,${configured});return checked?{json:checked,pairedItem:{item:index}}:null;}).filter(Boolean);`;
+  find(VALIDATE).parameters.jsCode =
+    `const validate = ${validateEvolutionEvent.toString()};\nreturn $input.all().map((item,index)=>{const checked=validate(item.json,${configured});return checked?{json:checked,pairedItem:{item:index}}:null;}).filter(Boolean);`;
   const lookup = find(LOOKUP);
   lookup.parameters = {
     ...lookup.parameters,
@@ -677,54 +786,8 @@ export function createEvolutionWorkflow(source, options) {
     // braces would truncate the expression before offset/page.
     jsonBody: EVOLUTION_IDENTITY_LOOKUP_BODY,
   };
-  find(CONVERT).parameters.jsCode = config.personalInbound
-    ? `const general=${convertEvolutionEvent.toString()};const convert=${convertPersonalEvolutionEvent.toString()};const input=$('${VALIDATE}').item.json;return {json:convert(input,input.needs_lid?$json:null,${configured},general)};`
-    : `const convert=${convertEvolutionEvent.toString()};\nconst input=$('${VALIDATE}').item.json;return {json:convert(input,input.needs_lid?$json:null,${configured})};`;
-  if (config.personalInbound) {
-    // One shared personal-ingress workflow; account/instance come only from the
-    // generation authenticated by the patched pre-persistence n8n boundary.
-    workflow.name = 'Silmer seller WhatsApp inbound';
-    workflow.settings = {
-      ...workflow.settings,
-      saveDataSuccessExecution: 'none',
-      saveDataErrorExecution: 'none',
-      saveManualExecutions: false,
-      saveExecutionProgress: false,
-    };
-    delete workflow.settings.errorWorkflow;
-    workflow.pinData = {};
-    for (const node of workflow.nodes)
-      for (const header of node.parameters?.headerParameters?.parameters ??
-        []) {
-        if (String(header.name).toLowerCase() === 'x-silmer-workflow-key')
-          header.value = 'seller-whatsapp-inbound';
-        if (String(header.name).toLowerCase() === 'x-silmer-workflow-version')
-          header.value = '1.0';
-      }
-    workflow.nodes = workflow.nodes.filter(
-      (/** @type {any} */ node) =>
-        node.type !== 'n8n-nodes-base.webhook' ||
-        node.parameters?.path === options.webhookPath,
-    );
-    lookup.parameters.url = `={{ ${JSON.stringify(config.baseUrl + '/chat/findMessages/')} + $('${VALIDATE}').item.json.instance }}`;
-    const normalizer = find(NORMALIZE);
-    normalizer.parameters.jsCode = `const projected=(()=>{${normalizer.parameters.jsCode}})();projected.json.source={...$json.source};return projected;`;
-    for (const name of [
-      'Preparar inbound CRM (MVP)',
-      'Preparar status de entrega (MVP)',
-    ]) {
-      const node = find(name);
-      node.parameters.jsCode = `const projected=(()=>{${node.parameters.jsCode}})();if(!projected.json)return projected;const source=$('${NORMALIZE}').item.json.source;if(!source)throw new Error('EVOLUTION_SOURCE_MISMATCH');projected.json.payload.source=source;projected.json.idempotency_key=source.accountId+':'+projected.json.idempotency_key;projected.json.payload.event_id=source.accountId+':'+projected.json.payload.event_id;${name === 'Preparar inbound CRM (MVP)' ? "projected.json.payload.provider='evolution';projected.json.payload.metadata={provider_account_id:source.accountId};" : ''}return projected;`;
-    }
-    const router = find('Rotear conversa registrada (MVP)');
-    for (const rule of router.parameters.rules.values)
-      for (const condition of rule.conditions.conditions)
-        condition.leftValue = "={{ 'no_action' }}";
-    for (const edges of workflow.connections[INBOUND]?.main ?? [])
-      for (let index = edges.length - 1; index >= 0; index--)
-        if (edges[index].node === 'Acompanhar intenção de compra? (OA)')
-          edges.splice(index, 1);
-  }
+  find(CONVERT).parameters.jsCode =
+    `const convert=${convertEvolutionEvent.toString()};\nconst input=$('${VALIDATE}').item.json;return {json:convert(input,input.needs_lid?$json:null,${configured})};`;
   const apiCredential = lookup.credentials;
   const expression = (/** @type {string} */ value) =>
     value.replace(/^=?\{\{\s*/, '').replace(/\s*\}\}$/, '');
@@ -765,8 +828,6 @@ export function createEvolutionWorkflow(source, options) {
       response: { response: { responseFormat: 'json' } },
     },
   };
-  if (config.personalInbound)
-    query.parameters.url = `={{ ${JSON.stringify(config.baseUrl + '/chat/getBase64FromMediaMessage/')} + $('${VALIDATE}').item.json.instance }}`;
   query.credentials = apiCredential;
   find('WhatsApp - Baixar mídia (MVP)').parameters.jsCode =
     `const decode=${decodeEvolutionMedia.toString()};return decode($json,$('${NORMALIZE}').item.json);`;
@@ -802,6 +863,11 @@ export function createEvolutionWorkflow(source, options) {
   find(MEDIA_SEND).parameters.jsonBody = '={{ $json.evolution_message }}';
   find('Validar resposta do envio de midia (MVP)').parameters.jsCode =
     `const getId=${getEvolutionMessageId.toString()};const id=getId($json);return {json:{messages:[{id}]}};`;
+  if (config.personalInbound)
+    applyPersonalInbound(workflow, {
+      config,
+      webhookPath: /** @type {string} */ (options.webhookPath),
+    });
   if (options?.workflowId) {
     workflow.id = options.workflowId;
     if (
@@ -816,8 +882,18 @@ export function createEvolutionWorkflow(source, options) {
     if (workflow.settings.errorWorkflow === source.id)
       delete workflow.settings.errorWorkflow;
   }
-  workflow.name =
-    options?.workflowName ?? 'Vendedor Silmer — Evolution Baileys';
+  if (config.personalInbound) {
+    // The personal ingress name is part of the n8n scope guard; never default it.
+    if (
+      options.workflowName !== undefined &&
+      options.workflowName !== PERSONAL_INBOUND_NAME
+    )
+      throw new Error('EVOLUTION_PERSONAL_NAME_FIXED');
+    workflow.name = PERSONAL_INBOUND_NAME;
+    delete workflow.settings.errorWorkflow;
+  } else
+    workflow.name =
+      options?.workflowName ?? 'Vendedor Silmer — Evolution Baileys';
   delete workflow.versionId;
   delete workflow.activeVersionId;
   delete workflow.activeVersion;

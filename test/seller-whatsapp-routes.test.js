@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
 import { createApi } from '../apps/api/src/app.js';
+import { readHumanControl } from '../apps/api/src/seller-whatsapp-contract.js';
 import { createSellerWhatsAppRuntime } from '../apps/api/src/seller-whatsapp-runtime.js';
 import {
   createWhatsAppControlJobHandler,
@@ -72,6 +73,7 @@ function fixture(options = {}) {
     begin: 0,
     finish: /** @type {any[]} */ ([]),
     challenge: 0,
+    submitted: /** @type {any[]} */ ([]),
   };
   const expiresAt = new Date(Date.now() + 90_000).toISOString();
   const challengeId = randomUUID();
@@ -91,6 +93,7 @@ function fixture(options = {}) {
     },
     submit: async (/** @type {any} */ command) => {
       calls.submit++;
+      calls.submitted.push(command);
       assert.equal(command.actorId, actor.id);
       assert.equal(command.instanceName, undefined);
       return {
@@ -297,6 +300,43 @@ test('human GET is read-only, server derives owner and rejects auth/CSRF/origin/
   assert.equal(response.statusCode, 202);
   assert.equal(calls.submit, 1);
   assert.doesNotMatch(response.body, /5511999990000|instance|token/u);
+  await api.close();
+});
+
+test('WAP-E12: connect accepts a body without expectedNumber, so the stored number reconnects', async () => {
+  assert.deepEqual(readHumanControl({ expectedVersion: 4 }, 'connect'), {
+    expectedVersion: 4,
+  });
+  assert.deepEqual(
+    readHumanControl(
+      { expectedNumber: '+5511999990000', expectedVersion: 0 },
+      'connect',
+    ),
+    { expectedNumber: '+5511999990000', expectedVersion: 0 },
+  );
+  for (const bad of [
+    {},
+    { expectedNumber: null, expectedVersion: 4 },
+    { expectedNumber: '', expectedVersion: 4 },
+    { expectedNumber: '123', expectedVersion: 4 },
+    { expectedVersion: -1 },
+    { expectedVersion: 4, instanceName: 'synthetic-canary' },
+  ])
+    assert.throws(() => readHumanControl(bad, 'connect'), {
+      code: 'INVALID_REQUEST',
+    });
+  const { api, calls } = fixture();
+  const response = await api.inject({
+    method: 'POST',
+    url: '/api/v1/me/whatsapp/connect',
+    headers: { ...headers, 'idempotency-key': randomUUID() },
+    payload: { expectedVersion: 4 },
+  });
+  assert.equal(response.statusCode, 202);
+  assert.equal(calls.submitted.length, 1);
+  assert.equal('expectedNumber' in calls.submitted[0], false);
+  assert.equal(calls.submitted[0].expectedVersion, 4);
+  assert.equal(calls.submitted[0].action, 'connect');
   await api.close();
 });
 

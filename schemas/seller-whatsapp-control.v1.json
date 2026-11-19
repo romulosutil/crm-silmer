@@ -9,7 +9,8 @@
     "connect": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["expectedNumber", "expectedVersion"],
+      "description": "WAP-E12: expectedNumber is required only for the first connection; an existing line reconnects its stored number, and a present number must match it.",
+      "required": ["expectedVersion"],
       "properties": {
         "expectedNumber": { "$ref": "#/$defs/phone" },
         "expectedVersion": { "type": "integer", "minimum": 0 }

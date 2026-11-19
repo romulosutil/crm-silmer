@@ -67,6 +67,16 @@ revogação, sem reescrever mensagens/identidades antigas. Reconectar o mesmo
 número preserva carteira/conta e não cria outro Cliente. Mudança de número é
 recusada na etapa 1. Provar a unicidade com duas conexões PostgreSQL reais.
 
+Nota WAP-E12 (19/11/2026): como a linha nunca troca de número, a reconexão não
+pede o número de novo. `expectedNumber` é opcional no `connect`: sem linha ele
+é obrigatório (400 sem ele); com linha, ausente usa o número cifrado da própria
+linha, decifrado só no servidor para o controle n8n e nunca devolvido ao
+cliente; presente, ainda precisa bater com o digest (409
+`WHATSAPP_LINE_CONFLICT`). A impressão digital de idempotência guarda o digest
+do número ou `null`, então a mesma chave com e sem número é corpo distinto
+(`IDEMPOTENCY_KEY_REUSED`). A mudança é retrocompatível e não altera decisão
+arquitetural, por isso fica nesta nota, sem ADR/RFC novo.
+
 Usar locks e CAS, não apenas validação JavaScript. Escrita cadastral e criação/
 revogação de vínculo compartilham lock do Contact para serializar a passagem de
 um para dois vínculos ativos. Ordem documentada: usuário/capacidade → linha
@@ -136,7 +146,7 @@ contrato/testes; não definir números sem ensaio de capacidade.
 | `POST /me/clients`                                 | Nome/telefone/e-mail atuais; Contact + vínculo na mesma transação; 201 ou replay 200. Não criar conversa/envio.           |
 | `POST /me/clients/:contactId/link`                 | Versão esperada do Cliente acessível; vínculo explícito idempotente. Não unir nem transferir.                             |
 | `GET /me/whatsapp`                                 | Estado, versões, geração e número próprio mascarado; operação pendente e disponibilidade. Leitura não cria nem reconecta. |
-| `POST /me/whatsapp/connect`                        | Número esperado e versão; conecta/reconecta a única linha; 202 com operação opaca. Repetição não cria outra instância.    |
+| `POST /me/whatsapp/connect`                        | Versão; número esperado só na primeira conexão. Reconexão usa o número guardado; número presente e divergente → 409. 202. |
 | `POST /me/whatsapp/disconnect`                     | Versão/geração; 202 com intenção durável. Não apagar carteira, histórico ou instância por limpeza.                        |
 | `POST /me/whatsapp/pairing-challenge`              | Operação/versão/geração e modalidade QR/código; resposta efêmera só ao titular. Não é leitura GET com efeito oculto.      |
 | `PATCH /contacts/:contactId/...`                   | Reutilizar rotas cadastrais atuais e versões; aplicar a política compartilhada a todas, inclusive caminhos legados.       |

@@ -787,7 +787,7 @@ test('decision normalizer applies the handoff rules of ADR 009', async () => {
     fabrics: 'algodão',
     artwork_locations: 'frente',
     artwork_status: 'cliente envia a arte',
-    needed_by: '20/11',
+    needed_by: '20/03',
   };
   const done = decide({ briefing_patch: complete });
   assert.equal(
@@ -1391,7 +1391,7 @@ const SHIRT_POINTS = Object.freeze({
   fabrics: 'algodão',
   artwork_locations: 'frente',
   artwork_status: 'cliente envia a arte',
-  needed_by: '20/11',
+  needed_by: '20/03',
 });
 const GREETING = {
   sender_type: 'ai',

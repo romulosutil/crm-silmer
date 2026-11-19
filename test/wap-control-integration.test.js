@@ -540,6 +540,81 @@ test('WAP-E02: reconciliation reads status, actual owner identity and exact webh
   );
 });
 
+test('WAP-E12: reconcile reads an unpaired instance whose socket is not loaded after a restart as close', async () => {
+  /** @param {any} row @param {any} state */
+  const run = async (
+    row,
+    state = { instance: { instanceName: 'synthetic-one' } },
+  ) => {
+    /** @type {any[]} */ const calls = [];
+    const adapter = createControlAdapter({
+      env,
+      // A fresh process: the in-memory generation binding did not survive.
+      generationRuntime: createGenerationRuntime({
+        enabled: true,
+        instances: ['synthetic-one'],
+      }),
+      fetchImpl: async (/** @type {any} */ url, /** @type {any} */ init) => {
+        const path = new URL(url).pathname;
+        calls.push({ path, method: init.method });
+        // Evolution 2.3.7 after a restart: no socket in memory, so the state
+        // read carries only the instance name.
+        if (path.includes('connectionState')) return response(state);
+        if (path.includes('settings/find')) return response(settingsRow);
+        if (path.includes('webhook/find'))
+          return response({
+            enabled: true,
+            url: webhookUrl,
+            webhookByEvents: false,
+            webhookBase64: false,
+            events: ['CONNECTION_UPDATE', 'MESSAGES_UPSERT', 'MESSAGES_UPDATE'],
+          });
+        return response([{ name: 'synthetic-one', token, ...row }]);
+      },
+    });
+    const result = adapter.execute({
+      ...privateInput,
+      action: 'reconcile',
+      source,
+      generationToken: token,
+    });
+    return { calls, result };
+  };
+  const unpaired = await run({
+    connectionStatus: 'connecting',
+    ownerJid: null,
+  });
+  assert.deepEqual(await unpaired.result, {
+    outcome: 'reconciled',
+    providerState: 'close',
+    webhookVerified: true,
+    bindingVerified: false,
+  });
+  assert.equal(
+    unpaired.calls.every((call) => call.method === 'GET'),
+    true,
+  );
+  // A paired owner, a claimed open socket or an unreadable reply stay uncertain.
+  for (const [row, state] of [
+    [
+      {
+        connectionStatus: 'connecting',
+        ownerJid: '5511000000001@s.whatsapp.net',
+      },
+    ],
+    [{ connectionStatus: 'open', ownerJid: null }],
+    [{ connectionStatus: 'connecting', ownerJid: null }, {}],
+    [
+      { connectionStatus: 'connecting', ownerJid: null },
+      { instance: { state: 'paused' } },
+    ],
+  ])
+    await assert.rejects(
+      (await run(row, state)).result,
+      /WAP_CONTROL_UNKNOWN/u,
+    );
+});
+
 /** Every observed settings row that must not count as verified. */
 const DRIFTED_SETTINGS = [
   null,

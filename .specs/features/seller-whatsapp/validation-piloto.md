@@ -192,6 +192,15 @@ Decisões do PO no mesmo dia:
   Painel e comandos por id respondem conforme o leitor. O vendedor do pedido e
   o `COMMERCIAL_ADMIN` continuam vendo, e Pedidos da linha geral não mudam.
 
+**Linha presa em `unknown` (19/11).** Depois de um reinício do Evolution, a
+instância continuava em `fetchInstances` (`connecting`, sem titular), mas
+`connectionState` respondia só com o nome da instância, sem `state`. O Gateway
+recusava a leitura com `WAP_CONTROL_UNKNOWN`, nenhum resultado era gravado, e a
+varredura reagendava o `reconcile` a cada minuto. Corrigido: instância sem
+titular, sem socket em memória e não `open` é lida como `close`; a linha vai
+para `disconnected` e o vendedor reconecta com geração nova. Titular presente
+ou `open` continua incerto.
+
 ## Gates do piloto
 
 O go/no-go está no [roteiro](../../../docs/runbooks/seller-whatsapp.md#gono-go-antes-do-primeiro-efeito-real).

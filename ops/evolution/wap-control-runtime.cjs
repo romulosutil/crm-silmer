@@ -356,7 +356,17 @@ function createControlAdapter({
         const state = await http(`/instance/connectionState/${name}`);
         const webhook = await http(`/webhook/find/${name}`);
         const settings = await http(`/settings/find/${name}`);
-        const providerState = state?.instance?.state;
+        // WAP-E12: after an Evolution restart an unpaired instance has no
+        // socket in memory and its state read omits `state`. The generation
+        // binding died with the process, so it is read as close (re-pair);
+        // a paired owner or a claimed open socket stays uncertain.
+        const unloaded =
+          state?.instance !== null &&
+          typeof state?.instance === 'object' &&
+          !('state' in state.instance) &&
+          !own[0].ownerJid &&
+          own[0].connectionStatus !== 'open';
+        const providerState = unloaded ? 'close' : state?.instance?.state;
         if (!['open', 'close', 'connecting'].includes(providerState))
           throw new Error('WAP_CONTROL_UNKNOWN');
         // WAP-E12: the CRM contract has one routing proof; drifted settings

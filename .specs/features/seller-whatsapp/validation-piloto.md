@@ -18,10 +18,29 @@ conectarem a própria linha e reservou a supervisão das conversas pessoais à
 única conta administrativa designada. A conta desativada indicada pelo
 proprietário fica fora das listas de habilitação. A autorização abrange o
 provisionamento de um par exclusivo de linha e instância por titular e a
-preservação do bloqueio da linha desativada. A ampliação aguarda confirmação da versão
-implantada e da configuração efetiva dos serviços.
+preservação do bloqueio da linha desativada.
 [ADR 095](../../../docs/adr/095-supervisao-das-linhas-pessoais.md) ·
 [operação](../../../docs/runbooks/seller-whatsapp.md#liberação-da-equipe-comercial)
+
+**Liberação verificada em produção às 12h47 de 20/11/2026 (Brasília).**
+A API, o worker e a interface executavam a revisão `e332c597`.
+[PR 432](https://github.com/romulosutil/crm-silmer/pull/432) ·
+[CI da revisão em master](https://github.com/romulosutil/crm-silmer/actions/runs/44765640374)
+
+- A leitura usada pela tela Meu WhatsApp retornou `available=true` e
+  `not_configured` para os quatro vendedores e três administradores ativos.
+  Os sete podem parear a própria linha. A verificação fez zero envios e
+  zero pareamentos.
+- A consulta de autorização da versão implantada retornou as dez conversas
+  pessoais da linha bloqueada para a única conta supervisora. Cada um dos
+  outros dois administradores e dos quatro vendedores obteve zero conversas
+  dessa linha. A conta desativada continuou com zero vínculos de transporte
+  ativos.
+- As listas de ingresso, controle e envio coincidiram nos sete titulares.
+  Os quatro workflows do n8n estavam ativos. A instância desativada continuou
+  na proteção de origem e retenção da Evolution, e a linha geral estava
+  aberta. Os cinco serviços estavam em execução e as sondas de prontidão
+  do CRM e do n8n responderam HTTP 200.
 
 **20/11/2026 — troca de mensagens no piloto de um vendedor (WAP-09 / WAP-E12).**
 Nas conversas individuais observadas, os registros de produção confirmam

@@ -70,6 +70,11 @@ else {
         access,
         environment: { ...environment, ...overrides },
       });
+    const supervisor = {
+      ...seller,
+      id: randomUUID(),
+      capabilities: ['COMMERCIAL_ADMIN'],
+    };
     const migrations = await loadMigrations();
     /** @param {string} id @param {string} [contactId] */
     async function conversation(id, contactId = `contact-${id}`) {
@@ -982,9 +987,28 @@ else {
             "INSERT INTO crm.user_capabilities(user_id,capability) VALUES($1,'COMMERCIAL_ADMIN')",
             [other.id],
           );
+          await assert.rejects(
+            runtime().createManual({
+              ...command('personal', 'personal-b'),
+              actor: other,
+            }),
+            { code: 'FORBIDDEN' },
+          );
+          await pool.query(
+            "INSERT INTO crm.users(id,email,password_hash,name) VALUES($1,'admin@crm-silmer.local','$argon2id$synthetic','Supervisor Sintético')",
+            [supervisor.id],
+          );
+          await pool.query(
+            "INSERT INTO crm.user_functions(user_id,function_name) VALUES($1,'Vendedor')",
+            [supervisor.id],
+          );
+          await pool.query(
+            "INSERT INTO crm.user_capabilities(user_id,capability) VALUES($1,'COMMERCIAL_ADMIN')",
+            [supervisor.id],
+          );
           const admin = await runtime().createManual({
             ...command('personal', 'personal-b'),
-            actor: other,
+            actor: supervisor,
           });
           assert.equal(admin.order.seller.id, seller.id);
           const blocker = await pool.connect();
@@ -1389,7 +1413,7 @@ else {
                 [contactId],
               )
             ).rows[0].n;
-          for (const actor of [intruder, peer])
+          for (const actor of [intruder, peer, admin])
             await assert.rejects(standalone(actor, privateContact), {
               code: 'CONTACT_NOT_FOUND',
             });
@@ -1399,18 +1423,18 @@ else {
           // The writer re-reads visibility under the Contact lock.
           await assert.rejects(
             repository.createPending({
-              actor: intruder,
+              actor: admin,
               contactId: privateContact,
               conversationId: null,
               correlationId: randomUUID(),
-              createdBy: intruder.id,
+              createdBy: admin.id,
               createdByKind: 'user',
               fabCode: '01',
               ficha: briefingToFicha(null),
               firstContactAt: NOW.toISOString(),
               id: randomUUID(),
               manualCreateKey: randomUUID(),
-              manualOwnerId: intruder.id,
+              manualOwnerId: admin.id,
               missingFields: ['items'],
               now: NOW,
               totalPieces: 0,
@@ -1448,8 +1472,12 @@ else {
           // The owner and an Admin keep working; a general client stays open.
           const own = await standalone(seller, privateContact);
           assert.equal(own.ficha.summary.cliente, 'Cliente Sintético');
-          const byAdmin = await standalone(admin, privateContact);
+          const byAdmin = await standalone(supervisor, privateContact);
           assert.equal(byAdmin.contactId, privateContact);
+          assert.equal(
+            (await standalone(admin, generalContact)).contactId,
+            generalContact,
+          );
           const general = await standalone(intruder, generalContact);
           assert.equal(general.contactId, generalContact);
           assert.equal(await manualOrders(privateContact), 2);

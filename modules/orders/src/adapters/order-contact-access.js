@@ -1,17 +1,20 @@
-import { contactVisible } from '@crm-silmer/contacts';
+import { contactReadVisible, contactVisible } from '@crm-silmer/contacts';
 
-/**
- * WAP-07 (P1-1): an order may name only a Contact its author may read. The
- * predicate is the one `GET /api/v1/contacts/:id` applies to a seller, and a
- * current COMMERCIAL_ADMIN grant reads every Contact, as there.
- *
- * @param {string} contact SQL alias of a `crm.contacts` row
- * @param {string} actor SQL parameter holding the user id
- */
+/** @param {string} actor */
+function commercialAdmin(actor) {
+  return `EXISTS (SELECT 1 FROM crm.user_capabilities admin_grant WHERE admin_grant.user_id=${actor} AND admin_grant.capability='COMMERCIAL_ADMIN')`;
+}
+
+/** Creating an order for a contact uses the same visibility as the contact catalogue.
+ * @param {string} contact @param {string} actor */
 export function contactReadable(contact, actor) {
-  return `(EXISTS (SELECT 1 FROM crm.user_capabilities admin_grant
-      WHERE admin_grant.user_id=${actor} AND admin_grant.capability='COMMERCIAL_ADMIN')
-    OR ${contactVisible(contact, actor)})`;
+  return contactReadVisible(contact, actor, commercialAdmin(actor));
+}
+
+/** Existing orders retain their commercial scope.
+ * @param {string} contact @param {string} actor */
+function commercialContact(contact, actor) {
+  return `(${commercialAdmin(actor)} OR ${contactVisible(contact, actor)})`;
 }
 
 /**
@@ -42,7 +45,7 @@ export function orderReadable(order, actor) {
     OR (EXISTS (
       SELECT 1 FROM crm.contacts order_contact
       WHERE order_contact.id=${order}.contact_id
-        AND ${contactReadable('order_contact', actor)})
+        AND ${commercialContact('order_contact', actor)})
     AND (${order}.conversation_id IS NULL OR EXISTS (
       SELECT 1 FROM crm.conversations order_conversation
       JOIN crm.contact_identities order_identity
@@ -50,5 +53,5 @@ export function orderReadable(order, actor) {
       JOIN crm.contacts conversation_contact
         ON conversation_contact.id=order_identity.current_contact_id
       WHERE order_conversation.id=${order}.conversation_id
-        AND ${contactReadable('conversation_contact', actor)}))))`;
+        AND ${commercialContact('conversation_contact', actor)}))))`;
 }

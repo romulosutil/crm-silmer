@@ -116,9 +116,14 @@ e corpo diferente conflita.
    sweep recuperam por `reconcile`, que só lê estado/identidade/webhook/ajustes. Não
    reiniciar/apagar instância, repetir create/logout/connect ou consumir revisão
    inbound. Reconciliação antiga não supera observação mais recente.
+   O sweep também verifica o socket das linhas conectadas da lista piloto a
+   cada dois minutos, com prioridade para a recuperação de operações pendentes.
+   Uma nova prova `open` mantém a versão da linha e o `verified_at`, que delimita
+   o início da recepção. Um `close` confirmado desconecta a linha e revoga seu
+   binding, permitindo ao titular iniciar outra geração.
    No boot do Evolution, uma instância allowlisted com status persistido
-   `connecting` é carregada em memória sem iniciar um socket, mesmo se o
-   registro ainda tiver o titular de uma sessão anterior.
+   `connecting` ou `open` é carregada em memória sem iniciar um socket. O
+   binding da geração precisa ser instalado novamente pelo desafio autorizado.
    A reconexão exige `connectionState` explicitamente `close` antes de
    reaplicar e conferir os ajustes e o webhook. O desafio autorizado instala
    a prova de geração antes de criar o socket. Se a instância ainda não

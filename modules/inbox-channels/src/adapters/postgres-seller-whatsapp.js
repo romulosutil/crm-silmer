@@ -8,6 +8,8 @@ import {
 } from 'node:crypto';
 import { contactPhoneHash } from '@crm-silmer/contacts';
 
+const CONNECTED_RECONCILE_INTERVAL_MS = 120_000;
+
 const UUID =
   /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/iu;
 
@@ -1086,11 +1088,11 @@ export class PostgresSellerWhatsAppRepository {
         'UPDATE crm.seller_whatsapp_operations SET state=$2,updated_at=$3 WHERE id=$1',
         [op.id, operationState, this.#clock()],
       );
-      // A read that observes the line exactly as it is (e.g. still pairing) is
-      // not a change: bumping the version would make clients drop a challenge
-      // that is still valid. Connected always refreshes its proof and bumps.
+      // An unchanged observation preserves the active pairing challenge and the
+      // original verified_at, which is the inbound cutover for this connection.
       const unchanged =
-        state === line.state && state !== 'connected' && !line.verified_at;
+        state === line.state &&
+        Boolean(line.verified_at) === (state === 'connected');
       const updated = unchanged
         ? line
         : (
@@ -1139,7 +1141,13 @@ export class PostgresSellerWhatsAppRepository {
           "UPDATE crm.seller_whatsapp_revocations SET state='completed',updated_at=$2 WHERE current_operation_id=$1 AND state='queued'",
           [op.id, this.#clock()],
         );
-      await this.#audit(client, updated, op, `WHATSAPP_${state.toUpperCase()}`);
+      if (!unchanged || state !== 'connected')
+        await this.#audit(
+          client,
+          updated,
+          op,
+          `WHATSAPP_${state.toUpperCase()}`,
+        );
       return { accepted: true, duplicate: false, stale: false };
     });
   }
@@ -1531,30 +1539,38 @@ export class PostgresSellerWhatsAppRepository {
     });
   }
 
-  /** Crash recovery schedules reads only. A process lost after its effect fence
-   * never makes the original mutating job eligible to run again.
+  /** Recover in-flight operations and check the socket of connected lines by
+   * scheduling reads. An effect lost after its fence is never replayed.
    * @param {{staleAfterMs?:number}} [options] */
   async scheduleReconciliations(options = {}) {
     if (this.#options.enabled !== true) return { scheduled: 0 };
     const staleAfterMs = options.staleAfterMs ?? 30_000;
     if (!Number.isSafeInteger(staleAfterMs) || staleAfterMs < 1000)
       fail('INVALID_REQUEST', 400);
-    const cutoff = new Date(this.#clock().getTime() - staleAfterMs);
+    const now = this.#clock().getTime();
+    const cutoff = new Date(now - staleAfterMs);
+    const connectedCutoff = new Date(now - CONNECTED_RECONCILE_INTERVAL_MS);
     const candidates = (
       await this.#database.query(
-        `SELECT DISTINCT o.id FROM crm.seller_whatsapp_operations o
+        `SELECT o.id, l.state='connected' AND o.action='connect'
+          AND o.state IN ('succeeded','reconciled') AS connected_check
+      FROM crm.seller_whatsapp_operations o
       JOIN crm.seller_whatsapp_lines l ON l.id=o.line_id
-      WHERE ((o.generation=l.generation AND l.state<>'blocked') OR EXISTS(
+      WHERE o.actor_id=ANY($3::text[])
+      AND NOT EXISTS(SELECT 1 FROM crm.outbox_jobs j WHERE j.whatsapp_operation_id=o.id
+        AND j.whatsapp_action='reconcile' AND j.status IN ('pending','processing','retry'))
+      AND ((o.generation=l.generation AND l.state<>'blocked') OR EXISTS(
         SELECT 1 FROM crm.seller_whatsapp_revocations r WHERE r.previous_operation_id=o.id AND r.state='waiting_reconciliation'))
-      AND o.updated_at<$1
-      AND (o.state IN ('dispatching','unknown') OR (o.state='pending' AND EXISTS(
+      AND (CASE WHEN l.state='connected' AND o.action='connect' AND o.state IN ('succeeded','reconciled')
+      THEN o.generation=l.generation AND o.updated_at<$2
+      ELSE o.updated_at<$1 AND (o.state IN ('dispatching','unknown') OR (o.state='pending' AND EXISTS(
         SELECT 1 FROM crm.outbox_jobs j WHERE j.whatsapp_operation_id=o.id
           AND j.job_type='whatsapp.control.deliver' AND j.status IN ('dead_letter','outcome_unknown','completed')))
         OR EXISTS(SELECT 1 FROM crm.seller_whatsapp_challenges c
         WHERE c.operation_id=o.id AND (c.state IN ('reserved','dispatching','delivered','unknown')
-          OR (c.state='resolved' AND l.state='awaiting_pairing')) AND c.updated_at<$1))
-      ORDER BY o.id LIMIT 50`,
-        [cutoff],
+          OR (c.state='resolved' AND l.state='awaiting_pairing')) AND c.updated_at<$1)) END)
+      ORDER BY connected_check, o.updated_at, o.id LIMIT 50`,
+        [cutoff, connectedCutoff, [...this.#sellers]],
       )
     ).rows;
     let scheduled = 0;
@@ -1577,7 +1593,16 @@ export class PostgresSellerWhatsAppRepository {
           throw error;
         }
         const { line, op } = context;
-        if (new Date(op.updated_at) >= cutoff) return false;
+        if (candidate.connected_check) {
+          if (
+            line.state !== 'connected' ||
+            Number(line.generation) !== Number(op.generation) ||
+            op.action !== 'connect' ||
+            !['succeeded', 'reconciled'].includes(op.state) ||
+            new Date(op.updated_at) >= connectedCutoff
+          )
+            return false;
+        } else if (new Date(op.updated_at) >= cutoff) return false;
         const queued = (
           await client.query(
             "SELECT id FROM crm.outbox_jobs WHERE whatsapp_operation_id=$1 AND whatsapp_action='reconcile' AND status IN ('pending','processing','retry')",
@@ -1585,6 +1610,10 @@ export class PostgresSellerWhatsAppRepository {
           )
         ).rows[0];
         if (queued) return false;
+        if (candidate.connected_check) {
+          await this.#reconcile(client, op);
+          return true;
+        }
         if (op.state === 'dispatching' || op.state === 'pending') {
           await client.query(
             "UPDATE crm.seller_whatsapp_operations SET state='unknown',updated_at=$2 WHERE id=$1",

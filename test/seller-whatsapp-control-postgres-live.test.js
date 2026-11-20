@@ -302,7 +302,7 @@ else {
             });
           if (path.startsWith('/instance/connectionState/'))
             return globalThis.Response.json({
-              instance: { state: providerState },
+              instance: { instanceName, state: providerState },
             });
           if (path.startsWith('/instance/connect/')) {
             if (providerState !== 'connecting') socket = {};

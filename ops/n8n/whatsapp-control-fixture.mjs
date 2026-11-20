@@ -176,7 +176,9 @@ createServer(async (req, res) => {
         return res.end(JSON.stringify(record.settings ?? null));
       if (path.startsWith('/instance/connectionState/'))
         return res.end(
-          JSON.stringify({ instance: { state: record.state || 'close' } }),
+          JSON.stringify({
+            instance: { instanceName: instance, state: record.state || 'close' },
+          }),
         );
       if (path.startsWith('/instance/connect/')) {
         if (!record.reserved.has('challenge') || record.issued)

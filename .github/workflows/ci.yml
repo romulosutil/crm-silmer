@@ -267,6 +267,8 @@ jobs:
         env:
           POSTGRES_DB: crm_silmer_test
           POSTGRES_PASSWORD: issue12-ci-only
+          # Four independent suites may reset their full schemas concurrently.
+          POSTGRES_INITDB_ARGS: '-c max_locks_per_transaction=256'
         ports:
           - 5432:5432
         options: >-

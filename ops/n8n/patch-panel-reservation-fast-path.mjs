@@ -63,13 +63,23 @@ export function patchPanelReservationFastPath(source) {
       throw new Error('PANEL_FAST_PATH_CONNECTIONS_CHANGED');
     const p = n.parameters;
     if (n.type === 'n8n-nodes-base.set') {
+      const explicit =
+        keys(p) === 'includeOtherFields,jsonOutput,mode,options' &&
+        p.includeOtherFields === false &&
+        keys(p.options) === 'stripBinary' &&
+        p.options.stripBinary === true;
+      // The n8n 2.43 editor omits defaults. In Set 3.4, omitted
+      // includeOtherFields sets include='none', which also drops binary data.
+      const editorDefaults =
+        keys(p) === 'jsonOutput,mode,options' &&
+        p.options &&
+        typeof p.options === 'object' &&
+        !Array.isArray(p.options) &&
+        keys(p.options) === '';
       if (
         n.typeVersion !== 3.4 ||
-        keys(p) !== 'includeOtherFields,jsonOutput,mode,options' ||
+        (!explicit && !editorDefaults) ||
         p.mode !== 'raw' ||
-        p.includeOtherFields !== false ||
-        keys(p.options) !== 'stripBinary' ||
-        p.options.stripBinary !== true ||
         typeof p.jsonOutput !== 'string' ||
         sha(p.jsonOutput) !== target.expressionHash
       )

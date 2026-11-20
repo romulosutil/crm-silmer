@@ -16,6 +16,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
+import { patchPanelReservationFastPath } from '../ops/n8n/patch-panel-reservation-fast-path.mjs';
 import {
   buildWapProductionWorkflows,
   insideRepository,
@@ -400,6 +401,103 @@ test('WAP-E12: the main keeps every untouched node and gains exactly the dispatc
   assert.equal(pilot.inbound.name, 'Silmer seller WhatsApp inbound');
   assert.throws(
     () => buildWapProductionWorkflows(rebuilt, config()),
+    /EVOLUTION_SEND_NODE_UNSUPPORTED/u,
+  );
+});
+
+test('WAP-E12: personal send preserves the native panel fast path', () => {
+  const before = patchPanelReservationFastPath(main()).workflow;
+  const normalize = 'Normalizar comando do painel (MVP)';
+  const reserve = 'Preparar reserva de envio humano (MVP)';
+  const at = (/** @type {any} */ workflow, /** @type {string} */ name) =>
+    workflow.nodes.find((/** @type {any} */ node) => node.name === name);
+  // The editor can omit the default Set parameters when it saves the draft.
+  for (const name of [normalize, reserve]) {
+    const node = at(before, name);
+    delete node.parameters.includeOtherFields;
+    node.parameters.options = {};
+  }
+  const after = buildWapProductionWorkflows(before, {
+    ...config(),
+    personalSendLineIds: [lineA],
+  })['main-personal-send'];
+  class FixedDate extends Date {
+    constructor() {
+      super('2026-11-12T12:00:00.000Z');
+    }
+  }
+  const run = (/** @type {any} */ node, /** @type {any} */ json) =>
+    JSON.parse(
+      JSON.stringify(
+        vm.runInNewContext(
+          `(${node.parameters.jsonOutput.slice(3, -2)})`,
+          { $json: json, $execution: { id: '12345' }, Date: FixedDate },
+          { timeout: 500 },
+        ),
+      ),
+    );
+  for (const name of [normalize, reserve]) {
+    const n = at(after, name);
+    assert.deepEqual(
+      { ...n, parameters: at(before, name).parameters },
+      at(before, name),
+    );
+    assert.notEqual(
+      n.parameters.jsonOutput,
+      at(before, name).parameters.jsonOutput,
+    );
+  }
+  const payload = {
+    schema_version: '1.0',
+    action: 'send_message',
+    command_id: 'synthetic-command',
+    conversation_id: 'synthetic-conversation',
+    automation_epoch: 7,
+    source_revision: 9,
+    message: { type: 'text', text: 'synthetic' },
+    to: '5511000000000',
+  };
+  const input = {
+    body: payload,
+    headers: { 'idempotency-key': payload.command_id },
+  };
+  const general = run(at(before, normalize), input);
+  assert.equal(general.kind, 'send');
+  assert.deepEqual(run(at(after, normalize), input), general);
+  assert.deepEqual(
+    run(at(after, reserve), general),
+    run(at(before, reserve), general),
+  );
+
+  const source = {
+    bindingId: 'synthetic-binding',
+    lineId: lineA,
+    accountId: 'synthetic-account',
+    generation: 3,
+  };
+  const target = { source: { ...source, instance: instances[0] } };
+  const personal = run(at(after, normalize), {
+    ...input,
+    body: { ...payload, whatsapp_target: target },
+  });
+  assert.equal(personal.kind, 'send');
+  assert.deepEqual(run(at(after, reserve), personal).payload.source, source);
+  for (const body of [
+    {
+      ...payload,
+      whatsapp_target: { source: { ...target.source, lineId: lineB } },
+    },
+    { ...payload, to: 'invalid', whatsapp_target: target },
+  ])
+    assert.deepEqual(run(at(after, normalize), { ...input, body }), {
+      payload: {},
+      kind: 'invalid',
+    });
+
+  const drifted = structuredClone(before);
+  at(drifted, reserve).parameters.jsonOutput += ' ';
+  assert.throws(
+    () => buildWapProductionWorkflows(drifted, config()),
     /EVOLUTION_SEND_NODE_UNSUPPORTED/u,
   );
 });

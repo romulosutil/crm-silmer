@@ -1,3 +1,5 @@
+import { patchPanelReservationFastPath } from '../patch-panel-reservation-fast-path.mjs';
+
 const RESERVE = 'Preparar reserva de envio humano (MVP)';
 const TEXT = 'WhatsApp - Enviar texto humano (MVP)';
 const MEDIA = 'Evolution - Enviar midia humana (MVP)';
@@ -34,22 +36,39 @@ export function configurePersonalSend(workflow, lineIds) {
     return node;
   };
   const normalize = find('Normalizar comando do painel (MVP)');
-  // The patch edits Code-node source; a main where this node was rebuilt as
-  // another node type cannot be patched safely.
-  if (typeof normalize.parameters?.jsCode !== 'string')
+  const reserve = find(RESERVE);
+  const setType = 'n8n-nodes-base.set';
+  const native = normalize.type === setType || reserve.type === setType;
+  const sourceKey = native ? 'jsonOutput' : 'jsCode';
+  if (
+    typeof normalize.parameters?.[sourceKey] !== 'string' ||
+    typeof reserve.parameters?.[sourceKey] !== 'string'
+  )
     throw new Error('EVOLUTION_SEND_NODE_UNSUPPORTED');
   if (
-    normalize.parameters.jsCode.includes('payload.whatsapp_target') ||
+    normalize.parameters[sourceKey].includes('payload.whatsapp_target') ||
     workflow.nodes.some((/** @type {any} */ node) =>
       /^Despacho pessoal de (?:text|media)\? \(WAP\)$/u.test(node.name),
     )
   )
     throw new Error('EVOLUTION_SEND_ALREADY_CONFIGURED');
-  normalize.parameters.jsCode = replaceOnce(
+  if (native) {
+    try {
+      // Both Set nodes must match the deployed fast path, including edges.
+      if (patchPanelReservationFastPath(workflow).changedNodeNames.length)
+        throw new Error('EVOLUTION_SEND_NODE_UNSUPPORTED');
+    } catch {
+      throw new Error('EVOLUTION_SEND_NODE_UNSUPPORTED');
+    }
+  }
+  const invalid = native
+    ? "{payload:{},kind:'invalid'}"
+    : "{json:{payload:{},kind:'invalid'}}";
+  normalize.parameters[sourceKey] = replaceOnce(
     replaceOnce(
-      normalize.parameters.jsCode,
+      normalize.parameters[sourceKey],
       'const siteChat = ',
-      `const target=payload.whatsapp_target;if(target&&(!${JSON.stringify(lineIds)}.includes(target.source?.lineId)||!/^\\d{8,15}$/.test(String(payload.to??'').replace(/^\\+/,''))||!/^[A-Za-z0-9_-]{1,64}$/.test(target.source?.instance??'')))return {json:{payload:{},kind:'invalid'}};\nconst ficha=Boolean(target&&payload.order_pdf&&payload.message?.type==='document'&&payload.message.mime_type==='application/pdf');\nconst siteChat = !target && `,
+      `const target=payload.whatsapp_target;if(target&&(!${JSON.stringify(lineIds)}.includes(target.source?.lineId)||!/^\\d{8,15}$/.test(String(payload.to??'').replace(/^\\+/,''))||!/^[A-Za-z0-9_-]{1,64}$/.test(target.source?.instance??'')))return ${invalid};\nconst ficha=Boolean(target&&payload.order_pdf&&payload.message?.type==='document'&&payload.message.mime_type==='application/pdf');\nconst siteChat = !target && `,
     ),
     "['text', 'image', 'audio', 'video'].includes(payload.message?.type)",
     "(['text', 'image', 'audio', 'video'].includes(payload.message?.type)||ficha)",
@@ -69,6 +88,17 @@ export function configurePersonalSend(workflow, lineIds) {
     "!['image','audio','video'].includes(expected.type)&&!(command.whatsapp_target&&command.order_pdf&&expected.type==='document'&&expected.mime_type==='application/pdf')",
   );
 
+  /** @param {string} code */
+  const withPersonalSource = (code) =>
+    replaceOnce(
+      code,
+      /payload:\s*\{(?=[\s\S]*event_type:)/u,
+      'payload: { ...(command.whatsapp_target ? {source: (({bindingId,lineId,accountId,generation})=>({bindingId,lineId,accountId,generation}))(command.whatsapp_target.source)} : {}),',
+    );
+  if (native)
+    reserve.parameters.jsonOutput = withPersonalSource(
+      reserve.parameters.jsonOutput,
+    );
   for (const node of workflow.nodes) {
     const code = node.parameters?.jsCode;
     if (
@@ -79,11 +109,7 @@ export function configurePersonalSend(workflow, lineIds) {
       )
     )
       continue;
-    node.parameters.jsCode = replaceOnce(
-      code,
-      /payload:\s*\{(?=[\s\S]*event_type:)/u,
-      'payload: { ...(command.whatsapp_target ? {source: (({bindingId,lineId,accountId,generation})=>({bindingId,lineId,accountId,generation}))(command.whatsapp_target.source)} : {}),',
-    );
+    node.parameters.jsCode = withPersonalSource(code);
   }
 
   const recipient = find('Evolution - Consultar destinatario humano (MVP)');
@@ -144,7 +170,8 @@ export function configurePersonalSend(workflow, lineIds) {
         parameters: {
           ...structuredClone(template.parameters),
           method: 'POST',
-          url: template.parameters.url.replace(
+          url: replaceOnce(
+            template.parameters.url,
             '/media?preflight=true',
             '/preflight',
           ),

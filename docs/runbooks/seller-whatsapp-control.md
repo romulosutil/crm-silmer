@@ -95,6 +95,8 @@ e corpo diferente conflita.
 3. Desafio explícito reserva uso único, instala binding do socket e chama connect
    upstream uma vez. A resposta só sai após revalidar sessão, titular, geração e
    TTL. O binding captura source/token antes da fila; retry não reclassifica evento.
+   A tela orienta o pareamento em Aparelhos conectados, indica que o desafio
+   está sendo gerado e informa quando ele expira para o titular solicitar outro.
 4. Só leitura posterior que comprova número esperado, estado `open`, webhook
    autorizado e binding realmente capturado no socket da geração atual pode
    marcar `connected`. Um socket antigo aberto ou binding apenas preparado não

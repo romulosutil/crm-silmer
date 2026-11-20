@@ -278,7 +278,7 @@ onBeforeUnmount(clear);
         </button>
       </template>
       <template #tools>
-        <slot name="tools" :disabled="disabled || active || sending" />
+        <slot name="tools" :disabled="active || sending" />
       </template>
       <template #recording-status>
         <div v-if="state !== 'idle' || error" class="composer-status">

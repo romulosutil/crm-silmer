@@ -17,6 +17,7 @@ const busy = ref(false);
 const requestingChallenge = ref(false);
 const error = ref('');
 const secret = ref(null);
+const expiredChallenge = ref('');
 const root = ref(null);
 const title = ref(null);
 const qrTrigger = ref(null);
@@ -163,6 +164,7 @@ async function refresh() {
           data.challenge?.state === 'revoked'))
     )
       clearSecret();
+    if (next?.state !== 'awaiting_pairing') expiredChallenge.value = '';
     state.value = data;
     error.value = '';
     // Only a server that reports challenge metadata can prove the earlier
@@ -182,6 +184,7 @@ async function control(action) {
   if (!line.value || busy.value) return;
   if (action === 'connect' && uncertain.value) return;
   clearSecret();
+  expiredChallenge.value = '';
   challengeId.value = '';
   uncertain.value = '';
   const current = new AbortController();
@@ -222,6 +225,7 @@ async function control(action) {
 /** @param {'qr'|'code'} mode */
 async function challenge(mode) {
   if (challengeLocked.value) return;
+  expiredChallenge.value = '';
   lastMode.value = mode;
   busy.value = true;
   requestingChallenge.value = true;
@@ -310,7 +314,10 @@ async function challenge(mode) {
     scheduleFollowUp();
     // Bound the in-memory lifetime even without a server clock.
     expiryTimer = setTimeout(
-      clearSecret,
+      () => {
+        clearSecret();
+        expiredChallenge.value = mode;
+      },
       Math.min(120_000, Math.max(0, expires - referenceTime)),
     );
   } catch (cause) {
@@ -392,8 +399,8 @@ onBeforeUnmount(() => {
         A conexão pessoal não está disponível para sua conta.
       </p>
       <p v-if="state.available && line.state === 'blocked'">
-        O número conectado não é o cadastrado. Desconecte e reconecte pelo
-        celular com o número cadastrado.
+        A conexão não pôde ser confirmada. Desconecte e tente de novo com o
+        celular do número cadastrado.
       </p>
       <form
         v-if="
@@ -429,7 +436,10 @@ onBeforeUnmount(() => {
         </button>
       </form>
       <template v-if="state.available && line.state === 'awaiting_pairing'">
-        <p>Peça um desafio somente quando estiver pronto para conectar.</p>
+        <p>
+          Abra <strong>Aparelhos conectados</strong> no WhatsApp. Use o QR em
+          outra tela ou o código no mesmo celular.
+        </p>
         <div class="inline-actions" :aria-busy="busy ? 'true' : undefined">
           <button
             ref="qrTrigger"
@@ -449,6 +459,16 @@ onBeforeUnmount(() => {
           </button>
         </div>
         <p>O código no mesmo celular ainda não foi homologado em uso real.</p>
+        <p v-if="requestingChallenge" role="status">
+          {{ lastMode === 'qr' ? 'Gerando QR…' : 'Gerando código…' }}
+        </p>
+        <p v-else-if="expiredChallenge" role="status">
+          {{
+            expiredChallenge === 'qr'
+              ? 'O QR expirou. Selecione Mostrar QR para gerar outro.'
+              : 'O código expirou. Selecione Mostrar código para gerar outro.'
+          }}
+        </p>
         <button
           v-if="requestingChallenge"
           type="button"
@@ -457,11 +477,16 @@ onBeforeUnmount(() => {
           Cancelar desafio
         </button>
         <div v-if="secret" aria-live="polite">
-          <img
-            v-if="secret.mode === 'qr'"
-            :src="secret.value"
-            alt="QR para conectar seu WhatsApp"
-          />
+          <template v-if="secret.mode === 'qr'">
+            <p>
+              Toque em <strong>Conectar um aparelho</strong> e escaneie o QR.
+            </p>
+            <img
+              class="pairing-qr"
+              :src="secret.value"
+              alt="QR para conectar seu WhatsApp"
+            />
+          </template>
           <p v-else>
             Código: <strong>{{ secret.value }}</strong>
           </p>
@@ -502,5 +527,10 @@ onBeforeUnmount(() => {
   cursor: not-allowed;
   opacity: 0.55;
   box-shadow: none;
+}
+.pairing-qr {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto;
 }
 </style>

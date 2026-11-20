@@ -41,6 +41,7 @@ import {
   AUTOMATION_MESSAGE_CAP,
   countStalledConversations,
   readAssistantStallMinutes,
+  sellerWhatsAppSendConfiguration,
 } from '@crm-silmer/n8n-integration';
 import { PostgresHandoffReadRepository } from '@crm-silmer/work-management';
 
@@ -85,7 +86,7 @@ export const ASSISTANT_PERFORMANCE_DAYS = Object.freeze({
   min: 1,
 });
 
-/** @param {{clock?: () => Date, contactRepository: any, cursorKey: Buffer, database?: any, handoffRepository: any, inboxRepository: any, countStalled?: ((now: Date) => Promise<number>) | null, assistantMessageCap?: number, stallMinutes?: number}} dependencies */
+/** @param {{clock?: () => Date, contactRepository: any, cursorKey: Buffer, database?: any, handoffRepository: any, inboxRepository: any, countStalled?: ((now: Date) => Promise<number>) | null, assistantMessageCap?: number, stallMinutes?: number, personalSendSellers?: ReadonlySet<string>}} dependencies */
 export function createOperationReadService({
   clock = () => new Date(),
   contactRepository,
@@ -96,6 +97,7 @@ export function createOperationReadService({
   countStalled = null,
   assistantMessageCap = AUTOMATION_MESSAGE_CAP,
   stallMinutes = ASSISTANT_STALL_MINUTES,
+  personalSendSellers = new Set(),
 }) {
   if (!contactRepository || typeof contactRepository !== 'object') {
     throw new TypeError('contactRepository is required');
@@ -248,10 +250,22 @@ export function createOperationReadService({
      * @param {any} input @param {{actorId?: string, capabilities?: readonly string[]}} [access]
      */
     async getConversation(input, access = {}) {
-      return inboxRepository.get(
+      const detail = await inboxRepository.get(
         requireId(input?.conversationId, 'CONVERSATION_ID'),
         readerFor(access),
       );
+      if (
+        detail?.conversation?.personalReplyStatus !== 'ready' ||
+        personalSendSellers.has(access.actorId ?? '')
+      )
+        return detail;
+      return {
+        ...detail,
+        conversation: {
+          ...detail.conversation,
+          personalReplyStatus: 'send_disabled',
+        },
+      };
     },
     /**
      * INBOX-VEZ-01: the four tab counts in one snapshot. Same `owner`,
@@ -695,6 +709,7 @@ export function createOperationReadRuntime(database, options = {}) {
   const service = createOperationReadService({
     countStalled: (now) =>
       countStalledConversations(database, now, stallMinutes),
+    personalSendSellers: sellerWhatsAppSendConfiguration(environment),
     stallMinutes,
     contactRepository: new PostgresContactReadRepository({
       database,

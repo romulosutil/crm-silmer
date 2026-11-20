@@ -440,30 +440,30 @@ const activeLine = computed(() => lineOf(active.value));
  * while replying is possible; otherwise `#reply-help` says why not.
  */
 const replyLineHint = computed(() =>
-  canReply.value && !personalLineDown.value
-    ? (activeLine.value?.sendHint ?? '')
-    : '',
+  replySendable.value ? (activeLine.value?.sendHint ?? '') : '',
 );
-/**
- * WAP-11: the reader's own personal line cannot send now (disconnected,
- * blocked, pairing or unknown). Reading, the draft and the order tools stay;
- * only "Enviar resposta" waits, and `#reply-line` says how to reconnect. The
- * detail carries `personalLineUsable` for the holder only.
- */
-const personalLineDown = computed(
-  () =>
-    active.value?.personalLine === true &&
-    Boolean(currentUserId.value) &&
-    active.value?.assignedUser?.id === currentUserId.value &&
-    active.value?.personalLineUsable === false,
-);
+/** WAP-11: the holder can keep drafting while the personal reply is blocked. */
+const personalReplyBlock = computed(() => {
+  const conversation = active.value;
+  if (!conversation?.personalLine) return '';
+  if (
+    !currentUserId.value ||
+    conversation.assignedUser?.id !== currentUserId.value
+  )
+    return 'holder_only';
+  const status = conversation.personalReplyStatus;
+  if (['reconnect', 'unavailable', 'send_disabled'].includes(status))
+    return status;
+  return conversation.personalLineUsable === false ? 'reconnect' : '';
+});
 /** `#reply-line` exists: the exit of a reply, or why it cannot leave. */
-const showReplyLine = computed(
-  () =>
-    Boolean(replyLineHint.value) || (canReply.value && personalLineDown.value),
+const showReplyLine = computed(() =>
+  Boolean(replyLineHint.value || (canReply.value && personalReplyBlock.value)),
 );
 /** "Enviar resposta" may send, a draft aside. */
-const replySendable = computed(() => canReply.value && !personalLineDown.value);
+const replySendable = computed(
+  () => canReply.value && !personalReplyBlock.value,
+);
 const transferOptions = computed(() =>
   assignableUsers.value.filter((user) => user.id !== currentUserId.value),
 );
@@ -1808,7 +1808,7 @@ function describeError(cause, path = '') {
   if (code === 'NON_PRODUCTION_CONVERSATION')
     return 'Esta conversa é de teste e não envia mensagens pelo WhatsApp.';
   if (code === 'WHATSAPP_SEND_UNAVAILABLE')
-    return 'O WhatsApp desta linha está indisponível. A mensagem não foi enviada; seu rascunho foi mantido.';
+    return 'Não foi possível enviar pelo WhatsApp desta linha. Seu rascunho foi mantido.';
   // RFC 052: the loss and reminder commands refuse with a code of their own.
   const known = turnCommandError(code);
   if (known) return `${known}${suffix}`;
@@ -2674,6 +2674,12 @@ async function runCommand(
     // 409: the conversation moved. 403 on a loss: ownership moved.
     if (status === 409 || (status === 403 && path === 'lead-outcome'))
       await loadInbox(true);
+    else if (
+      path === 'messages' &&
+      activeId.value === conversationId &&
+      /** @type {any} */ (cause)?.code === 'WHATSAPP_SEND_UNAVAILABLE'
+    )
+      await selectConversation(conversationId, true);
     return false;
   } finally {
     busy.value = false;
@@ -3094,11 +3100,20 @@ async function periodicRefresh() {
 }
 
 function visibilityChanged() {
-  if (
-    globalThis.document.visibilityState === 'visible' &&
-    Date.now() - lastPeriodicAt >= PERIODIC_REFRESH_MS
-  )
+  if (globalThis.document.visibilityState !== 'visible') return;
+  if (Date.now() - lastPeriodicAt >= PERIODIC_REFRESH_MS) {
     void periodicRefresh();
+    return;
+  }
+  // Pairing can finish in another tab between regular Inbox refreshes.
+  if (
+    active.value?.personalLine &&
+    ownedByMe.value &&
+    !busy.value &&
+    !mediaSending.value &&
+    !globalThis.document.querySelector('dialog[open]')
+  )
+    void selectConversation(active.value.id, true);
 }
 
 onMounted(() => {
@@ -4026,9 +4041,13 @@ onBeforeUnmount(() => {
               :conversation-id="active.id"
               :expected-version="active.version"
               :drop-target="conversationPane"
-              :disabled="busy || !canReply || active.channel === 'site_chat'"
-              :unavailable="!canReply"
-              reason-id="reply-help"
+              :disabled="
+                busy || !replySendable || active.channel === 'site_chat'
+              "
+              :unavailable="!replySendable"
+              :reason-id="
+                canReply && personalReplyBlock ? 'reply-line' : 'reply-help'
+              "
               :order-tools="showOrderTools"
               @sending-change="mediaSending = $event"
               @sent="mediaSent"
@@ -4042,7 +4061,13 @@ onBeforeUnmount(() => {
                   :destination-label="active.contact?.label || ''"
                   :subjects="subjectState.subjects"
                   :linked-order="active.order"
-                  :disabled="quoteDisabled || busy || mediaSending || !canReply"
+                  :disabled="
+                    quoteDisabled ||
+                    busy ||
+                    mediaSending ||
+                    !canReply ||
+                    active.channel === 'site_chat'
+                  "
                   :revision="orderRevision"
                 />
                 <ConversationShippingQuote
@@ -4051,7 +4076,13 @@ onBeforeUnmount(() => {
                   :key="`shipping-${active.id}`"
                   :conversation-id="active.id"
                   :subjects="subjectState.subjects"
-                  :disabled="quoteDisabled || busy || mediaSending || !canReply"
+                  :disabled="
+                    quoteDisabled ||
+                    busy ||
+                    mediaSending ||
+                    !canReply ||
+                    active.channel === 'site_chat'
+                  "
                   :has-draft="Boolean(reply.trim())"
                   :revision="orderRevision"
                   @draft="addShippingDraft"
@@ -4080,21 +4111,31 @@ onBeforeUnmount(() => {
                     "
                     @keydown="replyKeydown"
                   ></textarea>
-                  <!-- WAP-09: the number a reply leaves by. Plain text read
-                       with the field and the send button, never a live
-                       region: it changes only with the conversation.
-                       WAP-11: the holder's own line down says how to
-                       reconnect instead; the draft stays. -->
+                  <!-- WAP-09/11: the reply's line or the reason sending is blocked. -->
                   <p
-                    v-if="canReply && personalLineDown"
+                    v-if="canReply && personalReplyBlock"
                     id="reply-line"
                     class="composer-help composer-line-down"
                   >
-                    Seu WhatsApp está desconectado. Reconecte em
-                    <RouterLink to="/conta#my-whatsapp-title"
-                      >Conta › Meu WhatsApp</RouterLink
+                    <template v-if="personalReplyBlock === 'holder_only'">
+                      {{ activeLine?.sendHint }}
+                    </template>
+                    <template
+                      v-else-if="personalReplyBlock === 'send_disabled'"
                     >
-                    para enviar.
+                      O envio pelo CRM está desativado para esta linha. Você
+                      pode preparar a resposta.
+                    </template>
+                    <template v-else>
+                      {{
+                        personalReplyBlock === 'reconnect'
+                          ? 'Reconecte seu WhatsApp para enviar. Acesse'
+                          : 'O envio aguarda a confirmação da conexão. Consulte'
+                      }}
+                      <RouterLink to="/conta#my-whatsapp-title"
+                        >Conta › Meu WhatsApp</RouterLink
+                      >.
+                    </template>
                   </p>
                   <p
                     v-else-if="replyLineHint"
@@ -4117,10 +4158,10 @@ onBeforeUnmount(() => {
                     <template v-else-if="!canReply"
                       >Assuma o atendimento antes de responder.</template
                     >
-                    <template v-else-if="touchInput"
+                    <template v-else-if="replySendable && touchInput"
                       >Toque em Enviar resposta para enviar.</template
                     >
-                    <template v-else
+                    <template v-else-if="replySendable"
                       >Enter envia · Shift+Enter quebra a linha.</template
                     >
                   </p>
@@ -4133,7 +4174,7 @@ onBeforeUnmount(() => {
                   class="primary"
                   aria-label="Enviar resposta"
                   :title="
-                    touchInput
+                    !replySendable || touchInput
                       ? 'Enviar resposta'
                       : 'Enviar resposta · Enter envia; Shift+Enter quebra a linha'
                   "

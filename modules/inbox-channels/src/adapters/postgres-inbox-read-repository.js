@@ -16,22 +16,20 @@ const SELLER_NAME_ORDER = new Intl.Collator('pt-BR', { sensitivity: 'base' });
 const PERSONAL_LINE_PROJECTION = `EXISTS (SELECT 1 FROM crm.seller_whatsapp_lines personal_line
   WHERE personal_line.account_id::text=conversation.provider_account_id) AS personal_line`;
 /**
- * WAP-11: whether the reader's own personal line can send right now, the same
- * line test the send path applies (connected, verified, current binding). It
- * is true only for the holder: nobody else learns the line's state.
+ * WAP-11: the send path's connection proof, visible only to the holder.
  * @param {string} actor the SQL parameter holding the reader's id
  */
-const personalLineUsableProjection = (
-  actor,
-) => `EXISTS (SELECT 1 FROM crm.seller_whatsapp_lines usable_line
-  JOIN crm.seller_whatsapp_bindings usable_binding
-    ON usable_binding.line_id=usable_line.id
-   AND usable_binding.generation=usable_line.generation
-   AND usable_binding.revoked_at IS NULL
-  WHERE usable_line.account_id::text=conversation.provider_account_id
-    AND usable_line.seller_id=${actor}::text
-    AND usable_line.state='connected'
-    AND usable_line.verified_at IS NOT NULL) AS personal_line_usable`;
+const personalReplyStatusProjection = (actor) => `(SELECT CASE
+    WHEN line.state IN ('disconnected','blocked') THEN 'reconnect'
+    WHEN line.state='connected' AND line.verified_at IS NOT NULL AND EXISTS (
+      SELECT 1 FROM crm.seller_whatsapp_bindings binding
+      WHERE binding.line_id=line.id AND binding.generation=line.generation
+        AND binding.revoked_at IS NULL
+    ) THEN 'ready'
+    ELSE 'unavailable'
+  END FROM crm.seller_whatsapp_lines line
+  WHERE line.account_id::text=conversation.provider_account_id
+    AND line.seller_id=${actor}::text) AS personal_reply_status`;
 
 const DOCUMENT_IMAGE_MIME_TYPES = new Set([
   'image/jpeg',
@@ -775,7 +773,7 @@ export class PostgresInboxReadRepository {
               .query(
                 `SELECT conversation.id, conversation.state,
                     ${PERSONAL_LINE_PROJECTION},
-                    ${personalLineUsableProjection('$3')},
+                    ${personalReplyStatusProjection('$3')},
                     conversation.automation_state, conversation.automation_epoch,
                     conversation.assigned_user_id, conversation.version,
                     conversation.opened_at, conversation.last_message_at,
@@ -1612,10 +1610,13 @@ function mapConversationSummary(row, repository, turnAsOf = null) {
     : null;
   return Object.freeze({
     personalLine: row.personal_line === true,
-    // WAP-11: only the detail reads it, and only true for the line's holder.
-    ...(row.personal_line_usable === undefined
+    // Preserve the detail's connection proof for existing callers.
+    ...(row.personal_reply_status === undefined
       ? {}
-      : { personalLineUsable: row.personal_line_usable === true }),
+      : { personalLineUsable: row.personal_reply_status === 'ready' }),
+    ...(row.personal_reply_status
+      ? { personalReplyStatus: row.personal_reply_status }
+      : {}),
     assignedUser: row.assigned_user_id
       ? {
           functionName: row.function_name,

@@ -16,6 +16,12 @@ para gerar os candidatos inativos sobre o gerador Evolution anterior. O candidat
 workflow recusa comandos pessoais. A versão e a execução que obtiveram a
 reserva são obrigatórias na autorização de despacho e na conclusão.
 
+No detalhe da Caixa de Entrada, o próprio titular vê o estado do envio.
+Uma linha já conectada com o envio desativado conserva a leitura e o rascunho.
+O botão de resposta e os controles de mídia ficam indisponíveis. Se a conexão
+precisar de confirmação, a orientação aponta para Conta › Meu WhatsApp. A
+reserva e o despacho ainda revalidam os requisitos da linha a cada comando.
+
 O comando humano guarda destino cifrado, conta, instância, binding, geração,
 identidade e versão do vínculo. A fila, `message.send.requested`, a leitura
 de mídia e o `POST` sem corpo em `commands/{commandId}/preflight` revalidam a

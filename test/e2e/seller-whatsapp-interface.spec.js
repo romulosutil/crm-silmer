@@ -528,6 +528,62 @@ test('reconexão exige comando explícito e falha de desafio não repete efeito'
   });
 });
 
+test('alternar de aplicativo mantém a desconexão em andamento', async ({
+  page,
+}) => {
+  await installMocks(page, {}, { fixedClock: false });
+  const line = {
+    id: 'line-synthetic',
+    state: 'connected',
+    version: 5,
+    generation: 2,
+    maskedNumber: '••••0000',
+  };
+  let writes = 0;
+  let release = () => {};
+  const gate = new Promise((resolve) => {
+    release = () => resolve(undefined);
+  });
+  await page.route('**/api/v1/me/whatsapp', (route) =>
+    route.fulfill({ json: { line, challenge: null, available: true } }),
+  );
+  await page.route('**/api/v1/me/whatsapp/disconnect', async (route) => {
+    writes++;
+    await gate;
+    line.state = 'disconnected';
+    line.version++;
+    await route.fulfill({ status: 202, json: {} });
+  });
+  await page.goto('/conta');
+  const disconnect = page.getByRole('button', { name: 'Desconectar' });
+  await disconnect.click();
+  try {
+    await expect.poll(() => writes).toBe(1);
+    const refreshed = page.waitForResponse('**/api/v1/me/whatsapp');
+    await page.evaluate(() => {
+      for (const value of ['hidden', 'visible']) {
+        Object.defineProperty(globalThis.document, 'visibilityState', {
+          configurable: true,
+          value,
+        });
+        globalThis.document.dispatchEvent(
+          new globalThis.Event('visibilitychange'),
+        );
+      }
+    });
+    await refreshed;
+    await expect(disconnect).toBeDisabled();
+    await disconnect.focus();
+    await page.keyboard.press('Enter');
+  } finally {
+    release();
+  }
+  await expect(
+    page.getByRole('button', { name: 'Reconectar WhatsApp' }),
+  ).toBeEnabled();
+  expect(writes).toBe(1);
+});
+
 test('primeira conexão sem linha pede o número com código do país', async ({
   page,
 }) => {

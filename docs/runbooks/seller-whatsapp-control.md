@@ -31,6 +31,11 @@ do worker ou do sweep resolver o desafio. `stream.reset` do SSE só provoca nova
 leitura: o desafio na tela some apenas por mudança de linha, geração, operação
 ou estado, TTL, aba oculta ou troca de identidade.
 
+Em Conta → Meu WhatsApp (WAP-03/E12), alternar para outro aplicativo
+oculta o desafio. Se o vendedor já pediu conexão ou desconexão, a tela
+aguarda a resposta do comando, inclusive se uma consulta de estado ainda
+mostrar a situação anterior. Ao retornar, acompanhe o estado na mesma tela.
+
 Configuração de servidor, **sem valores reais neste documento**:
 
 | Variável                                                        | Uso                                                                                                                                                              |

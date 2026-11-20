@@ -404,7 +404,10 @@ test(
             });
           if (path.startsWith('/instance/connectionState/'))
             return globalThis.Response.json({
-              instance: { state: provider(instance).state },
+              instance: {
+                instanceName: instance,
+                state: provider(instance).state,
+              },
             });
           if (path.startsWith('/instance/connect/')) {
             // A renewed challenge reuses the live socket; logout drops it.

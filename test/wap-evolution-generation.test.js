@@ -20,22 +20,26 @@ const a2 = { ...a1, bindingId: 'synthetic-a-g2', generation: 2 };
 const token1 = 'synthetic-generation-one-token-32-characters';
 const token2 = 'synthetic-generation-two-token-32-characters';
 
-test('WAP-E12: boot leaves allowlisted connecting instances idle', () => {
+test('WAP-E12: boot leaves allowlisted personal instances idle until a binding is installed', () => {
   const config = { instances: ['synthetic-personal'] };
   const enabled = createGenerationRuntime({ ...config, enabled: true });
   const disabled = createGenerationRuntime({ ...config, enabled: false });
+  for (const state of ['connecting', 'open']) {
+    assert.equal(
+      enabled.deferPairingStartup('synthetic-personal', state),
+      true,
+    );
+    assert.equal(
+      enabled.deferPairingStartup('synthetic-general', state),
+      false,
+    );
+    assert.equal(
+      disabled.deferPairingStartup('synthetic-personal', state),
+      false,
+    );
+  }
   assert.equal(
-    enabled.deferPairingStartup('synthetic-personal', 'connecting'),
-    true,
-  );
-  for (const [instance, state] of [
-    ['synthetic-general', 'connecting'],
-    ['synthetic-personal', 'open'],
-    ['synthetic-personal', 'close'],
-  ])
-    assert.equal(enabled.deferPairingStartup(instance, state), false);
-  assert.equal(
-    disabled.deferPairingStartup('synthetic-personal', 'connecting'),
+    enabled.deferPairingStartup('synthetic-personal', 'close'),
     false,
   );
 });

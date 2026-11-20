@@ -1242,6 +1242,88 @@ if (!url) {
       );
 
       await t.test(
+        'WAP-11: sweep deduplicates reads of a connected line and makes a closed socket reconnectable',
+        async () => {
+          await reset();
+          const connected = await armed();
+          const operation = connected.current.operation;
+          const open = {
+            providerState: 'open',
+            confirmedNumber: NUMBER,
+            bindingVerified: true,
+          };
+          const snapshot = async () =>
+            (
+              await pool.query(
+                'SELECT state, version, verified_at FROM crm.seller_whatsapp_lines WHERE id=$1',
+                [operation.lineId],
+              )
+            ).rows[0];
+          const finishReadJob = () =>
+            pool.query(
+              "UPDATE crm.outbox_jobs SET status='completed',completed_at=$2 WHERE whatsapp_operation_id=$1 AND whatsapp_action='reconcile' AND status='pending'",
+              [operation.id, now],
+            );
+          await result(connected.dispatch, open);
+          await finishReadJob();
+          const initial = await snapshot();
+          assert.equal(initial.state, 'connected');
+          assert.deepEqual(initial.verified_at, now);
+
+          now = new Date(now.getTime() + 119_000);
+          assert.equal(
+            (await repository.scheduleReconciliations()).scheduled,
+            0,
+          );
+          now = new Date(now.getTime() + 2_000);
+          const concurrent = await Promise.all([
+            repository.scheduleReconciliations(),
+            repository.scheduleReconciliations(),
+          ]);
+          assert.equal(concurrent[0].scheduled + concurrent[1].scheduled, 1);
+          const read = await reserve(operation, { action: 'reconcile' });
+          await result(read, open);
+          await finishReadJob();
+          assert.deepEqual(await snapshot(), initial);
+          assert.equal(
+            (await repository.scheduleReconciliations()).scheduled,
+            0,
+          );
+
+          now = new Date(now.getTime() + 121_000);
+          assert.equal(
+            (await repository.scheduleReconciliations()).scheduled,
+            1,
+          );
+          const close = await reserve(operation, { action: 'reconcile' });
+          await result(close, { providerState: 'close' });
+          await finishReadJob();
+          const closed = await snapshot();
+          assert.equal(closed.state, 'disconnected');
+          assert.equal(closed.verified_at, null);
+          assert.ok(closed.version > initial.version);
+          assert.equal(
+            (
+              await pool.query(
+                'SELECT count(*)::int AS n FROM crm.seller_whatsapp_bindings WHERE line_id=$1 AND revoked_at IS NULL',
+                [operation.lineId],
+              )
+            ).rows[0].n,
+            0,
+          );
+          now = new Date(now.getTime() + 121_000);
+          assert.equal(
+            (await repository.scheduleReconciliations()).scheduled,
+            0,
+          );
+          const next = await submit({
+            expectedVersion: Number(closed.version),
+          });
+          assert.equal(next.line.generation, operation.generation + 1);
+        },
+      );
+
+      await t.test(
         'socket binding proof and active DB binding are both required before connected',
         async () => {
           await reset();

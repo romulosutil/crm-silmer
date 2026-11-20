@@ -306,17 +306,17 @@ function createControlAdapter({
           const existing = own[0];
           if (
             existing &&
-            !['close', 'connecting'].includes(existing.connectionStatus)
+            !['close', 'connecting', 'open'].includes(existing.connectionStatus)
           )
             throw new Error('WAP_CONTROL_UNKNOWN');
-          // An expired QR can leave a stored 'connecting' row with the last
-          // owner. Require an explicit live 'close' before changing settings.
-          if (
-            existing &&
-            (await http(`/instance/connectionState/${name}`))?.instance
-              ?.state !== 'close'
-          )
-            throw new Error('WAP_CONTROL_UNKNOWN');
+          // A socket can close while its stored status and owner remain. The
+          // live state must identify this idle instance before any writes.
+          if (existing) {
+            const live = (await http(`/instance/connectionState/${name}`))
+              ?.instance;
+            if (live?.state !== 'close' || live.instanceName !== body.instance)
+              throw new Error('WAP_CONTROL_UNKNOWN');
+          }
           if (!existing) {
             const created = await http('/instance/create', 'POST', {
               instanceName: body.instance,

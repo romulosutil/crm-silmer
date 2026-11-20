@@ -662,9 +662,13 @@ test('WAP-E12: reconnect writes only after the retained instance is loaded idle'
     true,
   );
   const retainedOwner = '5511000000001@s.whatsapp.net';
-  for (const ownerJid of [null, retainedOwner]) {
+  for (const row of [
+    { connectionStatus: 'connecting', ownerJid: null },
+    { connectionStatus: 'connecting', ownerJid: retainedOwner },
+    { connectionStatus: 'open', ownerJid: retainedOwner },
+  ]) {
     const reconnect = await run(
-      { connectionStatus: 'connecting', ownerJid },
+      row,
       { instance: { instanceName: 'synthetic-one', state: 'close' } },
       'connect',
     );
@@ -682,10 +686,14 @@ test('WAP-E12: reconnect writes only after the retained instance is loaded idle'
       ],
     );
   }
-  for (const state of ['open', 'connecting']) {
+  for (const instance of [
+    { instanceName: 'synthetic-one', state: 'open' },
+    { instanceName: 'synthetic-one', state: 'connecting' },
+    { instanceName: 'different-instance', state: 'close' },
+  ]) {
     const active = await run(
-      { connectionStatus: 'connecting', ownerJid: retainedOwner },
-      { instance: { instanceName: 'synthetic-one', state } },
+      { connectionStatus: 'open', ownerJid: retainedOwner },
+      { instance },
       'connect',
     );
     await assert.rejects(active.result, /WAP_CONTROL_UNKNOWN/u);
@@ -777,7 +785,9 @@ test('WAP-E12: every connect, including reuse of a closed instance, reapplies an
           events: ['CONNECTION_UPDATE', 'MESSAGES_UPSERT', 'MESSAGES_UPDATE'],
         });
       if (path.includes('/instance/connectionState/'))
-        return response({ instance: { state: 'close' } });
+        return response({
+          instance: { instanceName: 'synthetic-one', state: 'close' },
+        });
       return response({ enabled: true }, 201);
     },
   });

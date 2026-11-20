@@ -1,5 +1,6 @@
 import {
   contactVisible,
+  contactReadVisible,
   personalIdentityVisible,
   contactConversationVisible,
 } from './contact-access.js';
@@ -48,23 +49,21 @@ export class PostgresContactReadRepository {
         values.push(value);
         return '$' + values.length;
       };
-      const actor = scopedReader.visibilityActorId
-        ? bind(scopedReader.visibilityActorId)
-        : null;
+      const actor = bind(
+        scopedReader.actorId ?? scopedReader.visibilityActorId ?? null,
+      );
+      const generalAdmin = scopedReader.visibilityActorId ? 'false' : 'true';
       const wallet = scopedReader.walletSellerId
-        ? scopedReader.walletSellerId === scopedReader.visibilityActorId
-          ? actor
-          : bind(scopedReader.walletSellerId)
+        ? bind(scopedReader.walletSellerId)
         : null;
       const visible = (/** @type {string} */ alias) =>
-        actor ? contactConversationVisible(alias, actor) : 'true';
+        contactConversationVisible(alias, actor, generalAdmin);
       const identityVisible = (/** @type {string} */ alias) =>
-        actor ? personalIdentityVisible(alias, actor) : 'true';
+        personalIdentityVisible(alias, actor);
+      const contactScope = contactReadVisible('contact', actor, generalAdmin);
       const scoped = wallet
-        ? contactVisible('contact', wallet, true)
-        : actor
-          ? contactVisible('contact', actor)
-          : 'true';
+        ? `(${contactScope} AND ${contactVisible('contact', wallet, true)})`
+        : contactScope;
       const q = (input.q ?? '').trim();
       const phone = normalizeContactPhone(q);
       const term = q
@@ -152,6 +151,9 @@ export class PostgresContactReadRepository {
   async get(contactId, reader = {}) {
     return this.#snapshot(async (database) => {
       const scopedReader = await this.#currentReader(database, reader);
+      const actorId =
+        scopedReader.actorId ?? scopedReader.visibilityActorId ?? null;
+      const generalAdmin = scopedReader.visibilityActorId ? 'false' : 'true';
       const [contact, identities, conversations, siteClaims] =
         await runSequential([
           () =>
@@ -161,8 +163,8 @@ export class PostgresContactReadRepository {
                     registration_envelope, registration_fields_complete,
                     (SELECT count(*)>1 FROM crm.seller_client_links WHERE contact_id=contact.id AND status='active') shared
              FROM crm.contacts contact WHERE id=$1
-               AND ($2::text IS NULL OR ${contactVisible('contact', '$2')})`,
-              [contactId, scopedReader.visibilityActorId ?? null],
+               AND ${contactReadVisible('contact', '$2', generalAdmin)}`,
+              [contactId, actorId],
             ),
           () =>
             database.query(
@@ -171,9 +173,9 @@ export class PostgresContactReadRepository {
                     created_at, updated_at
              FROM crm.contact_identities
              WHERE current_contact_id=$1
-               AND ($2::text IS NULL OR ${personalIdentityVisible('crm.contact_identities', '$2')})
+               AND ${personalIdentityVisible('crm.contact_identities', '$2')}
              ORDER BY created_at, id`,
-              [contactId, scopedReader.visibilityActorId ?? null],
+              [contactId, actorId],
             ),
           () =>
             database.query(
@@ -185,9 +187,9 @@ export class PostgresContactReadRepository {
              JOIN crm.contact_identities identity
                ON identity.id=conversation.contact_identity_id
              WHERE identity.current_contact_id=$1
-               AND ($2::text IS NULL OR ${contactConversationVisible('conversation', '$2')})
+               AND ${contactConversationVisible('conversation', '$2', generalAdmin)}
              ORDER BY conversation.last_message_at DESC, conversation.id DESC`,
-              [contactId, scopedReader.visibilityActorId ?? null],
+              [contactId, actorId],
             ),
           () =>
             database.query(
@@ -198,9 +200,9 @@ export class PostgresContactReadRepository {
              JOIN crm.contact_identities site_identity
                ON site_identity.id = site_conversation.contact_identity_id
              WHERE site_identity.current_contact_id=$1
-               AND ($2::text IS NULL OR ${contactConversationVisible('site_conversation', '$2')})
+               AND ${contactConversationVisible('site_conversation', '$2', generalAdmin)}
              ORDER BY site_claim.updated_at DESC, site_claim.id DESC LIMIT 1`,
-              [contactId, scopedReader.visibilityActorId ?? null],
+              [contactId, actorId],
             ),
         ]);
       const row = contact.rows[0];

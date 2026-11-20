@@ -15,6 +15,19 @@ import { decryptInboxMessageEnvelope } from './postgres-inbox-repository.js';
 const SELLER_NAME_ORDER = new Intl.Collator('pt-BR', { sensitivity: 'base' });
 const PERSONAL_LINE_PROJECTION = `EXISTS (SELECT 1 FROM crm.seller_whatsapp_lines personal_line
   WHERE personal_line.account_id::text=conversation.provider_account_id) AS personal_line`;
+/** @param {{actorId?:string|null,visibilityActorId?:string}} reader @param {unknown[]} values */
+function readerPredicate(reader, values) {
+  const id = reader.actorId ?? reader.visibilityActorId;
+  if (!id)
+    return 'NOT EXISTS (SELECT 1 FROM crm.seller_whatsapp_lines private_line WHERE private_line.account_id::text=conversation.provider_account_id)';
+  const actor = '$' + values.push(id);
+  return contactConversationVisible(
+    'conversation',
+    actor,
+    reader.visibilityActorId ? 'false' : 'true',
+  );
+}
+
 /**
  * WAP-11: the send path's connection proof, visible only to the holder.
  * @param {string} actor the SQL parameter holding the reader's id
@@ -598,14 +611,10 @@ export class PostgresInboxReadRepository {
   async list(input, reader = {}) {
     return this.#snapshot(async (database) => {
       reader = (await this.#currentReader(database, reader)) ?? {};
+      /** @type {unknown[]} */
       const values = [];
       const predicates = [];
-      if (reader.visibilityActorId) {
-        values.push(reader.visibilityActorId);
-        predicates.push(
-          contactConversationVisible('conversation', `$${values.length}`),
-        );
-      }
+      predicates.push(readerPredicate(reader, values));
       predicates.push(
         input.archived
           ? 'conversation.archived_at IS NOT NULL'
@@ -814,11 +823,11 @@ export class PostgresInboxReadRepository {
              ${REVIEW_ORDER_JOIN}
              ${WAITING_JOIN}
              WHERE conversation.id=$1
-               AND ($2::text IS NULL OR ${contactConversationVisible('conversation', '$2')})`,
+               AND ${contactConversationVisible('conversation', '$3', '$2::text IS NULL')}`,
                 [
                   conversationId,
                   reader.visibilityActorId ?? null,
-                  reader.actorId ?? null,
+                  reader.actorId ?? reader.visibilityActorId ?? null,
                 ],
               )
               .then((/** @type {any} */ result) => {
@@ -969,7 +978,7 @@ export class PostgresInboxReadRepository {
            WHERE conversation.archived_at IS NULL
              AND conversation.state NOT IN
                ('convertida_em_lead','sem_lead','encerrada')
-             AND ($4::boolean OR ${contactConversationVisible('conversation', '$1')})`,
+             AND ${contactConversationVisible('conversation', '$1', '$4::boolean')}`,
           [actorId, at, stalledBefore, readAll],
         ),
         database.query(
@@ -998,9 +1007,9 @@ export class PostgresInboxReadRepository {
            WHERE message.direction='outbound'
              AND message.occurred_at > $1::timestamptz
              AND message.occurred_at <= $2::timestamptz
-             AND ($3::boolean OR EXISTS (SELECT 1 FROM crm.conversations visible
+             AND EXISTS (SELECT 1 FROM crm.conversations visible
                WHERE visible.id=message.conversation_id
-                 AND ${contactConversationVisible('visible', '$4')}))`,
+                 AND ${contactConversationVisible('visible', '$4', '$3::boolean')})`,
           [dayAgo, at, readAll, actorId],
         ),
         unansweredMinutes === null
@@ -1023,11 +1032,13 @@ export class PostgresInboxReadRepository {
                  AND conversation.assigned_user_id IS NOT NULL
                  AND last_message.direction='inbound'
                  AND last_message.occurred_at <= $1::timestamptz
+                 AND ${contactConversationVisible('conversation', '$2', 'true')}
                GROUP BY conversation.assigned_user_id, seller.name`,
               [
                 new Date(
                   now.getTime() - unansweredMinutes * 60_000,
                 ).toISOString(),
+                actorId,
               ],
             ),
       ]);
@@ -1101,54 +1112,60 @@ export class PostgresInboxReadRepository {
    * snapshot over `(from, to]`. Nothing here identifies a conversation, a
    * customer or a seller; `null` stands for "no sample".
    *
-   * @param {{from: Date, to: Date}} input
+   * @param {{from: Date, to: Date, actorId?: string|null}} input
    */
-  async assistantPerformance({ from, to }) {
-    const window = [from.toISOString(), to.toISOString()];
+  async assistantPerformance({ from, to, actorId }) {
+    const window = [from.toISOString(), to.toISOString(), actorId ?? null];
     return this.#snapshot(async (database) => {
+      /** @param {string} sql */
+      const scopedQuery = (sql) =>
+        database.query(
+          `WITH visible AS NOT MATERIALIZED (
+          SELECT conversation.id FROM crm.conversations conversation
+          WHERE ${contactConversationVisible('conversation', '$3', 'true')}
+        ) SELECT * FROM (${sql}) performance`,
+          window,
+        );
       const [activity, reasons, ficha, claim, resolve, failures, versions] =
         await runSequential([
           () =>
-            database.query(
+            scopedQuery(
               `SELECT
                  (SELECT count(*)::integer FROM crm.messages
-                  WHERE direction='outbound' AND author_kind='assistant'
+                  WHERE conversation_id IN (SELECT id FROM visible) AND direction='outbound' AND author_kind='assistant'
                     AND created_at > $1 AND created_at <= $2) replies,
                  (SELECT count(DISTINCT conversation_id)::integer FROM (
                     SELECT conversation_id FROM crm.messages
-                    WHERE direction='outbound' AND author_kind='assistant'
+                    WHERE conversation_id IN (SELECT id FROM visible) AND direction='outbound' AND author_kind='assistant'
                       AND created_at > $1 AND created_at <= $2
                     UNION ALL
                     SELECT conversation_id FROM crm.automation_turns
-                    WHERE occurred_at > $1 AND occurred_at <= $2
+                    WHERE conversation_id IN (SELECT id FROM visible) AND occurred_at > $1 AND occurred_at <= $2
                     UNION ALL
                     SELECT conversation_id FROM crm.handoffs
-                    WHERE created_at > $1 AND created_at <= $2
+                    WHERE conversation_id IN (SELECT id FROM visible) AND created_at > $1 AND created_at <= $2
                       AND (automation_workflow_key IS NOT NULL
                         OR reason_code = 'automation_failure')
                   ) touched) conversations`,
-              window,
             ),
           () =>
-            database.query(
+            scopedQuery(
               `SELECT reason_code, count(*)::integer total
                FROM crm.handoffs
-               WHERE created_at > $1 AND created_at <= $2
+               WHERE conversation_id IN (SELECT id FROM visible) AND created_at > $1 AND created_at <= $2
                GROUP BY reason_code
                ORDER BY total DESC, reason_code`,
-              window,
             ),
           () =>
-            database.query(
+            scopedQuery(
               `SELECT count(*)::integer samples,
                       round(avg(ficha_filled::numeric / ficha_total), 2) ratio
                FROM crm.automation_turns
-               WHERE event_type='handoff.requested' AND ficha_total > 0
+               WHERE conversation_id IN (SELECT id FROM visible) AND event_type='handoff.requested' AND ficha_total > 0
                  AND occurred_at > $1 AND occurred_at <= $2`,
-              window,
             ),
           () =>
-            database.query(
+            scopedQuery(
               `SELECT count(*)::integer samples,
                       round((percentile_cont(0.5) WITHIN GROUP (ORDER BY minutes))::numeric, 1) median,
                       round((percentile_cont(0.9) WITHIN GROUP (ORDER BY minutes))::numeric, 1) p90
@@ -1161,24 +1178,22 @@ export class PostgresInboxReadRepository {
                    WHERE history.handoff_id=handoff.id
                      AND history.to_status='accepted'
                  ) claimed ON claimed.at IS NOT NULL
-                 WHERE handoff.created_at > $1 AND handoff.created_at <= $2
+                 WHERE handoff.conversation_id IN (SELECT id FROM visible) AND handoff.created_at > $1 AND handoff.created_at <= $2
                ) waits`,
-              window,
             ),
           () =>
-            database.query(
+            scopedQuery(
               `SELECT count(*)::integer samples,
                       round((percentile_cont(0.5) WITHIN GROUP (ORDER BY minutes))::numeric, 1) median
                FROM (
                  SELECT extract(epoch FROM resolved_at - created_at) / 60 minutes
                  FROM crm.handoffs
-                 WHERE created_at > $1 AND created_at <= $2
+                 WHERE conversation_id IN (SELECT id FROM visible) AND created_at > $1 AND created_at <= $2
                    AND resolved_at IS NOT NULL
                ) durations`,
-              window,
             ),
           () =>
-            database.query(
+            scopedQuery(
               `WITH workflow AS (
                  SELECT count(*)::integer workflow_failed,
                    max(processed_at) workflow_last_at,
@@ -1190,40 +1205,45 @@ export class PostgresInboxReadRepository {
                    )::integer workflow_last_24_hours
                  FROM crm.n8n_events
                   WHERE event_type='workflow.failed'
+                    AND (conversation_id IS NULL OR conversation_id IN (SELECT id FROM visible))
+                    AND (message_id IS NULL OR EXISTS (SELECT 1 FROM crm.messages source
+                      JOIN visible ON visible.id=source.conversation_id WHERE source.id=n8n_events.message_id))
+                    AND (run_id IS NULL OR EXISTS (SELECT 1 FROM crm.automation_runs run
+                      WHERE run.id=n8n_events.run_id AND (run.conversation_id IS NULL OR run.conversation_id IN (SELECT id FROM visible))
+                        AND (run.source_message_id IS NULL OR EXISTS (SELECT 1 FROM crm.messages source
+                          JOIN visible ON visible.id=source.conversation_id WHERE source.id=run.source_message_id))))
                     AND processed_at > $1 AND processed_at <= $2
                ) SELECT workflow.*,
                  (SELECT count(*)::integer FROM crm.messages
-                  WHERE direction='outbound' AND author_kind='assistant'
+                  WHERE conversation_id IN (SELECT id FROM visible) AND direction='outbound' AND author_kind='assistant'
                     AND created_at > $1 AND created_at <= $2
                     AND (status='outcome_unknown'
                       OR delivery_status='outcome_unknown')) send_unknown,
                  (SELECT count(*)::integer FROM crm.messages
-                  WHERE direction='outbound' AND author_kind='assistant'
+                  WHERE conversation_id IN (SELECT id FROM visible) AND direction='outbound' AND author_kind='assistant'
                     AND created_at > $1 AND created_at <= $2
                     AND (status='failed' OR delivery_status='failed')) send_failed,
                  (SELECT count(*)::integer FROM crm.audit_events
-                  WHERE action='integration.n8n.stale_fence'
+                  WHERE target_type='conversation' AND target_id IN (SELECT id FROM visible) AND action='integration.n8n.stale_fence'
                     AND occurred_at > $1 AND occurred_at <= $2) stale_fence,
                  (SELECT count(*)::integer FROM crm.n8n_events
-                  WHERE event_type='message.transcribed'
+                  WHERE conversation_id IN (SELECT id FROM visible) AND event_type='message.transcribed'
                     AND outcome->>'transcriptStatus'='failed'
                     AND processed_at > $1 AND processed_at <= $2) transcription_failed,
                  (SELECT count(*)::integer FROM crm.handoffs
-                  WHERE reason_code='automation_failure'
+                  WHERE conversation_id IN (SELECT id FROM visible) AND reason_code='automation_failure'
                     AND created_at > $1 AND created_at <= $2) automation_failure_handoffs
                FROM workflow`,
-              window,
             ),
           () =>
-            database.query(
+            scopedQuery(
               `SELECT workflow_version, count(*)::integer turns,
                       count(*) FILTER (WHERE event_type='handoff.requested')::integer handoffs
                FROM crm.automation_turns
-               WHERE occurred_at > $1 AND occurred_at <= $2
+               WHERE conversation_id IN (SELECT id FROM visible) AND occurred_at > $1 AND occurred_at <= $2
                GROUP BY workflow_version
                ORDER BY turns DESC, workflow_version
                LIMIT 20`,
-              window,
             ),
         ]);
       const counts = activity.rows[0] ?? {};
@@ -1348,8 +1368,12 @@ export class PostgresInboxReadRepository {
     reader = (await this.#currentReader(database, reader)) ?? {};
     const result = await database.query(
       `SELECT conversation.id FROM crm.conversations conversation WHERE conversation.id=$1
-         AND ($2::text IS NULL OR ${contactConversationVisible('conversation', '$2')})`,
-      [conversationId, reader.visibilityActorId ?? null],
+         AND ${contactConversationVisible('conversation', '$3', '$2::text IS NULL')}`,
+      [
+        conversationId,
+        reader.visibilityActorId ?? null,
+        reader.actorId ?? reader.visibilityActorId ?? null,
+      ],
     );
     if (!result.rows[0]) throw notFound('CONVERSATION_NOT_FOUND');
     return result;
@@ -1464,12 +1488,7 @@ export class PostgresInboxReadRepository {
         'conversation.terminal_at IS NULL',
         "conversation.state NOT IN ('convertida_em_lead','sem_lead','encerrada')",
       ];
-      if (reader.visibilityActorId) {
-        values.push(reader.visibilityActorId);
-        predicates.push(
-          contactConversationVisible('conversation', `$${values.length}`),
-        );
-      }
+      predicates.push(readerPredicate(reader, values));
       if (input.assignedUserId !== undefined) {
         values.push(input.assignedUserId);
         predicates.push(`conversation.assigned_user_id = $${values.length}`);

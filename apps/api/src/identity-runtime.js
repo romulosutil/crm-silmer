@@ -3,6 +3,7 @@ import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import {
   createAccessControlService,
+  canReadAllPersonalWhatsApp,
   createIdentityAccessService,
   createPostgresAccessRepository,
   createPostgresAuthenticationThrottle,
@@ -537,6 +538,7 @@ export function createIdentityApiRuntime(database, environment = process.env) {
           if (!user) throw new Error('User not found');
           return {
             user: {
+              canReadAllPersonalWhatsApp: canReadAllPersonalWhatsApp(user),
               capabilities: user.capabilities,
               email: user.email,
               functionName: user.functionName,

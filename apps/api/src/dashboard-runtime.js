@@ -129,20 +129,23 @@ export async function readDashboardPerformance(database, input) {
   const manager = input.manager === true;
   const actorId = manager ? (input.actorId ?? null) : identifier(input.actorId);
   const result = await database.query(
-    `WITH sales AS (
+    `WITH visible_conversations AS (
+       SELECT c.id FROM crm.conversations c WHERE ${contactConversationVisible('c', '$3', 'true')}
+     ), sales AS (
        SELECT * FROM crm.orders
        WHERE status = 'confirmado' AND NOT is_test AND cancelled_at IS NULL
          AND order_date BETWEEN $1::date AND $2::date
      ), sold AS (
        SELECT sales_owner_id AS user_id, count(*)::integer confirmed_count,
               coalesce(sum(final_amount_cents),0)::bigint sold_amount_cents,
-              count(DISTINCT conversation_id)::integer conversations_with_sale_count
+              count(DISTINCT conversation_id) FILTER (WHERE conversation_id IN (SELECT id FROM visible_conversations))::integer conversations_with_sale_count
        FROM sales WHERE origin = 'atendimento' AND sales_owner_id IS NOT NULL
        GROUP BY sales_owner_id
      ), attended AS (
        SELECT author_id AS user_id, count(DISTINCT conversation_id)::integer attended_count
        FROM crm.messages
        WHERE direction = 'outbound' AND author_kind = 'human' AND status = 'sent'
+         AND conversation_id IN (SELECT id FROM visible_conversations)
          AND coalesce(delivery_status,'sent') NOT IN ('failed','outcome_unknown')
          AND coalesce(sent_at,occurred_at) >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo')
          AND coalesce(sent_at,occurred_at) < (($2::date + 1)::timestamp AT TIME ZONE 'America/Sao_Paulo')
@@ -162,10 +165,11 @@ export async function readDashboardPerformance(database, input) {
          AND occurred_at < (($2::date + 1)::timestamp AT TIME ZONE 'America/Sao_Paulo')
      ), assumed AS (
        SELECT user_id, count(DISTINCT conversation_id)::integer assumed_count
-       FROM assumption_events GROUP BY user_id
+       FROM assumption_events WHERE conversation_id IN (SELECT id FROM visible_conversations) GROUP BY user_id
      ), closed AS (
        SELECT closed_by AS user_id, count(DISTINCT id)::integer closed_count
        FROM crm.conversations WHERE state = 'encerrada' AND closed_by IS NOT NULL
+         AND id IN (SELECT id FROM visible_conversations)
          AND terminal_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo')
          AND terminal_at < (($2::date + 1)::timestamp AT TIME ZONE 'America/Sao_Paulo')
        GROUP BY closed_by

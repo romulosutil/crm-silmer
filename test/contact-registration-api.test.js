@@ -85,6 +85,13 @@ function fakeDatabase(contact = {}) {
     /** @param {string} sql @param {any[]} [values] */
     async query(sql, values = []) {
       statements.push(`${sql} ${JSON.stringify(values)}`);
+      if (
+        sql.includes(') AS found') &&
+        sql.includes('crm.site_contact_claims')
+      ) {
+        assert.deepEqual(values, ['contact-1', 'seller-1', state.isAdmin]);
+        return { rows: [{ found: state.whatsapp.has(values[0]) }] };
+      }
       if (sql.includes('FROM crm.users'))
         return { rows: [{ id: 'seller-1', disabled_at: null }] };
       if (sql.includes('FROM crm.user_functions'))
@@ -149,9 +156,6 @@ function fakeDatabase(contact = {}) {
       if (sql.includes('INSERT INTO crm.contact_change_reviews')) {
         state.reviews.push(values);
         return { rows: [] };
-      }
-      if (sql.includes('crm.contact_identities')) {
-        return { rows: [{ found: state.whatsapp.has(values[0]) }] };
       }
       throw new Error('unexpected query');
     },

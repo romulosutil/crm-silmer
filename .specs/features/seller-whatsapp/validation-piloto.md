@@ -9,6 +9,20 @@ a partir do E11 `12b4c101`. [Spec](spec.md), [design §10](design.md),
 
 ## Estado
 
+**20/11/2026 — decisão de liberação para a equipe comercial.** O proprietário
+confirmou **“A mensagem chega”**. A confirmação registra o recebimento relatado.
+Remetente, modalidade e horário desse recebimento não foram especificados.
+
+O proprietário autorizou os vendedores e administradores comerciais ativos a
+conectarem a própria linha e reservou a supervisão das conversas pessoais à
+única conta administrativa designada. A conta desativada indicada pelo
+proprietário fica fora das listas de habilitação. A autorização abrange o
+provisionamento de um par exclusivo de linha e instância por titular e a
+preservação do bloqueio da linha desativada. A ampliação aguarda confirmação da versão
+implantada e da configuração efetiva dos serviços.
+[ADR 095](../../../docs/adr/095-supervisao-das-linhas-pessoais.md) ·
+[operação](../../../docs/runbooks/seller-whatsapp.md#liberação-da-equipe-comercial)
+
 **20/11/2026 — troca de mensagens no piloto de um vendedor (WAP-09 / WAP-E12).**
 Nas conversas individuais observadas, os registros de produção confirmam
 recebimento no CRM e sincronização das respostas escritas no aparelho.
@@ -35,10 +49,9 @@ preservado. A [PR 429](https://github.com/romulosutil/crm-silmer/pull/429)
 cobre a alternância de aplicativo enquanto um comando de conexão está em
 andamento.
 
-A homologação em aparelho fica para outra janela. O titular deverá enviar
-uma resposta pela Inbox para o aparelho de teste e conferir remetente,
-conteúdo, entrega e ocorrência única nas duas telas. O pareamento por
-código no mesmo celular e a ampliação para outros vendedores seguem pendentes.
+O item “sem amostra” refere-se àquela janela de conciliação. A conferência do
+remetente, conteúdo e ocorrência única nas duas telas e a prova de pareamento
+por código no mesmo celular continuam com resultados próprios em WAP-E12.
 
 ### Registro inicial de 18/11/2026
 

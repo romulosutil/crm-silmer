@@ -1528,7 +1528,7 @@ function proposeLimits(scenarios) {
     perService: {
       pilotAllowlistMaxSellers: pilotSellers,
       linesPerSeller: 1,
-      outboundSendsPerMinuteHardCeiling: Math.floor(drain * 60),
+      outboundSendsPerMinuteHardCeiling: 20,
       outboundSendsPerMinutePilotBudget: pilotSellers * perSellerSendsPerMinute,
       sseStreamsPerProcess: 30,
       apiPoolMax: PARAMS.apiPoolMax,
@@ -1548,14 +1548,15 @@ function proposeLimits(scenarios) {
     },
     enforcedToday: {
       outboundSendsPerMinuteHardCeiling:
-        'yes, implicitly (worker claims 1 job per 1 s poll)',
+        'yes (20 personal reservations per rolling minute across all sellers)',
       unsettledSendsPerConversation: 'yes (WAP-24 pendingSend)',
       clientsPageSizeMax: 'yes (parseListQuery 1..100)',
       sseStreamsPerProcess: 'yes (activeStreams >= 30)',
       linesPerSeller: 'yes (seller_whatsapp_lines.seller_id UNIQUE)',
       pilotAllowlistMaxSellers: 'operational only (allowlist content)',
       activePortfolioLinksMax: 'no',
-      outboundSendsPerMinute: 'no per-user limiter',
+      outboundSendsPerMinute:
+        'yes (10 personal reservations per seller per rolling minute)',
       sseStreamsMax: 'no per-user limiter',
       inboundMessagesPerLineSustainedPerSecond: 'no limiter on n8n ingress',
     },

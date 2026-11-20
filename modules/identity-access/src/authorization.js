@@ -2,6 +2,22 @@ export const CAPABILITIES = Object.freeze({
   COMMERCIAL_ADMIN: 'COMMERCIAL_ADMIN',
 });
 
+/** @param {{email?:string}} user */
+export function isPersonalWhatsAppSupervisorAccount(user) {
+  return user.email?.toLowerCase() === 'admin@crm-silmer.local';
+}
+
+/** @param {AccessActor} user */
+export function canReadAllPersonalWhatsApp(user) {
+  return (
+    user.kind !== 'assistant' &&
+    !user.disabledAt &&
+    user.functionName === 'Vendedor' &&
+    user.capabilities.includes(CAPABILITIES.COMMERCIAL_ADMIN) &&
+    isPersonalWhatsAppSupervisorAccount(user)
+  );
+}
+
 /**
  * @typedef {'COMMERCIAL_ADMIN'} Capability
  * @typedef {'Vendedor'|'Financeiro'} OperationalFunction

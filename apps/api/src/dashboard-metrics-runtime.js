@@ -1,3 +1,4 @@
+import { contactConversationVisible } from '@crm-silmer/contacts';
 import { lockDashboardReader } from './dashboard-access.js';
 import { DashboardError, dashboardPeriod } from './dashboard-runtime.js';
 import { activeLeadLossSql, EFFECTIVE_HUMAN_SEND } from './lead-outcome-sql.js';
@@ -22,6 +23,12 @@ const UNANSWERED_NOW_CONVERSATION = `open_conversation.automation_state = 'human
   AND open_conversation.terminal_at IS NULL AND open_conversation.archived_at IS NULL
   AND open_conversation.assigned_user_id IS NOT NULL
   AND NOT ${activeLeadLossSql('open_conversation.id')}`;
+
+// Keep historical credit on general lines, including after a transfer.
+const METRIC_CONVERSATIONS = `visible_conversations AS NOT MATERIALIZED (
+  SELECT conversation.* FROM crm.conversations conversation
+  WHERE ${contactConversationVisible('conversation', '$3', 'true')}
+)`;
 
 /** Ownership events of a conversation: claim/transfer of a handoff, takeover,
  * panel transfer and any human send (sending assigns the conversation to its
@@ -96,14 +103,14 @@ export async function readServiceMetrics(database, input) {
               -- 15 business minutes elapse within 4 calendar days (weekend
               -- included): no wait starting earlier can cross inside the window.
               ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') - interval '5 days' AS look_from
-     ), cohort AS (
+     ), ${METRIC_CONVERSATIONS}, cohort AS (
        SELECT h.id, h.conversation_id, h.created_at, c.terminal_at,
               claim.assigned_user_id AS claimer, claim.occurred_at AS claimed_at
        FROM bounds
        JOIN crm.handoffs h ON h.target_role = 'Vendedor'
          AND h.created_at >= bounds.from_at AND h.created_at < bounds.to_at
          AND h.created_at <= bounds.now_at
-       JOIN crm.conversations c ON c.id = h.conversation_id
+       JOIN visible_conversations c ON c.id = h.conversation_id
        LEFT JOIN LATERAL (
          SELECT history.assigned_user_id, history.occurred_at
          FROM crm.handoff_history history
@@ -173,7 +180,7 @@ export async function readServiceMetrics(database, input) {
        -- the lookback, or still open in human mode (a wait carried from
        -- before the lookback that a later claim or takeover starts).
        SELECT c.id, c.terminal_at, ${humanStartSql('c.id', 'bounds.now_at')} AS started_at
-       FROM crm.conversations c CROSS JOIN bounds
+       FROM visible_conversations c CROSS JOIN bounds
        WHERE c.opened_at <= bounds.now_at
          AND (c.terminal_at IS NULL OR c.terminal_at >= bounds.from_at)
          AND (c.last_message_at >= bounds.look_from
@@ -323,7 +330,7 @@ export async function readServiceMetrics(database, input) {
        FROM owner_runs
      ), episode_counts AS (
        SELECT owner.user_id, count(*)::integer AS count
-       FROM credited JOIN crm.conversations c ON c.id = credited.conversation_id
+       FROM credited JOIN visible_conversations c ON c.id = credited.conversation_id
        CROSS JOIN LATERAL (
          SELECT coalesce((SELECT u.id FROM crm.users u WHERE u.id = credited.owner_id),
                          c.assigned_user_id) AS user_id
@@ -335,7 +342,7 @@ export async function readServiceMetrics(database, input) {
        -- reply, no earlier than the human mode, read by indexed probes.
        SELECT open_conversation.assigned_user_id AS user_id, count(*)::integer AS count,
               max(waiting.minutes) AS oldest
-       FROM crm.conversations open_conversation CROSS JOIN bounds
+       FROM visible_conversations open_conversation CROSS JOIN bounds
        CROSS JOIN LATERAL (
          SELECT (SELECT max(${REPLY_CLOCK('r')}) FROM crm.messages r
                  WHERE r.conversation_id = open_conversation.id AND ${EFFECTIVE_HUMAN_SEND('r')}
@@ -378,7 +385,7 @@ export async function readServiceMetrics(database, input) {
      ), unclaimed AS (
        SELECT count(*)::integer AS count,
               max(crm.business_minutes_v1(h.created_at, bounds.now_at)) AS oldest
-       FROM crm.handoffs h JOIN crm.conversations c ON c.id = h.conversation_id
+       FROM crm.handoffs h JOIN visible_conversations c ON c.id = h.conversation_id
        CROSS JOIN bounds
        WHERE $4::boolean AND h.status = 'pending' AND h.target_role = 'Vendedor'
          AND c.terminal_at IS NULL AND h.created_at <= bounds.now_at
@@ -490,10 +497,10 @@ export async function readLossMetrics(database, input) {
        SELECT ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AS from_at,
               (($2::date + 1)::timestamp AT TIME ZONE 'America/Sao_Paulo') AS to_at,
               $5::timestamptz AS now_at
-     ), effective AS (
+     ), ${METRIC_CONVERSATIONS}, effective AS (
        SELECT DISTINCT ON (loss.conversation_id) loss.conversation_id, loss.owner_id,
               loss.reason_code, loss.last_inbound_message_id
-       FROM crm.lead_outcome_events loss CROSS JOIN bounds
+       FROM crm.lead_outcome_events loss JOIN visible_conversations c ON c.id=loss.conversation_id CROSS JOIN bounds
        WHERE loss.outcome = 'lost' AND loss.occurred_at >= bounds.from_at
          AND loss.occurred_at < bounds.to_at AND loss.occurred_at <= bounds.now_at
          AND NOT EXISTS (

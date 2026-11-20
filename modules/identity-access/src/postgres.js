@@ -264,6 +264,15 @@ export function createPostgresIdentityRepository(database) {
       return result.rows[0] ? mapUser(result.rows[0]) : null;
     },
 
+    /** @param {string} id */
+    async ownsPersonalLine(id) {
+      const result = await database.query(
+        'SELECT EXISTS (SELECT 1 FROM crm.seller_whatsapp_lines WHERE seller_id=$1) AS owns',
+        [id],
+      );
+      return result.rows[0]?.owns === true;
+    },
+
     async hasUsers() {
       const result = await database.query(
         `SELECT EXISTS (SELECT 1 FROM crm.users) AS has_users`,

@@ -1,5 +1,17 @@
 # Arquitetura — baseline do CRM Silmer
 
+## Acesso à linha pessoal na liberação de 20/11/2026
+
+A API autoriza o titular e verifica a conta administrativa designada ao
+consultar conversas pessoais de terceiros. A projeção da sessão informa à
+interface o alcance da leitura. O controle da própria linha também atende
+administradores comerciais. Para o primeiro pareamento, a configuração
+privada atribui a cada titular um ID de linha e uma instância já previstos
+nas listas do CRM, do n8n e da Evolution. A atribuição existente sobrevive à
+ampliação. [ADR 095](docs/adr/095-supervisao-das-linhas-pessoais.md) ·
+[RFC 072](docs/rfc/072-supervisao-das-linhas-pessoais.md) ·
+[WAP-E12](.specs/features/seller-whatsapp/validation-piloto.md)
+
 ## Ingresso efêmero e geração do WhatsApp pessoal — 16/11/2026
 
 [RFC 069](docs/rfc/069-ingresso-efemero-e-geracao-autenticada-do-whatsapp.md) /

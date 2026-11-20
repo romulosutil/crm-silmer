@@ -486,14 +486,12 @@ async function lockContacts(client, ids) {
 async function authorizeIdentityContacts(client, actor, identity, contactIds) {
   if (identity.channel === 'site_chat')
     throw new ContactIdentityForbiddenError();
-  if (!actor.isAdmin) {
-    const permitted = await client.query(
-      `SELECT identity.id FROM crm.contact_identities identity WHERE identity.id=$1
+  const permitted = await client.query(
+    `SELECT identity.id FROM crm.contact_identities identity WHERE identity.id=$1
        AND ${personalIdentityVisible('identity', '$2')}`,
-      [identity.identity_id, actor.id],
-    );
-    if (!permitted.rows.length) throw new ContactIdentityNotFoundError();
-  }
+    [identity.identity_id, actor.id],
+  );
+  if (!permitted.rows.length) throw new ContactIdentityNotFoundError();
   const ids = [...new Set([...contactIds, identity.current_contact_id])].sort();
   const contacts = await lockContacts(client, ids);
   if (contacts.length !== ids.length) throw new ContactIdentityNotFoundError();

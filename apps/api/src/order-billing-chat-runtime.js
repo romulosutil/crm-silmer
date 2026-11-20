@@ -1,6 +1,7 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { PostgresAuditTrail } from '@crm-silmer/audit-privacy';
 import { authorize } from '@crm-silmer/identity-access';
+import { contactConversationVisible } from '@crm-silmer/contacts';
 import {
   encryptJson,
   lockBillingSend,
@@ -290,8 +291,11 @@ export function createOrderBillingChatRuntime(database, options) {
     if (targetId) await lockSellerWhatsAppLines(client, ids);
     const conversations = (
       await client.query(
-        'SELECT * FROM crm.conversations WHERE id=ANY($1::text[]) ORDER BY id FOR UPDATE',
-        [ids],
+        `SELECT conversation.*,
+          ${contactConversationVisible('conversation', '$2', '$3::boolean')} AS readable
+         FROM crm.conversations conversation WHERE conversation.id=ANY($1::text[])
+         ORDER BY conversation.id FOR UPDATE OF conversation`,
+        [ids, actor.id, actor.capabilities.includes('COMMERCIAL_ADMIN')],
       )
     ).rows;
     const primary = conversations.find(
@@ -348,6 +352,10 @@ export function createOrderBillingChatRuntime(database, options) {
         (targetId && target?.assigned_user_id !== actor.id))
     )
       throw error('FORBIDDEN', 403);
+    if (target && !target.readable) {
+      if (write) throw error('FORBIDDEN', 403);
+      throw error('BILLING_NOT_FOUND', 404);
+    }
     if (targetId && (!target || !linked))
       throw error('BILLING_TARGET_CONFLICT', 409);
     if (

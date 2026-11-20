@@ -8,8 +8,12 @@ import { createWhatsAppControlClient } from '../modules/integration-reliability/
 import { createWhatsAppControlWorkflows } from '../ops/n8n/whatsapp-control-workflows.mjs';
 
 const loadRuntime = createRequire(import.meta.url);
-const { createControlAdapter, createControlMiddleware, protectExpress } =
-  loadRuntime('../ops/evolution/wap-control-runtime.cjs');
+const {
+  configuration,
+  createControlAdapter,
+  createControlMiddleware,
+  protectExpress,
+} = loadRuntime('../ops/evolution/wap-control-runtime.cjs');
 const { createGenerationRuntime } = loadRuntime(
   '../ops/evolution/wap-generation-runtime.cjs',
 );
@@ -59,6 +63,33 @@ const privateInput = {
   source,
   generationToken: token,
 };
+
+test('WAP-09 eligible instances are an explicit subset of fenced instances', async () => {
+  const config = {
+    ...env,
+    SILMER_WAP_GENERATION_INSTANCES: 'synthetic-one,retired',
+    SILMER_WAP_CONTROL_INSTANCES: 'synthetic-one',
+  };
+  assert.deepEqual(configuration(env).instances, ['synthetic-one']);
+  assert.deepEqual(configuration(config).instances, ['synthetic-one']);
+  for (const value of ['', 'other', 'synthetic-one,synthetic-one', '*'])
+    assert.throws(
+      () => configuration({ ...config, SILMER_WAP_CONTROL_INSTANCES: value }),
+      /WAP_CONTROL_DENIED/u,
+    );
+  const adapter = createControlAdapter({
+    env: config,
+    generation: createGenerationRuntime({
+      enabled: true,
+      instances: ['synthetic-one', 'retired'],
+    }),
+    fetchImpl: () => assert.fail('Retired instance reached provider'),
+  });
+  await assert.rejects(
+    adapter.execute({ ...privateInput, instance: 'retired' }),
+    /WAP_CONTROL_DENIED/u,
+  );
+});
 /** @param {any} value @param {number} [status] */
 const response = (value, status = 200) =>
   new globalThis.Response(JSON.stringify(value), { status });

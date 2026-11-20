@@ -1,3 +1,4 @@
+import { PostgresInboxReadRepository } from '../modules/inbox-channels/src/adapters/postgres-inbox-read-repository.js';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
@@ -646,6 +647,74 @@ test(
     await assert.rejects(runtime.service({ actor: sellerC }), {
       statusCode: 403,
     });
+
+    // A historical handoff on a disconnected personal line remains visible to its
+    // owner and the designated supervisor across both performance reports.
+    const personalLine = randomUUID();
+    const personalAccount = randomUUID();
+    await database.transaction(async (/** @type {any} */ client) => {
+      await client.query(
+        `INSERT INTO crm.seller_whatsapp_lines(id,seller_id,account_id,instance_name,number_digest,number_envelope,state,generation,version,created_at,updated_at)
+         VALUES($1,$2,$3,$4,$5,'{"algorithm":"AES-256-GCM","version":1}','disconnected',1,1,$6,$6)`,
+        [
+          personalLine,
+          sellerB.id,
+          personalAccount,
+          'wap_' + randomUUID().replaceAll('-', ''),
+          'b'.repeat(64),
+          NOW,
+        ],
+      );
+      await client.query(
+        "INSERT INTO crm.whatsapp_number_reservations(number_digest,kind,line_id,created_at) VALUES($1,'personal',$2,$3)",
+        ['b'.repeat(64), personalLine, NOW],
+      );
+      await client.query(
+        'UPDATE crm.conversations SET provider_account_id=$2 WHERE id=$1',
+        [b2, personalAccount],
+      );
+      await client.query(
+        'UPDATE crm.contact_identities SET provider_account_id=$2 WHERE id=(SELECT contact_identity_id FROM crm.conversations WHERE id=$1)',
+        [b2, personalAccount],
+      );
+      await client.query(
+        `INSERT INTO crm.seller_client_links(id,seller_id,contact_id,provenance,source_id,status,version,created_by,updated_by,created_at,updated_at)
+         SELECT $1,$2,i.current_contact_id,'personal_inbound',$3,'active',1,$2,$2,$4,$4
+         FROM crm.conversations c JOIN crm.contact_identities i ON i.id=c.contact_identity_id WHERE c.id=$5`,
+        [randomUUID(), sellerB.id, personalLine, NOW, b2],
+      );
+    });
+    /** @param {any} actor */
+    const samples = async (actor) =>
+      (await runtime.service({ actor, days: 30 })).rows.find(
+        (/** @type {any} */ entry) => entry.userId === sellerB.id,
+      ).claim.samples;
+    assert.equal(await samples(admin), 2);
+    assert.equal(await samples(sellerB), 3);
+    const managerPerformance = new PostgresInboxReadRepository({
+      database,
+      contactEnvelopeKey: CONTACT_KEY,
+      messageEnvelopeKey: MESSAGE_KEY,
+    });
+    /** @param {string} actorId */
+    const assistantReport = (actorId) =>
+      managerPerformance.assistantPerformance({
+        from: new Date(sp('2026-11-01T00:00')),
+        to: NOW,
+        actorId,
+      });
+    const ordinary = await assistantReport(admin.id);
+    await pool.query(
+      "UPDATE crm.users SET email='admin@crm-silmer.local' WHERE id=$1",
+      [admin.id],
+    );
+    assert.equal(await samples(admin), 3);
+    const supervisor = await assistantReport(admin.id);
+    assert.equal(supervisor.handoffs.total, ordinary.handoffs.total + 1);
+    assert.equal(
+      supervisor.time_to_claim_minutes.samples,
+      ordinary.time_to_claim_minutes.samples + 1,
+    );
   },
 );
 

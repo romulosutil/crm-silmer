@@ -67,6 +67,7 @@ test('FINQ-03/16: Financeiro has only finance actions and Admin has finance read
 test('FINQ-T01: three access types preserve separation and changing access revokes sessions', async () => {
   let sequence = 0;
   const repository = createInMemoryIdentityRepository();
+  const personalOwners = new Set();
   /** @type {any[]} */
   const events = [];
   const service = createIdentityAccessService({
@@ -78,7 +79,10 @@ test('FINQ-T01: three access types preserve separation and changing access revok
     clock: () => new Date('2026-10-22T12:00:00.000Z'),
     idFactory: (prefix) => `${prefix}-${++sequence}`,
     passwordParameters: { memory: 64, parallelism: 2, passes: 2 },
-    repository,
+    repository: {
+      ...repository,
+      ownsPersonalLine: async (id) => personalOwners.has(id),
+    },
   });
   const { user: admin } = await service.bootstrapAdmin({
     correlationId: 'bootstrap-access',
@@ -108,12 +112,59 @@ test('FINQ-T01: three access types preserve separation and changing access revok
   });
   assert.equal(secondAdmin.functionName, 'Vendedor');
   assert.deepEqual(secondAdmin.capabilities, ['COMMERCIAL_ADMIN']);
+  const reserved = 'admin@crm-silmer.local';
+  await assert.rejects(
+    service.createOperationalUser({
+      ...base,
+      email: reserved,
+      accessType: 'admin',
+    }),
+    { code: 'FORBIDDEN' },
+  );
+  await assert.rejects(
+    service.updateUser({
+      ...base,
+      targetId: admin.id,
+      email: reserved.toUpperCase(),
+    }),
+    { code: 'FORBIDDEN' },
+  );
+  await repository.updateUser(admin.id, { email: reserved });
+  const supervisorSession = await service.login({
+    email: reserved,
+    password: base.password,
+  });
+  assert.equal(supervisorSession.body.user.canReadAllPersonalWhatsApp, true);
+  const ordinarySession = await service.login({
+    email: secondAdmin.email,
+    password: base.password,
+  });
+  assert.equal(ordinarySession.body.user.canReadAllPersonalWhatsApp, false);
+  await assert.rejects(
+    service.updateUser({
+      ...base,
+      actorId: secondAdmin.id,
+      targetId: admin.id,
+      password: 'protected-synthetic',
+    }),
+    { code: 'FORBIDDEN' },
+  );
   const { user: seller } = await service.createOperationalUser({
     ...base,
     email: 'seller@example.test',
   });
   assert.equal(seller.functionName, 'Vendedor');
   assert.deepEqual(seller.capabilities, []);
+  personalOwners.add(seller.id);
+  await assert.rejects(
+    service.updateUser({
+      ...base,
+      actorId: secondAdmin.id,
+      targetId: seller.id,
+      password: 'protected-synthetic',
+    }),
+    { code: 'FORBIDDEN' },
+  );
   const session = await service.login({
     email: 'finance@example.test',
     password: 'synthetic-secret',

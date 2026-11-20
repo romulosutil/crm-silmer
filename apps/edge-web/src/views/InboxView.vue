@@ -403,6 +403,13 @@ const currentUserId = computed(() => sessionUser.value?.id ?? '');
 const isAdmin = computed(() =>
   (sessionUser.value?.capabilities ?? []).includes(ADMIN_CAPABILITY),
 );
+const visibilityHint = computed(() => {
+  if (!isAdmin.value)
+    return 'Você vê suas conversas e as sem responsável, incluindo as atendidas pela IA.';
+  return sessionUser.value?.canReadAllPersonalWhatsApp === true
+    ? 'Você pode consultar as conversas da linha geral e de todas as linhas pessoais.'
+    : 'Você pode consultar as conversas da linha geral e do seu WhatsApp pessoal.';
+});
 const owner = computed(() => active.value?.assignedUser ?? null);
 const ownedByMe = computed(
   () => !owner.value || owner.value.id === currentUserId.value,
@@ -3256,12 +3263,11 @@ onBeforeUnmount(() => {
     >
       <fieldset
         class="filter-sheet-group"
-        :aria-describedby="!isAdmin ? 'inbox-visibility-hint' : undefined"
+        aria-describedby="inbox-visibility-hint"
       >
         <legend>Responsável</legend>
-        <p v-if="!isAdmin" id="inbox-visibility-hint" class="filter-sheet-hint">
-          Você vê suas conversas e as sem responsável, incluindo as atendidas
-          pela IA.
+        <p id="inbox-visibility-hint" class="filter-sheet-hint">
+          {{ visibilityHint }}
         </p>
         <label
           v-for="scope in OWNER_SCOPES"

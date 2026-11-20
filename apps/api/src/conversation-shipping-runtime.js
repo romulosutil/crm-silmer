@@ -528,7 +528,7 @@ export function createConversationShippingRuntime(database, options) {
         const row = await rowFor(client, result.rows[0].id);
         const readable = await client.query(
           `SELECT conversation.id FROM crm.conversations conversation
-           WHERE conversation.id=$1 AND ($3::boolean OR ${contactConversationVisible('conversation', '$2')})`,
+           WHERE conversation.id=$1 AND ${contactConversationVisible('conversation', '$2', '$3::boolean')}`,
           [
             row.conversation_id,
             actor.id,

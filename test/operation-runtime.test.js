@@ -814,7 +814,10 @@ test('PNL-06: only a COMMERCIAL_ADMIN reads who has conversations unanswered for
   const unanswered = queries.find(({ sql }) => /unanswered_count/u.test(sql));
   assert.ok(unanswered);
   // 15 minutes before the server clock, bound, never inlined.
-  assert.deepEqual(unanswered.values, ['2026-10-15T14:45:00.000Z']);
+  assert.deepEqual(unanswered.values, [
+    '2026-10-15T14:45:00.000Z',
+    'manager-1',
+  ]);
   assert.match(unanswered.sql, /last_message\.direction='inbound'/u);
   assert.match(
     unanswered.sql,
@@ -827,7 +830,10 @@ test('PNL-06: only a COMMERCIAL_ADMIN reads who has conversations unanswered for
     /state NOT IN\s+\('convertida_em_lead','sem_lead','encerrada'\)/u,
   );
   // Seller ids, names and counts only: nothing about the customer.
-  assert.doesNotMatch(unanswered.sql, /envelope|contact|phone|text/u);
+  assert.doesNotMatch(
+    unanswered.sql.split('FROM crm.conversations')[0],
+    /envelope|contact|phone|text/u,
+  );
   // The other existing fields keep their shape.
   assert.equal(manager.mine.count, 0);
   assert.equal(typeof manager.assistant.stallMinutes, 'number');

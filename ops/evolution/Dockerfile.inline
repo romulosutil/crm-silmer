@@ -823,7 +823,15 @@ function configuration(env) {
   )
     denied();
   if (!enabled) return { enabled: false, instances: [] };
-  const instances = (env.SILMER_WAP_GENERATION_INSTANCES || '').split(',');
+  const generationInstances = (env.SILMER_WAP_GENERATION_INSTANCES || '').split(
+    ',',
+  );
+  // A retired instance still needs generation fencing and retention. Its
+  // socket must not accept a new control/challenge operation.
+  const instances =
+    env.SILMER_WAP_CONTROL_INSTANCES === undefined
+      ? generationInstances
+      : env.SILMER_WAP_CONTROL_INSTANCES.split(',');
   let webhook;
   try {
     webhook = new URL(env.SILMER_WAP_CONTROL_WEBHOOK_URL);
@@ -832,8 +840,9 @@ function configuration(env) {
   }
   if (
     env.SILMER_WAP_GENERATION_ENABLED !== 'true' ||
-    !instances.length ||
-    instances.some((v) => !ID.test(v)) ||
+    generationInstances.some((v) => !ID.test(v)) ||
+    new Set(generationInstances).size !== generationInstances.length ||
+    instances.some((v) => !generationInstances.includes(v)) ||
     new Set(instances).size !== instances.length ||
     !env.AUTHENTICATION_API_KEY ||
     env.AUTHENTICATION_API_KEY.length < 32 ||

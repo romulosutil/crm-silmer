@@ -118,8 +118,7 @@ export class PostgresOrderConversationPort {
        WHERE conversation.id=ANY($1::text[])
          AND EXISTS (SELECT 1 FROM crm.users reader JOIN crm.user_functions role ON role.user_id=reader.id
            WHERE reader.id=$2 AND reader.disabled_at IS NULL AND role.function_name='Vendedor')
-         AND (EXISTS (SELECT 1 FROM crm.user_capabilities WHERE user_id=$2 AND capability='COMMERCIAL_ADMIN')
-           OR ${contactConversationVisible('conversation', '$2')})`,
+         AND ${contactConversationVisible('conversation', '$2', "EXISTS (SELECT 1 FROM crm.user_capabilities WHERE user_id=$2 AND capability='COMMERCIAL_ADMIN')")}`,
       [conversationIds, actor.id],
     );
     return new Set(result.rows.map((row) => row.id));
@@ -482,7 +481,7 @@ export class PostgresOrderConversationPort {
                       AND phone_lookup.contact_id = contact.id)
                      OR (phone_lookup.source = 'whatsapp'
                          AND phone_identity.current_contact_id = contact.id
-                         AND ($3::text IS NULL OR ${personalIdentityVisible('phone_identity', '$3')})))
+                         AND ${personalIdentityVisible('phone_identity', '$4')}))
             ) OR EXISTS (
               SELECT 1 FROM crm.site_contact_claims AS claim
               JOIN crm.conversations AS conversation
@@ -491,7 +490,7 @@ export class PostgresOrderConversationPort {
                 ON identity.id = conversation.contact_identity_id
               WHERE claim.phone_hash = $2
                 AND identity.current_contact_id = contact.id
-                AND ($3::text IS NULL OR ${contactConversationVisible('conversation', '$3')})
+                AND ${contactConversationVisible('conversation', '$4', '$3::text IS NULL')}
             )
           )))
        ORDER BY contact.id`,
@@ -499,6 +498,7 @@ export class PostgresOrderConversationPort {
         `%${text.replace(/[\\%_]/gu, '\\$&')}%`,
         phoneHash,
         reader.readAll ? null : (reader.actorId ?? null),
+        reader.actorId ?? null,
       ],
     );
     return result.rows.map((row) => row.id);
@@ -526,8 +526,8 @@ export class PostgresOrderConversationPort {
        JOIN crm.contact_identities identity
          ON identity.id = conversation.contact_identity_id
        JOIN crm.contacts contact ON contact.id = identity.current_contact_id
-       WHERE ($1::text IS NULL OR ${personalIdentityVisible('identity', '$1')})`,
-      [reader.readAll ? null : (reader.actorId ?? null)],
+       WHERE ${personalIdentityVisible('identity', '$1')}`,
+      [reader.actorId ?? null],
     );
     return result.rows
       .filter((row) => {

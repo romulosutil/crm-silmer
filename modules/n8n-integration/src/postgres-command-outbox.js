@@ -69,6 +69,30 @@ export class PostgresN8nCommandOutbox {
         'WHATSAPP_SEND_UNAVAILABLE',
         503,
       );
+    if (target) {
+      // Serialize personal reservations across API processes. A second statement
+      // sees reservations committed while this transaction waited for the lock.
+      await client.query(
+        "SELECT pg_advisory_xact_lock(hashtextextended('wap-send-budget',0))",
+      );
+      const budget = (
+        await client.query(
+          `SELECT count(*)::int AS total, count(*) FILTER (WHERE cmd.actor_id=$1)::int AS own
+           FROM crm.n8n_commands cmd
+           JOIN crm.conversations c ON c.id=cmd.conversation_id
+           JOIN crm.seller_whatsapp_lines line ON line.account_id::text=c.provider_account_id
+          WHERE cmd.action='send_message' AND cmd.actor_kind='human'
+            AND cmd.created_at > $2::timestamptz - interval '1 minute'`,
+          [row.author_id, input.availableAt],
+        )
+      ).rows[0];
+      if (budget.own >= 10 || budget.total >= 20)
+        throw new N8nIntegrationError(
+          'Personal WhatsApp send limit reached',
+          'RATE_LIMITED',
+          429,
+        );
+    }
     const message = decryptJson(
       row.content_envelope,
       `message:${row.id}`,

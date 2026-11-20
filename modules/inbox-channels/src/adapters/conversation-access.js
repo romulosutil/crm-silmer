@@ -58,10 +58,8 @@ export async function lockConversationAccess(
     throw new InboxConflictError('Conversation identity changed');
   const allowed = await transaction.query(
     `SELECT conversation.id FROM crm.conversations conversation WHERE conversation.id=$1
-       AND ($3::boolean
-         ${allowGeneralReminder ? 'OR NOT EXISTS(SELECT 1 FROM crm.seller_whatsapp_lines general_reminder_line WHERE general_reminder_line.account_id::text=conversation.provider_account_id)' : ''}
-         OR ${contactConversationVisible('conversation', '$2')})`,
-    [conversationId, actor.id, actor.isAdmin],
+       AND ${contactConversationVisible('conversation', '$2', '$3::boolean')}`,
+    [conversationId, actor.id, actor.isAdmin || allowGeneralReminder],
   );
   if (!allowed.rows[0]) throw new InboxForbiddenError();
   return { actor, personalSellerId: line?.seller_id ?? null };

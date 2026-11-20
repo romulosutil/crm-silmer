@@ -446,10 +446,17 @@ export class PostgresOrderRepository {
           }
           // P1-1 (WAP-07): visibility is read again under the Contact lock
           // that wallet link insertion/revocation also takes.
+          await transaction.query(
+            'SELECT id FROM crm.users WHERE id=$1 FOR SHARE',
+            [input.actor.id],
+          );
+          await transaction.query(
+            'SELECT id FROM crm.contacts WHERE id=$1 FOR SHARE',
+            [input.contactId],
+          );
           const contact = await transaction.query(
             `SELECT contact.id FROM crm.contacts contact WHERE contact.id = $1
-               AND ${contactReadable('contact', '$2')}
-             FOR SHARE OF contact`,
+               AND ${contactReadable('contact', '$2')}`,
             [input.contactId, input.actor.id],
           );
           if (!contact.rows[0]) {

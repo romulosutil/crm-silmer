@@ -428,8 +428,7 @@ export class PostgresOrderConversationPort {
   /**
    * Current operator-entered names of contacts used by manual orders. With a
    * `visibilityActorId` only the Contacts that person may read are returned
-   * (WAP-07): the predicate of `GET /api/v1/contacts/:id`, or every Contact
-   * under a current COMMERCIAL_ADMIN grant. A hidden Contact is absent.
+   * (WAP-07), using the predicate of `GET /api/v1/contacts/:id`.
    *
    * @param {string[]} contactIds @param {{visibilityActorId?: string}} [reader]
    */

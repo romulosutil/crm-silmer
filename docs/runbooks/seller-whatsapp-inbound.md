@@ -60,6 +60,23 @@ em modo `runOnceForEachItem` retornam `null` para encerrar o ramo que não
 corresponde ao evento. Retornar uma lista vazia pode interromper a execução
 antes de registrar a saída observada.
 
+### Modelos comerciais na linha pessoal (WAP-09 / WAP-E12)
+
+Na linha pessoal, o ingresso n8n confirma com HTTP 200 um
+`messages.upsert` recebido cujo único conteúdo é `templateMessage`. O
+modelo pode ser hidratado, interativo ou estar em um envelope efêmero. A
+origem e a geração passam pela verificação normal antes da confirmação.
+Esse evento termina no webhook, antes de abrir conversa ou gravar mensagem
+na Inbox. Uma mensagem comum de uma conta comercial e uma resposta humana
+a um modelo seguem pelo fluxo de atendimento. A regra não se aplica a
+recibos, saídas do aparelho ou à linha geral.
+
+Para publicar esse ajuste, validar `test/wap-n8n-ingress.test.js` e
+reimplantar a imagem n8n com `ops/n8n/wap-ingress-Dockerfile.inline`.
+Conferir a prontidão e o hash do módulo carregado. O ajuste vale para novas
+entradas. O texto genérico de registros anteriores não identifica seu
+formato original com segurança.
+
 ## Leitura, comandos e revogação
 
 O predicado compartilhado de conversa exige, para linha pessoal, titular,

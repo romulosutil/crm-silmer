@@ -139,7 +139,9 @@ export function applyObservedOutbound(workflow, options) {
   find(CONVERT).parameters.jsCode =
     `const general=${convertEvolutionEvent.toString()};const personal=${convertPersonalEvolutionEvent.toString()};const convert=${convertObservedEvolutionEvent.toString()};const input=$('${VALIDATE}').item.json;return {json:convert(input,input.needs_lid?$json:null,${config},personal,general)};`;
   const normalize = find(NORMALIZE);
-  normalize.parameters.jsCode = `if($json.external||(!$json.messages&&!$json.statuses))return [];${normalize.parameters.jsCode}`;
+  // In per-item mode n8n skips null; an array fails validation and can
+  // stop execution before the sibling branch records a device message.
+  normalize.parameters.jsCode = `if($json.external||(!$json.messages&&!$json.statuses))return null;${normalize.parameters.jsCode}`;
   const prepare = 'Preparar saída observada (WAP)';
   const record = 'CRM - Registrar saída observada (WAP)';
   workflow.nodes.push(
@@ -149,7 +151,7 @@ export function applyObservedOutbound(workflow, options) {
       id: 'wap-prepare-external',
       parameters: {
         mode: 'runOnceForEachItem',
-        jsCode: `const payload=$json.external;if(!payload)return [];return {json:{payload,idempotency_key:payload.event_id,correlation_id:String($execution.id).padStart(16,'0')}};`,
+        jsCode: `const payload=$json.external;if(!payload)return null;return {json:{payload,idempotency_key:payload.event_id,correlation_id:String($execution.id).padStart(16,'0')}};`,
       },
     },
     {
@@ -269,7 +271,7 @@ function attachObservedMedia(workflow, baseUrl, crmBaseUrl) {
     code(
       gate,
       'wap-observed-media-gate',
-      `const conversation=$json.attachment_conversation_id;const payload=$('${event}').item.json.payload;if($json.accepted!==true||typeof conversation!=='string')return [];return {json:{conversation,payload}};`,
+      `const conversation=$json.attachment_conversation_id;const payload=$('${event}').item.json.payload;if($json.accepted!==true||typeof conversation!=='string')return null;return {json:{conversation,payload}};`,
     ),
     {
       ...provider,

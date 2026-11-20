@@ -53,7 +53,8 @@ SILMER_WAP_CONTROL_RUNTIME_EOF
 COPY <<'SILMER_WAP_GENERATION_PATCH_EOF' /evolution/silmer-wap-generation-patch.mjs
 ${generationPatch}
 SILMER_WAP_GENERATION_PATCH_EOF
-RUN node /evolution/silmer-wap-generation-patch.mjs /evolution/dist/main.js
+RUN node /evolution/silmer-wap-generation-patch.mjs /evolution/dist/main.js /evolution/node_modules/baileys/lib/Socket/messages-recv.js \\
+  && node --check /evolution/node_modules/baileys/lib/Socket/messages-recv.js
 RUN mkdir -p /evolution/instances /evolution/store && chown -R node:node /evolution/instances /evolution/store /evolution/prisma /evolution/node_modules/.prisma
 USER node
 EXPOSE 8080

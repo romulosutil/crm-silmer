@@ -138,6 +138,9 @@ function createGenerationRuntime(options = {}) {
         enabled && selected(instance) && ['connecting', 'open'].includes(state)
       );
     },
+    shouldAckTopLevelStatus(instance) {
+      return enabled && selected(instance);
+    },
     // Trusted in-process control hook. E01 exercises it only from the rehearsal.
     // No HTTP route, mutation from provider payload, or implicit reconnect binding.
     bindNextSocket(instance, source, token) {

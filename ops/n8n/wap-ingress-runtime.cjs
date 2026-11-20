@@ -196,6 +196,25 @@ function eventBody(
     data: { state: body.data.state },
   };
 }
+const MESSAGE_WRAPPERS = [
+  'ephemeralMessage',
+  'viewOnceMessage',
+  'viewOnceMessageV2',
+  'documentWithCaptionMessage',
+];
+function standaloneTemplate(message, depth = 0) {
+  if (!object(message) || depth > 3) return false;
+  const fields = Object.keys(message).filter(
+    (key) => key !== 'messageContextInfo',
+  );
+  if (fields.length !== 1) return false;
+  const [field] = fields;
+  if (field === 'templateMessage') return object(message.templateMessage);
+  return (
+    MESSAGE_WRAPPERS.includes(field) &&
+    standaloneTemplate(message[field]?.message, depth + 1)
+  );
+}
 function projectMessage(raw, depth = 0) {
   if (!object(raw) || depth > 3) denied();
   // Keep only the kind so the validator can ignore standalone encrypted edits.
@@ -207,12 +226,7 @@ function projectMessage(raw, depth = 0) {
   )
     return { secretEncryptedMessage: {} };
   const projected = {};
-  for (const field of [
-    'ephemeralMessage',
-    'viewOnceMessage',
-    'viewOnceMessageV2',
-    'documentWithCaptionMessage',
-  ])
+  for (const field of MESSAGE_WRAPPERS)
     if (object(raw[field]?.message))
       projected[field] = {
         message: projectMessage(raw[field].message, depth + 1),
@@ -477,6 +491,7 @@ async function protectIngress(
     )
       denied();
     let body;
+    let ignoreTemplate = false;
     if (
       path.startsWith('silmer/seller-whatsapp/') &&
       ['control', 'challenge'].includes(paths[path])
@@ -502,6 +517,11 @@ async function protectIngress(
         fetchImpl,
         body.sender,
       );
+      ignoreTemplate =
+        path.startsWith('silmer/seller-whatsapp/') &&
+        body.event === 'messages.upsert' &&
+        body.data.key.fromMe === false &&
+        standaloneTemplate(req.body.data.message);
     }
     // Mutate aliases too: WebhookContext caches references to req.headers/body.
     replaceObject(req.headers, {});
@@ -518,6 +538,11 @@ async function protectIngress(
     req.body = replaceObject(req.body, body);
     if (Buffer.isBuffer(req.rawBody)) req.rawBody.fill(0);
     delete req.rawBody;
+    if (ignoreTemplate) {
+      response.writeHead(200, { 'Cache-Control': 'no-store' });
+      response.end();
+      return true;
+    }
     return false;
   } catch (error) {
     const temporary = error?.message === 'WAP_INGRESS_UNAVAILABLE';

@@ -5,6 +5,10 @@ import { createRequire } from 'node:module';
 import test from 'node:test';
 import vm from 'node:vm';
 import {
+  validateObservedEvolutionEvent,
+  convertObservedEvolutionEvent,
+} from '../ops/n8n/workflows/create-seller-whatsapp-evolution-workflow.mjs';
+import {
   patchWebhookSource,
   patchExecutionsSource,
   patchControllerSource,
@@ -253,6 +257,114 @@ function verificationResponse(value, status = 200) {
     })(),
   };
 }
+
+test('WAP-09: personal ingress acknowledges standalone incoming business templates without creating Inbox events', async () => {
+  const path = 'silmer/seller-whatsapp/events';
+  const instance = 'wap_synthetic_personal';
+  const origin = {
+    bindingId: randomUUID(),
+    lineId: randomUUID(),
+    accountId: randomUUID(),
+    generation: 1,
+  };
+  const config = {
+    ...env,
+    SILMER_WAP_INGRESS_PATHS: JSON.stringify({ [path]: 'event' }),
+    SILMER_WAP_INGRESS_INSTANCES: instance,
+  };
+  const template = {
+    templateMessage: {
+      hydratedTemplate: { hydratedContentText: 'private-template' },
+    },
+    messageContextInfo: {},
+  };
+  /** @param {any} message @param {boolean} [fromMe] @param {number} [status] */
+  async function receive(message, fromMe = false, status = 200) {
+    const sample = context({
+      parameters: { path },
+      req: {
+        body: {
+          event: 'messages.upsert',
+          instance,
+          source: origin,
+          sender: '5511990000081@s.whatsapp.net',
+          date_time: '2026-11-17T12:00:00.000Z',
+          data: {
+            key: {
+              fromMe,
+              id: 'SYNTHETIC_MESSAGE',
+              remoteJid: '5511990000082@s.whatsapp.net',
+            },
+            messageTimestamp: 1794916800,
+            message,
+          },
+        },
+      },
+    });
+    let verified = 0;
+    const stopped = await protectIngress(sample, config, async () => {
+      verified++;
+      return verificationResponse({ source: origin, instance }, status);
+    });
+    assert.equal(verified, 1);
+    return { stopped, status: sample.response.status, body: sample.req.body };
+  }
+  for (const message of [
+    template,
+    {
+      templateMessage: {
+        interactiveMessageTemplate: { body: { text: 'private-template' } },
+      },
+    },
+    { ephemeralMessage: { message: template } },
+  ]) {
+    const result = await receive(message);
+    assert.equal(result.stopped, true);
+    assert.equal(result.status, 200);
+    assert.doesNotMatch(JSON.stringify(result.body), /private-template/);
+  }
+  assert.equal((await receive(template, false, 403)).status, 403);
+  assert.equal((await receive(template, false, 503)).status, 503);
+  assert.equal((await receive(template, true)).stopped, false);
+  assert.equal((await receive({ pollCreationMessage: {} })).stopped, false);
+  const personal = { personalInbound: true, personalLineIds: [origin.lineId] };
+  for (const fromMe of [false, true]) {
+    for (const message of [
+      { ...template, conversation: 'Texto do chat' },
+      {
+        extendedTextMessage: {
+          text: 'Texto do chat',
+          contextInfo: { quotedMessage: template },
+        },
+      },
+      {
+        ...template,
+        imageMessage: { mimetype: 'image/jpeg', caption: 'Texto do chat' },
+      },
+    ]) {
+      const result = await receive(message, fromMe);
+      assert.equal(result.stopped, false);
+      const validated = validateObservedEvolutionEvent(result.body, personal);
+      const converted = convertObservedEvolutionEvent(
+        validated,
+        null,
+        personal,
+      );
+      const type = 'imageMessage' in message ? 'image' : 'text';
+      if (fromMe) {
+        assert.equal(converted.external.message.type, type);
+        assert.equal(converted.external.message.text, 'Texto do chat');
+      } else {
+        assert.equal(converted.messages[0].type, type);
+        const received = converted.messages[0];
+        assert.equal(
+          received.text?.body ?? received.image?.caption,
+          'Texto do chat',
+        );
+      }
+    }
+  }
+});
 
 test('WAP-E04: personal message projection precedes persistence and removes generation credentials and media secrets', async () => {
   const origin = {

@@ -13,8 +13,9 @@ import { commandKey, request } from '../lib/api-client.js';
 const liveEvent = inject('liveEvent', ref(null));
 const state = ref(null);
 const number = ref('');
-const busy = ref(false);
+const controlling = ref(false);
 const requestingChallenge = ref(false);
+const busy = computed(() => controlling.value || requestingChallenge.value);
 const error = ref('');
 const secret = ref(null);
 const expiredChallenge = ref('');
@@ -28,7 +29,8 @@ const challengeId = ref('');
 // '' | 'challenge' | 'control': a command whose outcome this tab cannot know.
 const uncertain = ref('');
 let readController;
-let commandController;
+let controlController;
+let challengeController;
 let expiryTimer = 0;
 let pollTimer = 0;
 let followUpTimer = 0;
@@ -103,16 +105,15 @@ function scheduleFollowUp() {
 }
 function clearSecret() {
   epoch++;
-  commandController?.abort();
-  commandController = undefined;
-  busy.value = false;
+  challengeController?.abort();
+  challengeController = undefined;
   requestingChallenge.value = false;
   secret.value = null;
   if (expiryTimer) clearTimeout(expiryTimer);
   expiryTimer = 0;
 }
 function cancelChallenge() {
-  if (busy.value) uncertain.value = 'challenge';
+  if (requestingChallenge.value) uncertain.value = 'challenge';
   clearSecret();
   scheduleFollowUp();
 }
@@ -188,8 +189,8 @@ async function control(action) {
   challengeId.value = '';
   uncertain.value = '';
   const current = new AbortController();
-  commandController = current;
-  busy.value = true;
+  controlController = current;
+  controlling.value = true;
   const body =
     action === 'connect'
       ? reconnecting.value
@@ -209,17 +210,20 @@ async function control(action) {
       idempotencyKey: commandKey(),
       signal: current.signal,
     });
-    if (commandController !== current) return;
+    if (controlController !== current) return;
     number.value = '';
     await refresh();
   } catch (cause) {
-    if (commandController !== current || cause?.name === 'AbortError') return;
+    if (controlController !== current || cause?.name === 'AbortError') return;
     uncertain.value = 'control';
     await refresh();
     error.value =
       'Não foi possível confirmar o comando. Consulte o estado antes de tentar novamente.';
   } finally {
-    if (commandController === current) busy.value = false;
+    if (controlController === current) {
+      controlController = undefined;
+      controlling.value = false;
+    }
   }
 }
 /** @param {'qr'|'code'} mode */
@@ -227,7 +231,6 @@ async function challenge(mode) {
   if (challengeLocked.value) return;
   expiredChallenge.value = '';
   lastMode.value = mode;
-  busy.value = true;
   requestingChallenge.value = true;
   await refresh();
   if (
@@ -236,15 +239,13 @@ async function challenge(mode) {
     !operation.value?.id ||
     unconfirmedOnServer.value
   ) {
-    busy.value = false;
     requestingChallenge.value = false;
     return;
   }
   clearSecret();
   const currentEpoch = epoch;
   const current = new AbortController();
-  commandController = current;
-  busy.value = true;
+  challengeController = current;
   requestingChallenge.value = true;
   // After a reload/new tab the id of the latest challenge comes from the GET.
   const renewChallengeId = reportsChallenge.value
@@ -264,7 +265,7 @@ async function challenge(mode) {
       idempotencyKey: commandKey(),
       signal: current.signal,
     });
-    if (currentEpoch !== epoch || commandController !== current) return;
+    if (currentEpoch !== epoch || challengeController !== current) return;
     const value = response.data;
     const expires = Date.parse(value.expiresAt);
     // Prefer the HTTP clock for both validation and the in-memory TTL.
@@ -327,8 +328,8 @@ async function challenge(mode) {
     if (currentEpoch !== epoch) return;
     error.value = 'Não foi possível confirmar o desafio agora.';
   } finally {
-    if (commandController === current) {
-      busy.value = false;
+    if (challengeController === current) {
+      challengeController = undefined;
       requestingChallenge.value = false;
     }
   }
@@ -352,6 +353,9 @@ watch(liveEvent, (event) => {
   if (event?.type === 'identity.user.changed') {
     if (busy.value)
       uncertain.value = requestingChallenge.value ? 'challenge' : 'control';
+    controlController?.abort();
+    controlController = undefined;
+    controlling.value = false;
     clearSecret();
     challengeId.value = '';
     void refresh();
@@ -371,6 +375,8 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', onVisibilityChange);
   clearSecret();
+  controlController?.abort();
+  controlController = undefined;
   readController?.abort();
   if (pollTimer) clearInterval(pollTimer);
   if (followUpTimer) clearTimeout(followUpTimer);

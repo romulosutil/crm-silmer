@@ -492,9 +492,13 @@ for (const theme of ['light', 'dark']) {
         await expect(field).toHaveAccessibleDescription(
           new RegExp(`${scene.hint}$`, 'u'),
         );
-        await expect(
-          page.getByRole('button', { name: 'Enviar resposta', exact: true }),
-        ).toHaveAccessibleDescription(scene.hint);
+        const send = page.getByRole('button', {
+          name: 'Enviar resposta',
+          exact: true,
+        });
+        await expect(send).toHaveAccessibleDescription(scene.hint);
+        if (scene.admin && scene.personal)
+          await expect(send).toHaveAttribute('aria-disabled', 'true');
 
         await expect
           .poll(() =>
@@ -523,7 +527,7 @@ for (const theme of ['light', 'dark']) {
 // with that reason, the draft stays and reading and ordering stay available.
 // A connected line keeps the exit hint.
 const LINE_DOWN =
-  'Seu WhatsApp está desconectado. Reconecte em Conta › Meu WhatsApp para enviar.';
+  'Reconecte seu WhatsApp para enviar. Acesse Conta › Meu WhatsApp.';
 for (const theme of ['light', 'dark']) {
   for (const width of [390, 1366]) {
     test(`WAP-11 linha pessoal desconectada em ${width}px ${theme}`, async ({
@@ -637,6 +641,7 @@ test('WAP-11 linha pessoal conectada mantém a saída e o envio', async ({
   if (!item) throw new Error('Missing synthetic personal conversation');
   item.personalLine = true;
   item.personalLineUsable = true;
+  item.personalReplyStatus = 'ready';
   await page.goto('/inbox/r-joao');
   await expect(page.locator('#reply-line')).toHaveText('Sai pelo seu WhatsApp');
   await page
@@ -649,4 +654,58 @@ test('WAP-11 linha pessoal conectada mantém a saída e o envio', async ({
   await expect(send).not.toHaveAttribute('aria-disabled');
   await expect(send).toBeEnabled();
   await expect(page.getByText(LINE_DOWN)).toHaveCount(0);
+});
+
+test('WAP-11 recebimento pessoal continua com envio desativado', async ({
+  page,
+}) => {
+  const mock = await installMocks(page, {}, { fixedClock: false });
+  const item = /** @type {Record<string, any>|undefined} */ (
+    mock.items.find(({ id }) => id === 'r-joao')
+  );
+  if (!item) throw new Error('Missing synthetic personal conversation');
+  item.personalLine = true;
+  item.personalLineUsable = false;
+  item.personalReplyStatus = 'reconnect';
+  let posts = 0;
+  await page.route('**/api/v1/conversations/r-joao/messages', (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    posts += 1;
+    return route.fulfill({ status: 503, json: {} });
+  });
+  await page.goto('/inbox/r-joao');
+
+  const note = page.locator('#reply-line');
+  await expect(note).toHaveText(LINE_DOWN);
+  const field = page.getByRole('textbox', { name: 'Responder', exact: true });
+  await field.fill('Rascunho da linha conectada');
+  item.personalLineUsable = true;
+  item.personalReplyStatus = 'send_disabled';
+  await page.evaluate(() => {
+    globalThis.document.dispatchEvent(new globalThis.Event('visibilitychange'));
+  });
+  await expect(note).toHaveText(
+    'O envio pelo CRM está desativado para esta linha. Você pode preparar a resposta.',
+  );
+  await expect(note.getByRole('link')).toHaveCount(0);
+  await expect(field).toBeFocused();
+  const send = page.getByRole('button', {
+    name: 'Enviar resposta',
+    exact: true,
+  });
+  await expect(send).toHaveAttribute('aria-disabled', 'true');
+  for (const name of ['Anexar arquivo', 'Gravar áudio'])
+    await expect(page.getByRole('button', { name })).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'Criar pedido', exact: true }),
+  ).toBeEnabled();
+  await field.press('Enter');
+  await send.click({ force: true });
+  expect(posts).toBe(0);
+  await expect(field).toHaveValue('Rascunho da linha conectada');
+  await expect(
+    page.getByText('Olá, gostaria de um orçamento de uniformes.', {
+      exact: true,
+    }),
+  ).toBeVisible();
 });

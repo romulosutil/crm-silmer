@@ -6538,12 +6538,21 @@ components:
           description: >-
             WAP-11. Só no detalhe (GET /inbox/conversations/{conversationId}); ausente na
             lista. true somente quando o leitor é o titular e a própria linha
-            está conectada, verificada e com vínculo vigente (o mesmo teste do
-            envio). false para qualquer outro leitor, linha geral ou linha
+            está conectada, verificada e com vínculo vigente (a prova de
+            conexão exigida pelo envio). false para qualquer outro leitor, linha geral ou linha
             desconectada, bloqueada, em pareamento ou desconhecida; não revela
             o estado da linha de outro vendedor. Com false para o titular, a
             interface mantém leitura, rascunho e pedido e desabilita o envio;
             o servidor continua recusando com 503 WHATSAPP_SEND_UNAVAILABLE.
+        personalReplyStatus:
+          type: string
+          enum: [ready, reconnect, unavailable, send_disabled]
+          description: >-
+            WAP-06/11. Só no detalhe para o próprio titular. Ready indica
+            conexão comprovada e envio liberado para o vendedor. Reconnect
+            orienta recuperar a conexão. Unavailable indica prova incompleta
+            ou transição. Send_disabled indica conexão comprovada com envio
+            desativado para o titular. O despacho revalida as permissões.
     InboxBucket:
       type: string
       enum: [respond, awaiting, silent, lost]

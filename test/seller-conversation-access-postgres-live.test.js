@@ -440,7 +440,11 @@ test(
           const usable = async (/** @type {string} */ id) =>
             (await inbox.get(own.id, reader(id))).conversation
               .personalLineUsable;
+          const replyStatus = async (/** @type {string} */ id) =>
+            (await inbox.get(own.id, reader(id))).conversation
+              .personalReplyStatus;
           assert.equal(await usable(sellerA), false, 'disconnected line');
+          assert.equal(await replyStatus(sellerA), 'reconnect');
           const ownLine = (
             await pool.query(
               'SELECT id,account_id,instance_name,generation FROM crm.seller_whatsapp_lines WHERE seller_id=$1',
@@ -456,6 +460,7 @@ test(
             [ownLine.id, confirmed],
           );
           assert.equal(await usable(sellerA), false, 'no active binding');
+          assert.equal(await replyStatus(sellerA), 'unavailable');
           const bindingId = randomUUID();
           await pool.query(
             `INSERT INTO crm.seller_whatsapp_bindings
@@ -472,7 +477,18 @@ test(
             ],
           );
           assert.equal(await usable(sellerA), true, 'connected holder');
+          assert.equal(await replyStatus(sellerA), 'ready');
           assert.equal(await usable(admin), false, 'admin is not the holder');
+          assert.equal(await replyStatus(admin), undefined);
+          const detail = await operations.getConversation(
+            { conversationId: own.id },
+            { actorId: sellerA },
+          );
+          assert.equal(
+            detail.conversation.personalReplyStatus,
+            'send_disabled',
+          );
+          assert.equal(detail.conversation.personalLineUsable, true);
           // Scoped to this suite's owner: an unfiltered administrator list
           // reads every suite's rows in the shared test database, sealed with
           // other keys.
@@ -488,6 +504,7 @@ test(
             false,
             'the list never carries the line state',
           );
+          assert.equal('personalReplyStatus' in listed, false);
           for (const state of ['blocked', 'awaiting_pairing', 'unknown']) {
             await pool.query(
               'UPDATE crm.seller_whatsapp_lines SET state=$2,version=version+1 WHERE id=$1',

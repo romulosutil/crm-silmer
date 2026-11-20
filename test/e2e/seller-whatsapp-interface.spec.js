@@ -199,6 +199,11 @@ test('versão nova sem mudança de estado mantém o desafio até expirar', async
   await expect(page.getByText('TEST-CODE')).toBeVisible();
   // Expiry still removes it.
   await expect(page.getByText('TEST-CODE')).toHaveCount(0, { timeout: 6000 });
+  await expect(
+    page.getByText(
+      'O código expirou. Selecione Mostrar código para gerar outro.',
+    ),
+  ).toBeVisible();
 
   // A new generation removes it even while still awaiting pairing.
   ttl = 30000;
@@ -980,7 +985,7 @@ test('linha bloqueada explica o motivo e permite desconectar', async ({
   await expect(page.getByText('Bloqueado · ••••0778')).toBeVisible();
   await expect(
     page.getByText(
-      'O número conectado não é o cadastrado. Desconecte e reconecte pelo celular com o número cadastrado.',
+      'A conexão não pôde ser confirmada. Desconecte e tente de novo com o celular do número cadastrado.',
     ),
   ).toBeVisible();
   await axeEverywhere(page);

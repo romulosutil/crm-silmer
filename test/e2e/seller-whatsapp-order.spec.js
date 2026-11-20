@@ -577,7 +577,7 @@ test('WAP-E09: canal indisponível preserva rascunho e não bloqueia pedido loca
   await draft.fill('Mensagem sintética preservada');
   await page.getByRole('button', { name: /Enviar resposta/u }).click();
   await expect(
-    page.getByText('O WhatsApp desta linha está indisponível.', {
+    page.getByText('Não foi possível enviar pelo WhatsApp desta linha.', {
       exact: false,
     }),
   ).toBeVisible();

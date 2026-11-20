@@ -9,6 +9,39 @@ a partir do E11 `12b4c101`. [Spec](spec.md), [design §10](design.md),
 
 ## Estado
 
+**20/11/2026 — troca de mensagens no piloto de um vendedor (WAP-09 / WAP-E12).**
+Nas conversas individuais observadas, os registros de produção confirmam
+recebimento no CRM e sincronização das respostas escritas no aparelho.
+
+| Conferência entre 01h17 e 11h16 BRT | Resultado |
+| --- | --- |
+| Entrada do interlocutor na Inbox | 12/12 textos e 1/1 mídia |
+| Saída escrita no aparelho e registrada na Inbox | 11/11 textos e 2/2 mídias |
+| Resposta enviada pela Inbox após a publicação do workflow às 01h17 | Sem amostra nessa janela |
+
+A conciliação comparou identificadores do provedor por HMAC efêmero, sem
+copiar conteúdo, números ou identificadores para o relatório. Nas 24 horas
+observadas havia seis envios humanos pela Inbox anteriores à publicação:
+três com recibo de entrega, um aceito pelo provedor sem recibo e dois que
+falharam na consulta do destinatário. Ambas as conversas tiveram envio
+posterior com entrega confirmada.
+
+Por decisão do proprietário, modelos comerciais recebidos ficam fora da
+Inbox pessoal. A [PR 430](https://github.com/romulosutil/crm-silmer/pull/430)
+implantada no n8n trata o evento no ingresso. Após a troca, o módulo
+correspondia ao commit `47bedc42`, os três webhooks pessoais estavam
+registrados e as linhas pessoal e geral estavam conectadas. O histórico foi
+preservado. A [PR 429](https://github.com/romulosutil/crm-silmer/pull/429)
+cobre a alternância de aplicativo enquanto um comando de conexão está em
+andamento.
+
+A homologação em aparelho fica para outra janela. O titular deverá enviar
+uma resposta pela Inbox para o aparelho de teste e conferir remetente,
+conteúdo, entrega e ocorrência única nas duas telas. O pareamento por
+código no mesmo celular e a ampliação para outros vendedores seguem pendentes.
+
+### Registro inicial de 18/11/2026
+
 **E12 parcial.** A preparação e o ensaio local integrado estão concluídos.
 A homologação real **não foi executada**. Nenhum gate live está aprovado, e
 nenhum item T05-05/06/07 está concluído.
@@ -369,7 +402,7 @@ de carteira.
 | E12-4 | P2   | Revisão de QA: o gravador da ficha ainda fechava ciclo pelo FK `uploaded_by` → `crm.users` com um envio de mídia da Inbox do mesmo vendedor, em outra aba                                                   | corrigido no E08, `2493cdad`                                          |
 | E12-5 | P2   | Anterior a este branch: erro sem `statusCode` (por exemplo, erro bruto do PostgreSQL) nas rotas de conversa e de operação caía no handler padrão do Fastify e devolvia `500` com código e mensagem do banco | corrigido, `faf72e02`: handler raiz com corpo genérico; 4xx idênticos |
 
-## Resultado live
+## Resultado live registrado no ensaio inicial de 18/11/2026
 
 | Item       | Resultado | Motivo                                                       |
 | ---------- | --------- | ------------------------------------------------------------ |

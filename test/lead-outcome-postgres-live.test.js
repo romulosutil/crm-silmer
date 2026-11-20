@@ -891,6 +891,12 @@ test(
             clock,
           ],
         );
+        /** @param {any} actor */
+        const lossCount = async (actor) =>
+          (await metrics.losses({ actor, days: 7 })).rows.find(
+            (/** @type {any} */ entry) => entry.userId === seller.id,
+          ).lostCount;
+        const visibleBefore = await lossCount(admin);
         const accountId = randomUUID(),
           lineId = randomUUID();
         await database.transaction(async (/** @type {any} */ client) => {
@@ -933,6 +939,14 @@ test(
             .note,
           NOTE,
         );
+        assert.equal(await lossCount(admin), visibleBefore - 1);
+        assert.equal(await lossCount(seller), visibleBefore);
+        const supervisor = await user('supervisor', 'Vendedor', true);
+        await pool.query(
+          "UPDATE crm.users SET email='admin@crm-silmer.local' WHERE id=$1",
+          [supervisor.id],
+        );
+        assert.equal(await lossCount(supervisor), visibleBefore);
         let calculations = 0;
         const shipping = createConversationShippingRuntime(database, {
           key: Buffer.alloc(32, 130),
@@ -991,9 +1005,9 @@ test(
         await assert.rejects(shipping.quote(quoteInput), { code: 'FORBIDDEN' });
         await assert.rejects(shipping.select(selection), { code: 'FORBIDDEN' });
         assert.equal(calculations, 1);
-        assert.equal(
-          (await leads.detail({ actor: admin, conversationId: personal })).note,
-          NOTE,
+        await assert.rejects(
+          leads.detail({ actor: admin, conversationId: personal }),
+          { code: 'FORBIDDEN' },
         );
         // The order's seller keeps the commercial estimate without chat.
         const commercial = (
@@ -1020,7 +1034,7 @@ test(
         assert.equal(
           (await shipping.read({ actor: admin, orderId: row.id })).quote
             .conversationId,
-          quotedConversation,
+          null,
         );
       },
     );

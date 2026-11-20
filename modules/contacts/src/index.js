@@ -58,4 +58,5 @@ export {
   personalIdentityVisible,
   contactConversationVisible,
   contactVisible,
+  contactReadVisible,
 } from './adapters/contact-access.js';

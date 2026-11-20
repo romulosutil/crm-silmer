@@ -60,16 +60,12 @@ const renameTrigger = ref(null);
 const ONBOARDING_DISMISSED_KEY = 'crm.portfolio-whatsapp-onboarding.dismissed';
 const personalWhatsApp = ref(null);
 const onboardingDismissed = ref(false);
-// /me/clients refused this account (e.g. an administrator): no portfolio.
+// The authenticated portfolio endpoint decides access, including for admins.
 const portfolioUnavailable = ref(false);
-const isAdmin = computed(() =>
-  (sessionUser.value?.capabilities ?? []).includes('COMMERCIAL_ADMIN'),
-);
 const showOnboarding = computed(
   () =>
     props.mine &&
     !portfolioUnavailable.value &&
-    !isAdmin.value &&
     !onboardingDismissed.value &&
     personalWhatsApp.value?.available === true &&
     personalWhatsApp.value?.line?.state !== 'connected',
@@ -564,7 +560,8 @@ let whatsappController;
 async function loadPersonalWhatsApp() {
   whatsappController?.abort();
   personalWhatsApp.value = null;
-  if (!props.mine || isAdmin.value) return;
+  if (!props.mine || !hasLoadedContacts.value || portfolioUnavailable.value)
+    return;
   const controller = new AbortController();
   whatsappController = controller;
   try {
@@ -581,8 +578,11 @@ onMounted(() => {
   heading.value?.focus();
   readOnboardingDismissed();
   void loadContacts();
-  void loadPersonalWhatsApp();
 });
+watch(
+  () => props.mine && hasLoadedContacts.value && !portfolioUnavailable.value,
+  () => void loadPersonalWhatsApp(),
+);
 watch(
   liveEvent,
   (event) => {

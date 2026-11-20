@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { contactConversationVisible } from '@crm-silmer/contacts';
 
 import { encryptJson } from './crypto.js';
 
@@ -341,14 +342,22 @@ export function createPostgresAutomationStallSweeper(options) {
 /**
  * The count the Painel shows as "stalled now" uses the same rule.
  *
- * @param {{query: Function}} database @param {Date} now @param {number} stallMinutes
+ * @param {{query: Function}} database @param {Date} now @param {number} stallMinutes @param {string} [actorId]
  */
-export async function countStalledConversations(database, now, stallMinutes) {
+export async function countStalledConversations(
+  database,
+  now,
+  stallMinutes,
+  actorId,
+) {
   const window = stallWindow(now, stallMinutes);
+  const scope = actorId
+    ? `JOIN crm.conversations c ON c.id=stalled.id WHERE ${contactConversationVisible('c', '$4', 'true')}`
+    : '';
   const row = (
     await database.query(
-      `SELECT count(*)::integer AS total FROM (${STALLED_CONVERSATIONS}) stalled`,
-      windowValues(window),
+      `SELECT count(*)::integer AS total FROM (${STALLED_CONVERSATIONS}) stalled ${scope}`,
+      actorId ? [...windowValues(window), actorId] : windowValues(window),
     )
   ).rows[0];
   return Number(row?.total ?? 0);

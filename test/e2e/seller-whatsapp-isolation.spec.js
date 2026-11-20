@@ -387,7 +387,7 @@ const LINE_CASES = [
     hint: 'Sai pela linha Silmer',
   },
   {
-    name: 'administrador na linha pessoal de um vendedor',
+    name: 'administrador autorizado na linha pessoal de outro titular',
     id: 'r-bruno',
     personal: true,
     admin: true,
@@ -408,7 +408,12 @@ for (const theme of ['light', 'dark']) {
         const mock = await installMocks(
           page,
           {},
-          { fixedClock: false, admin: scene.admin },
+          {
+            fixedClock: false,
+            admin: scene.admin,
+            canReadAllPersonalWhatsApp: scene.admin,
+            enforceVisibility: true,
+          },
         );
         const item = /** @type {Record<string, any>|undefined} */ (
           mock.items.find(({ id }) => id === scene.id)

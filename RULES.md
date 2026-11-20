@@ -1,5 +1,15 @@
 # Regras do CRM Silmer
 
+## Supervisão do WhatsApp pessoal — decisão de 20/11/2026
+
+Cada vendedor ou administrador comercial ativo opera sua própria linha. Só a
+conta administrativa designada pelo proprietário, enquanto ativa e com
+`COMMERCIAL_ADMIN`, pode consultar as conversas de outras linhas pessoais.
+Enviar exige titularidade. As leituras derivadas de conversa respeitam esse
+escopo, inclusive por ID, mídia e eventos. A linha geral segue a ADR 088 e a
+autorização do Pedido segue seu contrato comercial. Contas desativadas e
+Financeiro ficam fora do provisionamento. [ADR 095](docs/adr/095-supervisao-das-linhas-pessoais.md)
+
 ## Linhas pessoais e cadastro compartilhado — decisão de 15/11/2026
 
 [ADR 090](docs/adr/090-whatsapp-pessoal-carteira-e-cadastro-compartilhado.md) /

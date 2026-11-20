@@ -58,16 +58,21 @@ test(
     const sellerA = 'scope-a-' + prefix;
     const sellerB = 'scope-b-' + prefix;
     const admin = 'scope-admin-' + prefix;
+    const otherAdmin = 'scope-team-admin-' + prefix;
     // WAP-07/08: a seller with no wallet link and no order of this client.
     const stranger = 'scope-stranger-' + prefix;
     const actor = (/** @type {string} */ id) => ({
       id,
       kind: 'human',
       functionName: 'Vendedor',
-      capabilities: id === admin ? ['COMMERCIAL_ADMIN'] : [],
+      capabilities: [admin, otherAdmin].includes(id)
+        ? ['COMMERCIAL_ADMIN']
+        : [],
     });
     const reader = (/** @type {string} */ id) =>
-      id === admin ? { actorId: id } : { actorId: id, visibilityActorId: id };
+      [admin, otherAdmin].includes(id)
+        ? { actorId: id }
+        : { actorId: id, visibilityActorId: id };
     const inbox = new PostgresInboxReadRepository({
       database,
       contactEnvelopeKey: key,
@@ -98,10 +103,10 @@ test(
     });
     try {
       await migrate(pool, { migrations: await loadMigrations() });
-      for (const id of [sellerA, sellerB, admin, stranger]) {
+      for (const id of [sellerA, sellerB, admin, otherAdmin, stranger]) {
         await pool.query(
           "INSERT INTO crm.users(id,email,password_hash,name) VALUES($1,$2,'$argon2id$synthetic','Synthetic scope')",
-          [id, id + '@example.test'],
+          [id, id === admin ? 'admin@crm-silmer.local' : id + '@example.test'],
         );
         await pool.query(
           "INSERT INTO crm.user_functions(user_id,function_name) VALUES($1,'Vendedor')",
@@ -109,8 +114,8 @@ test(
         );
       }
       await pool.query(
-        "INSERT INTO crm.user_capabilities(user_id,capability,granted_by) VALUES($1,'COMMERCIAL_ADMIN',$2)",
-        [admin, sellerA],
+        "INSERT INTO crm.user_capabilities(user_id,capability,granted_by) VALUES($1,'COMMERCIAL_ADMIN',$2),($3,'COMMERCIAL_ADMIN',$2)",
+        [admin, sellerA, otherAdmin],
       );
       const accountA = randomUUID(),
         accountB = randomUUID();
@@ -142,7 +147,7 @@ test(
       }
       const own = await seedConversation(accountA, sellerA, '5511987000011');
       const other = await seedConversation(accountB, sellerB, '5511987000011');
-      await seedConversation(
+      const general = await seedConversation(
         'scope-general-' + prefix,
         sellerA,
         '5511987000012',
@@ -425,6 +430,52 @@ test(
           await denyBothMedia();
           await commercialWithoutChat();
           currentActor = actor(sellerA);
+        },
+      );
+      await t.test(
+        'commercial administrators see the general line; only the named supervisor sees another personal line',
+        async () => {
+          currentActor = actor(otherAdmin);
+          try {
+            const list = await inbox.list(
+              { limit: 10, assignedUserId: sellerA },
+              reader(otherAdmin),
+            );
+            assert.equal(list.totalCount, 1);
+            assert.deepEqual(
+              list.items.map((/** @type {any} */ item) => item.id),
+              [general.id],
+            );
+            assert.equal(
+              (await inbox.get(general.id, reader(otherAdmin))).conversation.id,
+              general.id,
+            );
+            for (const restricted of [otherAdmin, stranger]) {
+              await assert.rejects(inbox.get(own.id, reader(restricted)), {
+                code: 'CONVERSATION_NOT_FOUND',
+              });
+              await assert.rejects(
+                inbox.assistantContext(own.id, reader(restricted)),
+                { code: 'CONVERSATION_NOT_FOUND' },
+              );
+              await assert.rejects(
+                subjects.list(own.id, '', actor(restricted)),
+                { statusCode: 403 },
+              );
+            }
+            await denyBothMedia();
+            await commercialWithoutChat();
+            const supervisor = await inbox.list(
+              { limit: 10, assignedUserId: sellerA },
+              reader(admin),
+            );
+            assert.equal(supervisor.totalCount, 2);
+            currentActor = actor(admin);
+            for (const id of [transientId, retainedId])
+              assert.equal((await fetchMedia(id)).statusCode, 200);
+          } finally {
+            currentActor = actor(sellerA);
+          }
         },
       );
       await t.test(
@@ -848,6 +899,19 @@ test(
         'an active-user check revalidates stale administrator claims before any projection',
         async () => {
           await pool.query(
+            "DELETE FROM crm.user_capabilities WHERE user_id=$1 AND capability='COMMERCIAL_ADMIN'",
+            [admin],
+          );
+          await assert.rejects(inbox.get(other.id, reader(admin)), {
+            code: 'CONVERSATION_NOT_FOUND',
+          });
+          await assert.rejects(
+            database.transaction((/** @type {any} */ tx) =>
+              lockConversationAccess(tx, other.id, admin),
+            ),
+            { code: 'INBOX_FORBIDDEN' },
+          );
+          await pool.query(
             'UPDATE crm.users SET disabled_at=now() WHERE id=$1',
             [admin],
           );
@@ -860,6 +924,10 @@ test(
         },
       );
     } finally {
+      await pool.query('UPDATE crm.users SET email=$2 WHERE id=$1', [
+        admin,
+        admin + '@example.test',
+      ]);
       await pool.end();
     }
   },

@@ -109,7 +109,7 @@ export class PostgresSellerWhatsAppRepository {
   /** @type {Set<string>} */
   #sellers;
 
-  /** @param {any} database @param {{envelopeKey:Buffer,lookupKey:Buffer,enabled?:boolean,sellerAllowlist?:string[],generalNumberDigest?:string,clock?:()=>Date,challengeTtlMs?:number}} options */
+  /** @param {any} database @param {{envelopeKey:Buffer,lookupKey:Buffer,enabled?:boolean,sellerAllowlist?:string[],provisionedLines?:Map<string,{lineId:string,instance:string}>,generalNumberDigest?:string,clock?:()=>Date,challengeTtlMs?:number}} options */
   constructor(database, options) {
     if (
       !Buffer.isBuffer(options.envelopeKey) ||
@@ -499,7 +499,8 @@ export class PostgresSellerWhatsAppRepository {
       );
       const at = this.#clock();
       if (!line) {
-        const lineId = randomUUID();
+        const slot = this.#options.provisionedLines?.get(input.actorId);
+        const lineId = slot?.lineId ?? randomUUID();
         const digest = this.#digest(expectedNumber);
         const reserved = (
           await client.query(
@@ -516,7 +517,7 @@ export class PostgresSellerWhatsAppRepository {
               lineId,
               input.actorId,
               randomUUID(),
-              `wap_${randomUUID().replaceAll('-', '')}`,
+              slot?.instance ?? `wap_${randomUUID().replaceAll('-', '')}`,
               digest,
               JSON.stringify(
                 encrypt(

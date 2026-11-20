@@ -171,7 +171,7 @@ export class PostgresChatMediaUploadRepository {
       throw error(409);
     const visible = await client.query(
       `SELECT conversation.id FROM crm.conversations conversation WHERE conversation.id=$1
-         AND ($3::boolean OR ${contactConversationVisible('conversation', '$2')})`,
+         AND ${contactConversationVisible('conversation', '$2', '$3::boolean')}`,
       [input.conversationId, actor.id, actor.isAdmin],
     );
     if (!visible.rows[0]) throw error(403);
@@ -318,9 +318,7 @@ export class PostgresChatMediaUploadRepository {
            AND EXISTS (SELECT 1 FROM crm.users reader
              JOIN crm.user_functions role ON role.user_id=reader.id
              WHERE reader.id=$4 AND reader.disabled_at IS NULL AND role.function_name='Vendedor')
-           AND (($3::boolean AND EXISTS (SELECT 1 FROM crm.user_capabilities
-             WHERE user_id=$4 AND capability='COMMERCIAL_ADMIN'))
-             OR ${contactConversationVisible('conversation', '$4')})`,
+           AND ${contactConversationVisible('conversation', '$4', "$3::boolean AND EXISTS (SELECT 1 FROM crm.user_capabilities WHERE user_id=$4 AND capability='COMMERCIAL_ADMIN')")}`,
         [input.mediaId, input.conversationId, scope.readAll, scope.actorId],
       )
     ).rows[0];

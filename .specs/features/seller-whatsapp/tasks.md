@@ -10,6 +10,17 @@ PRs ou ciclos completos de preparação e validação. O gate prioritário é
 **WAP-E07**, equivalente ao aceite WAP-T02a-05. Primeira saída continua depois.
 Nenhum item de runtime está concluído por esta revisão documental.
 
+## WAP-E12 — liberação da equipe comercial em 20/11/2026
+
+O proprietário autorizou o acesso dos vendedores e administradores comerciais
+ativos, com uma linha por titular e uma única conta administrativa para
+supervisionar conversas pessoais de terceiros. WAP-T05-05/06/07 acompanham o
+aceite. A implantação exige conferir o conjunto de titulares e as listas dos
+serviços, preservar a linha pareada, validar a autorização no servidor e limitar
+os envios pessoais a 10 por titular e 20 pelo serviço por minuto. A confirmação
+funcional e o estado operacional ficam no [registro do piloto](validation-piloto.md).
+[WAP-01/04/07/09/12](spec.md) · [ADR 095](../../../docs/adr/095-supervisao-das-linhas-pessoais.md)
+
 ## WAP-T00e — reduzir o custo de execução do SDD
 
 - [x] Consolidar os 32 itens em 12 entregas com fronteiras coerentes, dependências

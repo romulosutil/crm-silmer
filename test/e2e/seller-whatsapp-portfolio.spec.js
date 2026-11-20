@@ -4,7 +4,7 @@ import { installMocks } from './support/inbox-vez-mock.js';
 
 // WAP-01: "Atenda com seu WhatsApp" only for a seller in the pilot without a
 // connected line; "Agora não" is remembered for that user in this browser.
-// An account without a portfolio (an administrator) reads why, without the
+// An account refused by the portfolio endpoint reads why, without the
 // creation form. Synthetic projections only; no provider or real account.
 test.use({ locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
 
@@ -75,7 +75,7 @@ for (const theme of ['light', 'dark']) {
       await expect(page.getByRole('heading', ONBOARDING)).toHaveCount(0);
     });
 
-    test(`Meus clientes indisponível para administrador em ${width}px ${theme}`, async ({
+    test(`Meus clientes indisponível quando a API nega a carteira em ${width}px ${theme}`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: 844 });
@@ -109,6 +109,35 @@ for (const theme of ['light', 'dark']) {
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     });
   }
+}
+
+for (const allLines of [false, true]) {
+  test(`administrador com visão ${allLines ? 'global' : 'restrita'} acessa sua carteira e configura a própria linha`, async ({
+    page,
+  }) => {
+    await installMocks(
+      page,
+      {},
+      { fixedClock: false, admin: true, canReadAllPersonalWhatsApp: allLines },
+    );
+    const reads = await portfolio(page, NOT_CONFIGURED);
+    await page.goto('/meus-clientes');
+    await expect(
+      page.getByRole('button', { name: 'Novo cliente' }),
+    ).toBeVisible();
+    const configure = page.getByRole('link', {
+      name: 'Configurar Meu WhatsApp',
+    });
+    await configure.focus();
+    await page.keyboard.press('Enter');
+    await expect(
+      page.getByRole('heading', { name: 'Meu WhatsApp', exact: true }),
+    ).toBeFocused();
+    await expect(
+      page.getByRole('button', { name: 'Conectar WhatsApp' }),
+    ).toBeVisible();
+    expect(reads).toEqual(['GET', 'GET']);
+  });
 }
 
 for (const [scene, whatsapp] of /** @type {const} */ ([

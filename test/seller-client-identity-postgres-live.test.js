@@ -110,7 +110,7 @@ if (!URL) {
       for (const id of [A, B, ADMIN]) {
         await pool.query(
           "INSERT INTO crm.users(id,email,password_hash,name) VALUES($1,$2,'$argon2id$synthetic','Synthetic seller')",
-          [id, `${id}@example.test`],
+          [id, id === ADMIN ? 'admin@crm-silmer.local' : `${id}@example.test`],
         );
         await pool.query(
           "INSERT INTO crm.user_functions(user_id,function_name) VALUES($1,'Vendedor')",
@@ -409,6 +409,10 @@ if (!URL) {
         },
       );
     } finally {
+      await pool.query('UPDATE crm.users SET email=$2 WHERE id=$1', [
+        ADMIN,
+        ADMIN + '@example.test',
+      ]);
       await pool.end();
     }
   });

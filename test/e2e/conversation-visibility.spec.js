@@ -5,12 +5,12 @@ import { installMocks } from './support/inbox-vez-mock.js';
 // cleanup; authorization and SQL visibility are verified by API tests.
 test.use({ locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
 
-/** @param {import('@playwright/test').Page} page @param {boolean} [admin] */
-async function open(page, admin = false) {
+/** @param {import('@playwright/test').Page} page @param {boolean} [admin] @param {boolean} [canReadAllPersonalWhatsApp] */
+async function open(page, admin = false, canReadAllPersonalWhatsApp = false) {
   const mock = await installMocks(
     page,
     { writes: [], unmocked: [] },
-    { admin },
+    { admin, canReadAllPersonalWhatsApp },
   );
   await page.addInitScript(() => {
     const scope = /** @type {any} */ (globalThis);
@@ -38,11 +38,30 @@ async function emit(page, type = 'stream.reset') {
   }, type);
 }
 
-for (const admin of [false, true]) {
-  test(`CONV-ACL-01: responsável mostra o escopo de ${admin ? 'administrador' : 'vendedor'}`, async ({
+for (const [role, admin, allLines, description] of /** @type {const} */ ([
+  [
+    'vendedor',
+    false,
+    false,
+    'Você vê suas conversas e as sem responsável, incluindo as atendidas pela IA.',
+  ],
+  [
+    'administrador',
+    true,
+    false,
+    'Você pode consultar as conversas da linha geral e do seu WhatsApp pessoal.',
+  ],
+  [
+    'administrador com visão de todas as linhas',
+    true,
+    true,
+    'Você pode consultar as conversas da linha geral e de todas as linhas pessoais.',
+  ],
+])) {
+  test(`CONV-ACL-01: responsável mostra o escopo de ${role}`, async ({
     page,
   }) => {
-    await open(page, admin);
+    await open(page, admin, allLines);
     await page.getByRole('button', { name: 'Filtros', exact: true }).click();
     await expect(
       page.getByRole('radio', {
@@ -50,9 +69,9 @@ for (const admin of [false, true]) {
         exact: true,
       }),
     ).toBeVisible();
-    await expect(page.locator('#inbox-visibility-hint')).toHaveCount(
-      admin ? 0 : 1,
-    );
+    await expect(
+      page.getByRole('group', { name: 'Responsável' }),
+    ).toHaveAccessibleDescription(description);
     await expect(
       page.getByRole('radio', { name: 'Minhas', exact: true }),
     ).toBeVisible();

@@ -50,9 +50,7 @@ export function createInboundMediaRuntime({
              AND EXISTS (SELECT 1 FROM crm.users reader
                JOIN crm.user_functions role ON role.user_id=reader.id
                WHERE reader.id=$4 AND reader.disabled_at IS NULL AND role.function_name='Vendedor')
-             AND (($3::boolean AND EXISTS (SELECT 1 FROM crm.user_capabilities
-               WHERE user_id=$4 AND capability='COMMERCIAL_ADMIN'))
-               OR ${contactConversationVisible('conversation', '$4')})
+             AND ${contactConversationVisible('conversation', '$4', "$3::boolean AND EXISTS (SELECT 1 FROM crm.user_capabilities WHERE user_id=$4 AND capability='COMMERCIAL_ADMIN')")}
              AND (message.direction='inbound' OR (message.author_kind='system' AND message.command_id LIKE 'external:%'))
              AND media.provider=message.provider AND media.provider_account_id=message.provider_account_id
              AND media.media_type=message.message_type

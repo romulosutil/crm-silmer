@@ -40,12 +40,16 @@ export class PostgresHandoffReadRepository {
       const scopedReader = await this.#currentReader(database, reader);
       const values = [];
       const predicates = ["handoff.status = 'pending'"];
-      if (scopedReader.visibilityActorId) {
-        values.push(scopedReader.visibilityActorId);
-        predicates.push(
-          contactConversationVisible('conversation', `$${values.length}`),
-        );
-      }
+      values.push(
+        scopedReader.actorId ?? scopedReader.visibilityActorId ?? null,
+      );
+      predicates.push(
+        contactConversationVisible(
+          'conversation',
+          '$1',
+          scopedReader.visibilityActorId ? 'false' : 'true',
+        ),
+      );
       const countValues = [...values];
       const countWhere = predicates.join(' AND ');
       if (input.after) {
@@ -115,11 +119,15 @@ export class PostgresHandoffReadRepository {
          JOIN crm.conversations conversation ON conversation.id=handoff.conversation_id
          LEFT JOIN crm.users preferred ON preferred.id = handoff.preferred_user_id
          WHERE handoff.conversation_id = $1
-           AND ($2::text IS NULL OR ${contactConversationVisible('conversation', '$2')})
+           AND ${contactConversationVisible('conversation', '$2', '$3::boolean')}
            AND handoff.status IN ('pending', 'accepted')
          ORDER BY handoff.created_at DESC, handoff.id DESC
          LIMIT 1`,
-        [conversationId, scopedReader.visibilityActorId ?? null],
+        [
+          conversationId,
+          scopedReader.actorId ?? scopedReader.visibilityActorId ?? null,
+          !scopedReader.visibilityActorId,
+        ],
       );
       const row = result.rows[0];
       if (!row) return null;

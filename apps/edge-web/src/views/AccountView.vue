@@ -1,11 +1,13 @@
 <script setup>
 import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { request } from '../lib/api-client.js';
 import MyWhatsApp from '../components/MyWhatsApp.vue';
 
 const props = defineProps({
   session: { type: Object, required: true },
 });
+const route = useRoute();
 const liveEvent = inject('liveEvent', ref(null));
 const liveConnection = inject('liveConnection', ref('indisponível'));
 const heading = ref(null);
@@ -48,7 +50,11 @@ watch(liveEvent, (event) => {
     void refreshSession();
 });
 onMounted(() => {
-  heading.value?.focus();
+  const personalHeading =
+    route.hash === '#my-whatsapp-title'
+      ? document.getElementById('my-whatsapp-title')
+      : null;
+  (personalHeading ?? heading.value)?.focus();
   fallbackTimer = globalThis.setInterval(() => {
     if (
       liveConnection.value !== 'conectado' &&

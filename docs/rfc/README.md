@@ -1,5 +1,11 @@
 # Request for Comments
 
+## Decisão de 20/11/2026
+
+- [072 — Supervisão das linhas pessoais](072-supervisao-das-linhas-pessoais.md).
+  A proposta de supervisão por uma única conta administrativa foi aceita na
+  [ADR 095](../adr/095-supervisao-das-linhas-pessoais.md).
+
 ## Correção técnica de 16/11/2026
 
 - [069 — Ingresso efêmero e geração autenticada do WhatsApp](069-ingresso-efemero-e-geracao-autenticada-do-whatsapp.md),

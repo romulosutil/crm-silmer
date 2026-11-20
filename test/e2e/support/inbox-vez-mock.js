@@ -61,6 +61,7 @@ const SILENT_AFTER_MINUTES = 72 * 60;
  *   extras?: boolean,      // round-2 fixtures (see fixtures.mjs)
  *   bulk?: boolean,        // 104 fillers each in silent/lost: P1-C targets past page one
  *   admin?: boolean,       // the session user is a COMMERCIAL_ADMIN
+ *   canReadAllPersonalWhatsApp?: boolean,
  *   enforceVisibility?: boolean, // CONV-ACL-01 in focused authorization UI scenes
  *   failBuckets?: boolean,  // GET /inbox/buckets answers 503
  *   commandErrors?: Record<string, {status: number, code: string}>, // forced refusal per command path ('lead-outcome', 'reminder')
@@ -76,9 +77,10 @@ export async function installMocks(page, log = {}, options = {}) {
   );
   const isReadable = (item) =>
     !options.enforceVisibility ||
-    options.admin === true ||
-    !item.assignedUser ||
-    item.assignedUser.id === ME.id;
+    item.assignedUser?.id === ME.id ||
+    (item.personalLine
+      ? options.admin && options.canReadAllPersonalWhatsApp
+      : options.admin || !item.assignedUser);
   const open = () =>
     items.filter((item) => !item.archivedAt && isReadable(item));
   /** The instant the "SQL" computed this response; one per response. */
@@ -169,6 +171,8 @@ export async function installMocks(page, log = {}, options = {}) {
           ...ME,
           functionName: 'Vendedor',
           capabilities: options.admin ? ['COMMERCIAL_ADMIN'] : [],
+          canReadAllPersonalWhatsApp:
+            options.canReadAllPersonalWhatsApp === true,
         },
       });
     if (path === '/api/v1/events')

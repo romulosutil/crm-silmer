@@ -86,7 +86,7 @@ export const ASSISTANT_PERFORMANCE_DAYS = Object.freeze({
   min: 1,
 });
 
-/** @param {{clock?: () => Date, contactRepository: any, cursorKey: Buffer, database?: any, handoffRepository: any, inboxRepository: any, countStalled?: ((now: Date) => Promise<number>) | null, assistantMessageCap?: number, stallMinutes?: number, personalSendSellers?: ReadonlySet<string>}} dependencies */
+/** @param {{clock?: () => Date, contactRepository: any, cursorKey: Buffer, database?: any, handoffRepository: any, inboxRepository: any, countStalled?: ((now: Date, actorId?:string) => Promise<number>) | null, assistantMessageCap?: number, stallMinutes?: number, personalSendSellers?: ReadonlySet<string>}} dependencies */
 export function createOperationReadService({
   clock = () => new Date(),
   contactRepository,
@@ -130,7 +130,7 @@ export function createOperationReadService({
     if (!actorId || !database) return '0';
     const result = await database.query(
       `SELECT md5(jsonb_build_array(
-        (SELECT jsonb_build_array(u.disabled_at,f.function_name,
+        (SELECT jsonb_build_array(u.disabled_at,f.function_name,lower(u.email)='admin@crm-silmer.local',
           (SELECT jsonb_agg(capability ORDER BY capability) FROM crm.user_capabilities WHERE user_id=$1))
           FROM crm.users u LEFT JOIN crm.user_functions f ON f.user_id=u.id WHERE u.id=$1),
         (SELECT COALESCE(version,0) FROM crm.seller_client_scope_versions WHERE seller_id=$1),
@@ -189,9 +189,9 @@ export function createOperationReadService({
      * AGENTE-OBS-01: aggregates of the assistant over the last `days`, on
      * the server clock. Counts, ratios and minutes only.
      *
-     * @param {{days?: unknown}} [input]
+     * @param {{days?: unknown}} [input] @param {{actorId?:string}} [access]
      */
-    async assistantPerformance(input = {}) {
+    async assistantPerformance(input = {}, access = {}) {
       rejectUnknownKeys(input, ['days']);
       const days =
         input.days === undefined
@@ -209,6 +209,7 @@ export function createOperationReadService({
       const aggregates = await inboxRepository.assistantPerformance({
         from,
         to,
+        actorId: access.actorId,
       });
       return Object.freeze({
         window: Object.freeze({
@@ -217,7 +218,7 @@ export function createOperationReadService({
           to: to.toISOString(),
         }),
         ...aggregates,
-        stalled_now: countStalled ? await countStalled(to) : 0,
+        stalled_now: countStalled ? await countStalled(to, access.actorId) : 0,
       });
     },
     /**
@@ -562,9 +563,10 @@ export function createOperationReadService({
       if (!projected) return reset;
       const conversationId = projected.payload.conversationId;
       const contactId = projected.payload.contactId;
-      if (actor.capabilities?.includes(CAPABILITIES.COMMERCIAL_ADMIN))
-        return projected;
-      if (!actor?.id || (!conversationId && !contactId)) return reset;
+      if (!conversationId && !contactId)
+        return actor.capabilities?.includes(CAPABILITIES.COMMERCIAL_ADMIN)
+          ? projected
+          : reset;
       try {
         // A shared Contact never authorizes an event about its private chat.
         if (!conversationId && contactId) {
@@ -707,8 +709,8 @@ export function createOperationReadRuntime(database, options = {}) {
   );
   const clientsConfig = sellerClientsConfiguration(environment);
   const service = createOperationReadService({
-    countStalled: (now) =>
-      countStalledConversations(database, now, stallMinutes),
+    countStalled: (now, actorId) =>
+      countStalledConversations(database, now, stallMinutes, actorId),
     personalSendSellers: sellerWhatsAppSendConfiguration(environment),
     stallMinutes,
     contactRepository: new PostgresContactReadRepository({
@@ -773,7 +775,7 @@ export function createOperationReadRuntime(database, options = {}) {
          SELECT 1 FROM crm.contact_identities
          WHERE current_contact_id = $1 AND channel = 'whatsapp'
            AND identity_kind = 'phone' AND phone_status = 'confirmed'
-           AND ($2::text IS NULL OR ${personalIdentityVisible('crm.contact_identities', '$2')})
+           AND ${personalIdentityVisible('crm.contact_identities', '$2')}
          UNION ALL
          SELECT 1 FROM crm.site_contact_claims claim
          JOIN crm.conversations conversation
@@ -781,9 +783,9 @@ export function createOperationReadRuntime(database, options = {}) {
          JOIN crm.contact_identities identity
            ON identity.id = conversation.contact_identity_id
          WHERE identity.current_contact_id = $1
-           AND ($2::text IS NULL OR ${contactConversationVisible('conversation', '$2')})
+           AND ${contactConversationVisible('conversation', '$2', '$3::boolean')}
        ) AS found`,
-      [contactId, actor.isAdmin ? null : actor.id],
+      [contactId, actor.id, actor.isAdmin],
     );
     return phone.rows[0]?.found === true;
   }

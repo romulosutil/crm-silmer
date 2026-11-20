@@ -24,7 +24,7 @@ import {
 import { createSafeLogger } from '../../modules/shared/src/index.js';
 
 // WAP-E10 / WAP-T04-03 (WAP-22/23/24/32) on a real synthetic PostgreSQL 17.
-const now = new Date('2026-11-18T12:00:00.000Z');
+let now = new Date('2026-11-18T12:00:00.000Z');
 const key = Buffer.alloc(32, 77);
 const A = 'wap-e10-seller-a';
 const B = 'wap-e10-seller-b';
@@ -632,6 +632,79 @@ test(
       },
     );
 
+    await t.test(
+      'WAP-12: concurrent personal sends respect both rolling budgets, including at the window boundary',
+      async () => {
+        now = new Date(now.getTime() + 60_000);
+        let phone = 5511000010100;
+        /** @param {typeof a} line */
+        async function prepare(line) {
+          const contactId = await database.transaction((/** @type {any} */ c) =>
+            seedContact(c, String(++phone), [line.sellerId]),
+          );
+          return request(line, contactId);
+        }
+
+        // With nine fresh reservations from each seller, A has one slot.
+        for (let i = 0; i < 9; i++) {
+          await firstSend.send(await prepare(a));
+          await firstSend.send(await prepare(b));
+        }
+        const limited = { code: 'RATE_LIMITED', statusCode: 429 };
+        /** @param {Awaited<ReturnType<typeof request>>[]} inputs */
+        async function compete(inputs) {
+          const before = await effects();
+          const results = await Promise.allSettled(
+            inputs.map((input) => firstSend.send(input)),
+          );
+          const won = results.findIndex(
+            (result) => result.status === 'fulfilled',
+          );
+          const lost = results.findIndex(
+            (result) => result.status === 'rejected',
+          );
+          assert.ok(won >= 0 && lost >= 0);
+          const accepted = results[won];
+          const refused = results[lost];
+          assert.ok(accepted.status === 'fulfilled' && accepted.value.created);
+          assert.ok(refused.status === 'rejected');
+          assert.equal(refused.reason.code, limited.code);
+          assert.equal(refused.reason.statusCode, limited.statusCode);
+          const after = await effects();
+          assert.deepEqual(after, {
+            ...before,
+            identities: before.identities + 1,
+            conversations: before.conversations + 1,
+            messages: before.messages + 1,
+            commands: before.commands + 1,
+            jobs: before.jobs + 1,
+            receipts: before.receipts + 1,
+            audits: before.audits + 1,
+          });
+          const replay = await firstSend.send(inputs[won]);
+          assert.equal(replay.created, false);
+          assert.deepEqual(replay.body, accepted.value.body);
+          assert.deepEqual(await effects(), after);
+          return inputs[lost];
+        }
+
+        const ownRefusal = await compete([await prepare(a), await prepare(a)]);
+        // The service has one slot. B and D are both below the individual ceiling.
+        const globalRefusal = await compete([
+          await prepare(b),
+          await prepare(d),
+        ]);
+        const full = await effects();
+        now = new Date(now.getTime() + 59_999);
+        await assert.rejects(firstSend.send(ownRefusal), limited);
+        await assert.rejects(firstSend.send(globalRefusal), limited);
+        assert.deepEqual(await effects(), full);
+        now = new Date(now.getTime() + 1);
+        assert.equal((await firstSend.send(ownRefusal)).created, true);
+        assert.equal((await firstSend.send(globalRefusal)).created, true);
+      },
+    );
+    now = new Date(now.getTime() + 60_000);
     const P2 = '5511900000102';
     const c2 = await database.transaction((/** @type {any} */ c) =>
       seedContact(c, P2, [A]),
@@ -1199,6 +1272,7 @@ test(
     );
 
     // WAP-10/22/23: closing the cycle does not settle an uncertain send.
+    now = new Date(now.getTime() + 60_000);
     const P8 = '5511900000131';
     const c8 = await database.transaction((/** @type {any} */ c) =>
       seedContact(c, P8, [A, D]),

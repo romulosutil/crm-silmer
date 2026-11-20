@@ -43,11 +43,16 @@ if (!url) {
       transaction: (/** @type {any} */ work) => withTransaction(pool, work),
     };
     let now = new Date('2026-11-16T12:00:00.000Z');
+    const slot = {
+      lineId: randomUUID(),
+      instance: 'wap_' + randomUUID().replaceAll('-', ''),
+    };
     const options = {
       envelopeKey: KEY,
       lookupKey: LOOKUP,
       enabled: true,
       sellerAllowlist: [A, B, ADMIN],
+      provisionedLines: new Map([[A, slot]]),
       generalNumberDigest: digest(GENERAL),
       clock: () => now,
     };
@@ -435,6 +440,16 @@ if (!url) {
           await reset();
           const key = randomUUID();
           const created = await submit({ idempotencyKey: key });
+          assert.equal(created.operation.lineId, slot.lineId);
+          assert.equal(
+            (
+              await pool.query(
+                'SELECT instance_name FROM crm.seller_whatsapp_lines WHERE seller_id=$1',
+                [A],
+              )
+            ).rows[0].instance_name,
+            slot.instance,
+          );
           assert.equal(
             (await submit({ idempotencyKey: key })).operation.id,
             created.operation.id,

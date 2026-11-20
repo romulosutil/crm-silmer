@@ -1,5 +1,11 @@
 # Architecture Decision Records
 
+## Decisão de 20/11/2026
+
+- [095 — Supervisão das linhas pessoais](095-supervisao-das-linhas-pessoais.md).
+  Uma conta administrativa designada pode ler conversas de outras linhas
+  pessoais. Cada titular elegível opera sua própria linha. [RFC 072](../rfc/072-supervisao-das-linhas-pessoais.md)
+
 ## Correção técnica de 16/11/2026
 
 - [092 — Sanitização pré-persistência e geração na origem](092-sanitizacao-pre-persistencia-e-geracao-na-origem.md),

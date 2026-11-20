@@ -6,7 +6,7 @@ import { authorize } from '../modules/identity-access/src/authorization.js';
 import { createSafeLogger } from '../modules/shared/src/index.js';
 
 function harness(overrides = {}) {
-  const calls = /** @type {Array<[string, any]>} */ ([]);
+  const calls = /** @type {Array<[string, any, any?]>} */ ([]);
   const operations = {
     async authorizeRead(/** @type {any} */ input) {
       calls.push(['authorize', input]);
@@ -645,8 +645,11 @@ test('INBOX-HANDOFF-01: rejects query parameters on the handoff summary route', 
 
 test('AGENTE-OBS-01: publishes the assistant performance with conversation.read and no-store', async () => {
   const { api, calls, headers } = harness({
-    async assistantPerformance(/** @type {any} */ input) {
-      calls.push(['performance', input]);
+    async assistantPerformance(
+      /** @type {any} */ input,
+      /** @type {any} */ access,
+    ) {
+      calls.push(['performance', input, access]);
       return { assistant_replies: 3, stalled_now: 1 };
     },
   });
@@ -659,14 +662,18 @@ test('AGENTE-OBS-01: publishes the assistant performance with conversation.read 
   assert.equal(defaults.headers['cache-control'], 'private, no-store');
   assert.equal(defaults.headers.vary, 'Origin, Cookie');
   assert.equal(calls[0][1].action, 'assistant.performance.read');
-  assert.deepEqual(calls[1], ['performance', {}]);
+  assert.deepEqual(calls[1], ['performance', {}, { actorId: 'operator-1' }]);
   const thirty = await api.inject({
     headers,
     method: 'GET',
     url: '/api/v1/inbox/assistant/performance?days=30',
   });
   assert.equal(thirty.statusCode, 200);
-  assert.deepEqual(calls.at(-1), ['performance', { days: 30 }]);
+  assert.deepEqual(calls.at(-1), [
+    'performance',
+    { days: 30 },
+    { actorId: 'operator-1' },
+  ]);
   for (const query of ['days=abc', 'days=-1', 'days=1000', 'conversation=1']) {
     const refused = await api.inject({
       headers,

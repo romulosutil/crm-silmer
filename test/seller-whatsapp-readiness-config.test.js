@@ -55,6 +55,35 @@ const INVALID_LISTS = [
 ];
 const list = (/** @type {string[]} */ ...ids) => JSON.stringify(ids);
 
+test('pre-authorized slots are complete, unique, and optional for existing lines', () => {
+  const config = {
+    ...KEYS,
+    SELLER_WHATSAPP_CONTROL_ENABLED: 'true',
+    SELLER_WHATSAPP_SELLER_IDS: list(A, B),
+  };
+  const a = { lineId: randomUUID(), instance: 'wap_' + 'a'.repeat(32) };
+  const b = { lineId: randomUUID(), instance: 'wap_' + 'b'.repeat(32) };
+  const read = (/** @type {unknown} */ slots) =>
+    sellerWhatsAppConfiguration({
+      ...config,
+      SELLER_WHATSAPP_PROVISIONED_LINES: JSON.stringify(slots),
+    }).provisionedLines;
+  assert.equal(sellerWhatsAppConfiguration(config).provisionedLines, undefined);
+  assert.deepEqual(read({ [A]: a, [B]: b })?.get(A), a);
+  for (const invalid of [
+    null,
+    [],
+    {},
+    { [A]: a },
+    { [A]: a, extra: b },
+    { [A]: a, [B]: a },
+    { [A]: a, [B]: { ...b, instance: a.instance } },
+    { [A]: a, [B]: { ...b, lineId: 'bad' } },
+    { [A]: a, [B]: { ...b, instance: 'bad' } },
+  ])
+    assert.throws(() => read(invalid), /PROVISIONED_LINES/u);
+});
+
 /**
  * @typedef {{enabled:boolean, allows:(id:string)=>boolean}} Effective
  * @typedef {{name:string, flag:string, ids:string, flagError:RegExp, listError:RegExp, parse:(env:Record<string,string|undefined>)=>Effective}} Guard

@@ -242,13 +242,18 @@ export function registerOperationRoutes(api, operations, contextFor) {
       ) {
         throw new OperationReadRequestError(400, 'INVALID_DAYS');
       }
-      await authorizeRead(request, operations, 'assistant.performance.read');
+      const access = await authorizeRead(
+        request,
+        operations,
+        'assistant.performance.read',
+      );
       privateNoStoreHeaders(reply);
       return reply
         .code(200)
         .send(
           await operations.assistantPerformance(
             query.days === undefined ? {} : { days: Number(query.days) },
+            { actorId: access.actor.id },
           ),
         );
     }),

@@ -1,6 +1,11 @@
 import { argon2, createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
-import { AccessControlError } from './authorization.js';
+import {
+  AccessControlError,
+  canReadAllPersonalWhatsApp,
+  isPersonalWhatsAppSupervisorAccount,
+} from './authorization.js';
+export { canReadAllPersonalWhatsApp } from './authorization.js';
 
 /**
  * @typedef {'COMMERCIAL_ADMIN'} IdentityCapability
@@ -49,6 +54,7 @@ import { AccessControlError } from './authorization.js';
  *   findSession: (tokenHash: string) => IdentitySession | null | Promise<IdentitySession | null>,
  *   findUserByEmail: (email: string) => IdentityUser | null | undefined | Promise<IdentityUser | null | undefined>,
  *   findUserById: (id: string) => IdentityUser | null | Promise<IdentityUser | null>,
+ *   ownsPersonalLine?: (id: string) => Promise<boolean>,
  *   hasUsers: () => boolean | Promise<boolean>,
  *   insertInitialUser: (user: IdentityUser) => boolean | Promise<boolean>,
  *   listUsers: () => IdentityUser[] | Promise<IdentityUser[]>,
@@ -494,6 +500,12 @@ export function createIdentityAccessService({
     requireNonEmptyString(input.reason, 'reason');
     requireNonEmptyString(input.correlationId, 'correlationId');
     const actor = await requireAdmin(input.actorId);
+    if (isPersonalWhatsAppSupervisorAccount(input))
+      throw new AccessControlError(
+        403,
+        'FORBIDDEN',
+        'Reserved administrator identity',
+      );
     const profile = accessProfile(input.accessType ?? 'seller');
     if (
       input.olistEnabled !== undefined &&
@@ -657,6 +669,23 @@ export function createIdentityAccessService({
     requireNonEmptyString(input.reason, 'reason');
     requireNonEmptyString(input.correlationId, 'correlationId');
     const actor = await requireAdmin(input.actorId);
+    const target = await repository.findUserById(input.targetId);
+    if (!target) throw userNotFound(input.targetId);
+    const reservedEmail = isPersonalWhatsAppSupervisorAccount(input);
+    const supervisorTarget = isPersonalWhatsAppSupervisorAccount(target);
+    if (
+      (reservedEmail && (!supervisorTarget || actor.id !== target.id)) ||
+      (actor.id !== target.id &&
+        !canReadAllPersonalWhatsApp(actor) &&
+        (supervisorTarget ||
+          (input.password !== undefined &&
+            (await repository.ownsPersonalLine?.(target.id)))))
+    )
+      throw new AccessControlError(
+        403,
+        'FORBIDDEN',
+        'Protected personal WhatsApp identity',
+      );
     /** @type {IdentityUserPatch} */
     const patch = {};
     let olistChanged = false;
@@ -671,8 +700,6 @@ export function createIdentityAccessService({
           'INVALID_REQUEST',
           'Invalid Olist authorization revision',
         );
-      const target = await repository.findUserById(input.targetId);
-      if (!target) throw userNotFound(input.targetId);
       if (
         (target.olistAuthorizationVersion ?? 0) !==
         input.expectedOlistAuthorizationVersion
@@ -699,8 +726,6 @@ export function createIdentityAccessService({
     }
     let profileChanged = false;
     if (input.accessType !== undefined) {
-      const target = await repository.findUserById(input.targetId);
-      if (!target) throw userNotFound(input.targetId);
       const profile = accessProfile(input.accessType);
       profileChanged =
         target.functionName !== profile.functionName ||
@@ -805,7 +830,12 @@ export function createIdentityAccessService({
       userId: user.id,
     });
     return Object.freeze({
-      body: Object.freeze({ user: freezeUser(user) }),
+      body: Object.freeze({
+        user: Object.freeze({
+          ...freezeUser(user),
+          canReadAllPersonalWhatsApp: canReadAllPersonalWhatsApp(user),
+        }),
+      }),
       cookie: `crm_session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Lax`,
       csrfToken,
       sessionToken,

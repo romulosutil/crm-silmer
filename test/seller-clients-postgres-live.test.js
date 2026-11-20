@@ -227,7 +227,7 @@ if (!URL) {
       for (const id of [A, B, ADMIN, FINANCE]) {
         await pool.query(
           "INSERT INTO crm.users(id,email,password_hash,name) VALUES($1,$2,'$argon2id$synthetic','Synthetic seller')",
-          [id, `${id}@example.test`],
+          [id, id === ADMIN ? 'admin@crm-silmer.local' : `${id}@example.test`],
         );
         await pool.query(
           'INSERT INTO crm.user_functions(user_id,function_name) VALUES($1,$2)',
@@ -1337,6 +1337,26 @@ if (!URL) {
             operations.getContact({ contactId }, access(A)),
             rejects('CONTACT_NOT_FOUND'),
           );
+          await pool.query(
+            "INSERT INTO crm.user_capabilities(user_id,capability) VALUES($1,'COMMERCIAL_ADMIN')",
+            [A],
+          );
+          try {
+            assert.equal(
+              (await operations.listContacts({ q: phone }, access(A)))
+                .totalCount,
+              0,
+            );
+            await assert.rejects(
+              operations.getContact({ contactId }, access(A)),
+              rejects('CONTACT_NOT_FOUND'),
+            );
+          } finally {
+            await pool.query(
+              "DELETE FROM crm.user_capabilities WHERE user_id=$1 AND capability='COMMERCIAL_ADMIN'",
+              [A],
+            );
+          }
           await assert.rejects(
             operations.createMyClient({ ...createInput(A), phone }),
             rejects('CONTACT_PHONE_MATCH'),
@@ -1367,6 +1387,10 @@ if (!URL) {
         },
       );
     } finally {
+      await pool.query('UPDATE crm.users SET email=$2 WHERE id=$1', [
+        ADMIN,
+        ADMIN + '@example.test',
+      ]);
       await pool.end();
     }
   });

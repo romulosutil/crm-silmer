@@ -47,9 +47,8 @@ function visibilityHarness(owners) {
           /assigned_user_id/u,
           'the repository must enforce ownership in SQL',
         );
-        // The detail adds the reader only for its own line's usability
-        // (WAP-11); visibility is still the second value.
-        assert.ok(values.length === 2 || values.length === 3);
+        // The general-line assignment scope and the personal-line actor are distinct.
+        assert.equal(values.length, 3);
         const [id, reader] = values;
         const owner = owners[id];
         return {
@@ -131,7 +130,7 @@ test('CONV-ACL-01: hidden detail and assistant context stop before querying mess
     2,
     'a denied context must not fetch any turn or message count',
   );
-  assert.deepEqual(queries[1].values, ['hidden', SELLER.id]);
+  assert.deepEqual(queries[1].values, ['hidden', SELLER.id, SELLER.id]);
 });
 
 test('CONV-ACL-01: realtime visibility is checked against current ownership and never discloses hidden identifiers', async () => {
@@ -163,6 +162,18 @@ test('CONV-ACL-01: realtime visibility is checked against current ownership and 
     await service.eventForReader(hiddenEvent, ADMIN),
     hiddenEvent,
   );
+  const privateEvent = {
+    ...hiddenEvent,
+    payload: {
+      conversationId: 'inaccessible-personal-line',
+      orderId: 'private-order',
+    },
+  };
+  assert.deepEqual(await service.eventForReader(privateEvent, ADMIN), {
+    cursor: 2,
+    type: 'stream.reset',
+    payload: {},
+  });
   owners.own = 'seller-b';
   const transfer = {
     cursor: 3,

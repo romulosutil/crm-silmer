@@ -17,11 +17,11 @@ const admin = { ...seller, id: 'admin', capabilities: ['COMMERCIAL_ADMIN'] };
 /** Model the current database actor, independently of the request projection.
  * @param {string} sql @param {any} actor */
 function actorRows(sql, actor) {
-  if (sql.includes('FROM crm.users'))
+  if (sql.includes('FROM crm.users WHERE'))
     return { rows: [{ id: actor.id, disabled_at: actor.disabledAt ?? null }] };
-  if (sql.includes('FROM crm.user_functions'))
+  if (sql.includes('FROM crm.user_functions WHERE'))
     return { rows: [{ function_name: actor.functionName }] };
-  if (sql.includes('FROM crm.user_capabilities'))
+  if (sql.includes('FROM crm.user_capabilities WHERE'))
     return {
       rows: actor.capabilities.includes('COMMERCIAL_ADMIN') ? [{}] : [],
     };

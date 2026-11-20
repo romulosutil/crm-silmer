@@ -25,6 +25,7 @@ import {
   reachableNodes,
 } from '../ops/n8n/build-wap-production-workflows.mjs';
 import { configurePersonalSend } from '../ops/n8n/workflows/seller-whatsapp-send.mjs';
+import { updateWapWorkflowAllowlists } from '../ops/n8n/update-wap-workflow-allowlists.mjs';
 
 const { guardWorkflowMutation } = createRequire(import.meta.url)(
   '../ops/n8n/wap-ingress-runtime.cjs',
@@ -84,6 +85,55 @@ const config = () => ({
   personalSendLineIds: [lineA],
 });
 const built = buildWapProductionWorkflows(main(), config());
+
+test('WAP-09 rotates only the five allowlists in published workflows and preserves unrelated edits', () => {
+  const compile = (/** @type {string[]} */ ids, native = false) => {
+    const source = native
+      ? patchPanelReservationFastPath(main()).workflow
+      : main();
+    const result = buildWapProductionWorkflows(source, {
+      ...config(),
+      lineIds: ids,
+      personalSendLineIds: ids,
+    });
+    return [
+      result.control,
+      result.challenge,
+      result.inbound,
+      result['main-personal-send'],
+    ];
+  };
+  for (const native of [true, false]) {
+    const published = JSON.parse(JSON.stringify(compile([lineA], native)));
+    published[3].nodes[0].notes = 'Preserved operator annotation';
+    const snapshot = structuredClone(published);
+    const serialized = JSON.stringify(snapshot);
+    assert.equal(serialized.split(lineA).length - 1, 5);
+    const expected = JSON.parse(serialized.replaceAll(lineA, lineB));
+    assert.deepEqual(
+      updateWapWorkflowAllowlists(published, [lineA], [lineB]),
+      expected,
+    );
+    assert.deepEqual(published, snapshot);
+    assert.throws(
+      () => updateWapWorkflowAllowlists(published, [lineB], [lineA]),
+      /BASE_MISMATCH/u,
+    );
+    assert.throws(
+      () => updateWapWorkflowAllowlists(published, [lineA], []),
+      /INVALID_LINE_LIST/u,
+    );
+    assert.throws(
+      () =>
+        updateWapWorkflowAllowlists(
+          [published[0], ...published.slice(0, 3)],
+          [lineA],
+          [lineB],
+        ),
+      /WORKFLOW_MISMATCH/u,
+    );
+  }
+});
 const proposedN8n = built.summary.environment.n8n;
 const expectedWapNodes = [
   'Despacho pessoal de text? (WAP)',

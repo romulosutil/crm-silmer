@@ -356,10 +356,10 @@ const squash = (sql) => sql.replace(/\s+/gu, ' ');
 
 test('INBOX-VEZ-01: a tab is worked out once and its page and total share predicates and parameters', async () => {
   const expectedOrder = {
-    respond: /ORDER BY base\.sort_position DESC, base\.id DESC\s+LIMIT \$6\)/u,
-    awaiting: /ORDER BY base\.sort_position DESC, base\.id DESC\s+LIMIT \$6\)/u,
-    silent: /ORDER BY base\.sort_position ASC, base\.id ASC\s+LIMIT \$6\)/u,
-    lost: /ORDER BY base\.sort_position DESC, base\.id DESC\s+LIMIT \$6\)/u,
+    respond: /ORDER BY base\.sort_position DESC, base\.id DESC\s+LIMIT \$7\)/u,
+    awaiting: /ORDER BY base\.sort_position DESC, base\.id DESC\s+LIMIT \$7\)/u,
+    silent: /ORDER BY base\.sort_position ASC, base\.id ASC\s+LIMIT \$7\)/u,
+    lost: /ORDER BY base\.sort_position DESC, base\.id DESC\s+LIMIT \$7\)/u,
   };
   for (const bucket of /** @type {const} */ ([
     'respond',
@@ -395,6 +395,7 @@ test('INBOX-VEZ-01: a tab is worked out once and its page and total share predic
     assert.equal(calls.length, 1, 'one statement for the page and the total');
     // Thresholds and the instant are parameters, never now().
     const turnValues = [
+      'reader-1',
       '2026-11-08T15:00:00.000Z',
       '2026-11-08T14:55:00.000Z',
       '2026-11-05T15:00:00.000Z',
@@ -402,7 +403,7 @@ test('INBOX-VEZ-01: a tab is worked out once and its page and total share predic
     ];
     assert.deepEqual(page.values, [...turnValues, bucket, 2]);
     assert.match(page.sql, expectedOrder[bucket]);
-    assert.match(page.sql, /turn_state\.bucket = \$5/u);
+    assert.match(page.sql, /turn_state\.bucket = \$6/u);
     // One definition of the tab, evaluated once; the total counts those rows.
     assert.equal(
       page.sql.match(new RegExp(TURN_JOINS_PATTERN, 'gu'))?.length,
@@ -419,7 +420,7 @@ test('INBOX-VEZ-01: a tab is worked out once and its page and total share predic
     // The business-minute function runs for the page rows only.
     assert.match(
       page.sql,
-      /crm\.business_minutes_v1\(ranked\.turn_since, \$1::timestamptz\)/u,
+      /crm\.business_minutes_v1\(ranked\.turn_since, \$2::timestamptz\)/u,
     );
     assert.doesNotMatch(tabSql, /business_minutes_v1/u);
     // Active loss reuses the shared definition.
@@ -427,7 +428,7 @@ test('INBOX-VEZ-01: a tab is worked out once and its page and total share predic
     // Reminder: one CTE, own first; no per-row lookup on the decisions table.
     assert.match(
       page.sql,
-      /COALESCE\(decision\.user_id=\$4::text, false\) DESC/u,
+      /COALESCE\(decision\.user_id=\$5::text, false\) DESC/u,
     );
     assert.doesNotMatch(page.sql, /LATERAL \([^)]*dashboard_action_decisions/u);
     assert.equal(result.items[0].bucket, bucket);
@@ -455,7 +456,7 @@ test('INBOX-VEZ-01: a tab is worked out once and its page and total share predic
     empty.calls[1].sql,
     /base AS MATERIALIZED[\s\S]*SELECT count\(\*\)::integer count FROM base/u,
   );
-  assert.deepEqual(empty.calls[1].values, empty.calls[0].values.slice(0, 5));
+  assert.deepEqual(empty.calls[1].values, empty.calls[0].values.slice(0, 6));
 });
 
 test('INBOX-VEZ-01: each tab has its own cursor comparator and precedence', async () => {
@@ -468,22 +469,22 @@ test('INBOX-VEZ-01: each tab has its own cursor comparator and precedence', asyn
   const cases = [
     [
       'respond',
-      /\(base\.sort_position, base\.id\) < \(\$6::timestamptz, \$7\)/u,
+      /\(base\.sort_position, base\.id\) < \(\$7::timestamptz, \$8\)/u,
       [after.updatedAt, 'previous', 2],
     ],
     [
       'awaiting',
-      /\(base\.sort_position, base\.id\) < \(\$6::timestamptz, \$7\)/u,
+      /\(base\.sort_position, base\.id\) < \(\$7::timestamptz, \$8\)/u,
       [after.updatedAt, 'previous', 2],
     ],
     [
       'silent',
-      /\(base\.sort_position, base\.id\) > \(\$6::timestamptz, \$7\)/u,
+      /\(base\.sort_position, base\.id\) > \(\$7::timestamptz, \$8\)/u,
       [after.updatedAt, 'previous', 2],
     ],
     [
       'lost',
-      /\(base\.sort_position, base\.id\) < \(\$6::timestamptz, \$7\)/u,
+      /\(base\.sort_position, base\.id\) < \(\$7::timestamptz, \$8\)/u,
       [after.updatedAt, 'previous', 2],
     ],
   ];
@@ -494,9 +495,9 @@ test('INBOX-VEZ-01: each tab has its own cursor comparator and precedence', asyn
       READER,
     );
     assert.match(calls[0].sql, comparator, bucket);
-    assert.deepEqual(calls[0].values.slice(5), tail, bucket);
+    assert.deepEqual(calls[0].values.slice(6), tail, bucket);
     // An empty page counts its base without the cursor.
-    assert.equal(calls[1].values.length, 5, 'the total ignores the cursor');
+    assert.equal(calls[1].values.length, 6, 'the total ignores the cursor');
   }
   // Precedence: failure, loss, pending handoff, customer's turn, 72 h.
   const { repository, calls } = harness([]);
@@ -507,7 +508,7 @@ test('INBOX-VEZ-01: each tab has its own cursor comparator and precedence', asyn
     "WHEN f.lost_active THEN 'lost'",
     "WHEN f.handoff_pending THEN 'respond'",
     'WHEN f.customer_turn THEN',
-    'effective_reply.occurred_at <= $3::timestamptz',
+    'effective_reply.occurred_at <= $4::timestamptz',
   ].map((fragment) => sql.indexOf(fragment));
   assert.ok(order.every((index) => index > 0));
   assert.deepEqual(
@@ -539,7 +540,7 @@ test('INBOX-VEZ-01: owner and the order-ready chip join page and total alike', a
     READER,
   );
   for (const { sql, values } of calls) {
-    assert.match(sql, /conversation\.assigned_user_id = \$1/u);
+    assert.match(sql, /conversation\.assigned_user_id = \$2/u);
     assert.equal(values[0], 'reader-1');
     assert.match(sql, /review_order\.id IS NOT NULL/u);
     assert.match(sql, /\) review_order ON true/u);
@@ -553,7 +554,7 @@ test('INBOX-VEZ-01: owner and the order-ready chip join page and total alike', a
     assert.match(sql, /conversation\.assigned_user_id IS NULL/u);
     // The chip is not asked for: the tab itself does not join the order.
     assert.doesNotMatch(sql.split('FROM ranked')[0], /review_order ON true/u);
-    assert.equal(values[4], 'silent');
+    assert.equal(values[5], 'silent');
   }
   // No bucket: an older list narrowed by owner and the terminal consultation.
   const consult = harness([]);
@@ -616,7 +617,7 @@ test('INBOX-VEZ-01: the four counts are one statement and one tab definition', a
   }
   assert.ok(TURN_JOINS_PATTERN.test(sql));
   assert.deepEqual(values.slice(0, 1), ['reader-1']);
-  assert.equal(values.length, 5);
+  assert.equal(values.length, 6);
   assert.match(sql, /review_order\.id IS NOT NULL/u);
   assert.doesNotMatch(sql, /ORDER BY turn|business_minutes_v1|now\(\)/u);
   const seller = await repository.bucketCounts(
@@ -629,7 +630,7 @@ test('INBOX-VEZ-01: the four counts are one statement and one tab definition', a
     READER,
   );
   assert.equal(seller.respond, 3);
-  assert.deepEqual(calls[1].values.slice(0, 1), ['seller-9']);
+  assert.deepEqual(calls[1].values.slice(0, 2), ['reader-1', 'seller-9']);
   await assert.rejects(
     repository.bucketCounts({ actorId: 'reader-1' }, {}),
     TypeError,
@@ -652,8 +653,12 @@ test('INBOX-VEZ-01: older lists keep their query and read the turn for the page 
     READER,
   );
   const [page, count, turn] = queued.calls;
-  assert.deepEqual(page.values, ['reader-1', 2], 'the page query is the same');
-  assert.deepEqual(count.values, ['reader-1']);
+  assert.deepEqual(
+    page.values,
+    ['reader-1', 'reader-1', 2],
+    'the page query is the same',
+  );
+  assert.deepEqual(count.values, ['reader-1', 'reader-1']);
   assert.deepEqual(turn.values.slice(0, 4), [
     '2026-11-08T15:00:00.000Z',
     '2026-11-08T14:55:00.000Z',

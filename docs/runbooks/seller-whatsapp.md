@@ -13,6 +13,37 @@ Nada aqui decide ou opera runtime. Evidência **local** é sintética, deste
 repositório. **Live** exige ambiente real autorizado no WAP-E12.
 **Pendente** ainda não tem evidência.
 
+## Liberação da equipe comercial
+
+Em 20/11/2026 o proprietário autorizou habilitar vendedores e administradores
+comerciais ativos. A conta desativada indicada pelo proprietário e o perfil
+Financeiro ficam fora. Só a conta supervisora designada pode consultar
+conversas pessoais de terceiros. O envio pessoal pertence ao titular.
+[Decisão](../adr/095-supervisao-das-linhas-pessoais.md) ·
+[evidência operacional](../../.specs/features/seller-whatsapp/validation-piloto.md)
+
+1. Confira os titulares ativos e as linhas existentes. Reserve um ID de linha e
+   um nome de instância exclusivos por titular. Use os valores existentes para
+   quem já tem linha. Guarde no ambiente privado o mapa
+   `SELLER_WHATSAPP_PROVISIONED_LINES`, por ID do titular, com os campos
+   `lineId` e `instance`. O conjunto de titulares deve coincidir com
+   `SELLER_WHATSAPP_SELLER_IDS`.
+2. Alinhe as listas de ingresso, controle e envio no CRM, no n8n e na Evolution
+   com as linhas reservadas. Confira os workflows publicados de controle,
+   desafio, entrada e envio do painel. Preserve as edições em rascunho e o
+   roteamento da linha geral. Só exponha o controle aos novos titulares depois
+   que todas as fronteiras reconhecerem a mesma atribuição.
+   Na Evolution, configure `SILMER_WAP_CONTROL_INSTANCES` com as instâncias
+   autorizadas para controle. Uma instância desativada pode continuar em
+   `SILMER_WAP_GENERATION_INSTANCES` para a proteção de origem e o expurgo,
+   com o vínculo revogado e fora das listas de controle, ingresso e envio.
+3. Confira no SHA implantado os limites de reserva de envio pessoal de **10
+   por titular e 20 no serviço por minuto**, o acesso do titular, a leitura
+   pela conta supervisora e a recusa de um administrador comum para conversa
+   pessoal de terceiro. Confirme a saúde dos serviços e o bloqueio das linhas desativadas. Registre versão, contagens e resultados minimizados na validação.
+   A autorização para conectar permite a cada usuário decidir quando parear
+   seu próprio aparelho.
+
 ## Flags e allowlists
 
 Cada flag é falsa quando ausente ou `false`. Valor inválido, incluindo `TRUE`,
@@ -65,6 +96,10 @@ Nenhuma fase teve deadlock, falha de serialização ou timeout de pool.
 
 ### Limites do piloto
 
+Esta tabela registra o ensaio de 18/11/2026. A autorização de 20/11 e os
+limites exigidos na reserva de envio para ampliar o público estão na
+[liberação da equipe comercial](#liberação-da-equipe-comercial).
+
 | Escopo  | Limite                       | Valor              | Imposto por código                  |
 | ------- | ---------------------------- | ------------------ | ----------------------------------- |
 | Serviço | Vendedores na allowlist      | 2                  | não (decisão operacional, WAP-12)   |
@@ -82,15 +117,14 @@ Nenhuma fase teve deadlock, falha de serialização ou timeout de pool.
 
 Na Inbox, uma resposta nova depois de um envio `outcome_unknown` gera outro
 comando. O comando incerto nunca é reenviado e segue aberto para
-reconciliação (ensaio do WAP-E12). Rate limits existentes são por IP e por
-processo, não por usuário. A exceção é a verificação de ingresso pessoal
+reconciliação (ensaio do WAP-E12). No ensaio de 18/11, os limites eram por IP e por processo. A exceção é a verificação de ingresso pessoal
 (`…/whatsapp-control/ingress/verify`): 1200/min por vínculo
 (`X-Correlation-Id`, igual ao `bindingId`; sem ele, ou malformado, vale o
 balde do IP) dentro de um teto de 6000/min por IP, que só conta pedidos já
 admitidos pelo vínculo. O CRM responde 429, o n8n devolve 503 ao Evolution e
 o Evolution tenta de novo 3 vezes em cerca de 20 s, dentro da mesma janela.
-Os limites sem código restringem o piloto a dois vendedores sob observação.
-Eles não autorizam ampliação. As lacunas estão em
+Naquele ensaio os limites eram operacionais e o piloto abrangia até dois
+vendedores sob observação. Os achados da medição estão em
 [validation-etapa1](../../.specs/features/seller-whatsapp/validation-etapa1.md#findings).
 
 ## Ordem de publicação
@@ -265,7 +299,7 @@ salvamento pelo editor passa pelo guard de escrita.
 | Desligamento, fases e restore sintéticos                       | local    | drill 7/7 ×3                                                                                                                                                     |
 | Ensaio integrado do piloto (T05-05/06/07)                      | local    | ensaio 11/11 ×3; [validation-piloto](../../.specs/features/seller-whatsapp/validation-piloto.md)                                                                 |
 | Trava de envio pós-restore no código                           | pendente | P1, decisão de Tech Lead/PO antes do piloto                                                                                                                      |
-| Limite de envio por usuário                                    | pendente | P1 de capacidade, Backend antes de ampliar além de 2                                                                                                             |
+| Limite de envio por usuário                                    | local    | 10/min por titular, 20/min no serviço; disputa, replay e expiração verificados na suíte E10                                                                                                             |
 | CI verde, merge e migrações em produção                        | feito    | PR 398 em `1489c2fe`; expand `0080`/`0082`/`0083`, contract `0081`; [publicação](../../.specs/features/seller-whatsapp/validation-piloto.md#publicação-18112026) |
 | Imagens Evolution/n8n com patch e digest                       | feito    | reconstruídas em 19/11 com a master `829e20e7`, flags desligadas; [validation-piloto](../../.specs/features/seller-whatsapp/validation-piloto.md)                |
 | Spike de provedor e código no mesmo celular (WAP-E01)          | pendente | E01 aberto; WAP-T05-06 no E12                                                                                                                                    |

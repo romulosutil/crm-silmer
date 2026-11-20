@@ -975,6 +975,36 @@ test(
         const intent = await chat.submit(input);
         assert.equal(intent.state, 'waiting_link');
         await pool.query(
+          "INSERT INTO crm.user_capabilities(user_id,capability) VALUES($1,'COMMERCIAL_ADMIN')",
+          [sellerB],
+        );
+        try {
+          const otherAdmin = { ...actor, id: sellerB };
+          await assert.rejects(
+            chat.getIntent({ actor: otherAdmin, orderId, intentId: intent.id }),
+            { code: 'BILLING_NOT_FOUND' },
+          );
+          await assert.rejects(
+            chat.submit({
+              ...input,
+              actor: otherAdmin,
+              idempotencyKey: randomUUID(),
+            }),
+            { code: 'FORBIDDEN' },
+          );
+          const history = await chat.getHistory({ actor: otherAdmin, orderId });
+          assert.ok(
+            history.items.some(
+              (/** @type {any} */ event) => event.intentId === intent.id,
+            ),
+          );
+        } finally {
+          await pool.query(
+            "DELETE FROM crm.user_capabilities WHERE user_id=$1 AND capability='COMMERCIAL_ADMIN'",
+            [sellerB],
+          );
+        }
+        await pool.query(
           'UPDATE crm.contacts SET version=version+1,updated_at=$2 WHERE id=$1',
           [contactId, now],
         );

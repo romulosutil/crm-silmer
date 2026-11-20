@@ -52,6 +52,14 @@ mas a geração anterior não recebe relabeling. Callback antigo é recusado ant
 do replay/efeito. Resultado externo incerto exige reconciliação do ledger;
 nunca autoriza retry criador cego.
 
+No teste WAP-09/WAP-T05-06, usar uma conversa individual iniciada antes do
+pareamento. Com a linha conectada, conferir no mesmo histórico uma entrada do
+outro número e uma resposta escrita no WhatsApp do titular. Conferir horário,
+direção e uma ocorrência de cada mensagem. No workflow pessoal, os nós Code
+em modo `runOnceForEachItem` retornam `null` para encerrar o ramo que não
+corresponde ao evento. Retornar uma lista vazia pode interromper a execução
+antes de registrar a saída observada.
+
 ## Leitura, comandos e revogação
 
 O predicado compartilhado de conversa exige, para linha pessoal, titular,

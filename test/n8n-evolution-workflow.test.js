@@ -658,6 +658,35 @@ test('WAP-E08 personal fromMe upsert projects an external fact and no inbound', 
   });
   const observed =
     candidate.connections['Preparar saída observada (WAP)'].main[0];
+  /** @param {string} name @param {any} json */
+  function runItem(name, json) {
+    const node = candidate.nodes.find(
+      (/** @type {any} */ n) => n.name === name,
+    );
+    assert.equal(node.parameters.mode, 'runOnceForEachItem');
+    return vm.runInNewContext(`(()=>{${node.parameters.jsCode}})()`, {
+      $json: json,
+      $execution: { id: '42' },
+      $: () => ({ item: { json: { payload: result.external } } }),
+    });
+  }
+  const normalize = 'Normalizar evento WhatsApp (MVP)';
+  const prepare = 'Preparar saída observada (WAP)';
+  const media = 'Preparar mídia observada (WAP)';
+  assert.equal(runItem(normalize, result), null);
+  assert.equal(runItem(normalize, {}), null);
+  assert.equal(runItem(prepare, { messages: [{}] }), null);
+  assert.equal(runItem(prepare, { statuses: [{}] }), null);
+  assert.equal(
+    runItem(prepare, result).json.idempotency_key,
+    result.external.event_id,
+  );
+  assert.equal(runItem(media, { accepted: true }), null);
+  assert.equal(
+    runItem(media, { accepted: true, attachment_conversation_id: 'chat' }).json
+      .conversation,
+    'chat',
+  );
   assert.deepEqual(
     observed.map((/** @type {any} */ edge) => edge.node),
     ['CRM - Registrar saída observada (WAP)'],

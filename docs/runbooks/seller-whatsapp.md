@@ -136,10 +136,10 @@ diff, ticket ou relatório. A evidência segue a regra
 | 9     | O vendedor pede o QR e pareia. O QR fica em outra tela: o código no mesmo celular não está provado                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | A varredura marca a linha `connected`                                                                                                                                                                                                                                              | Número divergente, recusa do desafio ou linha `blocked`                                                  |
 | 10    | Ligar o restante por fase, um passo por vez: `SELLER_CLIENTS_*`, depois `SELLER_WHATSAPP_INBOUND_*` e, por último, `ORDER_SUBJECT_*`. `SELLER_WHATSAPP_SEND_*` e `SELLER_WHATSAPP_FIRST_SEND_ENABLED` ficam desligadas no piloto inicial                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Em cada fase, outro vendedor segue recusado                                                                                                                                                                                                                                        | Outro vendedor aceito em qualquer fase                                                                   |
 
-O envio pessoal exige o `main-personal-send`, com smoke próprio da linha
-geral, e fica para depois. Em 19/11 o principal vivo já não tinha o
-"Normalizar comando do painel (MVP)" como nó Code (virou um nó Set), então o
-patch de envio precisa ser portado antes de ligar o envio pessoal. O primeiro envio exige o gate do JID
+O envio pessoal exige o `main-personal-send` gerado do principal publicado,
+com smoke próprio da linha geral antes de habilitar a API e o worker. O gerador
+aceita o par de nós Set nativos da normalização e da reserva quando os hashes,
+parâmetros e conexões conferem. O primeiro envio exige o gate do JID
 ([saídas](seller-whatsapp-outbound.md)).
 
 SQL dos passos 4 e 8, somente leitura. Registre só prefixos de 8 caracteres:

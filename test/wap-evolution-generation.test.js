@@ -5,6 +5,7 @@ import {
   patchEvolutionGeneration,
   extractGenerationMethods,
   extractPrismaCredentialWriter,
+  patchBaileysStatusReceiver,
   patchedPrismaCredentialWriter,
 } from '../ops/evolution/wap-generation-patch.mjs';
 
@@ -116,6 +117,86 @@ test('WAP-E01: real Prisma credential writer strips only the temporary pairing c
   assert.throws(
     () => extractPrismaCredentialWriter(''),
     /WAP_EVOLUTION_CREDENTIAL_WRITER_MISMATCH/u,
+  );
+});
+
+test('WAP-E12: top-level status ACK uses the pilot socket and preserves offline ordering after an ACK failure', async () => {
+  const runtime = createGenerationRuntime({
+    enabled: true,
+    instances: ['synthetic-personal'],
+  });
+  const disabled = createGenerationRuntime({
+    enabled: false,
+    instances: ['synthetic-personal'],
+  });
+  assert.equal(disabled.shouldAckTopLevelStatus('synthetic-personal'), false);
+
+  const source = `
+    const makeOfflineNodeProcessor = () => {
+        const nodeProcessorMap = new Map();
+        const nodes = [];
+        return {
+            enqueue(type, node) { nodes.push(() => nodeProcessorMap.get(type)(node)); },
+            async drain() { for (const receive of nodes) await receive(); },
+        };
+    };
+    const queue = makeOfflineNodeProcessor();
+    const processNode = async (type, node, _label, handler) => {
+        if (node.attrs.offline) queue.enqueue(type, node);
+        else await handler(node);
+    };
+    ws.on('CB:ack,class:message', (node) => {});
+    return queue;
+  `;
+  const createReceiver = new Function(
+    'config',
+    'ws',
+    'sendMessageAck',
+    'onUnexpectedError',
+    patchBaileysStatusReceiver(source),
+  );
+  const listeners = new Map();
+  const ws = {
+    on: (/** @type {string} */ name, /** @type {any} */ fn) =>
+      listeners.set(name, fn),
+  };
+  /** @type {string[]} */ const seen = [];
+  const ack = async (/** @type {{attrs:{id:string}}} */ node) => {
+    seen.push(node.attrs.id);
+    if (node.attrs.id === 'failed') throw new Error('synthetic failure');
+  };
+  const report = (/** @type {Error} */ _error, /** @type {string} */ label) =>
+    seen.push(label);
+  createReceiver(
+    {
+      silmerAckTopLevelStatus:
+        runtime.shouldAckTopLevelStatus('synthetic-general'),
+    },
+    ws,
+    ack,
+    report,
+  );
+  assert.equal(listeners.has('CB:status'), false);
+
+  const queue = createReceiver(
+    {
+      silmerAckTopLevelStatus:
+        runtime.shouldAckTopLevelStatus('synthetic-personal'),
+    },
+    ws,
+    ack,
+    report,
+  );
+  const receive = listeners.get('CB:status');
+  await receive({ tag: 'status', attrs: { id: 'live' } });
+  await receive({ tag: 'status', attrs: { id: 'failed', offline: '1' } });
+  await receive({ tag: 'status', attrs: { id: 'next', offline: '1' } });
+  assert.deepEqual(seen, ['live']);
+  await queue.drain();
+  assert.deepEqual(seen, ['live', 'failed', 'acking status stanza', 'next']);
+  assert.throws(
+    () => patchBaileysStatusReceiver(source + source),
+    /WAP_BAILEYS_RECEIVER_ANCHOR_MISMATCH/u,
   );
 });
 
@@ -621,7 +702,7 @@ test('WAP-E12: the EasyPanel inline Evolution Dockerfile matches the render of c
   assert.ok(inline.includes(runtime));
   assert.match(
     inline,
-    /\nRUN node \/evolution\/silmer-wap-generation-patch\.mjs \/evolution\/dist\/main\.js\n/u,
+    /\nRUN node \/evolution\/silmer-wap-generation-patch\.mjs \/evolution\/dist\/main\.js \/evolution\/node_modules\/baileys\/lib\/Socket\/messages-recv\.js /u,
   );
 });
 

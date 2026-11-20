@@ -150,6 +150,17 @@ usa `emitOwnEvents:false`); sua confirmação vem do resultado HTTP e dos
 recibos `messages.update`. Evento de geração antiga é recusado com 403 fixo no
 ingresso n8n; o 409 `WHATSAPP_GENERATION_STALE` do CRM é a segunda barreira.
 
+**Recepção parada com socket aberto (WAP-09/WAP-E12).** A versão fixada do
+Baileys pode continuar enviando enquanto o servidor retém as entradas na
+ausência de ACK de um stanza `status` de nível superior. A imagem aplica a
+correção de protocolo ao recebedor do Baileys, com hash e âncoras fixados. Só
+os sockets das instâncias pessoais selecionadas enviam o ACK, pela mesma
+fila de nós offline. O corpo do Status permanece fora do CRM e do webhook.
+O build registra `WAP_BAILEYS_STATUS_ACK_PATCHED`. No piloto, verificar nova
+mensagem numa conversa existente e o recibo de uma resposta. O corte temporal
+e a geração continuam valendo para mensagens retidas antes da reconexão.
+[Correção proposta no Baileys](https://github.com/WhiskeySockets/Baileys/pull/2883).
+
 **Reconexão: eventos em voo da geração anterior são perdidos (WAP-E12).** Na
 2.3.7 (`src/api/integrations/channel/whatsapp/whatsapp.baileys.service.ts`), o
 `BaileysMessageProcessor` (rxjs `concatMap` com retry) é montado, mas a única

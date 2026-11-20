@@ -499,6 +499,9 @@ function createGenerationRuntime(options = {}) {
         enabled && selected(instance) && ['connecting', 'open'].includes(state)
       );
     },
+    shouldAckTopLevelStatus(instance) {
+      return enabled && selected(instance);
+    },
     // Trusted in-process control hook. E01 exercises it only from the rehearsal.
     // No HTTP route, mutation from provider payload, or implicit reconnect binding.
     bindNextSocket(instance, source, token) {
@@ -1220,6 +1223,8 @@ import { pathToFileURL } from 'node:url';
 
 export const EVOLUTION_BUNDLE_SHA256 =
   '71b49ea87b8d0d7b413b77d067e33a8720c2e95e136f632210c1424862ef6b44';
+const BAILEYS_RECEIVER_SHA256 =
+  '8b9329ddf95fa7a1785826d8861af236f5f055ff22a5ed1ce52afdf9565d873e';
 export const WAP_GENERATION_RUNTIME_PATH =
   '/evolution/silmer-wap-generation.cjs';
 const METHOD_START =
@@ -1262,6 +1267,10 @@ export function patchEvolutionGeneration(bundle) {
       `eventHandler(){const silmerWapRuntime=${runtime},silmerWapSource=silmerWapRuntime.captureSocket(this.instanceName,this.client);const silmerWapProcess=cb=>this.client.ev.process(silmerWapRuntime.wrap(silmerWapSource,cb));silmerWapProcess(async e=>{`,
     ],
     [
+      'emitOwnEvents:!1,shouldIgnoreJid:',
+      `emitOwnEvents:!1,silmerAckTopLevelStatus:${runtime}.shouldAckTopLevelStatus(this.instanceName),shouldIgnoreJid:`,
+    ],
+    [
       `${METHOD_START}if(u&&!u.includes("webhook"))return;`,
       `${METHOD_START}const silmerWapRuntime=${runtime};let silmerWapSource;try{silmerWapSource=silmerWapRuntime.current(e,o)}catch{this.logger.warn("WAP_GENERATION_EVENT_REJECTED");return;}if(u&&!u.includes("webhook"))return;`,
     ],
@@ -1281,6 +1290,48 @@ export function patchEvolutionGeneration(bundle) {
     patched = patched.replace(before, after);
   }
   return patched;
+}
+
+/** WAP-E12, Baileys 7.0.0-rc.9. Acknowledge status stanzas at the protocol
+ * boundary without decoding or forwarding them. Follow the native queue for
+ * offline nodes. See https://github.com/WhiskeySockets/Baileys/pull/2883.
+ * @param {string} source */
+export function patchBaileysStatusReceiver(source) {
+  const offlineFactory = '    const makeOfflineNodeProcessor = () => {';
+  const offlineQueue = '        const nodes = [];';
+  const ackListener = "    ws.on('CB:ack,class:message', (node) => {";
+  for (const anchor of [offlineFactory, offlineQueue, ackListener])
+    if (source.split(anchor).length !== 2)
+      throw new Error('WAP_BAILEYS_RECEIVER_ANCHOR_MISMATCH');
+  return source
+    .replace(
+      offlineFactory,
+      `    const handleSilmerStatus = async (node) => {
+        try {
+            await sendMessageAck(node);
+        } catch (error) {
+            onUnexpectedError(error, 'acking status stanza');
+        }
+    };
+${offlineFactory}`,
+    )
+    .replace(
+      offlineQueue,
+      `        if (config.silmerAckTopLevelStatus === true) {
+            nodeProcessorMap.set('status', handleSilmerStatus);
+        }
+${offlineQueue}`,
+    )
+    .replace(
+      ackListener,
+      `    if (config.silmerAckTopLevelStatus === true) {
+        ws.on('CB:status', (node) => {
+            return processNode('status', node, 'handling status stanza', handleSilmerStatus)
+                .catch(error => onUnexpectedError(error, 'handling status stanza'));
+        });
+    }
+${ackListener}`,
+    );
 }
 
 /** Extract complete real methods from the exact patched bundle for synthetic event
@@ -1338,17 +1389,27 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
-  const filename = process.argv[2];
-  if (!filename) throw new Error('WAP_EVOLUTION_BUNDLE_PATH_REQUIRED');
+  const [filename, receiverPath] = process.argv.slice(2);
+  if (!filename || !receiverPath)
+    throw new Error('WAP_EVOLUTION_PATCH_PATH_REQUIRED');
   const patched = patchEvolutionGeneration(await readFile(filename, 'utf8'));
   extractGenerationMethods(patched);
   extractPrismaCredentialWriter(patched);
+  const receiver = await readFile(receiverPath, 'utf8');
+  if (
+    createHash('sha256').update(receiver).digest('hex') !==
+    BAILEYS_RECEIVER_SHA256
+  )
+    throw new Error('WAP_BAILEYS_RECEIVER_MISMATCH');
+  await writeFile(receiverPath, patchBaileysStatusReceiver(receiver));
   await writeFile(filename, patched);
+  process.stdout.write('WAP_BAILEYS_STATUS_ACK_PATCHED\n');
   process.stdout.write('WAP_EVOLUTION_GENERATION_PATCHED\n');
 }
 
 SILMER_WAP_GENERATION_PATCH_EOF
-RUN node /evolution/silmer-wap-generation-patch.mjs /evolution/dist/main.js
+RUN node /evolution/silmer-wap-generation-patch.mjs /evolution/dist/main.js /evolution/node_modules/baileys/lib/Socket/messages-recv.js \
+  && node --check /evolution/node_modules/baileys/lib/Socket/messages-recv.js
 RUN mkdir -p /evolution/instances /evolution/store && chown -R node:node /evolution/instances /evolution/store /evolution/prisma /evolution/node_modules/.prisma
 USER node
 EXPOSE 8080

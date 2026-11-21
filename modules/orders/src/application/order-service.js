@@ -131,6 +131,21 @@ const LIST_KEYS = new Set([
 // entregas" (today and the six days after), on São Paulo days.
 const DELIVERY_FILTERS = new Set(['overdue', 'due_soon']);
 const DUE_SOON_DAYS = 7;
+/** @param {string} filter @param {string} cursor */
+function deliveryPosition(filter, cursor) {
+  const parts = /^(overdue|due_soon)\|(\d{4}-\d{2}-\d{2})\|([1-9]\d*)$/u.exec(
+    cursor,
+  );
+  if (
+    !parts ||
+    parts[1] !== filter ||
+    !isCalendarDay(parts[2]) ||
+    !Number.isSafeInteger(Number(parts[3]))
+  ) {
+    throw new OrderInputError('Invalid delivery cursor', ['cursor']);
+  }
+  return { day: parts[2], sequence: Number(parts[3]) };
+}
 // PNL-05: "Vendido por dia" covers today and the six days before.
 const SOLD_BY_DAY_DAYS = 7;
 // "12", "012" or "12-CRM" name order 12; anything else is a customer search.
@@ -1067,8 +1082,7 @@ export function createOrderService(options) {
       )
         throw new OrderInputError('firstPrint is invalid', ['firstPrint']);
       if (input.delivery !== undefined) {
-        // A delivery view is one short list in promised order: it does not
-        // combine with the other filters or page with a cursor.
+        // Keep the keyset in promised-day order even if an earlier delivery completes.
         if (
           !DELIVERY_FILTERS.has(/** @type {string} */ (input.delivery)) ||
           [
@@ -1076,7 +1090,6 @@ export function createOrderService(options) {
             'status',
             'origin',
             'q',
-            'cursor',
             'ownerId',
             'from',
             'to',
@@ -1090,12 +1103,34 @@ export function createOrderService(options) {
           input.delivery === 'overdue'
             ? deliveries.overdue
             : deliveries.dueSoon;
+        const limit = input.limit ?? MAX_ORDER_PAGE_SIZE;
+        if (
+          !Number.isSafeInteger(limit) ||
+          limit < 1 ||
+          limit > MAX_ORDER_PAGE_SIZE
+        ) {
+          throw new OrderInputError('Invalid delivery page size', ['limit']);
+        }
+        const after =
+          input.cursor == null
+            ? null
+            : deliveryPosition(input.delivery, input.cursor);
+        const start = after
+          ? matching.findIndex(
+              ({ day, order }) =>
+                day > after.day ||
+                (day === after.day && order.numberSequence > after.sequence),
+            )
+          : 0;
+        const page = start < 0 ? [] : matching.slice(start, start + limit);
+        const last = page.at(-1);
         return {
           counts: { confirmado: matching.length, pendente: 0 },
-          items: await readAll(
-            matching.slice(0, MAX_ORDER_PAGE_SIZE).map((entry) => entry.order),
-          ),
-          nextCursor: null,
+          items: await readAll(page.map((entry) => entry.order)),
+          nextCursor:
+            last && start + page.length < matching.length
+              ? [input.delivery, last.day, last.order.numberSequence].join('|')
+              : null,
         };
       }
       /** @type {import('../ports/contracts.js').OrderListQuery} */

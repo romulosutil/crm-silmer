@@ -666,7 +666,7 @@ watch(newContactPhone, () => {
 function listRequest(cursor) {
   if (deliveryFilter.value) {
     return {
-      url: `/api/v1/orders?delivery=${deliveryFilter.value}`,
+      url: `/api/v1/orders?delivery=${deliveryFilter.value}${cursor ? '&cursor=' + encodeURIComponent(cursor) : ''}`,
       options: {},
     };
   }
@@ -722,9 +722,23 @@ async function load(silent = false) {
       ...listing.options,
       signal: currentController.signal,
     });
-    items.value = response.data.items;
-    counts.value = response.data.counts;
-    nextCursor.value = response.data.nextCursor;
+    const retrieved = response.data.items;
+    let lastPage = response.data;
+    const desiredLength =
+      silent && deliveryFilter.value ? items.value.length : 0;
+    while (retrieved.length < desiredLength && lastPage.nextCursor) {
+      const subsequent = listRequest(lastPage.nextCursor);
+      const result = await request(subsequent.url, {
+        ...subsequent.options,
+        signal: currentController.signal,
+      });
+      lastPage = result.data;
+      retrieved.push(...lastPage.items);
+    }
+    if (currentController.signal.aborted) return;
+    items.value = retrieved;
+    counts.value = lastPage.counts;
+    nextCursor.value = lastPage.nextCursor;
     hasLoaded.value = true;
     now.value = new Date();
     error.value = '';
@@ -746,11 +760,16 @@ async function load(silent = false) {
 
 /** PLI-07: "Ver mais" appends the next page instead of replacing the list. */
 async function loadMore() {
-  if (!nextCursor.value || loadingMore.value) return;
+  if (!nextCursor.value || loadingMore.value || refreshing.value) return;
+  const current = controller;
   loadingMore.value = true;
   try {
     const listing = listRequest(nextCursor.value);
-    const response = await request(listing.url, listing.options);
+    const response = await request(listing.url, {
+      ...listing.options,
+      signal: current?.signal,
+    });
+    if (current !== controller || current?.signal.aborted) return;
     items.value = [...items.value, ...response.data.items];
     counts.value = response.data.counts;
     nextCursor.value = response.data.nextCursor;
@@ -758,6 +777,7 @@ async function loadMore() {
     error.value = '';
     errorMode.value = '';
   } catch {
+    if (current !== controller || current?.signal.aborted) return;
     error.value = 'Não foi possível carregar mais pedidos.';
     errorMode.value = 'more';
   } finally {
@@ -1548,7 +1568,7 @@ onBeforeUnmount(() => {
       v-if="nextCursor && !loading && hasLoaded"
       class="load-more"
       type="button"
-      :disabled="loadingMore"
+      :disabled="loadingMore || refreshing"
       @click="loadMore"
     >
       {{ loadingMore ? 'Carregando…' : 'Ver mais' }}

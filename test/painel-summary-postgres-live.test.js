@@ -350,7 +350,7 @@ if (connectionString) {
               payment_condition, order_date, confirmed_at, confirmed_by,
               created_by_kind, created_at, updated_at, delivered_on)
            SELECT $1, number.sequence,
-                  lpad(number.sequence::text, 2, '0') || '-CRM', $2,
+                  lpad(number.sequence::text, greatest(2,length(number.sequence::text)), '0') || '-CRM', $2,
                   identity.current_contact_id, $3, '01', $4::jsonb, $5, $6,
                   $7::date, $8, $9, 'automation', $10, $10, $11::date
            FROM number, crm.conversations conversation
@@ -633,6 +633,38 @@ if (connectionString) {
         (await fixtureOrders.list({ ...sampleDates, credit: sellerId }, reader))
           .counts.confirmado,
         2,
+      );
+      // The oldest page can change while an operator is inspecting the last records.
+      for (let i = 0; i < 101; i++)
+        await insertOrder({ conversationId: answered, promised: '2026-09-03' });
+      const allOverdue = await orders.summary({}, admin);
+      const pageOne = await orders.list({ delivery: 'overdue' }, reader);
+      assert.equal(
+        pageOne.counts.confirmado,
+        allOverdue.deliveries.overdueCount,
+      );
+      assert.equal(pageOne.items.length, 100);
+      assert.ok(pageOne.nextCursor);
+      await pool.query('UPDATE crm.orders SET delivered_on=$2 WHERE id=$1', [
+        pageOne.items[0].id,
+        '2026-09-08',
+      ]);
+      const pageTwo = await orders.list(
+        { delivery: 'overdue', cursor: pageOne.nextCursor },
+        reader,
+      );
+      assert.equal(pageTwo.items.length, pageOne.counts.confirmado - 100);
+      assert.equal(pageTwo.nextCursor, null);
+      assert.equal(
+        new Set([...pageOne.items, ...pageTwo.items].map((row) => row.id)).size,
+        pageOne.counts.confirmado,
+      );
+      await assert.rejects(
+        orders.list(
+          { delivery: 'due_soon', cursor: pageOne.nextCursor },
+          reader,
+        ),
+        { statusCode: 400 },
       );
     } finally {
       await pool.end();

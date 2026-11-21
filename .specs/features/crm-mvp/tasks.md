@@ -1047,7 +1047,8 @@ AGT-01–05/08/10 e ORC-03/05/07. [Análise, exemplos fictícios e critérios de
 - [x] Revisar filas, históricos, painel mensal e pedidos confirmados.
 - [x] Preparar candidato para cobrança de retorno, preço e prazo juntos, opções de volume e mudanças hipotéticas na cotação.
 - [x] Verificar os casos nos nós gerados com dados fictícios e controles negativos.
-- [ ] Aplicar o delta revisado no n8n e comparar a espera e a qualidade da resposta após a publicação.
+- [x] Publicar o delta revisado no principal Evolution e verificar os dois campos no export posterior, a revisão ativa e a rota de entrada da linha geral.
+- [ ] Comparar a espera e a qualidade da primeira resposta útil na semana posterior à publicação.
 
 ## VND-L06 — Contexto e interpretação das conversas (11/11/2026)
 

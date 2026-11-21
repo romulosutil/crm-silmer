@@ -548,6 +548,26 @@ test('live events keep contact and conversation changes as they were', async () 
   assert.deepEqual(queries[0].values, [6]);
 });
 
+test('a claimed handoff invalidates its authorized conversation, including on replay', async () => {
+  const { queries, service } = liveService([
+    {
+      aggregate_id: 'handoff-1',
+      aggregate_type: 'handoff',
+      payload: { conversationId: 'conversation-8', note: 'private' },
+      stream_cursor: '9',
+    },
+  ]);
+  const batch = await service.readLiveEvents({ after: '8' });
+  assert.deepEqual(batch.events, [
+    {
+      type: 'inbox.conversation.changed',
+      cursor: 9,
+      payload: { conversationId: 'conversation-8' },
+    },
+  ]);
+  assert.match(queries[0].sql, /event_type='handoff.claimed'/u);
+});
+
 test('an order change streams as inbox.order.changed with its conversation', async () => {
   const { queries, service } = liveService([
     {

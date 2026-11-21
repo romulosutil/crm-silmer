@@ -1,3 +1,4 @@
+import { readDashboardLive } from '../apps/api/src/dashboard-live-runtime.js';
 import { PostgresInboxReadRepository } from '../modules/inbox-channels/src/adapters/postgres-inbox-read-repository.js';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -160,8 +161,12 @@ test(
     });
     let sequence = 0;
     /** Opens a cycle with a customer message, in human mode.
-     * @param {string} local @param {string|null} owner */
-    async function conversation(local, owner) {
+     * @param {string} local @param {string|null} owner @param {string} [providerAccountId] */
+    async function conversation(
+      local,
+      owner,
+      providerAccountId = `account-${runId}`,
+    ) {
       const openedAt = new Date(local).toISOString();
       const label = `c${(sequence += 1)}`;
       const identity = await contacts.resolveInboundIdentity({
@@ -173,7 +178,7 @@ test(
         occurredAt: openedAt,
         phoneStatus: 'pending',
         provider: 'meta',
-        providerAccountId: `account-${runId}`,
+        providerAccountId,
       });
       const opened = await inbox.receiveInbound({
         contactId: identity.contact.id,
@@ -184,7 +189,7 @@ test(
         message: { content: { text: 'Mensagem sintética' }, type: 'text' },
         occurredAt: openedAt,
         provider: 'meta',
-        providerAccountId: `account-${runId}`,
+        providerAccountId,
       });
       await pool.query(
         `UPDATE crm.conversations SET automation_state='human',assigned_user_id=$2 WHERE id=$1`,
@@ -622,6 +627,28 @@ test(
       { count: 0, oldestWaitingMinutes: null },
     );
 
+    // RFC 073: time alone moves a human wait over the 15-minute limit.
+    /** @param {string} local */
+    const lateQueue = (local) =>
+      readDashboardLive(
+        database,
+        admin,
+        { region: 'queue', filter: 'atrasada' },
+        new Date(sp(local)),
+      );
+    const earlier = await lateQueue('2026-11-05T09:09');
+    const later = await lateQueue('2026-11-05T09:11');
+    assert.ok(later.total > earlier.total);
+    assert.equal(later.oldestMinutesByFilter.atrasada, later.oldestMinutes);
+    assert.equal(later.total, later.late);
+    for (const actor of [sellerA, financial]) {
+      for (const region of ['queue', 'facts'])
+        await assert.rejects(
+          readDashboardLive(database, actor, { region }, NOW),
+          { statusCode: 403 },
+        );
+    }
+
     // Scope is decided by the database role, never by the caller.
     const runtime = createDashboardMetricsRuntime(database, {
       access: {},
@@ -703,12 +730,64 @@ test(
         to: NOW,
         actorId,
       });
+    await pool.query(
+      `INSERT INTO crm.domain_events(id,aggregate_type,aggregate_id,aggregate_version,event_type,payload,correlation_id,occurred_at)
+       VALUES($1,'conversation',$2,10000,'conversation.taken_over','{}',$1,$3)`,
+      [randomUUID(), b2, NOW],
+    );
+    const recent = () =>
+      readDashboardLive(database, admin, { region: 'facts' }, NOW);
+    const inboundOnly = await conversation(
+      sp('2026-11-05T14:35'),
+      sellerB.id,
+      personalAccount,
+    );
+    const personalWaits = () =>
+      readDashboardLive(
+        database,
+        admin,
+        { region: 'queue', filter: 'atrasada' },
+        NOW,
+      );
+    assert.ok(
+      !(await personalWaits()).rows.some(
+        (/** @type {any} */ row) => row.id === inboundOnly,
+      ),
+    );
+    const hidden = await recent();
+    assert.ok(
+      !hidden.facts.some((/** @type {any} */ fact) => fact.recordId === b2),
+    );
     const ordinary = await assistantReport(admin.id);
     await pool.query(
       "UPDATE crm.users SET email='admin@crm-silmer.local' WHERE id=$1",
       [admin.id],
     );
     assert.equal(await samples(admin), 3);
+    assert.equal(
+      (await personalWaits()).rows.find(
+        (/** @type {any} */ row) => row.id === inboundOnly,
+      )?.minutes,
+      25,
+    );
+    const visibleFacts = await recent();
+    const visibleClaim = visibleFacts.facts.find(
+      (/** @type {any} */ fact) => fact.recordId === b2,
+    );
+    assert.equal(visibleClaim.kind, 'claimed');
+    assert.deepEqual((await recent()).facts, visibleFacts.facts);
+    const beforeClaim = await readDashboardLive(
+      database,
+      admin,
+      { region: 'facts', before: visibleClaim.cursor },
+      NOW,
+    );
+    assert.ok(
+      beforeClaim.facts.every(
+        (/** @type {any} */ fact) =>
+          BigInt(fact.cursor) < BigInt(visibleClaim.cursor),
+      ),
+    );
     const supervisor = await assistantReport(admin.id);
     assert.equal(supervisor.handoffs.total, ordinary.handoffs.total + 1);
     assert.equal(

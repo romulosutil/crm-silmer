@@ -1,3 +1,4 @@
+import { readDashboardLive } from '../apps/api/src/dashboard-live-runtime.js';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
@@ -536,6 +537,21 @@ test(
     assert.equal(bothMilestones.delivered_on, operationalDay(new Date()));
     assert.equal(bothMilestones.finance_payment_review_required, false);
     assert.equal(bothMilestones.version, 3);
+    // Payment and delivery share a correlation here. Only the matching
+    // persisted milestone version proves that the order was delivered.
+    const liveHistory = await readDashboardLive(
+      database,
+      admin,
+      { region: 'facts' },
+      NOW,
+    );
+    assert.equal(
+      liveHistory.facts.filter(
+        (/** @type {any} */ fact) =>
+          fact.kind === 'delivery' && fact.recordId === milestoneId,
+      ).length,
+      1,
+    );
     await pool.query(
       'UPDATE crm.conversations SET assigned_user_id=$2,version=version+1 WHERE id=$1',
       [follow.id, other.id],

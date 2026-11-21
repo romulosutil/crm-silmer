@@ -75,6 +75,18 @@ async function respond(reply, work) {
 
 /** @param {import('fastify').FastifyInstance} api @param {any} dashboard @param {(request:object)=>{correlationId:string}} contextFor */
 export function registerDashboardRoutes(api, dashboard, contextFor) {
+  api.get('/api/v1/dashboard/live', (request, reply) =>
+    respond(reply, async () => {
+      const query = object(request.query ?? {}, [
+        'region',
+        'filter',
+        'page',
+        'before',
+      ]);
+      const { actor } = await principal(request, dashboard, false);
+      return dashboard.live({ actor, query });
+    }),
+  );
   api.get('/api/v1/dashboard/actions', (request, reply) =>
     respond(reply, async () => {
       object(request.query ?? {}, []);

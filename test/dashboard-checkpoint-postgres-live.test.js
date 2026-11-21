@@ -224,7 +224,23 @@ test(
       [admin.id],
     );
     await assert.rejects(runtime.preview({ actor: seller }));
+    const readOnlyCounts = async () =>
+      (
+        await pool.query(`SELECT
+      (SELECT count(*) FROM crm.dashboard_checkpoint_snapshots) snapshots,
+      (SELECT count(*) FROM crm.dashboard_checkpoint_deliveries) deliveries,
+      (SELECT count(*) FROM crm.audit_events) audits`)
+      ).rows[0];
+    const beforeReads = await readOnlyCounts();
+    const dynamic = await runtime.preview({ actor: admin, day: '2026-11-02' });
+    assert.equal(dynamic.snapshot, false);
+    assert.ok(
+      dynamic.recipients.every(
+        (/** @type {any} */ item) => item.status === 'not_generated',
+      ),
+    );
     const preview = await runtime.preview({ actor: admin });
+    assert.deepEqual(await readOnlyCounts(), beforeReads);
     assert.equal(preview.snapshot, true);
     assert.equal(preview.totals.soldAmountCents, 50000);
     assert.equal(

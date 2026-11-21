@@ -22,7 +22,7 @@ const SUMMARY =
 
 /**
  * @param {import('@playwright/test').Page} page
- * @param {{handoffStatus?: number, status?: 'pending'|'accepted', preferredSeller?: string, assistantContext?: {status?: number, body: unknown}}} [options]
+ * @param {{summary?: string, handoffStatus?: number, status?: 'pending'|'accepted', preferredSeller?: string, assistantContext?: {status?: number, body: unknown}}} [options]
  */
 async function setup(page, options = {}) {
   const status = options.status ?? 'pending';
@@ -123,7 +123,7 @@ async function setup(page, options = {}) {
                 id: conversation.handoff.id,
                 reasonCode: conversation.handoff.reasonCode,
                 status: conversation.handoff.status,
-                summary: SUMMARY,
+                summary: options.summary ?? SUMMARY,
                 version: 1,
               }
             : null,
@@ -253,6 +253,76 @@ test('starts the summary closed once a seller took the conversation', async ({
   await expect(
     page.getByRole('region', { name: 'Resumo da transferência' }),
   ).toContainText('Dados coletados: 5 de 9 (56%).');
+});
+
+test('VND-L07: the seller sees the pending reply before expanding the transfer', async ({
+  page,
+}, testInfo) => {
+  await setup(page, {
+    summary:
+      'Motivo: Dúvida comercial. Responder valor e prazo solicitados juntos. Perguntas do cliente: • Qual o valor de cada lote? Alternativas para orçamento: 32 e 64 peças; quantidade não confirmada. Atenção: Conferir o tecido. Ficha: 4 de 7.',
+  });
+  await page.goto('/inbox/conversation-1');
+  const toggle = page.getByRole('button', {
+    name: /Resumo da transferência · A responder/,
+  });
+  for (const [width, height] of [
+    [1366, 768],
+    [390, 844],
+    [320, 700],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await expect(toggle).toBeVisible();
+    await expect(toggle).toHaveText(
+      'A responder: Informar valor e prazo · Cotar 32 e 64 peças',
+    );
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator('.handoff-summary-warning')).toHaveText(
+      'Atenção: Conferir o tecido.',
+    );
+    expect(
+      await page.evaluate(
+        () => globalThis.document.documentElement.scrollWidth,
+      ),
+    ).toBeLessThanOrEqual(width);
+    await page.screenshot({
+      path: testInfo.outputPath('pendencia-' + width + '.png'),
+    });
+  }
+  await toggle.focus();
+  await toggle.press('Enter');
+  const summary = page.getByRole('region', { name: /Resumo da transferência/ });
+  await expect(
+    summary.getByText('Qual o valor de cada lote?', { exact: true }),
+  ).toBeVisible();
+  await expect(summary.getByText(/quantidade não confirmada/)).toBeVisible();
+  await expect(summary).toContainText('Dados coletados: 4 de 7.');
+  await toggle.press('Space');
+  await expect(toggle).toBeFocused();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(
+    (await new AxeBuilder({ page }).include('.handoff-summary').analyze())
+      .violations,
+  ).toEqual([]);
+  await page.goto('/inbox/conversation-2');
+  await expect(page.getByText(/Cotar 32 e 64/)).toHaveCount(0);
+});
+
+test('VND-L07: an accepted handoff identifies the original request as historical', async ({
+  page,
+}) => {
+  await setup(page, {
+    status: 'accepted',
+    summary:
+      'Motivo: Reclamação. Cliente cobra retorno: Ainda espero a cotação. Retomar a pendência sem reiniciar a ficha. Ficha: 1 de 7.',
+  });
+  await page.goto('/inbox/conversation-1');
+  await expect(
+    page.getByRole('button', {
+      name: /Resumo da transferência · Na transferência/,
+    }),
+  ).toHaveText('Na transferência: Dar o retorno solicitado');
+  await expect(page.getByText(/^A responder:/)).toHaveCount(0);
 });
 
 test('leaves the summary out when the reader may not read handoffs', async ({

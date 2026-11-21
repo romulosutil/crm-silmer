@@ -41,9 +41,7 @@ const sidebarNarrow = ref(sidebarMedia?.matches ?? false);
 const sidebarPreference = ref(readSidebarPreference());
 const sidebarTipsDismissed = ref(false);
 const sidebarCompact = computed(
-  () =>
-    sidebarPreference.value ??
-    (route.path.startsWith('/inbox') || sidebarNarrow.value),
+  () => sidebarPreference.value ?? sidebarNarrow.value,
 );
 
 /** @returns {boolean | null} */

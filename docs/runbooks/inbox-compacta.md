@@ -151,9 +151,9 @@ rascunho ou trocar filtros. O botão volta a mostrar a lista. No celular,
 navegação por endereço e voltar continuam valendo. Identidade e ações ocupam
 linhas separadas para preservar o nome do contato até em 320 px. Arquivar a
 última conversa ampliada restaura a lista vazia. O menu lateral tem botão
-apenas por ícone, mantendo nome acessível e preferência persistida; expandir
-na Inbox sobrepõe a lista para não estreitar o chat. Outras telas preservam
-sua composição anterior.
+apenas por ícone, com nome acessível e preferência persistida. O menu
+expandido ocupa sua coluna ao lado da fila, como em Pedidos. Sem preferência,
+a largura da janela define o estado inicial em ambas as telas.
 
 Verificar dados sintéticos em 1366×657, 1366×768, 390×844 e reflow a 320 px,
 claro/escuro, toque e teclado. Abrir filtros, mudar seleções enquanto carrega,

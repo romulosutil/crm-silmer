@@ -107,7 +107,6 @@
     --sidebar-rail-size: 4.5rem;
     --topbar-block-size: 56px;
     --inbox-topbar-block-size: 3rem;
-    --inbox-rail-inline-size: 3.5rem;
     /* INBOX-RD-01: 224 px at 933 px of viewport, 300 px from 1250 px up. */
     --inbox-list-inline-size: clamp(14rem, 24vw, 18.75rem);
     /* INBOX-RD-03: the history is a centered reading column; a bubble stays

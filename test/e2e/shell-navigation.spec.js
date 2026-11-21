@@ -151,6 +151,7 @@ test.describe('navegação agrupada', () => {
     await page.setViewportSize(DESKTOP);
     await mount(page);
     await page.goto('/inbox');
+    await page.getByRole('button', { name: 'Recolher menu' }).click();
     await expect(page.locator('.app-shell')).toHaveAttribute(
       'data-sidebar',
       'compact',

@@ -3079,20 +3079,31 @@ test('opens the context overlay on demand at wide widths and starts closed after
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('INBOX-UX-01: compact navigation preserves focus, destinations and the saved choice', async ({
+test('INBOX-UX-01: shared navigation reserves space for the queue and preserves the saved choice', async ({
   page,
 }, testInfo) => {
   await mockCrm(page);
   await page.setViewportSize({ width: 1366, height: 768 });
-  await page.goto('/inbox/conversation-1');
+  await page.goto('/pedidos');
   const shell = page.locator('.app-shell');
   const menu = page.locator('.sidebar-toggle');
+  const sidebar = page.locator('.app-sidebar');
   const navigation = page.getByRole('navigation', {
     name: 'Navegação principal',
   });
-  await expect(shell).toHaveAttribute('data-sidebar', 'compact');
-  await expect(menu).toHaveAccessibleName('Expandir menu');
-  await expect(menu).toHaveAttribute('aria-expanded', 'false');
+  await expect(menu).toHaveAccessibleName('Recolher menu');
+  const ordersSidebar = await sidebar.boundingBox();
+  await page.screenshot({ path: testInfo.outputPath('orders-expanded.png') });
+  await page.goto('/inbox/conversation-1');
+  await expect(shell).toHaveAttribute('data-sidebar', 'expanded');
+  await expect(menu).toHaveAttribute('aria-expanded', 'true');
+  const inboxSidebar = await sidebar.boundingBox();
+  const list = await page.locator('.inbox-list-pane').boundingBox();
+  if (!ordersSidebar || !inboxSidebar || !list)
+    throw new Error('Expanded navigation and queue must be visible');
+  expect(inboxSidebar.width).toBeCloseTo(ordersSidebar.width, 0);
+  expect(inboxSidebar.x + inboxSidebar.width).toBeLessThanOrEqual(list.x);
+  await page.screenshot({ path: testInfo.outputPath('inbox-expanded.png') });
   await expect(menu.locator('.app-icon')).toBeVisible();
   await expect(menu).toHaveText('');
   expect(
@@ -3100,19 +3111,23 @@ test('INBOX-UX-01: compact navigation preserves focus, destinations and the save
       globalThis.localStorage.getItem('crm.sidebar.compact'),
     ),
   ).toBeNull();
-  const compactChat = await page.locator('.inbox-conversation').boundingBox();
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(shell).toHaveAttribute('data-sidebar', 'compact');
+  await expect(menu).toHaveAccessibleName('Expandir menu');
   await page.screenshot({ path: testInfo.outputPath('inbox-compact.png') });
   await menu.focus();
   await page.keyboard.press('Enter');
   await expect(menu).toBeFocused();
   await expect(menu).toHaveAccessibleName('Recolher menu');
   await expect(menu).toHaveAttribute('aria-expanded', 'true');
-  const expandedChat = await page.locator('.inbox-conversation').boundingBox();
-  if (!compactChat || !expandedChat)
-    throw new Error('Conversation must be visible');
-  // PCX-16f: expanded navigation overlays the list; the chat keeps its space.
-  expect(expandedChat.width).toBeCloseTo(compactChat.width, 0);
-  expect(expandedChat.x).toBeCloseTo(compactChat.x, 0);
+  const tabletSidebar = await sidebar.boundingBox();
+  const tabletList = await page.locator('.inbox-list-pane').boundingBox();
+  if (!tabletSidebar || !tabletList)
+    throw new Error('Expanded navigation must leave the tablet queue visible');
+  expect(tabletSidebar.x + tabletSidebar.width).toBeLessThanOrEqual(
+    tabletList.x,
+  );
+  await page.setViewportSize({ width: 1366, height: 768 });
   await expect(menu.locator('.app-icon')).toBeVisible();
   await expect(menu).toHaveText('');
   expect(
@@ -3158,6 +3173,11 @@ test('INBOX-UX-01: compact navigation preserves focus, destinations and the save
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(menu).toBeHidden();
   await expect(page.locator('.mobile-nav')).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('orders-mobile.png') });
+  await page.goto('/inbox');
+  await expect(page.locator('.mobile-nav')).toBeVisible();
+  await expect(page.locator('.inbox-list-pane')).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('inbox-mobile.png') });
   await page.setViewportSize({ width: 1366, height: 768 });
   await expect(menu).toHaveAttribute('aria-expanded', 'false');
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
@@ -3185,9 +3205,9 @@ for (const storage of ['invalid', 'blocked']) {
     await page.setViewportSize({ width: 1366, height: 768 });
     await page.goto('/inbox/conversation-1');
     const menu = page.locator('.sidebar-toggle');
-    await expect(menu).toHaveAttribute('aria-expanded', 'false');
-    await menu.click();
     await expect(menu).toHaveAttribute('aria-expanded', 'true');
+    await menu.click();
+    await expect(menu).toHaveAttribute('aria-expanded', 'false');
     const details = page.getByRole('button', {
       name: 'Detalhes do atendimento',
       exact: true,

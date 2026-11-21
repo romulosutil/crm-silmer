@@ -214,8 +214,8 @@ desenhada primeiro para 390×844.
 
 - Sidebar de `248px` no canvas, sem borda; item ativo usa superfície branca,
   peso semibold e ícone na cor da marca, sem sombra. Recolhe para rail de `72px` entre 769 e
-  1199 px, com o monograma da marca. A Inbox começa com menu compacto quando
-  não há preferência; `Expandir menu` / `Recolher menu` preserva a escolha
+  1199 px, com o monograma da marca. Todas as telas seguem esse padrão quando
+  não há preferência. `Expandir menu` / `Recolher menu` preserva a escolha
   no navegador para todas as telas desktop/tablet. No celular permanece a barra inferior.
   Ícones compactos mantêm nomes acessíveis e rótulos no hover e no foco.
 - O trabalho fica num painel inset (`--color-page`, raio `xl`) com topbar de
@@ -445,12 +445,11 @@ botão, campo, selo ou painel (§15).
 
 ### Caixa de Entrada
 
-Apresentação refinada aprovada em 04/11/2026 (INBOX-UX-04, PCX-16a–h):
-na Inbox, rail de 56 px e topo de 48 px deixam mais espaço para o chat;
-expandir a navegação sobrepõe a lista e preserva a preferência manual. O
-acionador usa só ícone, nome acessível, dica e estado. Ampliar conversa libera
-a coluna da lista sem remontar histórico nem perder rascunho. Demais telas
-preservam seus tamanhos de shell.
+Na revisão de 20/11/2026 de PCX-16f, a navegação da Inbox segue a §7.
+O menu expandido ocupa sua coluna ao lado da fila e a preferência manual
+acompanha o operador entre telas. O topo de 48 px e o controle Ampliar
+conversa preservam o espaço de trabalho. Ampliar libera a coluna da lista
+e mantém o histórico e o rascunho.
 
 Abas por vez de responder ([ADR 065](docs/adr/065-caixa-de-entrada-por-vez-de-responder.md),
 RFC 052, PCX-19, 08/11/2026) substituem os atalhos Atender / Fechar pedidos

@@ -3409,6 +3409,10 @@ paths:
             `status`, `origin`, `q` ou `cursor`. Pedido da loja não tem previsão
             de entrega e fica fora.
           schema: { type: string, enum: [overdue, due_soon] }
+        - { name: from, in: query, description: Primeiro dia comercial inclusivo. Exige to e status confirmado., schema: { type: string, format: date } }
+        - { name: to, in: query, description: Último dia comercial inclusivo. Testes e cancelados ficam fora., schema: { type: string, format: date } }
+        - { name: credit, in: query, description: Crédito na confirmação (id da pessoa ou loja ou sem-atribuicao). Exige intervalo comercial., schema: { type: string } }
+        - { name: firstPrint, in: query, description: Pedidos da loja ativos e reais antes da primeira impressão. Exige origin loja., schema: { type: string, enum: [pending] } }
         - name: owner
           in: query
           description: >-
@@ -3486,6 +3490,10 @@ paths:
               required: [q]
               properties:
                 q: { type: string, minLength: 1, maxLength: 128 }
+                from: { type: string, format: date }
+                to: { type: string, format: date }
+                credit: { type: string }
+                firstPrint: { type: string, enum: [pending] }
                 status: { $ref: '#/components/schemas/OrderStatus' }
                 cancellation:
                   {
@@ -3508,6 +3516,22 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '429': { description: Limite temporário de buscas privadas excedido }
+  /orders/commercial-result:
+    get:
+      operationId: getCommercialResult
+      summary: Consulta administrativa de vendas por data comercial e crédito congelado
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/HumanReadOrigin'
+        - { name: period, in: query, required: true, schema: { type: string, enum: [hoje, 7dias, mes] } }
+      responses:
+        '200':
+          description: Total elegível, série diária, composição e intervalos de comparação em São Paulo.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommercialResult' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /orders/summary:
     get:
       operationId: getOrdersSummary
@@ -8016,6 +8040,52 @@ components:
         occurredAt: { type: string, format: date-time }
         deliveryStatus: { type: [string, 'null'] }
         status: { type: string }
+    CommercialAmounts:
+      type: object
+      required: [confirmedCount, soldAmountCents, averageTicketCents]
+      properties:
+        confirmedCount: { type: integer }
+        soldAmountCents: { type: integer }
+        averageTicketCents: { type: [integer, 'null'] }
+    CommercialRange:
+      allOf:
+        - $ref: '#/components/schemas/CommercialAmounts'
+        - type: object
+          required: [from, to]
+          properties:
+            from: { type: string, format: date }
+            to: { type: string, format: date }
+    CommercialResult:
+      type: object
+      required: [period, daily, composition, comparison]
+      properties:
+        period:
+          allOf:
+            - $ref: '#/components/schemas/CommercialRange'
+            - type: object
+              required: [key, timeZone]
+              properties:
+                key: { type: string, enum: [hoje, 7dias, mes] }
+                timeZone: { type: string, const: America/Sao_Paulo }
+        daily:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/CommercialAmounts'
+              - { type: object, required: [day], properties: { day: { type: string, format: date } } }
+        composition:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/CommercialAmounts'
+              - { type: object, required: [source], properties: { source: { type: string, enum: [equipe, loja, sem-atribuicao] } } }
+        comparison:
+          type: [object, 'null']
+          required: [current, previous, partial]
+          properties:
+            partial: { type: boolean }
+            current: { $ref: '#/components/schemas/CommercialRange' }
+            previous: { $ref: '#/components/schemas/CommercialRange' }
     OrdersSummary:
       type: object
       additionalProperties: false

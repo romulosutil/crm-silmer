@@ -458,6 +458,24 @@ export class InMemoryOrderRepository {
           (cancellation === 'cancelled'
             ? Boolean(order.cancelledAt)
             : !order.cancelledAt)) &&
+        (query.from === undefined ||
+          (order.status === 'confirmado' &&
+            !order.isTest &&
+            !order.cancelledAt &&
+            order.orderDate !== null &&
+            order.orderDate >= query.from &&
+            order.orderDate <= /** @type {string} */ (query.to))) &&
+        (query.credit === undefined ||
+          (query.credit === 'loja'
+            ? order.origin === 'loja'
+            : query.credit === 'sem-atribuicao'
+              ? order.origin === 'atendimento' && !order.salesOwnerId
+              : order.salesOwnerId === query.credit)) &&
+        (query.firstPrint !== 'pending' ||
+          (order.origin === 'loja' &&
+            !order.isTest &&
+            !order.cancelledAt &&
+            !order.fichaFirstPrintedAt)) &&
         (origin === undefined || order.origin === origin) &&
         (owner === undefined ||
           order.manualOwnerId === owner.userId ||
@@ -499,6 +517,31 @@ export class InMemoryOrderRepository {
           ? encodeOrderCursor(/** @type {Order} */ (items.at(-1)))
           : null,
     };
+  }
+
+  /** @param {{from:string,to:string,visibilityActorId:string}} input */
+  async commercialSales(input) {
+    return [...this.#orders.values()]
+      .filter(
+        (order) =>
+          order.status === 'confirmado' &&
+          !order.isTest &&
+          !order.cancelledAt &&
+          order.orderDate &&
+          order.orderDate >= input.from &&
+          order.orderDate <= input.to,
+      )
+      .map((order) => ({
+        day: /** @type {string} */ (order.orderDate),
+        source:
+          order.origin === 'loja'
+            ? 'loja'
+            : order.salesOwnerId
+              ? 'equipe'
+              : 'sem-atribuicao',
+        confirmedCount: 1,
+        soldAmountCents: order.finalAmountCents ?? 0,
+      }));
   }
 
   /**

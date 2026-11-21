@@ -46,6 +46,7 @@ const orderDateFormat = new Intl.DateTimeFormat('en-CA', {
  * @typedef {{
  *   id: string, number: string, numberSequence: number,
  *   conversationId: string|null, contactId?: string|null, originSubjectId?: string|null,
+ *   salesOwnerId?: string|null,
  *   manualOwnerId?: string|null, manualCreateKey?: string|null,
  *   status: OrderStatus, fabCode: string,
  *   cancelledAt?: string|null, cancelledBy?: string|null,
@@ -216,7 +217,7 @@ function itemGaps(item, index) {
  *
  * @param {unknown} value
  */
-function isCalendarDay(value) {
+export function isCalendarDay(value) {
   const match = typeof value === 'string' ? ISO_DAY.exec(value) : null;
   if (!match) return false;
   const day = new Date(

@@ -872,6 +872,25 @@ export class PostgresOrderRepository {
     return result.rows[0] ? this.#map(result.rows[0]) : null;
   }
 
+  /** @param {{from:string,to:string,visibilityActorId:string}} input */
+  async commercialSales(input) {
+    const { rows } = await this.#database.query(
+      `SELECT to_char(order_date, 'YYYY-MM-DD') AS day,
+          CASE WHEN origin='loja' THEN 'loja' WHEN sales_owner_id IS NULL THEN 'sem-atribuicao' ELSE 'equipe' END AS source,
+          count(*)::integer AS count, coalesce(sum(final_amount_cents),0)::bigint AS cents
+       FROM crm.orders WHERE status='confirmado' AND NOT is_test AND cancelled_at IS NULL
+         AND order_date BETWEEN $1::date AND $2::date AND ${orderReadable('orders', '$3')}
+       GROUP BY order_date, source ORDER BY order_date, source`,
+      [input.from, input.to, input.visibilityActorId],
+    );
+    return rows.map((row) => ({
+      day: row.day,
+      source: row.source,
+      confirmedCount: Number(row.count),
+      soldAmountCents: Number(row.cents),
+    }));
+  }
+
   /**
    * @param {import('../ports/contracts.js').OrdersSummaryQuery} query
    * @returns {Promise<import('../ports/contracts.js').OrdersSummary>}
@@ -1145,6 +1164,17 @@ export class PostgresOrderRepository {
       }
       scope = `(${matches.join(' OR ')})`;
     }
+    if (query.from !== undefined) {
+      scope += ` AND status='confirmado' AND NOT is_test AND cancelled_at IS NULL AND order_date BETWEEN ${bind(query.from)}::date AND ${bind(query.to)}::date`;
+      if (query.credit === 'loja') scope += " AND origin='loja'";
+      else if (query.credit === 'sem-atribuicao')
+        scope += " AND origin='atendimento' AND sales_owner_id IS NULL";
+      else if (query.credit !== undefined)
+        scope += ` AND sales_owner_id=${bind(query.credit)}`;
+    }
+    if (query.firstPrint === 'pending')
+      scope +=
+        " AND origin='loja' AND NOT is_test AND cancelled_at IS NULL AND ficha_first_printed_at IS NULL";
     if (origin !== undefined) scope = `${scope} AND origin = ${bind(origin)}`;
     if (owner !== undefined) {
       scope = `${scope} AND (manual_owner_id = ${bind(owner.userId)}

@@ -102,6 +102,10 @@ const FILTER_LABELS = new Map(
 const QUICK_VALUES = new Set(QUICK_FILTERS.map((option) => option.value));
 // The Painel's links name their filter in the address (filterFromRoute).
 const FILTER_QUERY_KEYS = Object.freeze([
+  'de',
+  'ate',
+  'credito',
+  'impressao',
   'entrega',
   'origem',
   'status',
@@ -226,9 +230,35 @@ const showPending = computed(() =>
   ['', 'pendente', MINE_FILTER].includes(filter.value),
 );
 // PLI-10: a filter only the sheet offers is named, with a way out.
-const sheetFilterLabel = computed(() =>
-  QUICK_VALUES.has(filter.value) ? '' : (FILTER_LABELS.get(filter.value) ?? ''),
-);
+const commercialFilters = computed(() => {
+  const result = {};
+  if (
+    filter.value === 'confirmado' &&
+    (route.query.de || route.query.ate || route.query.credito)
+  ) {
+    result.from = String(route.query.de ?? '');
+    result.to = String(route.query.ate ?? '');
+    if (route.query.credito) result.credit = String(route.query.credito);
+  }
+  if (filter.value === STORE_FILTER && route.query.impressao === 'pendente')
+    result.firstPrint = 'pending';
+  return result;
+});
+const sheetFilterLabel = computed(() => {
+  const selected = commercialFilters.value;
+  if (selected.firstPrint) return 'Loja · primeira impressão pendente';
+  if (selected.from)
+    return (
+      'Confirmados · ' +
+      selected.from.split('-').reverse().join('/') +
+      ' a ' +
+      selected.to.split('-').reverse().join('/') +
+      (selected.credit ? ' · com filtro de crédito' : '')
+    );
+  return QUICK_VALUES.has(filter.value)
+    ? ''
+    : (FILTER_LABELS.get(filter.value) ?? '');
+});
 // PLI-10: the result replaces the old "N confirmados · N pendentes" line; the
 // group headings keep both counts (PLI-03). The API counts the search, the
 // origin and the owner; the production queue is read here.
@@ -648,6 +678,8 @@ function listRequest(cursor) {
     params.set('status', 'pendente');
     params.set('owner', 'me');
   } else if (status) params.set('status', status);
+  for (const [key, value] of Object.entries(commercialFilters.value))
+    params.set(key, value);
   const needle = query.value.trim();
   if ((needle.match(/\d/gu) ?? []).length >= 8) {
     return {
@@ -657,6 +689,7 @@ function listRequest(cursor) {
         body: {
           limit: PAGE_SIZE,
           q: needle,
+          ...commercialFilters.value,
           ...(filter.value === STORE_FILTER
             ? { origin: STORE_FILTER }
             : filter.value === MINE_FILTER
@@ -1258,7 +1291,15 @@ onBeforeUnmount(() => {
         </button>
       </template>
       <template v-else-if="filter">
-        <h2>Nenhum pedido com esse filtro</h2>
+        <h2>
+          {{
+            commercialFilters.firstPrint
+              ? 'Nenhum pedido da loja aguarda primeira impressão'
+              : commercialFilters.from
+                ? 'Nenhum pedido confirmado neste intervalo'
+                : 'Nenhum pedido com esse filtro'
+          }}
+        </h2>
         <p>Escolha outra visualização ou volte para todos os pedidos.</p>
         <button type="button" class="soft" @click="clearFilter">
           Limpar filtro

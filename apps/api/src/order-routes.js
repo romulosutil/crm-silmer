@@ -107,6 +107,21 @@ export function registerOrderRoutes(
   whatsappPdf,
 ) {
   registerOrderReceiptRoutes(api, orders, contextFor, pdfRenderer);
+  api.get('/api/v1/orders/commercial-result', async (request, reply) =>
+    respond(reply, async () => {
+      const query = requireObject(request.query ?? {});
+      rejectUnknownKeys(query, ['period']);
+      if (!SUMMARY_PERIODS.has(query.period))
+        throw new OrderRequestError(400, 'INVALID_FILTER');
+      const { actor } = await authorizeRead(request, orders);
+      if (!actor.capabilities?.includes('COMMERCIAL_ADMIN'))
+        throw new OrderRequestError(403, 'FORBIDDEN');
+      privateReadHeaders(reply);
+      return reply
+        .code(200)
+        .send(await orders.commercialResult(query.period, actor));
+    }),
+  );
   api.get('/api/v1/orders/summary', async (request, reply) =>
     respond(reply, async () => {
       const query = requireObject(request.query ?? {});
@@ -1144,6 +1159,10 @@ function parseListQuery(value) {
   const query = requireObject(value ?? {});
   rejectUnknownKeys(query, [
     'cancellation',
+    'from',
+    'to',
+    'credit',
+    'firstPrint',
     'cursor',
     'delivery',
     'limit',
@@ -1152,8 +1171,17 @@ function parseListQuery(value) {
     'q',
     'status',
   ]);
-  /** @type {{cancellation?: 'active'|'cancelled'|'all',status?: string, origin?: string, q?: string, cursor?: string, limit?: number, delivery?: string, owner?: 'me'}} */
+  /** @type {{cancellation?: 'active'|'cancelled'|'all',status?: string, origin?: string, q?: string, cursor?: string, limit?: number, delivery?: string, owner?: 'me', from?: string, to?: string, credit?: string, firstPrint?: string}} */
   const input = {};
+  for (const key of /** @type {const} */ ([
+    'from',
+    'to',
+    'credit',
+    'firstPrint',
+  ])) {
+    if (query[key] !== undefined)
+      input[key] = requireIdentifier(query[key], 'FILTER', 128);
+  }
   if (query.cancellation !== undefined) {
     if (!['active', 'cancelled', 'all'].includes(query.cancellation))
       throw new OrderRequestError(400, 'INVALID_FILTER');

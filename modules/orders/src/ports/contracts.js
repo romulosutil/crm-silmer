@@ -46,6 +46,7 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  * adapters apply it before status counts, cursor comparison and pagination.
  * @typedef {{
  *   status?: OrderStatus, numberSequence?: number, conversationIds?: string[],
+ *   from?: string, to?: string, credit?: string, firstPrint?: string,
  *   contactIds?: string[],
  *   phoneDigests?: string[], storeNumber?: string,
  *   origin?: 'atendimento'|'loja', cursor?: string|null, limit: number,
@@ -170,6 +171,7 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  *   bindSubject?(order: Order, subjectId: string): Promise<Order>,
  *   listByConversation(conversationId: string): Promise<Order[]>,
  *   list(query: OrderListQuery): Promise<OrderPage>,
+ *   commercialSales(input: {from:string,to:string,visibilityActorId:string}): Promise<import('../application/commercial-result.js').SalesGroup[]>,
  *   summary(query: OrdersSummaryQuery): Promise<OrdersSummary>,
  *   openDeliveries(reader?: {visibilityActorId?: string|null}): Promise<Order[]>,
  *   recordFirstPrint(input: RecordFirstPrintInput): Promise<{recorded: boolean, order: Order}>,

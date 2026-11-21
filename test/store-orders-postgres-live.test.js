@@ -414,6 +414,16 @@ if (connectionString) {
     );
     const waiting = await repository.summary(SUMMARY_PERIOD);
     assert.equal(waiting.storeNewCount, before.storeNewCount + 2);
+    const unprinted = () =>
+      repository.list({ limit: 100, origin: 'loja', firstPrint: 'pending' });
+    const awaitingPrint = await unprinted();
+    assert.equal(awaitingPrint.counts.confirmado, waiting.storeNewCount);
+    assert.ok(awaitingPrint.items.some((row) => row.id === older.order.id));
+    assert.ok(
+      awaitingPrint.items.every(
+        (row) => !row.isTest && !row.fichaFirstPrintedAt,
+      ),
+    );
     // The test order paid earlier never counts nor dates the notice.
     assert.ok(
       waiting.storeNewOldestPaidAt !== null &&
@@ -450,6 +460,9 @@ if (connectionString) {
 
     const after = await repository.summary(SUMMARY_PERIOD);
     assert.equal(after.storeNewCount, waiting.storeNewCount - 1);
+    const stillWaiting = await unprinted();
+    assert.equal(stillWaiting.counts.confirmado, after.storeNewCount);
+    assert.ok(stillWaiting.items.every((row) => row.id !== older.order.id));
     const events = (
       await pool.query(
         `SELECT event_type, payload FROM crm.domain_events

@@ -415,6 +415,44 @@ if (connectionString) {
         status: 'pendente',
       });
 
+      const admin = {
+        id: sellerId,
+        kind: 'human',
+        capabilities: ['COMMERCIAL_ADMIN'],
+      };
+      const report = await orders.commercialResult('mes', admin);
+      assert.equal(report.period.confirmedCount, 4);
+      assert.equal(report.daily.length, 8);
+      const dates = {
+        from: report.period.from,
+        to: report.period.to,
+        status: 'confirmado',
+      };
+      const reader = { actorId: sellerId, readAll: true };
+      const first = await orders.list({ ...dates, limit: 2 }, reader);
+      const second = await orders.list(
+        { ...dates, limit: 2, cursor: first.nextCursor },
+        reader,
+      );
+      assert.equal(first.counts.confirmado, 4);
+      assert.equal(second.nextCursor, null);
+      assert.equal(
+        [...first.items, ...second.items].reduce(
+          (sum, row) => sum + (row.finalAmountCents ?? 0),
+          0,
+        ),
+        report.period.soldAmountCents,
+      );
+      const mineByCredit = await orders.list(
+        { ...dates, credit: sellerId },
+        reader,
+      );
+      assert.ok(mineByCredit.items.some((row) => row.id === dueToday));
+      assert.equal(
+        mineByCredit.counts.confirmado,
+        report.composition.find((row) => row.source === 'equipe')
+          ?.confirmedCount,
+      );
       const today = await orders.summary();
       assert.equal(today.today, '2026-09-08');
       assert.deepEqual(today.period, {
@@ -481,6 +519,121 @@ if (connectionString) {
         [myPending],
       );
       assert.deepEqual(mine.counts, { confirmado: 5, pendente: 1 });
+
+      // RFC 073's historical price sample is independent of the current store catalog.
+      const sampleDay = '2026-07-15';
+      const sampleTime = new Date(sampleDay + 'T15:00:00Z');
+      const fixtureOrders = createOrderService({
+        authorizeOwnership: async () => undefined,
+        clock: () => sampleTime,
+        conversations: {
+          readOrderContexts: async () => new Map(),
+          searchConversationIds: async () => [],
+        },
+        fabCode: '01',
+        repository: orderRepository,
+      });
+      await pool.query(
+        "INSERT INTO crm.user_capabilities(user_id,capability) VALUES($1,'COMMERCIAL_ADMIN')",
+        [sellerId],
+      );
+      const sampleConversation = await open('sample', '2026-07-15T12:00:00Z');
+      await assignToSeller(sampleConversation);
+      const sampleOrder = (
+        /** @type {number} */ amountCents,
+        /** @type {string} */ conversationId,
+      ) => insertOrder({ amountCents, conversationId, orderDate: sampleDay });
+      await sampleOrder(30000, sampleConversation);
+      const fiveHundred = await sampleOrder(50000, sampleConversation);
+      await sampleOrder(10000, lateHandoff);
+      const cancelled = await sampleOrder(90000, sampleConversation);
+      await pool.query(
+        'UPDATE crm.orders SET cancelled_at=$2,cancelled_by=$3,cancellation_reason_envelope=$4::jsonb WHERE id=$1',
+        [
+          cancelled,
+          sampleTime,
+          sellerId,
+          JSON.stringify(
+            encryptJson(
+              'Cancelamento sintético',
+              'order-cancellation:' + cancelled,
+              ORDER_KEY,
+            ),
+          ),
+        ],
+      );
+      for (const isTest of [false, true]) {
+        const id = 'order-' + randomUUID();
+        await pool.query(
+          `WITH n AS (SELECT nextval('crm.order_number_seq') AS seq)
+          INSERT INTO crm.orders(id,number_sequence,number,status,fab_code,ficha_envelope,total_pieces,missing_fields,final_amount_cents,payment_condition,order_date,confirmed_at,confirmed_by,created_by_kind,paid_on,origin,is_test,store_number,lead_time_business_days,payment_source,payment_confirmed_at,paid_amount_cents,payment_transaction_nsu,payment_invoice_slug,version,created_at,updated_at)
+          SELECT $1,seq,lpad(seq::text,2,'0')||'-CRM','confirmado','01',$2::jsonb,10,'{}',20000,'pix',$3::date,$4,'system:loja-do-site','automation',$3::date,'loja',$5,$6,0,'infinitepay',$4,20000,$1,$1,1,$4,$4 FROM n`,
+          [
+            id,
+            JSON.stringify(
+              encryptJson(
+                { summary: {}, items: [] },
+                'order-ficha:' + id,
+                ORDER_KEY,
+              ),
+            ),
+            sampleDay,
+            sampleTime,
+            isTest,
+            isTest ? 'LJ-000000BB' : 'LJ-000000AA',
+          ],
+        );
+      }
+      const result = () => fixtureOrders.commercialResult('hoje', admin);
+      const snapshot = await result();
+      assert.deepEqual(
+        snapshot.composition.map((row) => [
+          row.source,
+          row.confirmedCount,
+          row.soldAmountCents,
+        ]),
+        [
+          ['equipe', 2, 80000],
+          ['loja', 1, 20000],
+          ['sem-atribuicao', 1, 10000],
+        ],
+      );
+      assert.equal(snapshot.period.soldAmountCents, 110000);
+      assert.equal(snapshot.period.confirmedCount, 4);
+      assert.equal(snapshot.period.averageTicketCents, 27500);
+      await assignToSecond(sampleConversation);
+      const sampleDates = {
+        from: sampleDay,
+        to: sampleDay,
+        status: 'confirmado',
+      };
+      const credited = await fixtureOrders.list(
+        { ...sampleDates, credit: sellerId },
+        reader,
+      );
+      assert.equal(credited.counts.confirmado, 2);
+      assert.equal(
+        credited.items.reduce(
+          (sum, row) => sum + (row.finalAmountCents ?? 0),
+          0,
+        ),
+        80000,
+      );
+      await pool.query(
+        "UPDATE crm.orders SET status='pendente',version=version+1 WHERE id=$1",
+        [fiveHundred],
+      );
+      assert.equal((await result()).period.soldAmountCents, 60000);
+      await pool.query(
+        "UPDATE crm.orders SET status='confirmado',version=version+1 WHERE id=$1",
+        [fiveHundred],
+      );
+      assert.deepEqual((await result()).period, snapshot.period);
+      assert.equal(
+        (await fixtureOrders.list({ ...sampleDates, credit: sellerId }, reader))
+          .counts.confirmado,
+        2,
+      );
     } finally {
       await pool.end();
     }

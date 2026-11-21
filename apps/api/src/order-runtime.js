@@ -590,6 +590,7 @@ export function createOrderRuntime(options) {
     },
     ensurePendingFromIntent: service.ensurePendingFromIntent,
     projectAgentBriefing: service.projectAgentBriefing,
+    commercialResult: service.commercialResult,
     /** @param {{period?: unknown}} [input] @param {any} [actor] */
     summary: (input, actor) => service.summary(input, actor),
 

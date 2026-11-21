@@ -1,5 +1,10 @@
 # Request for Comments
 
+## Proposta de 21/11/2026
+
+- [073 — Vendas, equipe e central ao vivo do administrador](073-painel-comercial-do-administrador.md).
+  Pacote em avaliação para unificar o período comercial e acompanhar a operação em tempo real.
+
 ## Decisão de 20/11/2026
 
 - [072 — Supervisão das linhas pessoais](072-supervisao-das-linhas-pessoais.md).

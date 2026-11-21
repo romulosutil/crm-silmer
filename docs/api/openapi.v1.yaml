@@ -3405,8 +3405,9 @@ paths:
             Painel: `overdue` lista os pedidos confirmados cuja previsão
             de entrega já passou sem "Entregue em"; `due_soon`, os previstos de
             hoje até seis dias depois (dias de São Paulo). Ordena pela previsão
-            de entrega, devolve até 100 itens sem cursor e não combina com
-            `status`, `origin`, `q` ou `cursor`. Pedido da loja não tem previsão
+            de entrega e número sequencial. Cada página contém até 100 itens. O cursor
+            preserva essa ordem e exige o mesmo filtro. Não combina com `status`,
+            `origin` ou `q`. Pedido da loja não tem previsão
             de entrega e fica fora.
           schema: { type: string, enum: [overdue, due_soon] }
         - { name: from, in: query, description: Primeiro dia comercial inclusivo. Exige to e status confirmado., schema: { type: string, format: date } }

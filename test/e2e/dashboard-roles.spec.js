@@ -10,10 +10,13 @@ test('the manager reads reconciled human performance and keeps operational desti
   await expect(
     page.getByRole('heading', { name: 'Dashboard', level: 1 }),
   ).toBeFocused();
-  // ACT-T04: the Dashboard shows the compact team; the full table has its
-  // own page.
-  const team = page.getByRole('region', { name: 'Equipe nos últimos 7 dias' });
+  // ACT-T04: start with seller bars and switch to the exact, sortable figures.
+  const team = page.getByRole('region', { name: 'Vendedores', exact: true });
+  await expect(
+    team.getByRole('link', { name: /Atendente Sintética/u }),
+  ).toContainText('R$ 8.400,00');
   await expect(team).toContainText('R$ 16.400,00');
+  await team.getByRole('button', { name: 'Tabela', exact: true }).click();
   await expect(
     team.getByRole('row', { name: /Atendente Sintética/u }),
   ).toContainText('R$ 8.400,00');
@@ -22,7 +25,7 @@ test('the manager reads reconciled human performance and keeps operational desti
   ).toContainText('Inativo');
   await expect(
     team.getByRole('row', { name: /Vendedor Sintético/u }),
-  ).toContainText('4');
+  ).toContainText('12');
   await expect(team.getByRole('row', { name: /Loja do site/u })).toContainText(
     'R$ 1.800,00',
   );
@@ -295,10 +298,10 @@ test('PERF-05/MET-04: the team page reconciles sales and switches views by keybo
   await mockPainel(page);
   await page.goto('/dashboard');
   await page
-    .getByRole('region', { name: 'Equipe nos últimos 7 dias' })
+    .getByRole('region', { name: 'Vendedores', exact: true })
     .getByRole('link', { name: 'Ver desempenho da equipe' })
     .click();
-  await expect(page).toHaveURL('/dashboard/equipe');
+  await expect(page).toHaveURL('/dashboard/equipe?periodo=7dias');
   await expect(
     page.getByRole('heading', { name: 'Desempenho da equipe', level: 1 }),
   ).toBeFocused();
@@ -311,7 +314,13 @@ test('PERF-05/MET-04: the team page reconciles sales and switches views by keybo
     'aria-pressed',
     'true',
   );
-  await expect(table.getByRole('columnheader')).toHaveCount(5);
+  await expect(
+    table.getByRole('columnheader', { name: 'Conversão' }),
+  ).toBeVisible();
+  await expect(
+    table.getByRole('columnheader', { name: 'Resposta no prazo' }),
+  ).toBeVisible();
+  await expect(table.getByRole('columnheader')).toHaveCount(7);
   await expect(table.getByRole('rowheader')).toHaveCount(5);
   await expect(table.getByRole('row', { name: /^Total/u })).toContainText(
     'R$ 16.400,00',
@@ -389,6 +398,6 @@ test('PERF-07: a seller who opens the team page goes back to their own Dashboard
     page.getByRole('region', { name: 'Seu resultado' }),
   ).toContainText('R$ 8.400,00');
   await expect(
-    page.getByRole('region', { name: 'Equipe nos últimos 7 dias' }),
+    page.getByRole('region', { name: 'Vendedores', exact: true }),
   ).toHaveCount(0);
 });

@@ -35,6 +35,11 @@ export async function mockDashboardRead(route, manager = true) {
   if (url.pathname === '/api/v1/dashboard/metrics/losses')
     body = lossMetrics(manager, Number(url.searchParams.get('days') ?? 7));
   if (!body) return false;
+  const period = url.searchParams.get('period');
+  if (period && ['hoje', '7dias', 'mes'].includes(period)) {
+    const { from, to } = ordersSummary(period).period;
+    Object.assign(body, { period, from, to });
+  }
   await route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify(body),
@@ -459,24 +464,7 @@ export async function mockPainel(
         hasMore: false,
       });
     }
-    if (url.pathname === '/api/v1/dashboard/performance')
-      return json(
-        performanceSummary(manager, Number(url.searchParams.get('days') ?? 7)),
-      );
-    if (url.pathname === '/api/v1/dashboard/metrics/cohorts')
-      return json({
-        period: url.searchParams.get('period'),
-        days: Number(url.searchParams.get('days') ?? 7),
-        rows: [],
-      });
-    if (url.pathname === '/api/v1/dashboard/metrics/service')
-      return json(
-        serviceMetrics(manager, Number(url.searchParams.get('days') ?? 7)),
-      );
-    if (url.pathname === '/api/v1/dashboard/metrics/losses')
-      return json(
-        lossMetrics(manager, Number(url.searchParams.get('days') ?? 7)),
-      );
+    if (await mockDashboardRead(route, manager)) return;
     if (
       /^\/api\/v1\/(?:orders\/[^/]+\/(?:payment|delivery)-confirmation|dashboard\/actions\/[^/]+\/decision)$/u.test(
         url.pathname,

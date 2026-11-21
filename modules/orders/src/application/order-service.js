@@ -1112,7 +1112,7 @@ export function createOrderService(options) {
           throw new OrderInputError('Invalid delivery page size', ['limit']);
         }
         const after =
-          input.cursor == null
+          input.cursor === undefined || input.cursor === null
             ? null
             : deliveryPosition(input.delivery, input.cursor);
         const start = after

@@ -223,6 +223,70 @@
         max-width: 390px;
         margin: auto;
       }
+      #receipt {
+        position: fixed;
+        z-index: 5;
+        inset-inline-end: max(16px, env(safe-area-inset-right));
+        bottom: max(16px, env(safe-area-inset-bottom));
+        max-width: min(26rem, calc(100vw - 32px));
+      }
+      #receipt[data-open] {
+        --notice-surface: #fff;
+        --notice-border: #b8c9bf;
+        --notice-ink: #201735;
+        --notice-muted: #514b5d;
+        --notice-mark: #20593e;
+        --notice-tint: #e2f1e8;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: start;
+        gap: 12px;
+        padding: 12px 8px 12px 16px;
+        color: var(--notice-ink);
+        background: var(--notice-surface);
+        border: 1px solid var(--notice-border);
+        border-radius: 12px;
+        box-shadow: 0 6px 24px rgb(33 26 42 / 14%);
+      }
+      #receipt.dark {
+        --notice-surface: #272139;
+        --notice-border: #61766a;
+        --notice-ink: #f7f3ff;
+        --notice-muted: #d3cbdc;
+        --notice-mark: #a7e8c2;
+        --notice-tint: #2c473a;
+      }
+      .receipt-icon {
+        display: grid;
+        place-items: center;
+        height: 28px;
+        width: 28px;
+        margin-top: 3px;
+        border-radius: 50%;
+        background: var(--notice-tint);
+        color: var(--notice-mark);
+        font-weight: 700;
+      }
+      #receipt-message strong,
+      #receipt-message span {
+        display: block;
+      }
+      #receipt-message strong {
+        font-size: 14px;
+      }
+      #receipt-message span {
+        font-size: 13px;
+        color: var(--notice-muted);
+      }
+      #receipt-close {
+        width: 44px;
+        min-height: 44px;
+        font-size: 22px;
+        color: inherit;
+      }
+      #receipt [hidden] {
+        display: none;
+      }
       .preview:has(.mobile) {
         background: #e6e3eb;
       }
@@ -268,21 +332,6 @@
       }
       .seg button {
         min-height: 44px;
-      }
-      .alertlink {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        background: var(--warm);
-        color: var(--warmink);
-        border-radius: 9px;
-        padding: 8px 13px;
-        font-size: 13px;
-      }
-      .alertlink:hover {
-        background: var(--warm);
-        text-decoration: underline;
       }
       .hero {
         background: #241736;
@@ -332,23 +381,6 @@
       .doc p {
         margin-top: 6px;
       }
-      .chart {
-        display: flex;
-        align-items: flex-end;
-        gap: 4px;
-        height: 110px;
-        margin: 15px 0 2px;
-        border-bottom: 1px solid var(--line);
-        padding: 0 2px;
-      }
-      .chart i {
-        flex: 1;
-        background: var(--bar);
-        border-radius: 3px 3px 0 0;
-      }
-      .chart i:last-child {
-        background: #c8530a;
-      }
       .key {
         display: inline-block;
         width: 10px;
@@ -362,13 +394,6 @@
         overflow: hidden;
         border-radius: 5px;
         margin: 16px 0;
-      }
-      .legend {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 7px 18px;
-        color: var(--muted);
-        font-size: 13px;
       }
       .summaryline {
         margin-top: 12px;
@@ -631,9 +656,6 @@
           align-items: flex-start;
           flex-direction: column;
         }
-        .chart {
-          gap: 2px;
-        }
         .entry {
           align-items: flex-start;
         }
@@ -719,17 +741,127 @@
           gap: 5px;
         }
       }
-      .sales-context {
-        color: var(--muted);
+      .closing-head,
+      .queue-toolbar,
+      .queue-urgency,
+      .closing-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .closing-title {
+        font-size: 18px;
+      }
+      .closing-state {
+        background: var(--tint);
+        color: var(--ink);
+        padding: 4px 10px;
+        border-radius: 7px;
         font-size: 13px;
-        padding: 0 2px;
+        font-weight: 600;
       }
-      details.sales-context > summary {
+      [data-checkpoint-state='divergente'] .closing-state {
+        background: var(--warm);
+        color: var(--warmink);
+      }
+      .closing-values {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin: 18px 0;
+        padding: 14px 0;
+        border-block: 1px solid var(--line);
+      }
+      .closing-values dt {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .closing-values dd {
+        margin: 1px 0;
+        font-weight: 600;
+        font-size: 18px;
+        overflow-wrap: anywhere;
+      }
+      .closing-values small {
+        display: block;
+        font-weight: 400;
+      }
+      .closing-breakdown {
+        display: flex;
+        gap: 5px 16px;
+        flex-wrap: wrap;
+        margin: 6px 0 14px;
+        padding: 0;
+        list-style: none;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .closing-actions {
+        justify-content: flex-start;
+      }
+      .queue-urgency {
+        padding: 14px 18px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--paper);
+        color: var(--ink);
+      }
+      .queue-urgency .wait-metric {
+        margin-inline-start: auto;
+        border-inline-start: 2px solid var(--warmink);
+        padding-inline: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+      .queue-urgency small,
+      .queue-urgency span {
+        color: var(--muted);
+      }
+      @container (max-width:550px) {
+        .queue-urgency .wait-metric {
+          margin-inline-start: 0;
+        }
+      }
+      .queue-urgency b,
+      .queue-urgency span {
+        display: block;
+      }
+      .queue-urgency span {
+        font-size: 13px;
+      }
+      .queue-urgency .button {
         color: var(--accent);
-        padding: 10px 0;
+        background: var(--tint);
+        border: 1px solid transparent;
       }
-      .sales-context table {
-        max-width: 40rem;
+      .queue-scopes {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin: 12px 0;
+      }
+      .queue-scopes [aria-pressed='true'] {
+        font-weight: 600;
+        color: var(--ink);
+        background: var(--tint);
+        border-color: var(--accent);
+      }
+      @container (max-width:600px) {
+        .closing-values {
+          grid-template-columns: 1fr;
+          gap: 7px;
+        }
+        .closing-values > div {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          gap: 10px;
+        }
+        .closing-values dd {
+          text-align: right;
+          font-size: 16px;
+        }
       }
       @media print {
         .top,
@@ -737,7 +869,7 @@
         .tabs,
         .notes,
         .appnav,
-        .alertlink {
+        #receipt {
           display: none;
         }
         #work,
@@ -870,6 +1002,215 @@
         .seller-table td,
         .seller-table th {
           font-size: 13px;
+        }
+      }
+
+      .revenue-comparison.sales-context {
+        padding: 20px;
+        font-size: 14px;
+        color: var(--ink);
+      }
+      .revenue-comparison h3,
+      .revenue-series h3 {
+        font-size: 18px;
+      }
+      .revenue-movement {
+        display: flex;
+        align-items: baseline;
+        gap: 4px 12px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+      .revenue-movement strong {
+        font-size: 22px;
+        letter-spacing: -0.025em;
+      }
+      .revenue-movement span {
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .revenue-comparison .revenue-compare-table {
+        max-width: none;
+        margin-top: 16px;
+      }
+      .revenue-compare-table thead small {
+        display: block;
+        font-weight: 400;
+      }
+      .revenue-compare-table th,
+      .revenue-compare-table td {
+        padding: 9px 7px;
+      }
+      .revenue-compare-table tbody th {
+        color: var(--ink);
+        text-align: left;
+      }
+      .revenue-compare-table tbody td:first-of-type {
+        font-weight: 600;
+      }
+      .revenue-compare-table td:last-child {
+        color: var(--muted);
+      }
+      .revenue-yesterday,
+      .revenue-day-detail,
+      .revenue-series-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+      }
+      .revenue-yesterday {
+        margin-top: 12px;
+      }
+      .revenue-yesterday small,
+      .revenue-origins small,
+      .revenue-day-detail small {
+        display: block;
+      }
+      .revenue-origins {
+        padding: 0;
+        margin: 10px 0 0;
+        list-style: none;
+      }
+      .revenue-origins li {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(70px, auto);
+        align-items: baseline;
+        gap: 8px;
+        padding: 8px 0;
+        border-top: 1px solid var(--line);
+      }
+      .revenue-origins li small {
+        text-align: right;
+      }
+      .revenue-plot {
+        display: grid;
+        grid-template-columns: max-content minmax(0, 1fr);
+        grid-template-rows: 130px auto;
+        gap: 4px 10px;
+        margin: 22px 0 12px;
+        align-items: stretch;
+      }
+      .revenue-axis,
+      .revenue-ticks {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.15;
+      }
+      .revenue-axis {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        text-align: right;
+      }
+      .revenue-bars {
+        min-width: 0;
+        display: flex;
+        gap: 3px;
+        align-items: flex-end;
+        border-bottom: 1px solid var(--line);
+        border-top: 1px solid var(--line);
+        position: relative;
+      }
+      .revenue-bars::before {
+        content: '';
+        position: absolute;
+        inset: 50% 0 auto;
+        border-top: 1px dashed var(--line);
+      }
+      .revenue-bars i {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+        background: var(--bar);
+        border-radius: 3px 3px 0 0;
+      }
+      .revenue-bars i.is-picked {
+        background: var(--accent);
+        outline: 1px solid var(--ink);
+        outline-offset: -1px;
+      }
+      .revenue-ticks {
+        grid-column: 2;
+        display: flex;
+        justify-content: space-between;
+      }
+      .revenue-day-detail {
+        padding-top: 10px;
+        border-top: 1px solid var(--line);
+        margin-top: 14px;
+      }
+      .revenue-day-detail label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .revenue-day-detail select {
+        min-height: 44px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        color: var(--ink);
+        padding: 4px 8px;
+      }
+      .revenue-daily-table th:first-child {
+        text-align: left;
+      }
+      .revenue-daily-table td:last-child {
+        text-align: right;
+      }
+      .revenue-daily-table tfoot th,
+      .revenue-daily-table tfoot td {
+        font-weight: 600;
+      }
+      .revenue-empty {
+        padding: 15px 0;
+        border-block: 1px solid var(--line);
+        margin-top: 16px;
+      }
+      @container (max-width:500px) {
+        .revenue-comparison.sales-context {
+          padding: 13px;
+        }
+        .revenue-compare-table {
+          width: 100%;
+          table-layout: fixed;
+        }
+        .revenue-compare-table th,
+        .revenue-compare-table td,
+        .revenue-compare-table thead small {
+          font-size: 13px;
+          overflow-wrap: anywhere;
+          padding: 6px 2px;
+        }
+        .revenue-compare-table thead small {
+          padding: 0;
+        }
+        .revenue-comparison .revenue-movement strong {
+          font-size: 18px;
+        }
+        .revenue-origins li {
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+        .revenue-origins li small {
+          grid-column: 2;
+        }
+        .revenue-plot {
+          gap: 4px;
+          grid-template-rows: 100px auto;
+        }
+        .revenue-bars {
+          gap: 2px;
+        }
+        .revenue-daily-table th,
+        .revenue-daily-table td {
+          font-size: 13px;
+          padding: 6px 2px;
+        }
+        .revenue-day-detail .textbtn {
+          flex-basis: 100%;
+          text-align: left;
         }
       }
     </style>
@@ -1067,7 +1408,12 @@
         </aside>
       </div>
       <article class="doc" id="document" hidden></article>
-      <div id="announce" class="sr" role="status" aria-live="polite"></div>
+      <aside id="receipt" aria-label="Confirmação da ação">
+        <span class="receipt-icon" aria-hidden="true" hidden>✓</span>
+        <div id="receipt-message" role="status" aria-atomic="true"></div>
+        <button id="receipt-close" aria-label="Fechar aviso" hidden>×</button>
+      </aside>
+      <div id="announce" class="sr" role="status" aria-atomic="true"></div>
     </main>
     <script>
       (() => {
@@ -1224,7 +1570,9 @@
           clearInterval(centralClock);
           centralClock = 0;
         }
+        let centralQueueScope = null;
         function resetCentral() {
+          centralQueueScope = null;
           stopPlayback();
           centralStopClock();
           centralElapsed = centralReadElapsed = step = visibleStep = 0;
@@ -1387,6 +1735,12 @@
           detail: 'Uma conversa entrou na linha pessoal de Lia.',
         };
         const centralActions = {
+          assumirRestante: {
+            id: 'EV-TAKE42',
+            name: 'Atendimento assumido',
+            ref: 'AT-042',
+            detail: 'Bia assumiu o atendimento que aguardava na fila geral.',
+          },
           imprimir: {
             id: 'EV-IMP',
             name: 'Ficha impressa pela primeira vez',
@@ -1566,19 +1920,65 @@
             `<p>P-A02 · ${exampleStatus} · conversa de ${team[exampleOwner]} · crédito da primeira confirmação de Lia.</p><div class="inline">${actions.join('')}</div><details><summary>Universo da conferência</summary><p>P-A01 e P-A02 de Lia, P-L01 da loja e P-H01 sem atribuição. P-TESTE de R$ 990 e P-CANC de R$ 600 ficam fora do vendido. A transferência conserva o crédito.</p></details>`,
           );
         }
+
         function checkpointView() {
-          const day = today - 1,
-            rows = allDemoOrders().filter((o) => o.day === day);
-          const saved = checkpoint?.rows ?? rows;
-          const difference = sum(rows) - sum(saved);
-          const breakdown = sources
-            .map((name, p) => {
-              const group = saved.filter((o) => o.person === p);
-              return group.length ? name + ' · ' + money(sum(group)) : '';
-            })
-            .filter(Boolean);
-          return `<details class="paper checkpoint"><summary>Checkpoint do dia anterior · ${date(day)}</summary><p>${checkpoint ? 'Resumo registrado às 08h' : 'Prévia antes do registro'} · ${saved.length} pedidos · ${money(sum(saved))}</p><p class="muted">${breakdown.join(' · ') || 'Nenhuma venda'}</p><p>Apuração atual do mesmo dia · ${rows.length} pedidos · ${money(sum(rows))}. Diferença · ${money(difference)}.</p>${checkpoint ? (rows.length && !checkpointCorrection ? btn('Simular cancelamento posterior', 'checkpoint', 'corrigir') : '') : btn('Registrar snapshot simulado', 'checkpoint', 'fixar')}</details>`;
+          const day = today - 1;
+          const stale = scenario === 'parcial';
+          const source = stale ? (lastRead?.rows ?? []) : allDemoOrders();
+          const rows = source.filter((o) => o.day === day);
+          const previous = checkpoint?.rows;
+          const reference = previous ?? rows;
+          const amountChange = sum(rows) - sum(reference);
+          const orderChange = rows.length - reference.length;
+          const state = !checkpoint
+            ? 'previa'
+            : amountChange || orderChange
+              ? 'divergente'
+              : 'registrado';
+          const labels = {
+            previa: 'Prévia',
+            registrado: 'Registrado às 08h',
+            divergente: 'Apuração alterada',
+          };
+          const count = (n) => n + ' ' + (n === 1 ? 'pedido' : 'pedidos');
+          const values = (key, title, moneyValue, description) =>
+            `<div data-checkpoint-summary="${key}"><dt>${title}</dt><dd>${moneyValue}<small>${description}</small></dd></div>`;
+          const groups = sources.flatMap((name, p) => {
+            const attributed = reference.filter((o) => o.person === p);
+            return attributed.length
+              ? [`<li>${name} · ${money(sum(attributed))}</li>`]
+              : [];
+          });
+          const canCorrect =
+            !!checkpoint && !!rows.length && !checkpointCorrection;
+          const action = stale
+            ? btn('Atualizar leitura comercial', 'partial', 'retry', 'button')
+            : !checkpoint
+              ? btn(
+                  'Registrar fechamento simulado',
+                  'checkpoint',
+                  'fixar',
+                  'button mainbtn',
+                )
+              : canCorrect
+                ? btn(
+                    'Simular cancelamento de ' + rows[0].id,
+                    'checkpoint',
+                    'corrigir',
+                    'button',
+                  )
+                : '';
+          const context =
+            state === 'divergente'
+              ? `O pedido ${checkpointCorrection ?? ''} saiu da apuração após o registro.`
+              : !rows.length
+                ? 'Nenhuma venda elegível nesse dia.'
+                : checkpoint
+                  ? 'O valor registrado coincide com a apuração atual.'
+                  : 'O registro guarda os valores deste dia para conferências posteriores.';
+          return `<section class="paper checkpoint" data-checkpoint-state="${state}" aria-labelledby="checkpoint-title"><div class="closing-head"><div><h3 class="closing-title" id="checkpoint-title" tabindex="-1">Fechamento de ontem</h3><small>Dia comercial ${date(day)} · São Paulo</small></div><span class="closing-state">${labels[state]}</span></div><dl class="closing-values">${values('salvo', checkpoint ? 'Resumo registrado às 08h' : 'Registro das 08h', checkpoint ? money(sum(reference)) : '—', checkpoint ? count(reference.length) : 'Aguardando registro')}${values('atual', 'Apuração atual do mesmo dia', money(sum(rows)), count(rows.length))}${values('diferenca', 'Diferença para o registro', checkpoint ? money(amountChange) : '—', checkpoint ? count(orderChange) : 'Disponível após registrar')}</dl><p>${context}</p>${groups.length ? `<ul class="closing-breakdown" aria-label="${checkpoint ? 'Composição registrada' : 'Composição da prévia'}">${groups.join('')}</ul>` : ''}${stale ? `<p class="muted">Última leitura comercial válida às ${lastRead.at}.</p>` : ''}${action ? `<div class="closing-actions">${action}</div>` : ''}</section>`;
         }
+
         function btn(label, key, val, cls = 'button') {
           return `<button class="${cls}" data-${key}="${val}">${label}</button>`;
         }
@@ -1591,6 +1991,80 @@
         function announce(msg) {
           $('announce').textContent = msg;
         }
+        // A confirmation belongs to the command that actually changed the sample.
+        const receipt = $('receipt');
+        let receiptTimer;
+        let receiptTrigger;
+        let receiptSectionTitle;
+        function receiptReturnTarget() {
+          if (receiptTrigger?.isConnected) return receiptTrigger;
+          const command = Object.entries(receiptTrigger?.dataset || {})[0];
+          if (command) {
+            const matching = [...document.querySelectorAll('button')].find(
+              (b) =>
+                b.dataset[command[0]] === command[1] && b.checkVisibility(),
+            );
+            if (matching) return matching;
+          }
+          const heading = [...$('stage').querySelectorAll('h2, h3')].find(
+            (el) =>
+              el.textContent === receiptSectionTitle && el.checkVisibility(),
+          );
+          if (heading) heading.tabIndex = -1;
+          return (
+            heading || (page === 'painel' ? $('viewtitle') : $('doctitle'))
+          );
+        }
+        function dismissReceipt() {
+          const restoreFocus = receipt.contains(document.activeElement);
+          clearTimeout(receiptTimer);
+          delete receipt.dataset.open;
+          $('receipt-message').replaceChildren();
+          receipt.querySelector('.receipt-icon').hidden = true;
+          $('receipt-close').hidden = true;
+          if (restoreFocus) {
+            receiptReturnTarget()?.focus();
+          }
+        }
+        function scheduleReceipt() {
+          clearTimeout(receiptTimer);
+          if (
+            receipt.dataset.open &&
+            !receipt.matches(':hover, :focus-within') &&
+            !document.hidden
+          )
+            receiptTimer = setTimeout(dismissReceipt, 8000);
+        }
+        function confirmAction(title, effect) {
+          clearTimeout(receiptTimer);
+          receipt.dataset.open = 'true';
+          receipt.classList.toggle(
+            'dark',
+            page === 'painel' && $('screen').classList.contains('night'),
+          );
+          receipt.querySelector('.receipt-icon').hidden = false;
+          $('receipt-close').hidden = false;
+          const heading = document.createElement('strong');
+          const detail = document.createElement('span');
+          heading.textContent = title;
+          detail.textContent = effect;
+          $('receipt-message').replaceChildren(
+            heading,
+            document.createTextNode(' '),
+            detail,
+          );
+          if (document.activeElement === document.body && page === 'painel')
+            receiptReturnTarget()?.focus({ preventScroll: true });
+          scheduleReceipt();
+        }
+        $('receipt-close').addEventListener('click', dismissReceipt);
+        for (const event of ['pointerenter', 'focusin'])
+          receipt.addEventListener(event, () => clearTimeout(receiptTimer));
+        for (const event of ['pointerleave', 'focusout'])
+          receipt.addEventListener(event, () =>
+            requestAnimationFrame(scheduleReceipt),
+          );
+        document.addEventListener('visibilitychange', scheduleReceipt);
         function dates() {
           return (
             rangeLabel(...interval()) +
@@ -1615,10 +2089,18 @@
         function filteredLink(f, label) {
           return btn(label, 'orders', f, 'textbtn');
         }
+        // FIN-02 / PNL-02 / PNL-05 · comparar intervalos de dias civis já fechados.
         function comparison() {
           const [start] = interval();
-          if (period === 'hoje')
-            return `<small class="sales-context">Ontem, dia completo · ${money(sum(periodOrders(today - 1, today - 1)))}</small>`;
+          const wrap = (body) =>
+            `<section class="paper revenue-comparison sales-context" aria-labelledby="revenue-compare-title"><h3 id="revenue-compare-title">Comparação de vendas</h3>${body}</section>`;
+          if (period === 'hoje') {
+            const yesterday = today - 1;
+            const previous = periodOrders(yesterday, yesterday);
+            return wrap(
+              `<div class="revenue-yesterday"><div><strong>Ontem · ${date(yesterday)}</strong><small>Dia completo</small></div><div><b>${money(sum(previous))}</b><small>${previous.length} ${previous.length === 1 ? 'pedido' : 'pedidos'} · ticket médio ${ticket(previous)}</small></div></div>`,
+            );
+          }
           const priorMonthEnd = monthStart(today) - 1;
           const previousStart =
             period === 'mes'
@@ -1628,57 +2110,144 @@
             period === 'mes'
               ? Math.min(today - start, priorMonthEnd - previousStart + 1)
               : today - start;
-          if (!dayCount)
-            return '<p class="sales-context">Primeiro dia do mês · ainda não há dias completos para comparar.</p>';
-          const previousEnd = previousStart + dayCount - 1,
-            currentEnd = start + dayCount - 1;
-          const current = periodOrders(start, currentEnd),
-            previous = periodOrders(previousStart, previousEnd);
+          if (!dayCount) {
+            return wrap(
+              `<p class="muted">Primeiro dia do mês. O primeiro dia completo para comparação será ${date(today)}, após o encerramento de hoje.</p>`,
+            );
+          }
+          const currentEnd = start + dayCount - 1;
+          const previousEnd = previousStart + dayCount - 1;
+          const current = periodOrders(start, currentEnd);
+          const previous = periodOrders(previousStart, previousEnd);
+          const sold = sum(current);
           const base = sum(previous);
-          const diff = sum(current) - base;
-          const pct =
+          const diff = sold - base;
+          const percent =
             base > 0
-              ? ' (' +
-                ((Math.abs(diff) * 100) / base).toLocaleString('pt-BR', {
+              ? ((100 * Math.abs(diff)) / base).toLocaleString('pt-BR', {
                   maximumFractionDigits: 1,
-                }) +
-                '%)'
+                }) + '%'
               : '';
-          const summary =
+          const direction = diff > 0 ? 'a mais' : 'a menos';
+          const movement =
             diff === 0
               ? 'Mesmo valor vendido'
-              : money(Math.abs(diff)) +
-                (diff > 0 ? ' a mais' : ' a menos') +
-                pct;
-          const recentDates = rangeLabel(start, currentEnd),
-            priorDates = rangeLabel(previousStart, previousEnd);
-          return `<details class="sales-context"><summary>${summary} · ${recentDates} vs. ${priorDates}</summary><p>${recentDates} comparado a ${priorDates}. Hoje entra no total acima. ${base === 0 ? 'Base anterior igual a zero.' : ''}</p><table><caption class="sr">Vendas nos dois intervalos fechados</caption><thead><tr><th>Indicador</th><th>${recentDates}</th><th>${priorDates}</th></tr></thead><tbody><tr><th>Vendido</th><td>${money(sum(current))}</td><td>${money(base)}</td></tr><tr><th>Pedidos</th><td>${current.length}</td><td>${previous.length}</td></tr><tr><th>Ticket médio</th><td>${ticket(current)}</td><td>${ticket(previous)}</td></tr></tbody></table></details>`;
+              : money(Math.abs(diff)) + ' ' + direction;
+          const amountChange = (n) =>
+            n === 0 ? money(0) : (n > 0 ? '+' : '−') + ' ' + money(Math.abs(n));
+          const countChange = (n) =>
+            (n > 0 ? '+' : n < 0 ? '−' : '') + integer(Math.abs(n));
+          const averageChange =
+            current.length && previous.length
+              ? amountChange(
+                  Math.round(sold / current.length) -
+                    Math.round(base / previous.length),
+                )
+              : '—';
+          const rows = [
+            ['Vendido', money(sold), money(base), amountChange(diff)],
+            [
+              'Pedidos',
+              integer(current.length),
+              integer(previous.length),
+              countChange(current.length - previous.length),
+            ],
+            ['Ticket médio', ticket(current), ticket(previous), averageChange],
+          ];
+          const periodText =
+            dayCount === 1 ? '1 dia completo' : dayCount + ' dias completos';
+          return wrap(
+            `<div class="revenue-movement"><strong>${movement}</strong>${percent ? `<span>${percent} ${diff === 0 ? 'de variação' : diff > 0 ? 'de aumento' : 'de queda'}</span>` : ''}</div><p class="muted">${periodText} em cada intervalo. Hoje entra no total do painel.</p><table class="revenue-compare-table"><caption class="sr">Indicadores nos intervalos atual e anterior</caption><thead><tr><th scope="col">Indicador</th><th scope="col">Atual<small>${rangeLabel(start, currentEnd)}</small></th><th scope="col">Anterior<small>${rangeLabel(previousStart, previousEnd)}</small></th><th scope="col">Diferença</th></tr></thead><tbody>${rows.map(([label, now, prior, delta]) => `<tr><th scope="row">${label}</th><td>${now}</td><td>${prior}</td><td>${delta}</td></tr>`).join('')}</tbody></table>${base === 0 ? '<p class="muted">Base anterior igual a zero. A diferença é apresentada em valor absoluto.</p>' : ''}`,
+          );
         }
+        let revenueSeriesMode = 'grafico';
+        let revenueDay = null;
+        let revenueSelectionContext = '';
         function chart(rows) {
           const [start, end] = interval();
           if (period === 'hoje') {
-            const sums = [
-                sum(rows.filter((r) => r.person !== 4 && r.person !== 5)),
-                sum(rows.filter((r) => r.person === 4)),
-                sum(rows.filter((r) => r.person === 5)),
-              ],
-              total = sum(rows);
+            const groupNames = ['Equipe', 'Loja do site', 'Sem atribuição'];
+            const totals = groupNames.map(() => ({ cents: 0, n: 0 }));
+            for (const order of rows) {
+              const group =
+                totals[order.person === 4 ? 1 : order.person === 5 ? 2 : 0];
+              group.cents += order.cents;
+              group.n++;
+            }
+            const total = sum(rows);
             return area(
               'Quem compõe o vendido de hoje',
-              `<div class="stack" aria-hidden="true">${sums.map((s, i) => `<i style="width:${total ? (100 * s) / total : 0}%;background:${colors[i]}"></i>`).join('')}</div><div class="legend">${sums.map((s, i) => `<span><i class="key" style="background:${colors[i]}"></i>${['Equipe', 'Loja do site', 'Sem atribuição'][i]} · <b>${money(s)}</b></span>`).join('')}</div>`,
+              `<div class="stack" aria-hidden="true">${totals.map((group, i) => `<i style="width:${total ? (100 * group.cents) / total : 0}%;background:${colors[i]}"></i>`).join('')}</div><ul class="revenue-origins">${totals.map((group, i) => `<li><span><i class="key" style="background:${colors[i]}" aria-hidden="true"></i>${groupNames[i]}</span><strong>${money(group.cents)}</strong><small>${group.n} ${group.n === 1 ? 'pedido' : 'pedidos'}</small></li>`).join('')}</ul>`,
             );
           }
-          const days = Array.from({ length: end - start + 1 }, (_, i) => {
-            const d = start + i,
-              s = rows.filter((r) => r.day === d);
-            return { day: d, cents: sum(s), n: s.length };
-          });
-          const max = Math.max(1, ...days.map((d) => d.cents));
-          return area(
-            'Vendas por dia',
-            `<p class="muted">${dates()} · ${money(sum(rows))}</p><div class="chart" aria-hidden="true">${days.map((d) => `<i style="height:${(100 * d.cents) / max}%" title="${date(d.day)} · ${money(d.cents)}"></i>`).join('')}</div><div class="row between"><small>${date(start)}</small><small>${date(end)} · hoje</small></div><details><summary>Conferir valores por dia</summary>${days.map((d) => `<div class="entry"><span>${date(d.day)} · ${d.n} pedidos</span>${filteredLink('d' + d.day, money(d.cents))}</div>`).join('')}</details>`,
-          );
+          const days = Array.from({ length: end - start + 1 }, (_, i) => ({
+            day: start + i,
+            n: 0,
+            cents: 0,
+          }));
+          for (const order of rows) {
+            const bucket = days[order.day - start];
+            if (bucket) {
+              bucket.n++;
+              bucket.cents += order.cents;
+            }
+          }
+          const context = [start, end, scenario, role].join('/');
+          if (
+            context !== revenueSelectionContext ||
+            !days.some((d) => d.day === revenueDay)
+          ) {
+            revenueDay = end;
+            revenueSelectionContext = context;
+          }
+          const selectedDay = days[revenueDay - start];
+          const modeButton = (key, label) =>
+            `<button type="button" data-revenue-mode="${key}" aria-pressed="${revenueSeriesMode === key}">${label}</button>`;
+          const dayAction = (d, compact = false) =>
+            `<button type="button" class="textbtn" data-orders="d${d.day}" aria-label="Ver pedidos de ${date(d.day)}">${compact ? 'Ver pedidos' : 'Ver pedidos de ' + date(d.day)}</button>`;
+          let content;
+          if (revenueSeriesMode === 'tabela') {
+            content = `<table class="revenue-daily-table"><caption class="sr">Valores exatos de vendas por dia</caption><thead><tr><th scope="col">Dia</th><th scope="col">Pedidos</th><th scope="col">Vendido</th><th scope="col"><span class="sr">Consultar pedidos</span></th></tr></thead><tbody>${days.map((d) => `<tr data-revenue-day="${d.day}"><th scope="row">${date(d.day)}</th><td>${integer(d.n)}</td><td>${money(d.cents)}</td><td>${dayAction(d, true)}</td></tr>`).join('')}</tbody><tfoot><tr><th scope="row">Total</th><td>${integer(rows.length)}</td><td>${money(sum(rows))}</td><td></td></tr></tfoot></table>`;
+          } else {
+            const peak = Math.max(...days.map((d) => d.cents));
+            const midpoint = days[Math.floor((days.length - 1) / 2)];
+            const ticks = peak > 0 ? [peak, Math.round(peak / 2), 0] : [];
+            const draw =
+              peak > 0
+                ? `<div class="revenue-plot" aria-hidden="true"><div class="revenue-axis">${ticks.map((value) => `<span>${money(value)}</span>`).join('')}</div><div class="revenue-bars">${days.map((d) => `<i class="${d.day === selectedDay.day ? 'is-picked' : ''}" style="height:${(100 * d.cents) / peak}%" title="${date(d.day)} · ${money(d.cents)}"></i>`).join('')}</div><div class="revenue-ticks"><span>${date(start)}</span>${midpoint.day !== start && midpoint.day !== end ? `<span>${date(midpoint.day)}</span>` : ''}${start !== end ? `<span>${date(end)}</span>` : ''}</div></div>`
+                : '<p class="revenue-empty">Nenhuma venda nos dias deste período.</p>';
+            const picker = days
+              .map(
+                (d) =>
+                  `<option value="${d.day}" ${d.day === revenueDay ? 'selected' : ''}>${date(d.day)}${d.day === today ? ' · hoje' : ''}</option>`,
+              )
+              .join('');
+            content =
+              draw +
+              `<div class="revenue-day-detail"><label for="revenue-day">Dia<select id="revenue-day">${picker}</select></label><span><strong>${money(selectedDay.cents)}</strong><small>${selectedDay.n} ${selectedDay.n === 1 ? 'pedido confirmado' : 'pedidos confirmados'}</small></span>${dayAction(selectedDay)}</div>`;
+          }
+          return `<section class="paper revenue-series" data-revenue-series aria-labelledby="revenue-series-title"><div class="revenue-series-head"><div><h3 id="revenue-series-title">Vendas por dia</h3><p class="muted">${rangeLabel(start, end)} · ${money(sum(rows))} em ${integer(rows.length)} ${rows.length === 1 ? 'pedido' : 'pedidos'}</p></div><div class="seg" role="group" aria-label="Apresentação das vendas por dia">${modeButton('grafico', 'Gráfico')}${modeButton('tabela', 'Tabela')}</div></div>${content}</section>`;
         }
+        document.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-revenue-mode]');
+          if (
+            !button ||
+            !['grafico', 'tabela'].includes(button.dataset.revenueMode)
+          )
+            return;
+          revenueSeriesMode = button.dataset.revenueMode;
+          render();
+        });
+        document.addEventListener('change', (event) => {
+          if (event.target.id !== 'revenue-day') return;
+          const day = Number(event.target.value);
+          const [start, end] = interval();
+          if (!Number.isInteger(day) || day < start || day > end) return;
+          revenueDay = day;
+          render();
+          $('revenue-day')?.focus({ preventScroll: true });
+          announce('Dia selecionado · ' + date(day));
+        });
         // A data de entrada vem do mesmo atendimento usado em "Assumidas".
         // Cada ciclo possui um titular de tomada imutável. IDs nunca dependem do filtro.
         function cohortCycles() {
@@ -1954,6 +2523,7 @@
           return centralScoped(queue)
             .filter(
               (q) =>
+                !(q.id === 'AT-042' && centralHasFact('EV-TAKE42')) &&
                 !(q.id === 'AT-041' && centralHasFact('EV-19')) &&
                 !(q.id === 'AT-039' && centralHasFact('EV-21')),
             )
@@ -1968,46 +2538,108 @@
         function centralNextDeliveries() {
           return ['ENTREGA-PROXIMA'];
         }
+
+        const queueScopes = {
+          'sem-responsavel': 'Sem responsável',
+          aguardando: 'Aguardando resposta',
+          atrasadas: 'Resposta acima de 15 min',
+          todas: 'Toda a fila',
+        };
+        function scopedWaits(scope) {
+          return activeQueue()
+            .filter((r) =>
+              scope === 'sem-responsavel'
+                ? r.state === 'Sem responsável'
+                : scope === 'aguardando'
+                  ? r.state === 'Aguardando resposta'
+                  : scope === 'atrasadas'
+                    ? r.state === 'Aguardando resposta' && r.age > 15
+                    : true,
+            )
+            .sort((a, b) => b.age - a.age);
+        }
+        function queueFreshness() {
+          const state = live
+            ? 'Desconectado'
+            : centralGap
+              ? 'Histórico incompleto'
+              : 'Ao vivo';
+          return (
+            (live || centralGap
+              ? state + ' · última leitura válida às '
+              : state + ' · leitura às ') + nowTime()
+          );
+        }
+        function queuePhrase(scope, n) {
+          const noun = n === 1 ? 'conversa' : 'conversas';
+          const reason =
+            scope === 'sem-responsavel'
+              ? n === 1
+                ? 'espera vendedor'
+                : 'esperam vendedor'
+              : scope === 'atrasadas'
+                ? n === 1
+                  ? 'espera resposta há mais de 15 min úteis'
+                  : 'esperam resposta há mais de 15 min úteis'
+                : scope === 'aguardando'
+                  ? n === 1
+                    ? 'aguarda resposta'
+                    : 'aguardam resposta'
+                  : 'na fila';
+          return n + ' ' + noun + ' ' + reason;
+        }
         function centralUrgency() {
           if (!centralAllowed()) return '';
-          const q = activeQueue().sort((a, b) => b.age - a.age);
-          const unclaimed = q.filter((r) => r.state === 'Sem responsável');
-          if (unclaimed.length)
-            return btn(
-              unclaimed.length +
-                (unclaimed.length === 1
-                  ? ' conversa espera vendedor'
-                  : ' conversas esperam vendedor') +
-                ' · mais antiga há ' +
-                unclaimed[0].age +
-                ' min úteis · Abrir central →',
-              'view',
-              'central',
-              'alertlink',
-            );
-          const late = q.filter((r) => r.age > 15);
-          if (late.length)
-            return btn(
-              late.length + ' aguardando resposta · Abrir central →',
-              'view',
-              'central',
-              'alertlink',
-            );
-          return btn('Abrir central ao vivo →', 'view', 'central', 'alertlink');
+          const scope =
+            ['sem-responsavel', 'atrasadas', 'aguardando'].find(
+              (s) => scopedWaits(s).length,
+            ) || 'todas';
+          const waiting = scopedWaits(scope);
+          const headline = waiting.length
+            ? queuePhrase(scope, waiting.length)
+            : 'Fila sem esperas';
+          return `<section class="queue-urgency" aria-label="Urgência da fila"><div><b>${headline}</b><span>${queueFreshness()}</span></div>${waiting.length ? '<div class="wait-metric"><small>Espera mais antiga</small><b>' + minuteLabel(waiting[0].age) + ' úteis</b></div>' : ''}${btn('Abrir fila', 'queue-scope', scope, 'button')}</section>`;
+        }
+        function filteredQueue() {
+          const rows = scopedWaits(centralQueueScope);
+          const filters = Object.entries(queueScopes)
+            .map(
+              ([key, label]) =>
+                `<button type="button" class="button" data-queue-scope="${key}" aria-pressed="${key === centralQueueScope}">${label}</button>`,
+            )
+            .join('');
+          const status =
+            live || centralGap
+              ? area(
+                  'Dados da última leitura',
+                  '<p>' +
+                    queueFreshness() +
+                    '</p>' +
+                    btn(
+                      live ? 'Reconectar' : 'Reler fila e atividade',
+                      live ? 'connection' : 'central-action',
+                      live ? '1' : 'reler',
+                    ),
+                )
+              : '';
+          return (
+            btn('← Central completa', 'view', 'central', 'textbtn') +
+            `<section class="paper" id="queue-panel" aria-labelledby="queue-title"><div class="queue-toolbar"><div><h2 id="queue-title" tabindex="-1">Fila de atendimento</h2><small>${queueFreshness()}</small></div></div><div class="queue-scopes" role="group" aria-label="Filtrar a fila">${filters}</div><p><b>${queuePhrase(centralQueueScope, rows.length)}</b>${rows.length ? ' · espera mais antiga de ' + minuteLabel(rows[0].age) + ' úteis' : ''}</p>${rows.map((r) => centralItem(r.id, r.state, r.id + ' · ' + r.label, r.age + ' min úteis')).join('') || centralEmpty('Nenhuma conversa atende a este filtro.')}</section>` +
+            status
+          );
         }
 
         function result() {
           const rows = periodOrders(...interval());
-          const header =
-            `<div class="row between datehead">${heading('Resultado comercial', dates() + ' · São Paulo')}${periodSwitch()}</div>` +
-            centralUrgency();
+          const header = `<div class="row between datehead">${heading('Resultado comercial', dates() + ' · São Paulo')}${periodSwitch()}</div>`;
           if (loadingPeriod)
             return (
               header +
               area(
                 'Consultando o período',
                 `<p role="status">Buscando ${labels[period]}…</p>`,
-              )
+              ) +
+              centralUrgency()
             );
           if (
             scenario === 'erro' ||
@@ -2018,7 +2650,8 @@
               area(
                 'Vendas indisponíveis',
                 `<p>Sem leitura válida para ${dates()}.</p>${btn('Tentar novamente', scenario === 'erro' ? 'recover' : 'partial', scenario === 'erro' ? '1' : 'retry')}`,
-              )
+              ) +
+              centralUrgency()
             );
           const warning =
             scenario === 'parcial'
@@ -2032,6 +2665,7 @@
             header +
             warning +
             cards +
+            centralUrgency() +
             comparison() +
             (scenario === 'conciliacao' ? exerciseOrders() : '') +
             teamTable(rows) +
@@ -2242,6 +2876,7 @@
               'Central restrita',
               'A visão da operação exige perfil administrativo.',
             );
+          if (centralQueueScope) return filteredQueue();
           const q = activeQueue().sort((a, b) => b.age - a.age);
           const unclaimed = q.filter((r) => r.state === 'Sem responsável'),
             late = q.filter(
@@ -2348,9 +2983,11 @@
           if (raw)
             return [
               raw.label,
-              id === 'AT-041'
-                ? 'Lia assumiu o atendimento.'
-                : 'A primeira resposta humana encerrou a espera.',
+              id === 'AT-042'
+                ? 'Bia assumiu o atendimento.'
+                : id === 'AT-041'
+                  ? 'Lia assumiu o atendimento.'
+                  : 'A primeira resposta humana encerrou a espera.',
             ];
           if (id === 'P-1197')
             return [
@@ -2406,7 +3043,14 @@
               'A referência não está disponível neste perfil e retrato.',
             );
           if (!centralAllowed()) return denied();
-          const back = btn('← Central ao vivo', 'view', 'central', 'textbtn');
+          const back = centralQueueScope
+            ? btn(
+                '← Voltar à fila filtrada',
+                'queue-scope',
+                centralQueueScope,
+                'textbtn',
+              )
+            : btn('← Central ao vivo', 'view', 'central', 'textbtn');
           const groups = {
             PENDENTES: centralPending(),
             ATRASADAS: centralLateDeliveries(),
@@ -2454,8 +3098,11 @@
             );
           const r = centralReference(selected);
           if (!r) return back + denied();
-          const action =
-            selected === 'P-1501' && !centralHasFact('EV-20')
+          const action = activeQueue().some(
+            (q) => q.id === selected && q.state === 'Sem responsável',
+          )
+            ? ['assumir', 'Simular tomada de atendimento']
+            : selected === 'P-1501' && !centralHasFact('EV-20')
               ? ['confirmar', 'Simular confirmação']
               : selected === 'LOJA' && !centralHasFact('EV-IMP')
                 ? ['imprimir', 'Simular primeira impressão']
@@ -2566,7 +3213,8 @@
           'Aplicar Hoje, 7 dias e Mês a todo o resultado',
           'Adotar a composição da tabela e o detalhe de atendimento',
           'Entregar a Central ao vivo e sua ordem de prioridade',
-          'Mostrar a comparação compacta junto ao vendido',
+          'Exibir vendido, pedidos e ticket dos dois intervalos lado a lado',
+          'Abrir pendências na fila filtrada e confirmar por toast os comandos concluídos',
           'Adotar conversão de ciclos com 30 dias completos junto a resposta no prazo, pedidos e vendido',
         ];
         let choices = decisions.map(() => 'Em revisão'),
@@ -2654,6 +3302,7 @@
           if (!centralAllowed()) return;
           replayed = false;
           const action = d.centralAction;
+          let outcome;
           if (d.advance) advance();
           else if (d.play) {
             if (playback) stopPlayback();
@@ -2689,21 +3338,62 @@
             centralGap = false;
             centralSync();
           } else if (!live && !centralGap && view === 'record') {
-            if (action === 'confirmar' && selected === 'P-1501')
-              centralEmit(changes[1]);
-            if (action === 'imprimir' && selected === 'LOJA')
-              centralEmit(centralActions.imprimir);
-            if (action === 'entregar' && selected === 'P-1198')
-              centralEmit(centralActions.entregar);
+            if (
+              action === 'assumir' &&
+              activeQueue().some(
+                (q) => q.id === selected && q.state === 'Sem responsável',
+              ) &&
+              centralEmit(
+                selected === 'AT-041'
+                  ? changes[0]
+                  : centralActions.assumirRestante,
+              )
+            )
+              outcome = [
+                'Atendimento ' + selected + ' assumido',
+                'A conversa saiu da fila sem responsável.',
+              ];
+            if (
+              action === 'confirmar' &&
+              selected === 'P-1501' &&
+              centralEmit(changes[1])
+            )
+              outcome = [
+                'Pedido P-1501 confirmado',
+                'R$ 640,00 entraram no vendido de Caio.',
+              ];
+            if (
+              action === 'imprimir' &&
+              selected === 'LOJA' &&
+              centralEmit(centralActions.imprimir)
+            )
+              outcome = [
+                'Primeira impressão registrada',
+                'A ficha saiu da fila de impressão da loja.',
+              ];
+            if (
+              action === 'entregar' &&
+              selected === 'P-1198' &&
+              centralEmit(centralActions.entregar)
+            )
+              outcome = [
+                'Entrega de P-1198 registrada',
+                'O pedido saiu das entregas atrasadas.',
+              ];
           } else return;
           centralRefresh();
-          announce(
-            replayed
-              ? 'Evento já contabilizado'
-              : live || centralGap
-                ? 'Última leitura válida às ' + nowTime()
-                : 'Central atualizada às ' + nowTime(),
-          );
+          if (outcome) confirmAction(...outcome);
+          else if (d.replay && replayed)
+            announce(
+              'O último evento já foi contabilizado. Os totais foram preservados.',
+            );
+          else if (d.connection || action === 'lacuna' || action === 'reler')
+            announce(
+              live || centralGap
+                ? 'Atualização interrompida. Última leitura às ' + nowTime()
+                : 'Conexão restabelecida. Filas e histórico atualizados às ' +
+                    nowTime(),
+            );
           if (document.activeElement === document.body)
             (view === 'record'
               ? $('viewtitle')
@@ -2761,6 +3451,7 @@
           );
         }
         function selectPeriod(next) {
+          dismissReceipt();
           period = next;
           if (view === 'resultado') lastResultPeriod = period;
           const revision = ++readRevision;
@@ -2780,6 +3471,11 @@
           else announce('Período atualizado · ' + labels[period]);
         }
         const demos = [
+          [
+            'Confirmação de transferência',
+            'Transfira a conversa para Caio. O aviso informa quem recebeu o atendimento e quem manteve o crédito da venda.',
+            'aviso',
+          ],
           [
             'Resultado e conciliação',
             'Abrir os quatro pedidos de R$ 1.100, conferir loja e sem atribuição e experimentar transferência, reabertura, reconfirmação e cancelamento.',
@@ -2849,9 +3545,11 @@
         function startDemo(key) {
           setSimulationRole(key === 'perfis' ? 'admin' : 'designado');
           changeScenario(
-            ['central', 'perfis', 'equipe', 'checkpoint'].includes(key)
-              ? 'normal'
-              : key,
+            key === 'aviso'
+              ? 'conciliacao'
+              : ['central', 'perfis', 'equipe', 'checkpoint'].includes(key)
+                ? 'normal'
+                : key,
           );
           if (key === 'equipe') {
             period = 'mes';
@@ -2861,20 +3559,17 @@
           }
           if (key === 'central' || key === 'perfis') view = 'central';
           nav();
-          if (key === 'checkpoint') {
-            const panel = document
-              .querySelector('[data-checkpoint]')
-              ?.closest('details');
-            if (panel) {
-              panel.open = true;
-              panel.querySelector('summary').focus();
-            }
-          }
+          if (key === 'checkpoint') $('checkpoint-title')?.focus();
+          if (key === 'aviso')
+            document.querySelector('[data-order-op="transferir"]')?.focus();
         }
+
         function stateURL(replace = false) {
           const q = new URLSearchParams({ page, view, period });
           if (scenario !== 'normal') q.set('amostra', scenario);
           if (lastResultPeriod !== 'hoje') q.set('origem', lastResultPeriod);
+          if (centralQueueScope && ['central', 'record'].includes(view))
+            q.set('fila', centralQueueScope);
           if (selected) q.set('id', selected);
           if (filter !== 'all') q.set('filter', filter);
           if (location.hash.slice(1) !== q.toString())
@@ -2904,6 +3599,11 @@
           view = Object.hasOwn(notes, q.get('view'))
             ? q.get('view')
             : 'resultado';
+          centralQueueScope =
+            ['central', 'record'].includes(view) &&
+            Object.hasOwn(queueScopes, q.get('fila'))
+              ? q.get('fila')
+              : null;
           const id = q.get('id') || '',
             f = q.get('filter') || 'all';
           selected = [...centralRecordIds(), '0', '1', '2', '3', '6'].includes(
@@ -2958,11 +3658,19 @@
                 ? heading('Leitura indisponível', dates()) +
                   btn('Atualizar leitura comercial', 'partial', 'retry')
                 : (staleDetail
-                    ? '<p class="alertlink">Leitura comercial anterior · ' +
-                      lastRead.at +
-                      ' · ' +
-                      dates() +
-                      '</p>'
+                    ? area(
+                        'Leitura comercial anterior',
+                        '<p>Dados de ' +
+                          dates() +
+                          ', consultados às ' +
+                          lastRead.at +
+                          '.</p>' +
+                          btn(
+                            'Atualizar leitura comercial',
+                            'partial',
+                            'retry',
+                          ),
+                      )
                     : '') +
                   {
                     resultado: result,
@@ -2987,6 +3695,7 @@
           }
         }
         function nav() {
+          dismissReceipt();
           page = page || 'painel';
           stateURL();
           render();
@@ -2997,6 +3706,17 @@
         document.addEventListener('click', (e) => {
           const b = e.target.closest('button');
           if (!b) return;
+          if (receipt.contains(b)) return;
+          if (
+            b.matches(
+              '[data-order-op], [data-central-action], [data-checkpoint], [data-download], [data-recover], [data-partial]',
+            )
+          ) {
+            receiptTrigger = b;
+            receiptSectionTitle = b
+              .closest('section')
+              ?.querySelector('h2, h3')?.textContent;
+          }
           const d = b.dataset;
           if (d.demo) {
             startDemo(d.demo);
@@ -3007,6 +3727,8 @@
             scenario === 'conciliacao' &&
             commercialRoles.includes(role)
           ) {
+            const previousOwner = exampleOwner;
+            const previousStatus = exampleStatus;
             if (d.orderOp === 'transferir' && exampleStatus === 'confirmado')
               exampleOwner = 1;
             if (d.orderOp === 'reabrir' && exampleStatus === 'confirmado')
@@ -3019,37 +3741,84 @@
               exampleOwner = 0;
               exampleStatus = 'confirmado';
             }
+            if (
+              previousStatus === exampleStatus &&
+              previousOwner === exampleOwner
+            )
+              return;
+            const outcome = {
+              transferir: [
+                'Conversa transferida para Caio',
+                'O crédito de R$ 500,00 do pedido P-A02 continua com Lia.',
+              ],
+              reabrir: [
+                'Pedido P-A02 reaberto',
+                'Os R$ 500,00 saíram do vendido de Lia.',
+              ],
+              reconfirmar: [
+                'Pedido P-A02 reconfirmado',
+                'Os R$ 500,00 voltaram ao vendido de Lia.',
+              ],
+              cancelar: [
+                'Pedido P-A02 cancelado',
+                'Os R$ 500,00 saíram do vendido de Lia.',
+              ],
+              restaurar: [
+                'Exemplo P-A02 restaurado',
+                'A conversa voltou para Lia e o pedido está confirmado.',
+              ],
+            };
             render();
-            announce('Pedido P-A02 atualizado. ' + exampleStatus);
+            confirmAction(...outcome[d.orderOp]);
             return;
           }
-          if (d.checkpoint && commercialRoles.includes(role)) {
+          if (
+            d.checkpoint &&
+            view === 'resultado' &&
+            commercialRoles.includes(role) &&
+            !['parcial', 'erro'].includes(scenario)
+          ) {
             const rows = allDemoOrders().filter((o) => o.day === today - 1);
-            if (d.checkpoint === 'fixar' && !checkpoint)
+            let title, consequence;
+            if (d.checkpoint === 'fixar' && !checkpoint) {
               checkpoint = { rows: rows.map((o) => ({ ...o })) };
-            if (
+              title = 'Fechamento de ' + date(today - 1) + ' registrado';
+              consequence =
+                rows.length +
+                ' ' +
+                (rows.length === 1 ? 'pedido' : 'pedidos') +
+                ' no valor de ' +
+                money(sum(rows)) +
+                '.';
+            } else if (
               d.checkpoint === 'corrigir' &&
               checkpoint &&
               rows.length &&
               !checkpointCorrection
-            )
+            ) {
               checkpointCorrection = rows[0].id;
+              title = 'Cancelamento simulado';
+              consequence =
+                'O pedido ' +
+                checkpointCorrection +
+                ' saiu da apuração atual. O fechamento registrado foi preservado.';
+            } else return;
             render();
-            const details = document.querySelector('#stage details.checkpoint');
-            if (details) {
-              details.open = true;
-              details.querySelector('summary').focus({ preventScroll: true });
-            }
-            announce('Checkpoint atualizado');
+            $('checkpoint-title')?.focus({ preventScroll: true });
+            confirmAction(title, consequence);
             return;
           }
+
           if (d.partial) {
             scenario = 'normal';
             lastRead = null;
             $('scenario').value = scenario;
             stateURL(true);
             render();
-            announce('Leitura comercial atualizada');
+            confirmAction(
+              'Leitura comercial atualizada',
+              'Os indicadores já mostram os dados de ' + dates() + '.',
+            );
             return;
           }
           if (d.page) {
@@ -3073,7 +3842,22 @@
             nav();
             return;
           }
+          if (
+            d.queueScope &&
+            Object.hasOwn(queueScopes, d.queueScope) &&
+            centralAllowed()
+          ) {
+            centralQueueScope = d.queueScope;
+            page = 'painel';
+            view = 'central';
+            filter = 'all';
+            selected = '';
+            nav();
+            $('queue-title')?.focus();
+            return;
+          }
           if (d.view) {
+            centralQueueScope = null;
             if (d.view === 'resultado' && view !== 'resultado')
               period = lastResultPeriod;
             view = d.view;
@@ -3116,7 +3900,10 @@
             $('scenario').value = scenario;
             stateURL(true);
             render();
-            announce('Leitura comercial recuperada');
+            confirmAction(
+              'Consulta de vendas recuperada',
+              'Os indicadores já mostram os dados de ' + dates() + '.',
+            );
             return;
           }
           if (d.download) {
@@ -3133,7 +3920,10 @@
             a.download = 'parecer-painel-administrativo.txt';
             a.click();
             setTimeout(() => URL.revokeObjectURL(u), 1000);
-            announce('Parecer preparado para download');
+            confirmAction(
+              'Parecer preparado',
+              'O arquivo de texto com suas escolhas foi enviado ao navegador.',
+            );
             return;
           }
           if (
@@ -3173,6 +3963,7 @@
           if (e.target.id === 'comment') comment = e.target.value;
         });
         globalThis.addEventListener('hashchange', () => {
+          dismissReceipt();
           readRevision++;
           loadingPeriod = false;
           readURL();

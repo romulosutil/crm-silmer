@@ -82,7 +82,40 @@ test('a lista de confirmados reconcilia com o resultado, o vendedor e o dia', as
     );
   }
   await page.locator('[data-period="mes"]').click();
-  await page.getByText('Conferir valores por dia', { exact: true }).click();
+  const series = page.locator('[data-revenue-series]');
+  const mode = series.getByRole('group', {
+    name: 'Apresentação das vendas por dia',
+  });
+  const chart = mode.getByRole('button', { name: 'Gráfico' });
+  const detail = mode.getByRole('button', { name: 'Tabela' });
+  await expect(chart).toHaveAttribute('aria-pressed', 'true');
+  await expect(series.locator('#revenue-day')).toBeVisible();
+  await series.locator('#revenue-day').selectOption('5');
+  await series.getByRole('button', { name: 'Ver pedidos de 05/11' }).click();
+  await verifyOrderList(page, 30_000, 1);
+  await page.goBack();
+  await detail.focus();
+  await page.keyboard.press('Enter');
+  await expect(detail).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    series.getByRole('table', { name: 'Valores exatos de vendas por dia' }),
+  ).toBeVisible();
+  await expect(series.locator('[data-revenue-day]')).toHaveCount(18);
+  await expect(series.locator('#revenue-day')).not.toBeVisible();
+  const dayTotals = await series
+    .locator('tr[data-revenue-day]')
+    .allInnerTexts();
+  assert.equal(
+    dayTotals.reduce((sum, line) => sum + cents(line), 0),
+    110_000,
+  );
+  assert.equal(await revenue(page), 110_000);
+  await chart.click();
+  await expect(series.locator('#revenue-day')).toBeVisible();
+  await expect(
+    series.locator('tr[data-revenue-day]').first(),
+  ).not.toBeVisible();
+  await detail.click();
   await page.locator('[data-orders="d5"]').click();
   await verifyOrderList(page, 30_000, 1);
   await page.goBack();
@@ -129,6 +162,10 @@ test('comparação usa dias comuns no mês curto e trata a virada e a base zero'
   await page.selectOption('#scenario', 'curto');
   await page.locator('[data-period="mes"]').click();
   const comparison = page.locator('.sales-context');
+  await expect(
+    page.getByRole('region', { name: 'Comparação de vendas' }),
+  ).toBeVisible();
+  await expect(comparison.getByRole('table')).toBeVisible();
   await expect(comparison).toContainText(/01\/03.+28\/03/u);
   await expect(comparison).toContainText(/01\/02.+28\/02/u);
   await page.selectOption('#scenario', 'virada');
@@ -142,7 +179,7 @@ test('comparação usa dias comuns no mês curto e trata a virada e a base zero'
   await expect(comparison).not.toContainText('%');
   await page.selectOption('#scenario', 'basezero');
   assert.ok((await revenue(page)) > 0);
-  await comparison.locator('summary').click();
+  await expect(comparison.getByRole('table')).toBeVisible();
   const amounts = await comparison
     .locator('tbody tr')
     .first()
@@ -151,6 +188,48 @@ test('comparação usa dias comuns no mês curto e trata a virada e a base zero'
   assert.ok(cents(amounts[0]) > 0);
   assert.equal(cents(amounts[1]), 0);
   await expect(comparison).not.toContainText('%');
+});
+
+test('ação humana confirma no toast, fechar devolve o foco e eventos de fundo e erros conservam suas regiões', async (t) => {
+  const page = await openPrototype(t);
+  const receipt = page.locator('#receipt');
+  const message = receipt.locator('[role="status"]');
+  const close = receipt.getByRole('button', { name: 'Fechar aviso' });
+  await expect(receipt).not.toBeVisible();
+  await page.selectOption('#scenario', 'conciliacao');
+  await expect(receipt).not.toBeVisible();
+  await page.clock.install();
+  await page.locator('[data-order-op="transferir"]').click();
+  await expect(message).toBeVisible();
+  await expect(message).toHaveAttribute('aria-atomic', 'true');
+  await expect(message).toContainText(/P-A02/u);
+  await expect(message).toContainText(/Caio/u);
+  await expect(message).toContainText(/Lia/u);
+  await close.focus();
+  await page.clock.runFor(8_500);
+  await expect(receipt).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(receipt).not.toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Conferência do pedido de R$ 500' }),
+  ).toBeFocused();
+  await page.locator('[data-order-op="reabrir"]').click();
+  await expect(receipt).toBeVisible();
+  await page.clock.runFor(8_500);
+  await expect(receipt).not.toBeVisible();
+  await page.selectOption('#scenario', 'normal');
+  await page.locator('.appnav [data-view="central"]').click();
+  await page.locator('[data-play]').click();
+  await page.clock.runFor(3_100);
+  await expect(page.locator('[data-record="EV-19"]')).toHaveCount(1);
+  await expect(receipt).not.toBeVisible();
+  await page.selectOption('#scenario', 'erro');
+  await expect(
+    page.getByRole('heading', { name: 'Vendas indisponíveis' }),
+  ).toBeVisible();
+  await page.clock.runFor(9_000);
+  await expect(page.locator('[data-recover]')).toBeVisible();
+  await expect(receipt).not.toBeVisible();
 });
 
 test('uma resposta lenta de sete dias nunca substitui Mês após a troca de recorte', async (t) => {
@@ -174,20 +253,72 @@ test('uma resposta lenta de sete dias nunca substitui Mês após a troca de reco
 
 test('checkpoint conserva o snapshot de ontem após a correção da apuração', async (t) => {
   const page = await openPrototype(t);
-  const checkpoint = page.locator('details').filter({
-    has: page
-      .locator('summary')
-      .filter({ hasText: 'Checkpoint do dia anterior' }),
+  const checkpoint = page.getByRole('region', {
+    name: /Fechamento de ontem/iu,
   });
-  await checkpoint.locator('summary').click();
+  const snapshot = checkpoint.locator('[data-checkpoint-summary="salvo"]');
+  const current = checkpoint.locator('[data-checkpoint-summary="atual"]');
+  const difference = checkpoint.locator(
+    '[data-checkpoint-summary="diferenca"]',
+  );
+  await expect(snapshot).toBeVisible();
+  await expect(current).toBeVisible();
+  await expect(difference).toBeVisible();
+  await expect(checkpoint).toHaveAttribute('data-checkpoint-state', 'previa');
   await checkpoint.locator('[data-checkpoint="fixar"]').click();
-  const snapshot = checkpoint.getByText(/Resumo registrado às 08h/u);
-  const current = checkpoint.getByText(/Apuração atual do mesmo dia/u);
+  await expect(checkpoint).toHaveAttribute(
+    'data-checkpoint-state',
+    'registrado',
+  );
   const before = cents(await snapshot.innerText());
   assert.equal(cents(await current.innerText()), before);
+  assert.equal(cents(await difference.innerText()), 0);
   await checkpoint.locator('[data-checkpoint="corrigir"]').click();
+  await expect(checkpoint).toHaveAttribute(
+    'data-checkpoint-state',
+    'divergente',
+  );
   assert.equal(cents(await snapshot.innerText()), before);
-  assert.ok(cents(await current.innerText()) < before);
+  const corrected = cents(await current.innerText());
+  assert.ok(corrected < before);
+  assert.equal(cents(await difference.innerText()), before - corrected);
+});
+
+test('a urgência abre somente a fila correspondente e conserva o escopo ao voltar do registro', async (t) => {
+  const page = await openPrototype(t, 390);
+  const target = page.locator('#stage [data-queue-scope="sem-responsavel"]');
+  await target.focus();
+  await page.keyboard.press('Enter');
+  const panel = page.locator('#queue-panel');
+  await expect(page.locator('#queue-title')).toBeFocused();
+  await expect(page.locator('#queue-title')).toBeInViewport();
+  await expect(page).toHaveURL(/fila=sem-responsavel/u);
+  await expect(panel.locator('[data-record="AT-041"]')).toBeVisible();
+  await expect(panel.locator('[data-record="AT-042"]')).toBeVisible();
+  await expect(panel.locator('[data-record="AT-046"]')).toHaveCount(0);
+  await expect(
+    panel.locator('[data-queue-scope="sem-responsavel"]'),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await panel.locator('[data-record="AT-041"]').click();
+  await expect(page.locator('#stage')).toContainText('AT-041');
+  await page.goBack();
+  await expect(
+    panel.locator('[data-queue-scope="sem-responsavel"]'),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(panel.locator('[data-record="AT-046"]')).toHaveCount(0);
+  await panel.locator('[data-queue-scope="todas"]').click();
+  await expect(panel.locator('[data-record="AT-046"]')).toBeVisible();
+  await panel.locator('[data-queue-scope="sem-responsavel"]').click();
+  for (const id of ['AT-041', 'AT-042']) {
+    await panel.locator(`[data-record="${id}"]`).click();
+    await page.locator('[data-central-action="assumir"]').click();
+    await page.locator('#stage [data-queue-scope="sem-responsavel"]').click();
+  }
+  await expect(panel.locator('[data-record]')).toHaveCount(0);
+  await expect(panel).toContainText(/nenhum|ninguém|vazi/iu);
+  await page.locator('#stage [data-view="central"]').click();
+  await expect(page).not.toHaveURL(/fila=sem-responsavel/u);
+  await expect(page.locator('[data-record="AT-046"]')).toBeVisible();
 });
 
 test('leitura inicial indisponível e falha parcial com recuperação', async (t) => {
@@ -210,7 +341,7 @@ test('leitura inicial indisponível e falha parcial com recuperação', async (t
   await page.locator('[data-period="hoje"]').click();
   await expect(page.locator('.hero')).toHaveCount(0);
   await page.locator('[data-period="mes"]').click();
-  await page.locator('[data-partial="retry"]').click();
+  await page.locator('[data-partial="retry"]').first().click();
   await expect(page.locator('[data-partial="retry"]')).toHaveCount(0);
   assert.equal(await revenue(page), retained + 64_000);
 });

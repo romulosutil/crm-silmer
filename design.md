@@ -961,6 +961,22 @@ compõem os primitivos da §8 e não criam estilo novo de botão, badge ou
 painel (§15). Nada aqui altera ACT-01–12 ou PERF-01–08; onde um item
 depende de decisão ainda não registrada, isso está dito no próprio item.
 
+#### Feedback e leitura operacional do painel
+
+Proposta em revisão na [RFC 073](docs/rfc/073-painel-comercial-do-administrador.md). Aplica os componentes de período, tabela, fila e feedback à jornada do administrador. Os estados podem ser experimentados no [protótipo](docs/prototypes/painel-administrativo.html).
+
+| Situação | Componente e comportamento |
+| --- | --- |
+| O gestor compara períodos | Mostrar datas junto aos cabeçalhos Atual e Anterior. Exibir vendido, pedidos e ticket e identificar a direção da diferença em palavras. Usar o mesmo tratamento visual para os dois períodos. Uma base igual a zero admite diferença em reais. |
+| O gestor investiga um dia | Oferecer Gráfico e Tabela como vistas da mesma série. Indicar a vista selecionada, permitir escolher o dia por teclado e abrir os pedidos com data e período preservados. |
+| Há conversas esperando | Manter quantidade, motivo, maior espera útil e horário de leitura junto de um botão para a fila filtrada. Com a conexão interrompida, identificar a última leitura válida. Reservar a ênfase de atenção para a pendência. |
+| O gestor confere o dia anterior | Manter data comercial, estado do registro, apuração atual e diferença visíveis. A ação de registro guarda uma cópia. Uma correção posterior aparece na diferença e preserva o valor de referência. |
+| Um comando foi concluído | Emitir uma confirmação breve com o objeto e a consequência. Por exemplo, “Conversa transferida para Caio. O crédito de R$ 500,00 do pedido P-A02 continua com Lia.” O visto acompanha uma mudança efetivamente aplicada. |
+| Uma leitura falhou | Manter a explicação na região afetada e oferecer nova tentativa. Se houver uma leitura válida, indicar sua hora e seu recorte. Reservar anúncios urgentes para interrupções que exigem atenção imediata. |
+| Um fato chega em segundo plano | Atualizar as contagens e o histórico da Central preservando o foco. Uma repetição do mesmo fato preserva os totais e dispensa uma nova confirmação. |
+
+O toast tem uma mensagem atômica em `role="status"` e o botão **Fechar aviso** fora da região anunciada. Surge sem tomar o foco, expira após oito segundos e aguarda enquanto o ponteiro ou o foco estão no aviso ou a aba está oculta. O fechamento por teclado devolve o foco ao comando quando disponível, ou ao título da seção em que a ação foi realizada. Cor e ícone complementam o texto. O estado confirmado permanece consultável na própria tela.
+
 #### `SalesKpi`
 
 - **Propósito:** mostrar um número do período e levar à lista que o explica.

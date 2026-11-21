@@ -31,6 +31,18 @@ Uma entrada no Dashboard, com **Resultado comercial** e **Central ao vivo**. A p
 
 No celular, usar uma coluna, valor vendido como primeiro número e uma linha por pessoa com atendimentos, pedidos e vendido. O toque revela ticket e tempo de resposta. No notebook, esses campos cabem lado a lado e a fila pode dividir espaço com a atividade recente. Usar os componentes, tokens e temas do CRM. O gráfico terá alternativa textual por dia e valor. A chegada de eventos mantém o foco e a posição de leitura.
 
+### Como revisar os componentes no protótipo
+
+| Decisão de interface  | O que experimentar                                                                                                                                                                                                |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Comparação comercial  | Em **Mês**, ler os dois intervalos, a diferença em reais e as linhas de pedidos e ticket. Selecionar **Base anterior zerada** para conferir a ausência de percentual.                                             |
+| Série diária          | Em **Vendas por dia**, selecionar uma data no gráfico, alternar para a tabela e abrir os pedidos de um dia. A lista usa a mesma data e o total da tabela fecha com o vendido do período.                          |
+| Fila operacional      | Acionar **Abrir fila**, conferir o filtro ativo e entrar em um atendimento. Desconectar pelo simulador e conferir o horário da última leitura.                                                                    |
+| Fechamento de ontem   | Comparar a prévia com o primeiro registro. Simular um cancelamento e conferir a diferença para o valor registrado.                                                                                                |
+| Confirmações e falhas | Em **Conciliação e ciclo dos pedidos**, transferir a conversa para Caio e ler de quem continua sendo o crédito. Em **Leitura comercial indisponível**, localizar o motivo e repetir a consulta no próprio painel. |
+
+A aplicação desses padrões ao CRM depende do parecer sobre esta RFC. A implementação atual do shell usa um ícone de confirmação para mensagens de diferentes origens. A proposta limita esse ícone aos comandos concluídos e mantém o histórico da operação na Central. O contrato de interação está no [design system](../../design.md#feedback-e-leitura-operacional-do-painel).
+
 ## Definições para conferir os números
 
 - **Vendido e pedidos.** Somar o valor final em centavos, com frete conforme a ADR 080, dos pedidos confirmados, não teste e não cancelados, pela data comercial `order_date`. Um pedido elegível conta uma vez. Reabrir retira a venda e reconfirmar a torna elegível de novo. Preservar a atribuição comercial capturada na confirmação, inclusive após transferência. Recebimentos seguem a sua própria data e apuração.

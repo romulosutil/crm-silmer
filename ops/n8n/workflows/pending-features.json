@@ -261,7 +261,8 @@
       "task": "VND-L07",
       "date": "2026-11-20",
       "candidateVersion": "mvp-simple-25",
-      "status": "prepared_not_published",
+      "status": "published_reviewed_delta",
+      "publishedVersionId": "b163e503-9ccd-426e-b502-29819be21772",
       "requirements": [
         "AGT-01",
         "AGT-02",

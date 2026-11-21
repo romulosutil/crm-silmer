@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { performanceSummary, serviceMetrics } from './support/painel-mock.js';
+import { mockDashboardRead, serviceMetrics } from './support/painel-mock.js';
 
 const QUEUE_SUMMARY = Object.freeze({
   assistant: {
@@ -63,12 +63,11 @@ async function mockDashboard(page, options = {}) {
       }
       return json(QUEUE_SUMMARY);
     }
-    if (path === '/api/v1/dashboard/performance')
-      return json(performanceSummary(true));
     if (path === '/api/v1/dashboard/metrics/service') {
       const metrics = serviceMetrics(true);
       return json({
         ...metrics,
+        period: new URL(route.request().url()).searchParams.get('period'),
         rows: metrics.rows.map((row) => ({
           ...row,
           unansweredNow: { count: 0, oldestWaitingMinutes: null },
@@ -78,13 +77,7 @@ async function mockDashboard(page, options = {}) {
     }
     if (path === '/api/v1/inbox/conversations')
       return json({ hasMore: false, items: [], totalCount: 0 });
-    if (path === '/api/v1/dashboard/actions')
-      return json({
-        generatedAt: QUEUE_SUMMARY.generatedAt,
-        today: '2026-10-15',
-        items: [],
-        hasMore: false,
-      });
+    if (await mockDashboardRead(route)) return;
     if (path === '/api/v1/orders/delivery-tasks') return json({ items: [] });
     if (path === '/api/v1/orders/summary') {
       summaryReads += 1;

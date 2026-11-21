@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeUnmount, ref } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import AppIcon from './AppIcon.vue';
 
 // Pesquisa UX 2026-10-15, achado 6: a change the person asked for is also
@@ -11,7 +11,10 @@ const DISMISS_AFTER_MS = 8000;
 
 const notice = ref(null);
 let timer = 0;
-let paused = false;
+let hovering = false;
+let focused = false;
+/** @type {HTMLElement|null} */
+let trigger = null;
 
 function clearTimer() {
   if (timer) globalThis.clearTimeout(timer);
@@ -20,23 +23,28 @@ function clearTimer() {
 
 function schedule() {
   clearTimer();
-  if (paused || !notice.value) return;
+  if (hovering || focused || document.hidden || !notice.value) return;
   timer = globalThis.setTimeout(dismiss, DISMISS_AFTER_MS);
 }
 
 function dismiss() {
   clearTimer();
   notice.value = null;
-  paused = false;
+  hovering = false;
+  focused = false;
 }
 
 /**
  * @param {string} message
- * @param {{actionLabel?: string, onAction?: () => unknown}} [options]
+ * @param {{actionLabel?: string, onAction?: () => unknown, informational?: boolean}} [options]
  */
 function notify(message, options = {}) {
   if (!message) return;
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && !active.closest('.notice-toast'))
+    trigger = active;
   notice.value = {
+    confirmed: !options.informational,
     actionLabel: options.onAction ? options.actionLabel || 'Desfazer' : '',
     id: Date.now(),
     message,
@@ -51,22 +59,36 @@ function runAction() {
   if (action) void action();
 }
 
-/** @param {boolean} value */
-function pause(value) {
-  paused = value;
-  if (value) clearTimer();
-  else schedule();
+async function closeNotice() {
+  const target = trigger;
+  dismiss();
+  await nextTick();
+  if (
+    target?.isConnected &&
+    target !== document.body &&
+    !target.matches(':disabled')
+  ) {
+    target.focus();
+    if (document.activeElement === target) return;
+  }
+  const main = document.querySelector('#main-content');
+  (main?.querySelector('h1[tabindex]') ?? main)?.focus();
 }
 
 /** @param {FocusEvent} event */
 function leaveFocus(event) {
-  const next = /** @type {Node|null} */ (event.relatedTarget);
-  if (next && /** @type {HTMLElement} */ (event.currentTarget).contains(next))
-    return;
-  pause(false);
+  focused =
+    event.relatedTarget instanceof Node &&
+    event.currentTarget instanceof HTMLElement &&
+    event.currentTarget.contains(event.relatedTarget);
+  schedule();
 }
 
-onBeforeUnmount(clearTimer);
+onMounted(() => document.addEventListener('visibilitychange', schedule));
+onBeforeUnmount(() => {
+  clearTimer();
+  document.removeEventListener('visibilitychange', schedule);
+});
 
 defineExpose({ dismiss, notify });
 </script>
@@ -80,12 +102,21 @@ defineExpose({ dismiss, notify });
       v-if="notice"
       :key="notice.id"
       class="notice-toast"
-      @mouseenter="pause(true)"
-      @mouseleave="pause(false)"
-      @focusin="pause(true)"
+      @mouseenter="
+        hovering = true;
+        schedule();
+      "
+      @mouseleave="
+        hovering = false;
+        schedule();
+      "
+      @focusin="
+        focused = true;
+        schedule();
+      "
       @focusout="leaveFocus"
     >
-      <AppIcon name="check" />
+      <AppIcon v-if="notice.confirmed" name="check" />
       <p class="notice-toast-message">{{ notice.message }}</p>
       <button
         v-if="notice.actionLabel"
@@ -99,7 +130,7 @@ defineExpose({ dismiss, notify });
         type="button"
         class="notice-toast-close"
         aria-label="Fechar aviso"
-        @click="dismiss"
+        @click="closeNotice()"
       >
         <AppIcon name="close" />
       </button>

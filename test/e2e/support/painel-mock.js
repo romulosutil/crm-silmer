@@ -5,13 +5,156 @@
 // respostas da fila e do resumo de pedidos por período; `queue` em
 // `mockPainel` troca a resposta da fila (PNL-06).
 
+// RFC 073 fixture. Only confirmed, eligible sales appear in these read models.
+const commercialGroups = [
+  { day: '2026-10-02', source: 'equipe', cents: 30000 },
+  { day: '2026-10-14', source: 'equipe', cents: 50000 },
+  { day: '2026-10-15', source: 'loja', cents: 20000 },
+  { day: '2026-10-15', source: 'sem-atribuicao', cents: 10000 },
+];
+
+/** @param {typeof commercialGroups} groups */
+function groupTotals(groups) {
+  const soldAmountCents = groups.reduce((sum, row) => sum + row.cents, 0);
+  return {
+    soldAmountCents,
+    confirmedCount: groups.length,
+    averageTicketCents: groups.length
+      ? Math.round(soldAmountCents / groups.length)
+      : null,
+  };
+}
+
+/** @param {string} key */
+export function commercialReport(key) {
+  const { from, to } = ordersSummary(key).period;
+  const eligible = commercialGroups.filter((row) => row.day >= from);
+  const daily = Array.from(
+    { length: 16 - Number(from.slice(-2)) },
+    (_, index) => {
+      const day =
+        '2026-10-' + String(index + Number(from.slice(-2))).padStart(2, '0');
+      return { day, ...groupTotals(eligible.filter((row) => row.day === day)) };
+    },
+  );
+  const partial = key === 'hoje';
+  return {
+    period: {
+      key,
+      from,
+      to,
+      timeZone: 'America/Sao_Paulo',
+      ...groupTotals(eligible),
+    },
+    daily,
+    composition: ['equipe', 'loja', 'sem-atribuicao'].map((source) => ({
+      source,
+      ...groupTotals(eligible.filter((row) => row.source === source)),
+    })),
+    comparison: {
+      partial,
+      current: {
+        from,
+        to: partial ? to : '2026-10-14',
+        ...groupTotals(eligible.filter((row) => partial || row.day < to)),
+      },
+      previous: partial
+        ? {
+            from: '2026-10-14',
+            to: '2026-10-14',
+            ...groupTotals(commercialGroups.slice(1, 2)),
+          }
+        : key === 'mes'
+          ? { from: '2026-09-01', to: '2026-09-14', ...groupTotals([]) }
+          : { from: '2026-10-03', to: '2026-10-08', ...groupTotals([]) },
+    },
+  };
+}
+
+/** @param {URL} url */
+function commercialRead(url) {
+  const period = url.searchParams.get('period') ?? 'mes';
+  if (url.pathname === '/api/v1/orders/commercial-result')
+    return commercialReport(period);
+  if (url.pathname === '/api/v1/dashboard/checkpoint')
+    return {
+      day: '2026-10-14',
+      timezone: 'America/Sao_Paulo',
+      scheduledAt: '08:00',
+      configured: true,
+      enabled: true,
+      snapshot: false,
+      generatedAt: QUEUE.generatedAt,
+      previewText: 'Resumo de ontem',
+      recipients: [],
+      totals: groupTotals(commercialGroups.slice(1, 2)),
+    };
+  if (url.pathname === '/api/v1/dashboard/live') {
+    if (url.searchParams.get('region') === 'facts')
+      return { generatedAt: QUEUE.generatedAt, facts: [], nextCursor: null };
+    return {
+      generatedAt: QUEUE.generatedAt,
+      filter: url.searchParams.get('filter') ?? 'todas',
+      page: 1,
+      pageSize: 20,
+      unclaimed: 1,
+      waiting: 0,
+      late: 0,
+      withAgent: 4,
+      oldestMinutes: 42,
+      oldestMinutesByFilter: { 'sem-responsavel': 42, todas: 42 },
+      total: 1,
+      rows: [
+        {
+          id: 'waiting-1',
+          kind: 'sem-responsavel',
+          since: '2026-10-15T14:18:00Z',
+          minutes: 42,
+        },
+      ],
+    };
+  }
+  if (!url.searchParams.has('period')) return null;
+  const { from, to } = ordersSummary(period).period;
+  const range = { period, from, to, generatedAt: QUEUE.generatedAt };
+  if (url.pathname === '/api/v1/dashboard/performance') {
+    const report = commercialReport(period);
+    /** @param {string} source */
+    const amount = (source) =>
+      report.composition.find((row) => row.source === source);
+    const [first, second] = performanceSummary(true, 7).rows;
+    return {
+      ...range,
+      totals: report.period,
+      store: amount('loja'),
+      unattributed: amount('sem-atribuicao'),
+      rows: [
+        { ...first, ...amount('equipe') },
+        { ...second, ...groupTotals([]) },
+      ],
+    };
+  }
+  if (url.pathname === '/api/v1/dashboard/metrics/cohorts')
+    return { ...range, seller: url.searchParams.get('seller'), rows: [] };
+  if (url.pathname === '/api/v1/dashboard/metrics/service')
+    return { ...serviceMetrics(true, 7), ...range };
+  if (url.pathname === '/api/v1/dashboard/metrics/losses')
+    return { ...lossMetrics(true, 7), ...range };
+  return null;
+}
+
 /** Dashboard reads for fixtures whose primary subject is another screen.
  * @param {import('@playwright/test').Route} route
  * @param {boolean} [manager]
  */
 export async function mockDashboardRead(route, manager = true) {
   const url = new URL(route.request().url());
-  let body;
+  /** @type {Record<string,any>|null} */
+  let body = manager ? commercialRead(url) : null;
+  if (body) {
+    await route.fulfill({ json: body });
+    return true;
+  }
   if (url.pathname === '/api/v1/dashboard/actions')
     body = {
       generatedAt: '2026-10-15T15:00:00Z',
@@ -449,6 +592,10 @@ export async function mockPainel(
       periods.push(key);
       return json(ordersSummary(key));
     }
+    if (url.pathname === '/api/v1/orders/commercial-result')
+      periods.push(url.searchParams.get('period') ?? 'mes');
+    const commercial = manager ? commercialRead(url) : null;
+    if (commercial) return json(commercial);
     if (url.pathname === '/api/v1/inbox/summary') return json(queue);
     if (url.pathname === '/api/v1/dashboard/actions') {
       actionReads += 1;

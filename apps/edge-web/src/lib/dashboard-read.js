@@ -1,5 +1,5 @@
 import { onBeforeUnmount, ref } from 'vue';
-import { request } from './api-client.js';
+import { ApiError, request } from './api-client.js';
 
 /**
  * ACT-09: one read per region. Only the latest request may answer (an older
@@ -37,6 +37,8 @@ export function useLatestRead(messages) {
         /** @type {any} */ (cause)?.name === 'AbortError'
       )
         return false;
+      if (cause instanceof ApiError && [401, 403].includes(cause.status))
+        data.value = null;
       error.value = data.value ? messages.stale : messages.unavailable;
       return false;
     } finally {

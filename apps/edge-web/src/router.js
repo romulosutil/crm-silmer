@@ -27,7 +27,7 @@ export const router = createRouter({
     {
       path: '/dashboard',
       component: DashboardView,
-      meta: { title: 'Dashboard' },
+      meta: { title: 'Dashboard', viewKey: 'dashboard' },
     },
     {
       // AGENTE-OBS-01: opened from the agent's card, the manager's question.

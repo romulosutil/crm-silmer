@@ -1,313 +1,157 @@
 import { expect, test } from '@playwright/test';
-import { performanceSummary, serviceMetrics } from './support/painel-mock.js';
+import { commercialReport, mockPainel } from './support/painel-mock.js';
 
-const QUEUE_SUMMARY = Object.freeze({
-  assistant: {
-    activeCount: 3,
-    failedDeliveryCount: 0,
-    lastReplyAt: '2026-10-15T14:58:00.000Z',
-    stallMinutes: 10,
-    stalledCount: 0,
-  },
-  generatedAt: '2026-10-15T15:00:00.000Z',
-  mine: { awaitingReplyCount: 0, count: 0, oldestAwaitingSince: null },
-  unanswered: { bySeller: [], count: 0, thresholdMinutes: 15 },
-  waitingHandoff: { count: 0, oldestSince: null, overdueCount: 0 },
-});
-
-/**
- * @param {import('@playwright/test').Page} page
- * @param {{failFirstInbox?: boolean, failSummaryReads?: number}} [options]
- */
-async function mockDashboard(page, options = {}) {
-  let summaryReads = 0;
-  let failNext = false;
-  let failNextInbox = false;
-  /** @type {() => void} */
-  let releaseEvent = () => {};
-  const eventGate = new Promise((resolve) => {
-    releaseEvent = () => resolve(null);
+/** @param {import('@playwright/test').Page} page */
+async function mockRefresh(page) {
+  await mockPainel(page);
+  let release = () => {};
+  const event = new Promise((resolve) => {
+    release = () => resolve(null);
   });
-
-  await page.route('**/api/v1/**', async (route) => {
-    const path = new URL(route.request().url()).pathname;
-    const json = (/** @type {unknown} */ body, status = 200) =>
-      route.fulfill({
-        body: JSON.stringify(body),
-        contentType: 'application/json',
-        status,
-      });
-
-    if (path === '/api/v1/sessions/current') {
-      return json({
-        user: {
-          capabilities: ['COMMERCIAL_ADMIN'],
-          id: 'admin-1',
-          name: 'Administrador',
-        },
-      });
-    }
-    if (path === '/api/v1/events') {
-      await eventGate;
-      return route.fulfill({
-        body: 'retry: 60000\n\nevent: inbox.order.changed\nid: evt-2\ndata: {"orderId":"order-1"}\n\n',
-        contentType: 'text/event-stream',
-        status: 200,
-      });
-    }
-    if (path === '/api/v1/inbox/summary') {
-      if (options.failFirstInbox || failNextInbox) {
-        options.failFirstInbox = false;
-        failNextInbox = false;
-        return json({ code: 'UNAVAILABLE' }, 503);
-      }
-      return json(QUEUE_SUMMARY);
-    }
-    if (path === '/api/v1/dashboard/performance')
-      return json(performanceSummary(true));
-    if (path === '/api/v1/dashboard/metrics/service') {
-      const metrics = serviceMetrics(true);
-      return json({
-        ...metrics,
-        rows: metrics.rows.map((row) => ({
-          ...row,
-          unansweredNow: { count: 0, oldestWaitingMinutes: null },
-        })),
-        team: { unclaimedHandoffs: { count: 0, oldestWaitingMinutes: null } },
-      });
-    }
-    if (path === '/api/v1/inbox/conversations')
-      return json({ hasMore: false, items: [], totalCount: 0 });
-    if (path === '/api/v1/dashboard/actions')
-      return json({
-        generatedAt: QUEUE_SUMMARY.generatedAt,
-        today: '2026-10-15',
-        items: [],
-        hasMore: false,
-      });
-    if (path === '/api/v1/orders/delivery-tasks') return json({ items: [] });
-    if (path === '/api/v1/orders/summary') {
-      summaryReads += 1;
-      if (summaryReads <= (options.failSummaryReads ?? 0) || failNext) {
-        failNext = false;
-        return json({ code: 'UNAVAILABLE' }, 503);
-      }
-      const confirmedCount = summaryReads >= 3 ? 3 : 2;
-      const soldAmountCents = summaryReads >= 3 ? 450000 : 250000;
-      return json({
-        averageTicketCents: summaryReads >= 3 ? 150000 : 125000,
-        confirmedCount,
-        pendingCount: 1,
-        soldAmountCents,
-        totalPiecesSold: 300,
-        period: {
-          confirmedCount,
-          from: '2026-10-15',
-          key: 'hoje',
-          soldAmountCents,
-          timeZone: 'America/Sao_Paulo',
-          to: '2026-10-15',
-        },
-        today: '2026-10-15',
-        daily: Array.from({ length: 7 }, (_, index) => ({
-          day: `2026-10-${String(index + 9).padStart(2, '0')}`,
-          confirmedCount: index === 6 ? confirmedCount : 1,
-          soldAmountCents: index === 6 ? soldAmountCents : 10000,
-        })),
-      });
-    }
-    return json({ code: 'NOT_FOUND' }, 404);
+  await page.route('**/api/v1/events?**', async (route) => {
+    await event;
+    await route.fulfill({
+      contentType: 'text/event-stream',
+      body: 'retry: 60000\n\nevent: inbox.order.changed\nid: 9\ndata: {"orderId":"order-1"}\n\n',
+    });
   });
-
-  return {
-    failNextRefresh() {
-      failNext = true;
-      releaseEvent();
-    },
-    failNextQueueRefresh() {
-      failNextInbox = true;
-      releaseEvent();
-    },
-    summaryReads: () => summaryReads,
-  };
+  return () => release();
 }
 
-test('keeps loaded sales visible after a live refresh fails and retries on demand', async ({
+test('uma leitura inicial indisponível deixa o vendido desconhecido até tentar novamente', async ({
   page,
 }) => {
-  const mock = await mockDashboard(page);
-  await page.goto('/dashboard');
-  await expect(page.getByText('R$ 2.500,00')).toBeVisible();
-  const daily = page.getByRole('region', { name: 'Vendido por dia' });
-  await expect(daily.getByRole('img')).toBeVisible();
-
-  mock.failNextRefresh();
-  await expect(page.getByRole('alert')).toContainText(
-    'Os dados exibidos podem estar desatualizados.',
+  await mockPainel(page);
+  let failing = true;
+  await page.route('**/api/v1/orders/commercial-result?**', (route) =>
+    failing
+      ? route.fulfill({ status: 503, json: { code: 'UNAVAILABLE' } })
+      : route.fulfill({ json: commercialReport('mes') }),
   );
-  await expect(page.getByText('R$ 2.500,00')).toBeVisible();
+  await page.goto('/dashboard');
+  const result = page.getByRole('region', { name: 'Vendas do período' });
+  await expect(result).toContainText('Não foi possível consultar as vendas');
+  await expect(result.getByText('R$ 0,00')).toHaveCount(0);
   await expect(
-    page.getByRole('heading', { name: 'Dashboard indisponível' }),
-  ).toHaveCount(0);
-  expect(mock.summaryReads()).toBe(2);
-  // PNL-05: the previous chart cannot stand in for a failed current read.
-  await expect(daily.getByRole('img')).toHaveCount(0);
-  await expect(daily).toContainText('Sem dados de vendas agora');
-
-  await page.getByRole('button', { name: 'Tentar novamente' }).click();
-  await expect(page.getByRole('alert')).toHaveCount(0);
-  await expect(page.getByText('R$ 4.500,00')).toBeVisible();
-  await expect(daily.getByRole('img')).toBeVisible();
+    page.getByRole('region', { name: 'Urgência da fila' }),
+  ).toContainText('espera vendedor');
+  failing = false;
+  await result.getByRole('button', { name: 'Tentar novamente' }).press('Enter');
+  await expect(result.locator('dd').first()).toHaveText('R$ 1.100,00');
 });
 
-test('shows a clear initial error and recovers with retry', async ({
+test('uma falha de atualização conserva a última leitura apenas no próprio período', async ({
   page,
 }) => {
-  await mockDashboard(page, { failFirstInbox: true, failSummaryReads: 1 });
-  await page.goto('/dashboard');
-
-  await expect(
-    page.getByRole('heading', { name: 'Dashboard indisponível' }),
-  ).toBeVisible();
-  await page.getByRole('button', { name: 'Tentar novamente' }).click();
-  await expect(page.getByText('R$ 2.500,00')).toBeVisible();
-});
-
-test('keeps sales visible when the queue read fails and recovers', async ({
-  page,
-}) => {
-  await mockDashboard(page, { failFirstInbox: true });
-  await page.goto('/dashboard');
-
-  await expect(page.getByText('R$ 2.500,00')).toBeVisible();
-  const attendance = page.getByRole('region', {
-    name: 'Atendimento agora',
-    exact: true,
+  const publish = await mockRefresh(page);
+  let failNext = false;
+  await page.route('**/api/v1/orders/commercial-result?**', (route) => {
+    if (failNext)
+      return route.fulfill({ status: 503, json: { code: 'UNAVAILABLE' } });
+    const key =
+      new URL(route.request().url()).searchParams.get('period') ?? 'mes';
+    return route.fulfill({ json: commercialReport(key) });
   });
-  await expect(attendance).toBeVisible();
-  await expect(attendance.getByRole('alert')).toContainText(
-    'Não foi possível consultar a fila agora.',
-  );
-  // PNL-03: without a queue read every number is unknown, never "0".
-  await expect(attendance.locator('.attendance-value')).toHaveText([
-    '—',
-    '—',
-    '—',
-  ]);
-  await expect(attendance.getByRole('link', { name: /^—/u })).toHaveCount(3);
-  await attendance.getByRole('button', { name: 'Tentar novamente' }).focus();
-  await page.keyboard.press('Enter');
-  await expect(attendance.getByRole('heading')).toBeFocused();
-  await expect(attendance.locator('.attendance-value')).toHaveText([
-    '0',
-    '3',
-    '0',
-  ]);
-  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.goto('/dashboard');
+  const result = page.getByRole('region', { name: 'Vendas do período' });
+  await expect(result.locator('dd').first()).toHaveText('R$ 1.100,00');
+  failNext = true;
+  publish();
+  await expect(result).toContainText('última leitura');
+  await expect(result.locator('dd').first()).toHaveText('R$ 1.100,00');
+  await page.getByRole('radio', { name: 'Hoje', exact: true }).check();
+  await expect(result).toContainText('Não foi possível consultar as vendas');
+  await expect(result.locator('dd')).toHaveCount(0);
+  failNext = false;
+  await result.getByRole('button', { name: 'Tentar novamente' }).click();
+  await expect(result.locator('dd').first()).toHaveText('R$ 300,00');
 });
 
-test('keeps the queue visible without inventing sales when orders fail and recovers by keyboard', async ({
+test('a recuperação da fila devolve o foco à urgência sem repetir a leitura de vendas', async ({
   page,
 }) => {
-  await mockDashboard(page, { failSummaryReads: 1 });
-  await page.goto('/dashboard');
-
-  const attendance = page.getByRole('region', {
-    name: 'Atendimento agora',
-    exact: true,
+  await mockPainel(page);
+  let fail = true;
+  let salesReads = 0;
+  page.on('request', (request) => {
+    if (request.url().includes('/orders/commercial-result')) salesReads++;
   });
-  await expect(attendance).toBeVisible();
-  await expect(attendance.locator('.attendance-value')).toHaveText([
-    '0',
-    '3',
-    '0',
-  ]);
-  await expect(page.getByRole('alert')).toContainText(
-    'Não foi possível carregar os indicadores.',
+  await page.route('**/api/v1/dashboard/live?region=queue', (route) =>
+    fail
+      ? route.fulfill({ status: 503, json: { code: 'UNAVAILABLE' } })
+      : route.fallback(),
   );
-  // FIN-02 / T130: no sales read, no week of zeros.
-  const daily = page.getByRole('region', { name: 'Vendido por dia' });
-  await expect(daily).toContainText('Sem dados de vendas agora');
-  await expect(daily.getByRole('img')).toHaveCount(0);
-  const orders = page.getByRole('region', { name: 'Vendas e entregas' });
-  await expect(orders.locator('.metric-value')).toHaveText([
-    '—',
-    '—',
-    '—',
-    '—',
-  ]);
-  await expect(page.locator('.next-step')).toContainText(
-    'Os pedidos não responderam',
-  );
-  await expect(page.locator('.next-step a')).toHaveCount(0);
-  await expect(orders.getByText('R$ 0,00')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Tentar novamente' }).focus();
-  await page.keyboard.press('Enter');
-  await expect(page.getByText('R$ 2.500,00')).toBeVisible();
-  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.goto('/dashboard');
+  const urgency = page.getByRole('region', { name: 'Urgência da fila' });
+  await expect(urgency).toContainText('Não foi possível consultar a fila');
+  await expect(urgency).not.toContainText('Fila sem esperas');
   await expect(
-    page.getByRole('heading', { name: 'Dashboard', exact: true }),
-  ).toBeFocused();
+    page
+      .getByRole('region', { name: 'Vendas do período' })
+      .locator('dd')
+      .first(),
+  ).toHaveText('R$ 1.100,00');
+  fail = false;
+  await urgency
+    .getByRole('button', { name: 'Tentar novamente' })
+    .press('Enter');
+  await expect(urgency.getByRole('heading')).toBeFocused();
+  await expect(urgency).toContainText('1 conversa espera vendedor');
+  expect(salesReads).toBe(1);
 });
 
-test('keeps retry focused when only the queue recovers after a total failure', async ({
+test('uma resposta lenta não substitui o recorte escolhido depois dela', async ({
   page,
 }) => {
-  await mockDashboard(page, { failFirstInbox: true, failSummaryReads: 2 });
-  await page.goto('/dashboard');
-  await expect(
-    page.getByRole('heading', { name: 'Dashboard indisponível' }),
-  ).toBeVisible();
-
-  const retry = page.getByRole('button', { name: 'Tentar novamente' });
-  await retry.focus();
-  await page.keyboard.press('Enter');
-  await expect(
-    page.getByRole('region', { name: 'Atendimento agora', exact: true }),
-  ).toBeVisible();
-  await expect(retry).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect(page.getByText('R$ 4.500,00')).toBeVisible();
-  await expect(page.getByRole('alert')).toHaveCount(0);
-  await expect(
-    page.getByRole('heading', { name: 'Dashboard', exact: true }),
-  ).toBeFocused();
-});
-
-test('PNL-03: a failed queue refresh replaces previously loaded attendance counts with dashes', async ({
-  page,
-}) => {
-  const mock = await mockDashboard(page);
-  await page.goto('/dashboard');
-  const attendance = page.getByRole('region', {
-    name: 'Atendimento agora',
-    exact: true,
+  await mockPainel(page);
+  let entered = () => {};
+  let release = () => {};
+  const received = new Promise((resolve) => {
+    entered = () => resolve(null);
   });
-  await expect(attendance.locator('.attendance-value')).toHaveText([
-    '0',
-    '3',
-    '0',
-  ]);
-  mock.failNextQueueRefresh();
-  await expect(attendance.getByRole('alert')).toContainText(
-    'A fila não foi atualizada agora.',
+  const gate = new Promise((resolve) => {
+    release = () => resolve(null);
+  });
+  await page.route(
+    '**/api/v1/orders/commercial-result?period=7dias',
+    async (route) => {
+      entered();
+      await gate;
+      await route.fulfill({ json: commercialReport('7dias') }).catch(() => {});
+    },
   );
-  await expect(attendance.locator('.attendance-value')).toHaveText([
-    '—',
-    '—',
-    '—',
-  ]);
-  await expect(attendance).not.toContainText('Respondendo normalmente');
+  await page.goto('/dashboard?periodo=hoje');
+  const result = page.getByRole('region', { name: 'Vendas do período' });
+  await expect(result.locator('dd').first()).toHaveText('R$ 300,00');
+  await page.getByRole('radio', { name: '7 dias', exact: true }).check();
+  await received;
+  await page.getByRole('radio', { name: 'Mês', exact: true }).check();
+  await expect(result.locator('dd').first()).toHaveText('R$ 1.100,00');
+  release();
   await expect(
-    page.getByRole('region', { name: 'Vendido por dia' }).getByRole('img'),
-  ).toBeVisible();
-  await attendance.getByRole('button', { name: 'Tentar novamente' }).focus();
-  await page.keyboard.press('Enter');
-  await expect(attendance.getByRole('alert')).toHaveCount(0);
-  await expect(attendance.locator('.attendance-value')).toHaveText([
-    '0',
-    '3',
-    '0',
-  ]);
-  await expect(attendance.getByRole('heading')).toBeFocused();
+    result.getByRole('link', { name: 'Conferir pedidos', exact: true }),
+  ).toHaveAttribute(
+    'href',
+    '/pedidos?status=confirmado&de=2026-10-01&ate=2026-10-15',
+  );
+});
+
+test('revogar a leitura remove os valores da tela na próxima consulta', async ({
+  page,
+}) => {
+  const publish = await mockRefresh(page);
+  let allowed = true;
+  await page.route('**/api/v1/orders/commercial-result?**', (route) =>
+    allowed
+      ? route.fulfill({ json: commercialReport('mes') })
+      : route.fulfill({ status: 403, json: { code: 'FORBIDDEN' } }),
+  );
+  await page.goto('/dashboard');
+  const result = page.getByRole('region', { name: 'Vendas do período' });
+  await expect(result.locator('dd').first()).toHaveText('R$ 1.100,00');
+  allowed = false;
+  publish();
+  await expect(result).toContainText('Não foi possível consultar as vendas');
+  await expect(result.locator('dd')).toHaveCount(0);
+  await expect(result.getByRole('link')).toHaveCount(0);
 });

@@ -26,9 +26,11 @@ test('documents the authorized Inbox and Contact read contracts', async () => {
 
 test('ships connected screens without the demonstration dataset', async () => {
   const paths = [
-    'apps/edge-web/src/views/DashboardView.vue',
+    'apps/edge-web/src/components/DashboardSeller.vue',
     'apps/edge-web/src/views/InboxView.vue',
     'apps/edge-web/src/views/ClientsView.vue',
+    'apps/edge-web/src/components/DashboardManager.vue',
+    'apps/edge-web/src/views/DashboardView.vue',
   ];
   const screens = await Promise.all(
     paths.map((path) => readFile(new URL(path, rootUrl), 'utf8')),
@@ -39,6 +41,9 @@ test('ships connected screens without the demonstration dataset', async () => {
   assert.doesNotMatch(screens[0], /\/api\/v1\/inbox\/conversations/u);
   assert.match(screens[1], /\/api\/v1\/inbox\/conversations/u);
   assert.match(screens[2], /\/api\/v1\/contacts/u);
+  assert.match(screens[3], /\/api\/v1\/dashboard\/live\?region=queue/u);
+  assert.match(screens[4], /<DashboardManager/u);
+  assert.match(screens[4], /<DashboardSeller/u);
   assert.ok(screens.every((screen) => !screen.includes('demo-crm')));
   assert.ok(screens.every((screen) => !/kanban|negócio/iu.test(screen)));
   assert.ok(screens.every((screen) => !/instagram/iu.test(screen)));

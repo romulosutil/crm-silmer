@@ -835,13 +835,16 @@ test('exposes the CRM screens as authenticated Vue routes', async ({
         .getByRole('link', { name }),
     ).toBeVisible();
   }
-  // Painel: each indicator is a link to the list it counts.
   await expect(
-    page.getByRole('link', { name: /^Vendido hoje R\$\s2\.500,00/u }),
-  ).toHaveAttribute('href', '/pedidos?status=confirmado');
+    page.getByRole('link', { name: 'Conferir pedidos', exact: true }),
+  ).toHaveAttribute(
+    'href',
+    '/pedidos?status=confirmado&de=2026-10-01&ate=2026-10-15',
+  );
+  await page.getByRole('radio', { name: 'Central ao vivo' }).check();
   await expect(
-    page.getByRole('link', { name: /^1 Com o assistente/u }),
-  ).toHaveAttribute('href', '/inbox?situacao=agente');
+    page.getByRole('link', { name: 'Ver desempenho do agente' }),
+  ).toHaveAttribute('href', '/dashboard/agente');
 
   await page
     .getByRole('navigation', { name: 'Navegação principal' })

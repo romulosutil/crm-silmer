@@ -2,7 +2,7 @@ import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { mockPainel } from './support/painel-mock.js';
 
-test('the manager reads reconciled human performance and keeps operational destinations', async ({
+test('o resultado concilia o mês e abre os pedidos do mesmo período por teclado', async ({
   page,
 }) => {
   const mock = await mockPainel(page);
@@ -10,140 +10,36 @@ test('the manager reads reconciled human performance and keeps operational desti
   await expect(
     page.getByRole('heading', { name: 'Dashboard', level: 1 }),
   ).toBeFocused();
-  // ACT-T04: the Dashboard shows the compact team; the full table has its
-  // own page.
-  const team = page.getByRole('region', { name: 'Equipe nos últimos 7 dias' });
-  await expect(team).toContainText('R$ 16.400,00');
+  const result = page.getByRole('region', { name: 'Vendas do período' });
+  await expect(result.locator('dd').first()).toHaveText('R$ 1.100,00');
+  await expect(result.locator('dd').nth(1)).toHaveText('4');
+  await expect(result.locator('dd').nth(2)).toHaveText('R$ 275,00');
+  const team = page.getByRole('region', { name: 'Vendedores' });
+  await expect(team).toContainText('R$ 800,00');
+  await expect(team).toContainText('R$ 1.100,00');
   await expect(
-    team.getByRole('row', { name: /Atendente Sintética/u }),
-  ).toContainText('R$ 8.400,00');
-  await expect(
-    team.getByRole('row', { name: /Vendedor Sintético/u }),
-  ).toContainText('Inativo');
-  await expect(
-    team.getByRole('row', { name: /Vendedor Sintético/u }),
-  ).toContainText('4');
-  await expect(team.getByRole('row', { name: /Loja do site/u })).toContainText(
-    'R$ 1.800,00',
-  );
-  await expect(
-    team.getByRole('row', { name: /Sem atribuição/u }),
-  ).toContainText('R$ 0,00');
-  await expect(
-    team.getByRole('columnheader', { name: 'Vendido' }),
-  ).toHaveAttribute('aria-sort', 'descending');
-  const waiting = page.getByRole('region', { name: 'Esperando um vendedor' });
-  await expect(
-    waiting.getByRole('link', { name: /Conversa Sintética/u }),
-  ).toHaveAttribute('href', '/inbox/waiting-1');
-  await expect(waiting).toContainText('Fora do prazo · 2 h');
-  await expect(
-    waiting.getByRole('link', { name: 'Ver todos (3)' }),
-  ).toHaveAttribute('href', '/inbox?situacao=aguardando');
-  await expect(
-    page.getByRole('link', { name: /^Vendido hoje/u }),
-  ).toContainText('R$ 1.800,00');
-  const period = page.getByRole('group', { name: 'Período das vendas' });
-  await expect(period).toHaveAccessibleDescription('Vale para Vendido');
-  await period.getByRole('button', { name: '7 dias' }).focus();
-  await page.keyboard.press('Enter');
-  await expect(
-    page.getByRole('link', { name: /^Vendido em 7 dias/u }),
-  ).toContainText('R$ 12.300,00');
-  expect(mock.periods).toEqual(['hoje', '7dias']);
-  // PNL-05: the week by day is one described figure, same week any period.
-  const daily = page.getByRole('region', { name: 'Vendido por dia' });
-  await expect(daily).toContainText(
-    /Últimos 7 dias · R\$\s28\.170,00 em 67 pedidos/u,
-  );
-  await expect(daily.getByRole('img')).toHaveAccessibleName(
-    /^Vendido por dia: sexta R\$\s4\.120,00, sábado R\$\s2\.000,00, .*, hoje R\$\s1\.800,00$/u,
-  );
-  await expect(daily.locator('.sales-chart-day')).toHaveText([
-    'Sex',
-    'Sáb',
-    'Dom',
-    'Seg',
-    'Ter',
-    'Qua',
-    'Hoje',
-  ]);
-  // PNL-06: three whole-row links into the filtered Inbox.
-  const attendance = page.getByRole('region', { name: 'Atendimento agora' });
-  const rows = attendance.locator('.attendance-row');
-  await expect(rows).toHaveCount(3);
-  await expect(rows.nth(0)).toHaveAttribute(
-    'href',
-    '/inbox?situacao=aguardando',
-  );
-  await expect(rows.nth(0)).toContainText('3Esperando vendedor');
-  await expect(rows.nth(0)).toContainText('O primeiro espera há 6 h');
-  await expect(rows.nth(1)).toHaveAttribute('href', '/inbox?situacao=agente');
-  await expect(rows.nth(1)).toContainText(
-    '1 sem resposta há 10 min ou mais; 1 com envio falho em 24 h',
-  );
-  await expect(rows.nth(2)).toHaveAttribute('href', '/inbox?situacao=vendedor');
-  await expect(rows.nth(2)).toContainText('Sem resposta há mais de 15 min');
-  await expect(rows.nth(2)).toContainText(
-    '3 de Vendedor S. · 1 de Atendente S.',
-  );
-  for (const row of await rows.all()) {
-    expect((await row.boundingBox())?.height).toBeGreaterThanOrEqual(44);
-  }
-  await expect(
-    attendance.getByRole('link', { name: 'Ver desempenho do agente' }),
-  ).toHaveAttribute('href', '/dashboard/agente');
-  // MET-02: a handoff nobody took is never omitted, in business minutes.
-  await expect(attendance).toContainText(
-    'Pedidos de atendimento ainda sem tomada: 3; o mais antigo espera 42 min de expediente.',
-  );
-  // PNL-06: the partners' checkpoint and the manager's own actions left.
-  await expect(page.getByText('Checkpoint dos sócios')).toHaveCount(0);
-  await expect(page.getByText('Minhas providências')).toHaveCount(0);
-  await expect(
-    page.getByRole('region', { name: 'O que precisa de você' }),
+    page.getByRole('heading', { name: 'Minhas providências' }),
   ).toHaveCount(0);
-  // The team reads after the day and the week.
-  const chartNode = await daily.elementHandle();
-  const teamNode = await team.elementHandle();
-  expect(
-    await page.evaluate(
-      ([chart, people]) =>
-        Boolean(
-          chart &&
-          people &&
-          chart.compareDocumentPosition(people) &
-            globalThis.Node.DOCUMENT_POSITION_FOLLOWING,
-        ),
-      [chartNode, teamNode],
-    ),
-  ).toBe(true);
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({
-    path: test.info().outputPath('dashboard-manager-390.png'),
-    fullPage: true,
+  const confirm = result.getByRole('link', {
+    name: 'Conferir pedidos',
+    exact: true,
   });
-  // The two cards stack on the phone without horizontal scrolling.
-  const chartBox = await daily.boundingBox();
-  const attendanceBox = await attendance.boundingBox();
-  expect(attendanceBox?.y).toBeGreaterThan(
-    (chartBox?.y ?? 0) + (chartBox?.height ?? 0) - 1,
-  );
-  expect(
-    await page.evaluate(
-      () =>
-        globalThis.document.documentElement.scrollWidth -
-        globalThis.document.documentElement.clientWidth,
-    ),
-  ).toBeLessThanOrEqual(0);
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  await page.getByRole('link', { name: /^Entregas atrasadas/u }).focus();
+  await confirm.focus();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL('/pedidos?entrega=atrasada');
+  await expect(page).toHaveURL(
+    '/pedidos?status=confirmado&de=2026-10-01&ate=2026-10-15',
+  );
   await expect
-    .poll(() => mock.orderLists.at(-1)?.get('delivery'))
-    .toBe('overdue');
+    .poll(() => mock.orderLists.at(-1)?.get('from'))
+    .toBe('2026-10-01');
+  expect(mock.orderLists.at(-1)?.get('to')).toBe('2026-10-15');
+  await page.goBack();
+  await expect(
+    page.getByRole('radio', { name: 'Mês', exact: true }),
+  ).toBeChecked();
+  await expect(
+    result.getByRole('link', { name: 'Conferir pedidos', exact: true }),
+  ).toBeFocused();
 });
 
 test('the seller works from their own queue and navigates to the real Inbox by keyboard', async ({
@@ -244,61 +140,42 @@ test('the queue and detail fit phone, tablet and notebook without horizontal scr
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('PNL-05: manager chart labels fit phone, narrow desktop with expanded menu and notebook', async ({
+test('PNL-05: série, controles e tabela cabem a 320, 390 e 1366 px no tema escuro', async ({
   page,
 }) => {
   await mockPainel(page);
-  await page.goto('/dashboard');
-  const chart = page.getByRole('region', { name: 'Vendido por dia' });
-  await expect(chart.getByRole('img')).toBeVisible();
-  await page.evaluate(() => globalThis.document.fonts.ready);
-  for (const width of [390, 1024, 1440]) {
-    await page.setViewportSize({ width, height: 1000 });
-    if (width === 1024)
-      await page
-        .getByRole('button', { name: 'Expandir menu', exact: true })
-        .click();
-    await page.screenshot({
-      path: test.info().outputPath('manager-' + width + '.png'),
-      fullPage: true,
-    });
-    const labels = await chart
-      .locator('.sales-chart-value')
-      .evaluateAll((nodes) =>
-        nodes.map((node) => {
-          const range = globalThis.document.createRange();
-          range.selectNodeContents(node);
-          return {
-            label: node.textContent,
-            textWidth: range.getBoundingClientRect().width,
-            columnWidth: node.parentElement?.getBoundingClientRect().width ?? 0,
-          };
-        }),
-      );
-    for (const label of labels)
-      expect(label.textWidth, width + 'px: ' + label.label).toBeLessThanOrEqual(
-        label.columnWidth + 0.5,
-      );
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/dashboard?periodo=7dias');
+  const daily = page.getByRole('region', { name: 'Vendas por dia' });
+  await expect(
+    daily
+      .getByRole('group', { name: 'Selecionar dia da venda' })
+      .getByRole('button'),
+  ).toHaveCount(7);
+  await page.getByRole('button', { name: 'Escuro', exact: true }).click();
+  for (const width of [320, 390, 1366]) {
+    await page.setViewportSize({ width, height: 900 });
     expect(
       await page.evaluate(
-        () =>
-          globalThis.document.documentElement.scrollWidth -
-          globalThis.document.documentElement.clientWidth,
+        () => globalThis.document.documentElement.scrollWidth,
       ),
-    ).toBeLessThanOrEqual(0);
+    ).toBeLessThanOrEqual(width);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   }
+  await daily.getByRole('button', { name: 'Tabela', exact: true }).click();
+  await expect(daily.getByRole('table')).toBeVisible();
 });
 
 test('PERF-05/MET-04: the team page reconciles sales and switches views by keyboard', async ({
   page,
 }) => {
   await mockPainel(page);
-  await page.goto('/dashboard');
+  await page.goto('/dashboard?periodo=7dias');
   await page
-    .getByRole('region', { name: 'Equipe nos últimos 7 dias' })
+    .getByRole('region', { name: 'Vendedores' })
     .getByRole('link', { name: 'Ver desempenho da equipe' })
     .click();
-  await expect(page).toHaveURL('/dashboard/equipe');
+  await expect(page).toHaveURL('/dashboard/equipe?periodo=7dias');
   await expect(
     page.getByRole('heading', { name: 'Desempenho da equipe', level: 1 }),
   ).toBeFocused();
@@ -311,7 +188,13 @@ test('PERF-05/MET-04: the team page reconciles sales and switches views by keybo
     'aria-pressed',
     'true',
   );
-  await expect(table.getByRole('columnheader')).toHaveCount(5);
+  await expect(table.getByRole('columnheader')).toHaveCount(7);
+  await expect(
+    table.getByRole('columnheader', { name: /Conversão/u }),
+  ).toBeVisible();
+  await expect(
+    table.getByRole('columnheader', { name: /Resposta no prazo/u }),
+  ).toBeVisible();
   await expect(table.getByRole('rowheader')).toHaveCount(5);
   await expect(table.getByRole('row', { name: /^Total/u })).toContainText(
     'R$ 16.400,00',
@@ -388,7 +271,50 @@ test('PERF-07: a seller who opens the team page goes back to their own Dashboard
   await expect(
     page.getByRole('region', { name: 'Seu resultado' }),
   ).toContainText('R$ 8.400,00');
+  await expect(page.getByRole('region', { name: 'Vendedores' })).toHaveCount(0);
+});
+
+test('a série e os dois intervalos abrem listas que explicam os valores exibidos', async ({
+  page,
+}) => {
+  await mockPainel(page);
+  await page.goto('/dashboard?periodo=7dias');
+  const daily = page.getByRole('region', { name: 'Vendas por dia' });
+  const bars = daily.getByRole('group', { name: 'Selecionar dia da venda' });
+  await bars.getByRole('button').last().press('ArrowLeft');
+  await expect(bars.getByRole('button').nth(5)).toBeFocused();
+  await expect(bars.getByRole('button').nth(5)).toHaveAccessibleName(
+    /500,00.*1 pedido/u,
+  );
   await expect(
-    page.getByRole('region', { name: 'Equipe nos últimos 7 dias' }),
+    daily.getByRole('link', { name: 'Conferir pedidos do dia' }),
+  ).toHaveAttribute(
+    'href',
+    '/pedidos?status=confirmado&de=2026-10-14&ate=2026-10-14',
+  );
+  const comparison = page.getByRole('region', { name: 'Comparação de vendas' });
+  await expect(comparison).toContainText('base anterior zero');
+  await expect(
+    comparison.getByRole('link', { name: /intervalo atual/u }),
+  ).toHaveAttribute(
+    'href',
+    '/pedidos?status=confirmado&de=2026-10-09&ate=2026-10-14',
+  );
+  await expect(
+    comparison.getByRole('link', { name: /intervalo anterior/u }),
+  ).toHaveAttribute(
+    'href',
+    '/pedidos?status=confirmado&de=2026-10-03&ate=2026-10-08',
+  );
+  await comparison
+    .getByRole('button', { name: 'Tabela', exact: true })
+    .press('Enter');
+  const sold = comparison.getByRole('row', { name: /^Vendido/u });
+  await expect(sold.getByRole('cell').first()).toHaveText('R$ 500,00');
+  await expect(sold.getByRole('cell').nth(1)).toHaveText('R$ 0,00');
+  await page.getByRole('radio', { name: 'Hoje', exact: true }).check();
+  await expect(comparison).toContainText('Hoje, parcial');
+  await expect(
+    comparison.getByRole('columnheader', { name: 'Diferença' }),
   ).toHaveCount(0);
 });

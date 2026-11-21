@@ -748,6 +748,130 @@
           padding: 0;
         }
       }
+
+      .seller-sort {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 12px 0;
+      }
+      .seller-sort label,
+      .seller-sort select,
+      .seller-sort button {
+        font-size: 13px;
+      }
+      .seller-sort select {
+        background: var(--paper);
+        color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        min-height: 44px;
+        padding: 4px 8px;
+      }
+      .seller-table th,
+      .seller-table td {
+        vertical-align: top;
+        overflow-wrap: break-word;
+      }
+      .seller-table tbody th {
+        text-align: left;
+        color: var(--ink);
+      }
+      .seller-table tbody th .textbtn {
+        text-align: left;
+        padding: 0;
+      }
+      .seller-table td strong {
+        display: block;
+      }
+      .seller-table td small,
+      .cohort-list small {
+        display: block;
+        color: var(--muted);
+      }
+      .seller-table .cell-label {
+        display: none;
+      }
+      .seller-table tfoot {
+        background: var(--tint);
+      }
+      .seller-summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin: 14px 0;
+      }
+      .seller-summary strong,
+      .seller-summary small {
+        display: block;
+      }
+      .seller-summary strong {
+        font-size: clamp(17px, 2vw, 26px);
+        letter-spacing: -0.02em;
+      }
+      .cohort-list {
+        list-style: none;
+        padding: 0;
+        max-height: 24rem;
+        overflow: auto;
+      }
+      .cohort-list li {
+        padding: 8px 2px;
+        border-bottom: 1px solid var(--line);
+        overflow-wrap: anywhere;
+      }
+      .seller-period {
+        display: flex;
+        flex-wrap: wrap;
+        width: fit-content;
+      }
+      @container (max-width:860px) {
+        .seller-table,
+        .seller-table tbody,
+        .seller-table tfoot {
+          display: block;
+        }
+        .seller-table thead {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip-path: inset(50%);
+        }
+        .seller-table tr {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          border-top: 1px solid var(--line);
+          padding: 10px 0;
+          gap: 8px;
+        }
+        .seller-table th[scope='row'] {
+          grid-column: 1/-1;
+        }
+        .seller-table td,
+        .seller-table th {
+          padding: 0;
+          border: 0;
+          text-align: left;
+          min-width: 0;
+        }
+        .seller-table .cell-label {
+          display: block;
+          color: var(--muted);
+          font-size: 13px;
+        }
+      }
+      @container (max-width:490px) {
+        .seller-table tr,
+        .seller-summary {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .seller-table td,
+        .seller-table th {
+          font-size: 13px;
+        }
+      }
     </style>
     <script type="text/plain" id="poppins-license">
       Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-ThinItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-ExtraLight.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-ExtraLightItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Light.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-LightItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Regular.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Italic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Medium.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-MediumItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-SemiBold.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-SemiBoldItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Bold.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-BoldItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-ExtraBold.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-ExtraBoldItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Black.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-BlackItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins)
@@ -884,7 +1008,7 @@
                 <button data-view="resultado">Resultado comercial</button
                 ><button data-view="central">Central ao vivo</button>
               </nav>
-              <small>Administrador</small>
+              <small id="roleLabel">Administrador designado</small>
             </div>
             <div id="stage"></div>
           </div>
@@ -908,8 +1032,27 @@
               ><label for="scenario">Cenário comercial</label
               ><select class="button" id="scenario">
                 <option value="normal">Operação habitual</option>
+                <option value="conciliacao">
+                  Conciliação e ciclo dos pedidos
+                </option>
+                <option value="virada">Primeiro dia do mês · 01/12/2026</option>
+                <option value="curto">
+                  Comparação com fevereiro · 31/03/2027
+                </option>
+                <option value="basezero">
+                  Vendas com base anterior zerada
+                </option>
+                <option value="parcial">Falha após leitura válida</option>
+                <option value="lenta">Trocas rápidas de período</option>
                 <option value="zero">Período sem vendas</option>
                 <option value="erro">Leitura comercial indisponível</option>
+              </select>
+              <label for="role">Perfil simulado</label
+              ><select id="role" class="button">
+                <option value="designado">Administrador designado</option>
+                <option value="admin">Administrador comum</option>
+                <option value="vendedor">Vendedora · Lia</option>
+                <option value="financeiro">Financeiro</option>
               </select>
             </div>
             <details open>
@@ -930,11 +1073,42 @@
       (() => {
         'use strict';
         const $ = (id) => document.getElementById(id);
-        const today = 18;
+        let today = 18;
+        let role = 'designado';
+        let lastResultPeriod = 'hoje';
+        let lastRead = null;
+        let loadingPeriod = false;
+        let readRevision = 0;
+        let checkpoint = null;
+        let checkpointCorrection = null;
+        function canSeePerson(p) {
+          return role !== 'financeiro' && (role !== 'vendedor' || p === 0);
+        }
+        function canSeeCycle(cycle) {
+          if (role === 'financeiro') return false;
+          if (role === 'designado') return true;
+          if (cycle.privateOwner != null)
+            return cycle.privateOwner === (role === 'vendedor' ? 0 : -1);
+          return (
+            role === 'admin' ||
+            (cycle.owner ?? cycle.p ?? cycle.person ?? cycle.firstOwner) === 0
+          );
+        }
+        const commercialRoles = ['admin', 'designado'];
         const team = ['Lia', 'Caio', 'Bia', 'Ivo'];
-        const sources = [...team, 'Loja do site', 'Sem atribuição'];
+        const sources = [
+          ...team,
+          'Loja do site',
+          'Sem atribuição',
+          'Nara (inativa)',
+        ];
         const colors = ['#725397', '#df772f', '#a99db9'];
-        const labels = { hoje: 'Hoje', semana: '7 dias', mes: 'Mês' };
+        const labels = {
+          hoje: 'Hoje',
+          semana: '7 dias',
+          mes: 'Mês',
+          trinta: '30 dias',
+        };
         const money = (n) =>
           (n / 100).toLocaleString('pt-BR', {
             style: 'currency',
@@ -955,12 +1129,12 @@
         const minuteLabel = (n) => (n === null ? '—' : integer(n) + ' min');
         const orders = [],
           activity = [];
-        for (let day = -30; day <= today; day++) {
+        for (let day = -90; day <= 151; day++) {
           const n = day === today ? 5 : Math.abs(day * 11 + 7) % 8;
           for (let i = 0; i < n; i++) {
             const person = [0, 1, 2, 4, 5, 0, 1][(Math.abs(day) + i) % 7];
             orders.push({
-              id: 'P-' + (1201 + orders.length),
+              id: 'V-' + (1201 + orders.length),
               day,
               person,
               cents: (250 + ((Math.abs(day) * 37 + i * 103) % 1340)) * 100,
@@ -971,6 +1145,7 @@
               activity.push({
                 day,
                 p,
+                privateOwner: j === 0 || j === 2 ? p : null,
                 first: 2 + ((Math.abs(day) + p * 4 + j * 2) % 25),
                 claim: 1 + ((Math.abs(day) + j) % 8),
                 assumed: j % 3 !== 0,
@@ -981,8 +1156,28 @@
             }
           }
         }
+        activity.push({
+          day: 4,
+          p: 6,
+          first: 8,
+          claim: 3,
+          assumed: true,
+          closed: true,
+          lost: false,
+          reason: '',
+          privateOwner: null,
+        });
+        orders.push({ id: 'P-ARQ', day: 4, person: 6, cents: 72000 });
         function stats(rows) {
           const values = rows.map((r) => r.first).sort((a, b) => a - b);
+          const claims = rows
+            .filter((r) => r.assumed)
+            .map((r) => r.claim)
+            .sort((a, b) => a - b);
+          const p90 = (sample) =>
+            sample.length >= 5
+              ? sample[Math.ceil(sample.length * 0.9) - 1]
+              : null;
           const median = (v) =>
             v.length
               ? (v[Math.floor((v.length - 1) / 2)] +
@@ -992,16 +1187,9 @@
           return {
             n: rows.length,
             median: median(values),
-            claim: median(
-              rows
-                .filter((r) => r.assumed)
-                .map((r) => r.claim)
-                .sort((a, b) => a - b),
-            ),
-            p90:
-              values.length >= 5
-                ? values[Math.ceil(values.length * 0.9) - 1]
-                : null,
+            claim: median(claims),
+            claimP90: p90(claims),
+            p90: p90(values),
             late: rows.filter((r) => r.first > 15).length,
             assumed: rows.filter((r) => r.assumed).length,
             closed: rows.filter((r) => r.closed).length,
@@ -1020,16 +1208,98 @@
           step = 0,
           visibleStep = 0,
           replayed = false;
+
         let playback = 0;
+        let centralClock = 0;
+        let centralElapsed = 0;
+        let centralReadElapsed = 0;
+        let centralGap = false;
+        let centralServerEvents = [];
+        let centralReadEvents = [];
         function stopPlayback() {
           clearInterval(playback);
           playback = 0;
         }
-        function advance() {
-          step = Math.min(changes.length, step + 1);
-          if (!live) visibleStep = step;
-          if (step === changes.length) stopPlayback();
+        function centralStopClock() {
+          clearInterval(centralClock);
+          centralClock = 0;
         }
+        function resetCentral() {
+          stopPlayback();
+          centralStopClock();
+          centralElapsed = centralReadElapsed = step = visibleStep = 0;
+          centralGap = live = replayed = false;
+          centralServerEvents = [];
+          centralReadEvents = [];
+        }
+        function centralTime(elapsed) {
+          const mins = 14 * 60 + 32 + elapsed;
+          return (
+            (mins >= 1440
+              ? date(today + Math.floor(mins / 1440)) + ' · '
+              : '') +
+            String(Math.floor(mins / 60) % 24).padStart(2, '0') +
+            'h' +
+            String(((mins % 60) + 60) % 60).padStart(2, '0')
+          );
+        }
+        // Refaz o relógio útil no último retrato lido. Fins de semana e almoço
+        // não consomem os minutos da espera; o horário exibido é civil de SP.
+        function centralReadMinutes() {
+          const start = 14 * 60 + 32;
+          const end = start + centralReadElapsed;
+          let total = 0;
+          for (let offset = 0; offset <= Math.floor(end / 1440); offset++) {
+            const dow = new Date(
+              Date.UTC(2026, 10, today + offset),
+            ).getUTCDay();
+            if (dow === 0 || dow === 6) continue;
+            for (const [a, b] of [
+              [540, 720],
+              [780, 1080],
+            ]) {
+              total += Math.max(
+                0,
+                Math.min(end, offset * 1440 + b) -
+                  Math.max(start, offset * 1440 + a),
+              );
+            }
+          }
+          return total;
+        }
+        function centralHasFact(id) {
+          return centralReadEvents.some((f) => f.id === id);
+        }
+        function centralSync() {
+          if (live || centralGap) return;
+          centralReadEvents = centralServerEvents.slice();
+          centralReadElapsed = centralElapsed;
+          visibleStep = step;
+        }
+        function centralEmit(fact) {
+          if (!fact || centralServerEvents.some((e) => e.id === fact.id))
+            return false;
+          centralElapsed++;
+          centralServerEvents.push({
+            ...fact,
+            time: centralTime(centralElapsed),
+          });
+          step = changes.filter((c) =>
+            centralServerEvents.some((e) => e.id === c.id),
+          ).length;
+          centralSync();
+          return true;
+        }
+        function centralNext() {
+          return changes.find(
+            (c) => !centralServerEvents.some((e) => e.id === c.id),
+          );
+        }
+        function advance() {
+          centralEmit(centralNext());
+          if (!centralNext()) stopPlayback();
+        }
+
         const queue = [
           {
             id: 'AT-041',
@@ -1058,6 +1328,14 @@
             age: 14,
           },
         ];
+        queue.push({
+          id: 'AT-047',
+          state: 'Aguardando resposta',
+          label: 'Linha pessoal de Lia',
+          age: 9,
+          firstOwner: 0,
+          privateOwner: 0,
+        });
         const facts = [
           {
             id: 'EV-18',
@@ -1098,19 +1376,131 @@
             detail: 'Caio respondeu à conversa e encerrou a espera.',
           },
         ];
-        const nowTime = () => ['14h32', '14h33', '14h34', '14h35'][visibleStep];
-        function snapshotOrders() {
-          return scenario === 'zero'
-            ? []
-            : visibleStep >= 2
-              ? [...orders, { id: 'P-1501', day: 18, person: 1, cents: 64000 }]
-              : orders;
+
+        const nowTime = () => centralTime(centralReadElapsed);
+        const centralInitialPrivate = {
+          id: 'EV-LIA',
+          time: '14h26',
+          name: 'Atendimento iniciado',
+          ref: 'AT-047',
+          privateOwner: 0,
+          detail: 'Uma conversa entrou na linha pessoal de Lia.',
+        };
+        const centralActions = {
+          imprimir: {
+            id: 'EV-IMP',
+            name: 'Ficha impressa pela primeira vez',
+            ref: 'LOJA',
+            detail: 'A primeira impressão retirou o aviso da loja.',
+          },
+          entregar: {
+            id: 'EV-ENT',
+            name: 'Entrega registrada',
+            ref: 'P-1198',
+            detail: 'A entrega foi registrada pelo administrador na simulação.',
+          },
+        };
+        const centralGroups = {
+          PENDENTES: 'Pedidos a confirmar',
+          PROXIMAS: 'Próximas entregas',
+          ATRASADAS: 'Entregas atrasadas',
+          AGENTE: 'Atendimento do agente',
+        };
+        const centralKnownIds = [
+          'LOJA',
+          'P-1501',
+          'P-1198',
+          'P-1197',
+          'AT-038',
+          'ENTREGA-PROXIMA',
+          'AG-011',
+          'AG-012',
+        ];
+        function centralRecordIds() {
+          return [
+            ...Object.keys(centralGroups),
+            ...centralKnownIds,
+            ...Object.values(centralActions).map((e) => e.id),
+            centralInitialPrivate.id,
+            ...queue.map((q) => q.id),
+            ...changes.map((e) => e.id),
+            ...facts.map((e) => e.id),
+          ];
+        }
+        function centralAllowed() {
+          return role === 'designado' || role === 'admin';
+        }
+        function centralScoped(entries) {
+          return centralAllowed()
+            ? entries.filter((e) =>
+                canSeeCycle({ ...e, privateOwner: e.privateOwner ?? null }),
+              )
+            : [];
+        }
+        function centralEvents() {
+          return centralScoped(
+            [...centralReadEvents]
+              .reverse()
+              .concat(facts, centralInitialPrivate),
+          );
+        }
+
+        const exampleOrders = [
+          { id: 'P-A01', day: 5, person: 0, cents: 30000 },
+          { id: 'P-A02', day: 18, person: 0, cents: 50000 },
+          { id: 'P-L01', day: 16, person: 4, cents: 20000 },
+          { id: 'P-H01', day: 12, person: 5, cents: 10000 },
+          { id: 'P-TESTE', day: 18, person: 0, cents: 99000, test: true },
+          {
+            id: 'P-CANC',
+            day: 18,
+            person: 0,
+            cents: 60000,
+            status: 'cancelado',
+          },
+        ];
+        let exampleOwner = 0,
+          exampleStatus = 'confirmado';
+        const dateObject = (day) => new Date(Date.UTC(2026, 10, day));
+        function monthStart(day) {
+          return day - dateObject(day).getUTCDate() + 1;
         }
         function interval() {
-          return [period === 'hoje' ? 18 : period === 'semana' ? 12 : 1, today];
+          const length = { hoje: 1, semana: 7, trinta: 30 };
+          return [
+            period === 'mes' ? monthStart(today) : today - length[period] + 1,
+            today,
+          ];
+        }
+        function allDemoOrders() {
+          if (role === 'financeiro') return [];
+          const list =
+            scenario === 'zero'
+              ? []
+              : scenario === 'conciliacao'
+                ? exampleOrders.map((o) =>
+                    o.id === 'P-A02' ? { ...o, status: exampleStatus } : o,
+                  )
+                : [...orders, ...cohortOrders()];
+          if (centralHasFact('EV-20'))
+            list.push({ id: 'P-1501', day: today, person: 1, cents: 64000 });
+          return list.filter(
+            (o) =>
+              o.day <= today &&
+              canSeePerson(o.person) &&
+              !o.test &&
+              (!o.status || o.status === 'confirmado') &&
+              o.id !== checkpointCorrection &&
+              (scenario !== 'basezero' || o.day >= monthStart(today)),
+          );
+        }
+        function snapshotOrders() {
+          return scenario === 'parcial' && lastRead
+            ? lastRead.rows
+            : allDemoOrders();
         }
         function periodOrders(a, b) {
-          return snapshotOrders().filter((r) => r.day >= a && r.day <= b);
+          return snapshotOrders().filter((o) => o.day >= a && o.day <= b);
         }
         function periodActivity(person) {
           const [a, b] = interval();
@@ -1118,8 +1508,76 @@
             (r) =>
               r.day >= a &&
               r.day <= b &&
+              canSeePerson(r.p) &&
+              canSeeCycle(r) &&
               (person === undefined || r.p === person),
           );
+        }
+        function changeScenario(key) {
+          scenario = key;
+          $('scenario').value = key;
+          today = key === 'virada' ? 31 : key === 'curto' ? 151 : 18;
+          period = [
+            'virada',
+            'curto',
+            'conciliacao',
+            'basezero',
+            'parcial',
+          ].includes(key)
+            ? 'mes'
+            : 'hoje';
+          lastResultPeriod = period;
+          exampleOwner = 0;
+          exampleStatus = 'confirmado';
+          checkpoint = null;
+          checkpointCorrection = null;
+          readRevision++;
+          loadingPeriod = false;
+          lastRead = null;
+          resetCentral();
+          if (key === 'parcial')
+            lastRead = { period, rows: allDemoOrders(), at: nowTime() };
+          page = 'painel';
+          view = 'resultado';
+          filter = 'all';
+          selected = '';
+        }
+        function exerciseOrders() {
+          const actions = [];
+          if (exampleStatus === 'confirmado') {
+            if (exampleOwner === 0)
+              actions.push(
+                btn(
+                  'Transferir a conversa para Caio',
+                  'order-op',
+                  'transferir',
+                ),
+              );
+            actions.push(
+              btn('Reabrir pedido', 'order-op', 'reabrir'),
+              btn('Cancelar pedido', 'order-op', 'cancelar'),
+            );
+          }
+          if (exampleStatus === 'pendente')
+            actions.push(btn('Reconfirmar pedido', 'order-op', 'reconfirmar'));
+          actions.push(btn('Restaurar exemplo', 'order-op', 'restaurar'));
+          return area(
+            'Conferência do pedido de R$ 500',
+            `<p>P-A02 · ${exampleStatus} · conversa de ${team[exampleOwner]} · crédito da primeira confirmação de Lia.</p><div class="inline">${actions.join('')}</div><details><summary>Universo da conferência</summary><p>P-A01 e P-A02 de Lia, P-L01 da loja e P-H01 sem atribuição. P-TESTE de R$ 990 e P-CANC de R$ 600 ficam fora do vendido. A transferência conserva o crédito.</p></details>`,
+          );
+        }
+        function checkpointView() {
+          const day = today - 1,
+            rows = allDemoOrders().filter((o) => o.day === day);
+          const saved = checkpoint?.rows ?? rows;
+          const difference = sum(rows) - sum(saved);
+          const breakdown = sources
+            .map((name, p) => {
+              const group = saved.filter((o) => o.person === p);
+              return group.length ? name + ' · ' + money(sum(group)) : '';
+            })
+            .filter(Boolean);
+          return `<details class="paper checkpoint"><summary>Checkpoint do dia anterior · ${date(day)}</summary><p>${checkpoint ? 'Resumo registrado às 08h' : 'Prévia antes do registro'} · ${saved.length} pedidos · ${money(sum(saved))}</p><p class="muted">${breakdown.join(' · ') || 'Nenhuma venda'}</p><p>Apuração atual do mesmo dia · ${rows.length} pedidos · ${money(sum(rows))}. Diferença · ${money(difference)}.</p>${checkpoint ? (rows.length && !checkpointCorrection ? btn('Simular cancelamento posterior', 'checkpoint', 'corrigir') : '') : btn('Registrar snapshot simulado', 'checkpoint', 'fixar')}</details>`;
         }
         function btn(label, key, val, cls = 'button') {
           return `<button class="${cls}" data-${key}="${val}">${label}</button>`;
@@ -1134,12 +1592,20 @@
           $('announce').textContent = msg;
         }
         function dates() {
-          return rangeLabel(...interval()) + ' · novembro de 2026';
+          return (
+            rangeLabel(...interval()) +
+            ' · ' +
+            dateObject(today).getUTCFullYear()
+          );
         }
         function periodSwitch() {
           return `<div class="seg" role="group" aria-label="Período comercial">${Object.entries(
             labels,
           )
+            .filter(
+              ([key]) =>
+                key !== 'trinta' || view === 'seller' || period === 'trinta',
+            )
             .map(
               ([key, label]) =>
                 `<button data-period="${key}" aria-pressed="${period === key}">${label}</button>`,
@@ -1152,11 +1618,22 @@
         function comparison() {
           const [start] = interval();
           if (period === 'hoje')
-            return `<small class="sales-context">Ontem, dia completo · ${money(sum(periodOrders(17, 17)))}</small>`;
-          const previousStart = period === 'mes' ? -30 : start - 6;
-          const previousEnd = period === 'mes' ? -14 : start - 1;
-          const current = periodOrders(start, 17);
-          const previous = periodOrders(previousStart, previousEnd);
+            return `<small class="sales-context">Ontem, dia completo · ${money(sum(periodOrders(today - 1, today - 1)))}</small>`;
+          const priorMonthEnd = monthStart(today) - 1;
+          const previousStart =
+            period === 'mes'
+              ? monthStart(priorMonthEnd)
+              : start - (today - start);
+          const dayCount =
+            period === 'mes'
+              ? Math.min(today - start, priorMonthEnd - previousStart + 1)
+              : today - start;
+          if (!dayCount)
+            return '<p class="sales-context">Primeiro dia do mês · ainda não há dias completos para comparar.</p>';
+          const previousEnd = previousStart + dayCount - 1,
+            currentEnd = start + dayCount - 1;
+          const current = periodOrders(start, currentEnd),
+            previous = periodOrders(previousStart, previousEnd);
           const base = sum(previous);
           const diff = sum(current) - base;
           const pct =
@@ -1173,15 +1650,15 @@
               : money(Math.abs(diff)) +
                 (diff > 0 ? ' a mais' : ' a menos') +
                 pct;
-          const recentDates = rangeLabel(start, 17),
+          const recentDates = rangeLabel(start, currentEnd),
             priorDates = rangeLabel(previousStart, previousEnd);
-          return `<details class="sales-context"><summary>${summary} · ${recentDates} vs. ${priorDates}</summary><p>${recentDates} comparado a ${priorDates}. Hoje entra no total acima.</p><table><caption class="sr">Vendas nos dois intervalos fechados</caption><thead><tr><th>Indicador</th><th>${recentDates}</th><th>${priorDates}</th></tr></thead><tbody><tr><th>Vendido</th><td>${money(sum(current))}</td><td>${money(base)}</td></tr><tr><th>Pedidos</th><td>${current.length}</td><td>${previous.length}</td></tr><tr><th>Ticket médio</th><td>${ticket(current)}</td><td>${ticket(previous)}</td></tr></tbody></table></details>`;
+          return `<details class="sales-context"><summary>${summary} · ${recentDates} vs. ${priorDates}</summary><p>${recentDates} comparado a ${priorDates}. Hoje entra no total acima. ${base === 0 ? 'Base anterior igual a zero.' : ''}</p><table><caption class="sr">Vendas nos dois intervalos fechados</caption><thead><tr><th>Indicador</th><th>${recentDates}</th><th>${priorDates}</th></tr></thead><tbody><tr><th>Vendido</th><td>${money(sum(current))}</td><td>${money(base)}</td></tr><tr><th>Pedidos</th><td>${current.length}</td><td>${previous.length}</td></tr><tr><th>Ticket médio</th><td>${ticket(current)}</td><td>${ticket(previous)}</td></tr></tbody></table></details>`;
         }
         function chart(rows) {
           const [start, end] = interval();
-          if (start === end) {
+          if (period === 'hoje') {
             const sums = [
-                sum(rows.filter((r) => r.person < 4)),
+                sum(rows.filter((r) => r.person !== 4 && r.person !== 5)),
                 sum(rows.filter((r) => r.person === 4)),
                 sum(rows.filter((r) => r.person === 5)),
               ],
@@ -1202,60 +1679,365 @@
             `<p class="muted">${dates()} · ${money(sum(rows))}</p><div class="chart" aria-hidden="true">${days.map((d) => `<i style="height:${(100 * d.cents) / max}%" title="${date(d.day)} · ${money(d.cents)}"></i>`).join('')}</div><div class="row between"><small>${date(start)}</small><small>${date(end)} · hoje</small></div><details><summary>Conferir valores por dia</summary>${days.map((d) => `<div class="entry"><span>${date(d.day)} · ${d.n} pedidos</span>${filteredLink('d' + d.day, money(d.cents))}</div>`).join('')}</details>`,
           );
         }
+        // A data de entrada vem do mesmo atendimento usado em "Assumidas".
+        // Cada ciclo possui um titular de tomada imutável. IDs nunca dependem do filtro.
+        function cohortCycles() {
+          const serialByPersonAndDay = new Map();
+          return activity
+            .filter((row) => row.assumed)
+            .map((row) => {
+              const prefix = 'C-' + row.p + '-' + (row.day + 1000);
+              const ordinal = (serialByPersonAndDay.get(prefix) ?? 0) + 1;
+              serialByPersonAndDay.set(prefix, ordinal);
+              return {
+                id: prefix + '-' + ordinal,
+                ordinal,
+                person: row.p,
+                start: row.day,
+                expires: row.day + 30,
+                privateOwner: row.privateOwner ?? null,
+              };
+            });
+        }
+        function cohortOrders() {
+          const list = [];
+          for (const c of cohortCycles()) {
+            // A fixture de Ivo exemplifica atendimento sem fechamento. Nara
+            // tem seu pedido histórico no conjunto de vendas do simulador.
+            if (c.person === 3 || c.person === 6) continue;
+            const add = (suffix, age, person, cents) => {
+              list.push({
+                id: 'PV-' + c.id + '-' + suffix,
+                cycleId: c.id,
+                day: c.start + age,
+                person,
+                cents,
+                status: 'confirmado',
+                privateOwner: c.privateOwner,
+              });
+            };
+            if (c.ordinal === 1) {
+              add('A', 6, c.person, 32000);
+              if (c.person === 0) add('B', 14, c.person, 18000);
+            } else if (c.ordinal === 2 && c.person === 0) {
+              add('F', 30, c.person, 19000);
+            } else if (c.ordinal === 3 && c.person === 0) {
+              add('T', 8, 1, 21000);
+            }
+          }
+          return list;
+        }
+        function rateText(value, empty = 'Sem base') {
+          return value === null
+            ? empty
+            : value.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%';
+        }
+        function salesCohort(person, allCycles, ordersByCycle) {
+          const [from, to] = interval();
+          const finished = [];
+          const observing = [];
+          for (const c of allCycles) {
+            if (c.person !== person || !canSeeCycle(c) || c.start > to)
+              continue;
+            if (c.expires > to) {
+              observing.push(c);
+              continue;
+            }
+            if (c.expires < from) continue;
+            const candidates = (ordersByCycle.get(c.id) ?? []).filter(
+              (r) => r.day <= to,
+            );
+            const valid = candidates.filter(
+              (r) =>
+                r.person === c.person && r.day >= c.start && r.day < c.expires,
+            );
+            finished.push({ ...c, valid, candidates });
+          }
+          const converted = finished.filter((c) => c.valid.length > 0).length;
+          return {
+            finished,
+            observing,
+            converted,
+            value: finished.length ? (100 * converted) / finished.length : null,
+          };
+        }
+        function cohortEvidence() {
+          const byCycle = new Map();
+          for (const order of snapshotOrders()) {
+            if (!order.cycleId) continue;
+            if (!byCycle.has(order.cycleId)) byCycle.set(order.cycleId, []);
+            byCycle.get(order.cycleId).push(order);
+          }
+          return { cycles: cohortCycles(), byCycle };
+        }
+        function timelyResponse(person, rows) {
+          const [from, to] = interval();
+          const includesNow = today >= from && today <= to;
+          const onTime = rows.filter(
+            (r) => r.first !== null && r.first <= 15,
+          ).length;
+          const historical = rows.filter((r) => r.first !== null).length;
+          const lateInDemo = includesNow
+            ? queue.filter(
+                (q) =>
+                  q.firstOwner === person &&
+                  canSeeCycle(q) &&
+                  q.age + centralReadMinutes() > 15,
+              ).length
+            : 0;
+          const openLate = includesNow
+            ? queue.filter(
+                (q) =>
+                  q.firstOwner === person &&
+                  canSeeCycle(q) &&
+                  q.age + centralReadMinutes() > 15 &&
+                  !(q.id === 'AT-039' && centralHasFact('EV-21')),
+              ).length
+            : 0;
+          const eligible = historical + lateInDemo;
+          return {
+            onTime,
+            eligible,
+            openLate,
+            lateInDemo,
+            value: eligible < 10 ? null : (100 * onTime) / eligible,
+          };
+        }
+        const sellerColumns = [
+          ['name', 'Pessoa'],
+          ['conversion', 'Conversão'],
+          ['timely', 'Resposta no prazo'],
+          ['orders', 'Pedidos'],
+          ['sold', 'Vendido'],
+          ['attended', 'Atendeu'],
+          ['avg', 'Ticket'],
+          ['response', '1ª resposta'],
+        ];
         function teamRows(rows) {
-          return sources.map((name, p) => {
-            const sales = rows.filter((r) => r.person === p),
-              m = stats(periodActivity(p));
-            return {
+          const { cycles, byCycle } = cohortEvidence();
+          const people = [];
+          for (const [p, name] of sources.entries()) {
+            if (!canSeePerson(p)) continue;
+            const sales = rows.filter((r) => r.person === p);
+            const isSeller = p !== 4 && p !== 5;
+            const activityRows = isSeller ? periodActivity(p) : [];
+            const m = stats(activityRows);
+            const c = salesCohort(p, cycles, byCycle);
+            if (
+              p === 6 &&
+              !sales.length &&
+              !m.n &&
+              !c.finished.length &&
+              !c.observing.length
+            )
+              continue;
+            const t = timelyResponse(p, activityRows);
+            people.push({
               name,
               p,
-              attended: m.n,
+              isSeller,
               orders: sales.length,
               sold: sum(sales),
+              attended: m.n,
               avg: sales.length ? sum(sales) / sales.length : null,
               response: m.median,
-            };
-          });
+              conversion: c.value,
+              timely: t.value,
+              cohort: c,
+              timeliness: t,
+              service: m,
+            });
+          }
+          return people;
+        }
+        function detailCell(key, label, value, context = '') {
+          return `<td data-metric="${key}"><span class="cell-label" aria-hidden="true">${label}</span><strong>${value}</strong>${context ? `<small>${context}</small>` : ''}</td>`;
         }
         function teamTable(rows) {
           const people = teamRows(rows);
-          const compare = (a, b) => {
-            if (a[sort] === null) return b[sort] === null ? 0 : 1;
-            if (b[sort] === null) return -1;
+          const sorted = people
+            .filter((r) => r.isSeller)
+            .sort((a, b) => {
+              if (a[sort] === null) return b[sort] === null ? 0 : 1;
+              if (b[sort] === null) return -1;
+              const diff =
+                typeof a[sort] === 'string'
+                  ? a[sort].localeCompare(b[sort], 'pt-BR')
+                  : a[sort] - b[sort];
+              return diff * (desc ? -1 : 1) || a.p - b.p;
+            });
+          const teamRow = (r) => {
+            const name = r.isSeller
+              ? btn(r.name, 'seller', r.p, 'textbtn')
+              : r.name;
+            const c = r.cohort,
+              t = r.timeliness;
+            const asPerson = (value) => (r.isSeller ? value : '—');
             return (
-              (typeof a[sort] === 'string'
-                ? a[sort].localeCompare(b[sort])
-                : a[sort] - b[sort]) * (desc ? -1 : 1)
+              `<tr data-person="${r.p}"><th scope="row">${name}</th>` +
+              detailCell(
+                'conversion',
+                'Conversão',
+                asPerson(rateText(c.value)),
+                r.isSeller ? c.converted + ' de ' + c.finished.length : '',
+              ) +
+              detailCell(
+                'timely',
+                'Resposta no prazo',
+                asPerson(
+                  rateText(
+                    t.value,
+                    t.eligible ? 'Base insuficiente' : 'Sem base',
+                  ),
+                ),
+                r.isSeller ? t.onTime + ' de ' + t.eligible : '',
+              ) +
+              detailCell('orders', 'Pedidos', r.orders) +
+              detailCell('sold', 'Vendido', money(r.sold)) +
+              detailCell('attended', 'Atendeu', asPerson(r.attended)) +
+              detailCell(
+                'avg',
+                'Ticket',
+                r.avg === null ? '—' : money(Math.round(r.avg)),
+              ) +
+              detailCell(
+                'response',
+                '1ª resposta',
+                asPerson(minuteLabel(r.response)),
+                r.isSeller
+                  ? r.service.n +
+                      ' amostras · ' +
+                      (r.service.late + t.lateInDemo) +
+                      ' esperas > 15 min'
+                  : '',
+              ) +
+              '</tr>'
             );
           };
-          const cols = [
-            ['name', 'Pessoa'],
-            ['attended', 'Atendeu'],
-            ['orders', 'Pedidos'],
-            ['sold', 'Vendido'],
-            ['avg', 'Ticket'],
-            ['response', '1ª resposta'],
-          ];
+          const sortOptions = sellerColumns
+            .map(
+              ([key, label]) =>
+                `<option value="${key}" ${sort === key ? 'selected' : ''}>${label}</option>`,
+            )
+            .join('');
+          const header = sellerColumns
+            .map(
+              ([key, label]) =>
+                `<th scope="col" ${sort === key ? `aria-sort="${desc ? 'descending' : 'ascending'}"` : ''}>${label}</th>`,
+            )
+            .join('');
+          const total =
+            '<tr><th scope="row">Total</th>' +
+            detailCell('conversion', 'Conversão', '—') +
+            detailCell('timely', 'Resposta no prazo', '—') +
+            detailCell('orders', 'Pedidos', rows.length) +
+            detailCell('sold', 'Vendido', money(sum(rows))) +
+            detailCell('attended', 'Atendeu', '—') +
+            detailCell('avg', 'Ticket', ticket(rows)) +
+            detailCell('response', '1ª resposta', '—') +
+            '</tr>';
           return area(
             'Desempenho da equipe',
-            `<p class="muted">Selecione uma pessoa para conferir vendas e atendimento.</p><table class="teamtable"><thead><tr>${cols.map(([key, label]) => `<th scope="col" ${sort === key ? `aria-sort="${desc ? 'descending' : 'ascending'}"` : ''}>${btn(label + (sort === key ? (desc ? ' ↓' : ' ↑') : ''), 'sort', key, '')}</th>`).join('')}</tr></thead><tbody>${[...people.slice(0, 4).sort(compare), ...people.slice(4)].map((r) => `<tr><td>${r.p < 4 ? btn(r.name, 'seller', r.p, '') : r.name}</td><td>${r.p < 4 ? r.attended : '—'}</td><td>${r.orders}</td><td>${money(r.sold)}</td><td>${r.avg === null ? '—' : money(Math.round(r.avg))}</td><td>${r.p < 4 ? minuteLabel(r.response) : '—'}</td></tr>`).join('')}</tbody><tfoot><tr><th>Total</th><td>—</td><td>${rows.length}</td><td>${money(sum(rows))}</td><td>${ticket(rows)}</td><td>—</td></tr></tfoot></table>`,
+            `<p class="muted">Abra uma pessoa para conferir os ciclos considerados e os pedidos atribuídos.</p><div class="seller-sort"><label for="seller-order">Ordenar por</label><select id="seller-order">${sortOptions}</select>${btn(desc ? 'Decrescente ↓' : 'Crescente ↑', 'sort', sort, 'button')}</div><table class="seller-table" role="table"><caption class="sr">Desempenho por vendedor e composição das vendas</caption><thead><tr>${header}</tr></thead><tbody>${[...sorted, ...people.filter((r) => !r.isSeller)].map(teamRow).join('')}</tbody><tfoot>${total}</tfoot></table>`,
           );
         }
+        document.addEventListener('change', (event) => {
+          if (event.target.id !== 'seller-order') return;
+          const key = event.target.value;
+          if (!sellerColumns.some(([column]) => column === key)) return;
+          sort = key;
+          desc = key !== 'name';
+          render();
+          $('seller-order')?.focus({ preventScroll: true });
+        });
         function activeQueue() {
-          return queue
+          return centralScoped(queue)
             .filter(
               (q) =>
-                !(q.id === 'AT-041' && visibleStep >= 1) &&
-                !(q.id === 'AT-039' && visibleStep >= 3),
+                !(q.id === 'AT-041' && centralHasFact('EV-19')) &&
+                !(q.id === 'AT-039' && centralHasFact('EV-21')),
             )
-            .map((q) => ({ ...q, age: q.age + visibleStep }));
+            .map((q) => ({ ...q, age: q.age + centralReadMinutes() }));
         }
+        function centralPending() {
+          return centralHasFact('EV-20') ? [] : ['P-1501'];
+        }
+        function centralLateDeliveries() {
+          return centralHasFact('EV-ENT') ? [] : ['P-1198'];
+        }
+        function centralNextDeliveries() {
+          return ['ENTREGA-PROXIMA'];
+        }
+        function centralUrgency() {
+          if (!centralAllowed()) return '';
+          const q = activeQueue().sort((a, b) => b.age - a.age);
+          const unclaimed = q.filter((r) => r.state === 'Sem responsável');
+          if (unclaimed.length)
+            return btn(
+              unclaimed.length +
+                (unclaimed.length === 1
+                  ? ' conversa espera vendedor'
+                  : ' conversas esperam vendedor') +
+                ' · mais antiga há ' +
+                unclaimed[0].age +
+                ' min úteis · Abrir central →',
+              'view',
+              'central',
+              'alertlink',
+            );
+          const late = q.filter((r) => r.age > 15);
+          if (late.length)
+            return btn(
+              late.length + ' aguardando resposta · Abrir central →',
+              'view',
+              'central',
+              'alertlink',
+            );
+          return btn('Abrir central ao vivo →', 'view', 'central', 'alertlink');
+        }
+
         function result() {
-          const rows = periodOrders(...interval()),
-            count = activeQueue().filter(
-              (q) => q.state === 'Sem responsável',
-            ).length;
-          return `<div class="row between datehead">${heading('Resultado comercial', dates() + ' · São Paulo')}${periodSwitch()}</div>${btn(count + ' ' + (count === 1 ? 'conversa espera' : 'conversas esperam') + ' vendedor · Abrir central →', 'view', 'central', 'alertlink')}${scenario === 'erro' ? area('Vendas indisponíveis', `<p>A leitura do período falhou.</p>${btn('Tentar novamente', 'recover', '1')}`) : `<div class="hero"><div><span>Vendido no período</span><b>${money(sum(rows))}</b>${btn('Conferir pedidos →', 'orders', 'all', '')}</div><div><span>Pedidos confirmados</span><b>${integer(rows.length)}</b></div><div><span>Ticket médio</span><b>${ticket(rows)}</b></div></div>${comparison()}${chart(rows)}${teamTable(rows)}`}`;
+          const rows = periodOrders(...interval());
+          const header =
+            `<div class="row between datehead">${heading('Resultado comercial', dates() + ' · São Paulo')}${periodSwitch()}</div>` +
+            centralUrgency();
+          if (loadingPeriod)
+            return (
+              header +
+              area(
+                'Consultando o período',
+                `<p role="status">Buscando ${labels[period]}…</p>`,
+              )
+            );
+          if (
+            scenario === 'erro' ||
+            (scenario === 'parcial' && lastRead.period !== period)
+          )
+            return (
+              header +
+              area(
+                'Vendas indisponíveis',
+                `<p>Sem leitura válida para ${dates()}.</p>${btn('Tentar novamente', scenario === 'erro' ? 'recover' : 'partial', scenario === 'erro' ? '1' : 'retry')}`,
+              )
+            );
+          const warning =
+            scenario === 'parcial'
+              ? area(
+                  'Vendas desatualizadas',
+                  `<p>Última leitura válida às ${lastRead.at} de ${date(today)}. A Central continua recebendo eventos.</p>${btn('Atualizar leitura comercial', 'partial', 'retry')}`,
+                )
+              : '';
+          const cards = `<div class="hero"><div><span>Vendido no período</span><b>${money(sum(rows))}</b>${btn('Conferir pedidos →', 'orders', 'all', '')}</div><div><span>Pedidos confirmados</span><b>${rows.length}</b></div><div><span>Ticket médio</span><b>${ticket(rows)}</b></div></div>`;
+          return (
+            header +
+            warning +
+            cards +
+            comparison() +
+            (scenario === 'conciliacao' ? exerciseOrders() : '') +
+            teamTable(rows) +
+            chart(rows) +
+            checkpointView()
+          );
         }
         function metrics(pairs) {
           return `<div class="metrics">${pairs.map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>`;
@@ -1263,55 +2045,146 @@
         // Os ciclos históricos da amostra já completaram a janela de 15 min.
         // Na fila, AT-039 e AT-046 são primeiras respostas; AT-039 continua
         // fora do prazo depois da resposta tardia no terceiro evento.
-        function responseIndicator(person, rows) {
-          const cutoff = 15;
-          const onTime = rows.filter((r) => r.first <= cutoff).length;
-          const lateInDemo = queue.filter(
-            (q) => q.firstOwner === person && q.age + visibleStep > cutoff,
-          ).length;
-          const eligible = rows.length + lateInDemo;
-          const openLate = activeQueue().filter(
-            (q) => q.firstOwner === person && q.age > cutoff,
-          ).length;
-          const value =
-            eligible < 10
-              ? 'Base insuficiente'
-              : ((100 * onTime) / eligible).toLocaleString('pt-BR', {
-                  maximumFractionDigits: 1,
-                }) + '%';
+        function responseIndicator(t, person, rows) {
+          const waits = queue.filter(
+            (q) =>
+              q.firstOwner === person &&
+              canSeeCycle(q) &&
+              q.age + centralReadMinutes() > 15,
+          );
+          const ledger = rows
+            .filter((r) => r.first !== null)
+            .map(
+              (r, i) =>
+                '<li>' +
+                date(r.day) +
+                ' · amostra ' +
+                (i + 1) +
+                ' · ' +
+                minuteLabel(r.first) +
+                ' · ' +
+                (r.first <= 15 ? 'No prazo' : 'Após o prazo') +
+                '</li>',
+            )
+            .concat(
+              waits.map(
+                (q) =>
+                  '<li>' +
+                  q.id +
+                  ' · ' +
+                  (q.id === 'AT-039' && centralHasFact('EV-21')
+                    ? 'Respondida após o prazo'
+                    : 'Em aberto após o prazo') +
+                  '</li>',
+              ),
+            );
+
           return area(
             'Primeira resposta no prazo',
-            `<p><strong>${value}</strong> · ${onTime} de ${eligible} ciclos no prazo</p><p class="muted">${openLate} ainda em espera acima do prazo. Indicador proposto.</p><details><summary>Como é calculado</summary><p>Uma oportunidade por ciclo, atribuída a quem assumiu. Entram as janelas de 15 minutos de expediente que já terminaram no período. Conta no numerador a primeira resposta humana efetiva em até 15 minutos úteis. A espera vencida entra mesmo em aberto. O percentual aparece a partir de 10 ciclos.</p></details>`,
+            `<p><strong>${rateText(t.value, t.eligible ? 'Base insuficiente' : 'Sem base')}</strong> · ${t.onTime} de ${t.eligible} ciclos no prazo.</p><p class="muted">${t.openLate} ainda em espera acima do prazo.</p><details><summary>Como é calculado</summary><p>O prazo é de 15 minutos de expediente. Cada ciclo conta uma vez para quem assumiu, quando sua janela termina no período. Uma resposta humana efetiva no prazo entra no numerador. Esperas abertas vencidas entram na base. O percentual aparece a partir de dez ciclos.</p></details><details><summary>Conferir as respostas e esperas (${t.eligible})</summary><ul class=cohort-list>${ledger.join('')}</ul></details>`,
+          );
+        }
+        function conversionEvidence(c) {
+          const rows = c.finished.toSorted(
+            (a, b) => b.expires - a.expires || a.id.localeCompare(b.id),
+          );
+          const list = rows
+            .map((cycle) => {
+              const validIds = new Set(cycle.valid.map((order) => order.id));
+              const outside = cycle.candidates.filter(
+                (o) => !validIds.has(o.id),
+              );
+              const why = outside.map(
+                (o) =>
+                  o.id +
+                  (o.person !== cycle.person
+                    ? ' · crédito de outra pessoa'
+                    : ' · fora da janela'),
+              );
+              const result = cycle.valid.length
+                ? 'Convertido · ' + cycle.valid.map((o) => o.id).join(', ')
+                : 'Sem conversão';
+              return `<li data-cycle="${cycle.id}" data-converted="${cycle.valid.length ? 'sim' : 'nao'}"><strong>${cycle.id}</strong> · ${date(cycle.start)} a ${date(cycle.expires - 1)}<small>${result}${why.length ? ' · ' + why.join(', ') : ''}</small></li>`;
+            })
+            .join('');
+          return area(
+            'Conversão em 30 dias',
+            `<p><strong>${rateText(c.value)}</strong> · ${c.converted} de ${c.finished.length} ciclos completos geraram venda. ${c.observing.length} ainda em observação no fim do recorte.</p><details data-cohort-ledger><summary>Conferir os ciclos da conversão</summary><p>A base reúne os ciclos cuja janela de 30 dias civis se completou no período. Vale pelo menos um pedido elegível no ciclo, creditado ao vendedor que assumiu, entre a tomada e o fim do 30º dia. Duas vendas no mesmo ciclo geram uma conversão. Transferir a conversa preserva o titular da tomada e o crédito já registrado em cada venda.</p>${list ? `<ul class="cohort-list">${list}</ul>` : '<p>Nenhum ciclo completou sua janela neste recorte.</p>'}</details>`,
           );
         }
         function seller() {
-          const p = Number(selected),
-            sales = periodOrders(...interval()).filter((r) => r.person === p),
-            activityRows = periodActivity(p),
+          const p = Number(selected);
+          if (!canSeePerson(p) || p === 4 || p === 5)
+            return area(
+              'Acesso restrito',
+              '<p>Este perfil não pode consultar esta pessoa.</p>',
+            );
+          const activityRows = periodActivity(p),
             m = stats(activityRows);
+          const sales = periodOrders(...interval()).filter(
+            (row) => row.person === p,
+          );
+          const evidence = cohortEvidence();
+          const c = salesCohort(p, evidence.cycles, evidence.byCycle);
+          const visibleCycles = new Set(
+            evidence.cycles.filter(canSeeCycle).map((cycle) => cycle.id),
+          );
+          const withSale = new Set(
+            sales
+              .filter((order) => visibleCycles.has(order.cycleId))
+              .map((order) => order.cycleId),
+          ).size;
+          const t = timelyResponse(p, activityRows);
+          const keyNumbers = [
+            [
+              'conversion',
+              'Conversão',
+              rateText(c.value),
+              c.converted + ' de ' + c.finished.length + ' ciclos',
+            ],
+            [
+              'timely',
+              'Resposta no prazo',
+              rateText(t.value, t.eligible ? 'Base insuficiente' : 'Sem base'),
+              t.onTime + ' de ' + t.eligible + ' ciclos',
+            ],
+            ['orders', 'Pedidos', sales.length, 'Confirmados no período'],
+            ['sold', 'Vendido', money(sum(sales)), 'Atribuído na confirmação'],
+          ];
+          const localPeriods = [
+            ['hoje', 'Hoje'],
+            ['semana', '7 dias'],
+            ['mes', 'Mês'],
+            ['trinta', '30 dias'],
+          ];
+          const switcher = `<div class="seg seller-period" role="group" aria-label="Período do vendedor">${localPeriods.map(([key, label]) => `<button data-period="${key}" aria-pressed="${period === key}">${label}</button>`).join('')}</div>`;
           return (
-            btn('← Resultado comercial', 'view', 'resultado', 'textbtn') +
-            heading(team[p] + ' · desempenho', dates()) +
+            (commercialRoles.includes(role)
+              ? btn('← Resultado comercial', 'view', 'resultado', 'textbtn')
+              : '') +
+            heading(sources[p] + ' · desempenho', dates()) +
+            switcher +
             area(
-              'Vendas atribuídas',
-              metrics([
-                ['Vendido', money(sum(sales))],
-                ['Confirmados', sales.length],
-                ['Ticket médio', ticket(sales)],
-              ]) + filteredLink('p' + p, 'Conferir pedidos de ' + team[p]),
+              'Resultado do vendedor',
+              `<div class="seller-summary">${keyNumbers.map(([key, label, value, ctx]) => `<div data-metric="${key}"><small>${label}</small><strong>${value}</strong><small>${ctx}</small></div>`).join('')}</div><p>Ticket médio · ${ticket(sales)}</p>` +
+                filteredLink('p' + p, 'Conferir pedidos de ' + sources[p]),
             ) +
-            responseIndicator(p, activityRows) +
+            conversionEvidence(c) +
+            responseIndicator(t, p, activityRows) +
             area(
               'Atendimento no expediente',
               metrics([
                 ['Conversas atendidas', m.n],
                 ['Assumidas', m.assumed],
                 ['Encerradas', m.closed],
+                ['Conversas com venda no período', withSale],
                 ['1ª resposta · mediana', minuteLabel(m.median)],
                 ['1ª resposta · p90', minuteLabel(m.p90)],
                 ['Amostras de resposta', m.n],
                 ['Para assumir · mediana', minuteLabel(m.claim)],
-                ['Esperas acima de 15 min', m.late],
+                ['Para assumir · p90', minuteLabel(m.claimP90)],
+                ['Amostras de tomada', m.assumed],
+                ['Esperas acima de 15 min', m.late + t.lateInDemo],
               ]),
             ) +
             area(
@@ -1327,7 +2200,7 @@
           if (filter.startsWith('d'))
             rows = rows.filter((r) => r.day === Number(filter.slice(1)));
           const origin = filter.startsWith('p')
-            ? team[Number(filter.slice(1))]
+            ? sources[Number(filter.slice(1))]
             : filter.startsWith('d')
               ? date(Number(filter.slice(1)))
               : 'Todas as origens';
@@ -1346,7 +2219,7 @@
               rows.length
                 ? rows
                     .slice()
-                    .reverse()
+                    .sort((a, b) => b.day - a.day || a.id.localeCompare(b.id))
                     .map(
                       (r) =>
                         `<div class="entry"><span><b>${r.id}</b><small>${date(r.day)} · ${sources[r.person]}</small></span><strong>${money(r.cents)}</strong></div>`,
@@ -1356,96 +2229,256 @@
             )
           );
         }
+
+        function centralItem(id, title, detail, aside = '') {
+          return `<button class="entry" data-record="${id}"><span>${title}<small>${detail}</small></span>${aside ? '<span class="pill">' + aside + '</span>' : ''}</button>`;
+        }
+        function centralEmpty(text) {
+          return '<p class="muted">' + text + '</p>';
+        }
         function central() {
-          const q = activeQueue(),
-            unclaimed = q.filter((r) => r.state === 'Sem responsável'),
+          if (!centralAllowed())
+            return heading(
+              'Central restrita',
+              'A visão da operação exige perfil administrativo.',
+            );
+          const q = activeQueue().sort((a, b) => b.age - a.age);
+          const unclaimed = q.filter((r) => r.state === 'Sem responsável'),
             late = q.filter(
               (r) => r.state === 'Aguardando resposta' && r.age > 15,
             );
-          const events = [...changes.slice(0, visibleStep).reverse(), ...facts];
+          const stale = live || centralGap;
           return (
             heading(
               'Central ao vivo',
-              '18 de novembro de 2026 · relógio simulado de São Paulo',
+              date(today) + ' · relógio simulado de São Paulo',
             ) +
-            `<div class="row"><span class="pill ${live ? 'warn' : 'good'}">${live ? 'Reconectando' : 'Ao vivo · simulação'}</span><small>Última leitura válida às ${nowTime()}</small></div>` +
+            `<div class="row"><span class="pill ${stale ? 'warn' : 'good'}">${live ? 'Desconectado' : centralGap ? 'Histórico incompleto' : 'Ao vivo · simulação'}</span><small>Última leitura válida às ${nowTime()}</small></div>` +
+            (stale
+              ? area(
+                  'Dados da última leitura',
+                  `<p>${live ? 'O retrato será atualizado ao reconectar.' : 'A sequência recebida tem uma lacuna. Releia a fila e os fatos antes de continuar.'}</p>` +
+                    btn(
+                      live ? 'Reconectar' : 'Reler fila e atividade',
+                      live ? 'connection' : 'central-action',
+                      live ? '1' : 'reler',
+                    ),
+                )
+              : '') +
             area(
               'Operação agora',
               metrics([
                 ['Sem responsável', unclaimed.length],
-                ['Resposta acima de 15 min úteis', late.length],
-                [
-                  'Espera mais antiga',
-                  minuteLabel(Math.max(...q.map((r) => r.age))),
-                ],
-                ['Entregas atrasadas', '1'],
+                ['Aguardando resposta humana', q.length - unclaimed.length],
+                ['Acima de 15 min úteis', late.length],
+                ['Espera mais antiga', q.length ? minuteLabel(q[0].age) : '—'],
               ]),
             ) +
-            `<div class="twocol">${area(
+            '<div class="twocol">' +
+            area(
               'Fila de atenção',
               q
-                .toSorted((a, b) => b.age - a.age)
-                .map(
-                  (r) =>
-                    `<button class="entry" data-record="${r.id}"><span>${r.state}<small>${r.id} · ${r.label}</small></span><span class="pill ${r.age > 15 ? 'warn' : ''}">${r.age} min</span></button>`,
+                .map((r) =>
+                  centralItem(
+                    r.id,
+                    r.state,
+                    r.id + ' · ' + r.label,
+                    r.age + ' min úteis',
+                  ),
                 )
-                .join('') +
-                btn(
-                  'P-1198 · Entrega atrasada →',
-                  'record',
-                  'P-1198',
-                  'textbtn',
-                ),
-            )}${area('Atividade recente', events.map((e) => `<button class="entry" data-record="${e.id}"><span>${e.name}<small>${e.ref}</small></span><small>${e.time}</small></button>`).join(''))}</div>` +
+                .join('') || centralEmpty('Fila vazia.'),
+            ) +
             area(
-              'Outras pendências',
-              btn(
-                'Pedido da loja aguardando primeira impressão →',
-                'record',
-                'LOJA',
-                'textbtn',
+              'Atividade recente',
+              centralEvents()
+                .map((e) => centralItem(e.id, e.name, e.ref, e.time))
+                .join('') || centralEmpty('Sem atividade recente.'),
+            ) +
+            '</div>' +
+            area(
+              'Pedidos e entregas',
+              centralItem(
+                'PENDENTES',
+                'Pedidos a confirmar',
+                'Abrir a lista de pendentes',
+                String(centralPending().length),
               ) +
-                '<br>' +
-                btn(
-                  'Consultar atendimento do agente →',
-                  'record',
-                  'AGENTE',
-                  'textbtn',
-                ),
+                centralItem(
+                  'ATRASADAS',
+                  'Entregas atrasadas',
+                  'Compromisso anterior a ' + date(today),
+                  String(centralLateDeliveries().length),
+                ) +
+                centralItem(
+                  'PROXIMAS',
+                  'Próximas entregas',
+                  'Próximos sete dias',
+                  String(centralNextDeliveries().length),
+                ) +
+                (centralHasFact('EV-IMP')
+                  ? ''
+                  : centralItem(
+                      'LOJA',
+                      'Pedido da loja aguardando primeira impressão',
+                      'Abrir a ficha da loja',
+                      '1',
+                    )),
+            ) +
+            area(
+              'Agente de atendimento',
+              centralItem(
+                'AGENTE',
+                'Consultar atendimento do agente',
+                'Conversas em modo agente',
+                '2',
+              ),
             )
           );
+        }
+        function centralReference(id) {
+          // O mesmo registro explica o clique na fila ou depois de um fato.
+          const all = centralScoped(queue);
+          const queued = activeQueue().find((q) => q.id === id),
+            raw = all.find((q) => q.id === id);
+          if (queued)
+            return [
+              queued.state,
+              queued.label + ' · ' + queued.age + ' minutos úteis de espera.',
+            ];
+          if (raw)
+            return [
+              raw.label,
+              id === 'AT-041'
+                ? 'Lia assumiu o atendimento.'
+                : 'A primeira resposta humana encerrou a espera.',
+            ];
+          if (id === 'P-1197')
+            return [
+              'Entrega registrada',
+              'Entrega de pedido anterior registrada na amostra.',
+            ];
+          if (id === 'AT-038')
+            return [
+              'Atendimento de Lia',
+              'A conversa da linha geral foi assumida por Lia.',
+            ];
+          if (id === 'P-1501')
+            return [
+              centralHasFact('EV-20')
+                ? 'Pedido confirmado'
+                : 'Pedido a confirmar',
+              'Pedido de atendimento de Caio · R$ 640,00.',
+            ];
+          if (id === 'P-1198')
+            return [
+              centralHasFact('EV-ENT')
+                ? 'Entrega registrada'
+                : 'Entrega atrasada',
+              'Entrega prometida para ' + date(today - 1) + '.',
+            ];
+          if (id === 'ENTREGA-PROXIMA')
+            return [
+              'Próxima entrega',
+              'Pedido de atendimento · entrega prometida para ' +
+                date(today + 2) +
+                '.',
+            ];
+          if (id === 'LOJA')
+            return [
+              'Ficha da loja',
+              centralHasFact('EV-IMP')
+                ? 'Primeira impressão registrada.'
+                : 'Ficha pronta para primeira impressão.',
+            ];
+          if (id === 'AG-011' || id === 'AG-012')
+            return [
+              'Conversa com o agente',
+              id === 'AG-011'
+                ? 'Aguardando resposta do agente.'
+                : 'Conversa em acompanhamento pelo agente.',
+            ];
+          return null;
         }
         function record() {
-          const fact = [...changes, ...facts].find((e) => e.id === selected),
-            q = activeQueue().find((r) => r.id === selected);
-          const aux = {
-            'P-1198': [
-              'Entrega atrasada',
-              'Entrega prometida para 17/11. Conferir o pedido com o responsável.',
-            ],
-            LOJA: [
-              'Pedido da loja',
-              'Um pedido da loja aguarda a primeira impressão da ficha.',
-            ],
-            AGENTE: [
-              'Atendimento do agente',
-              'Duas conversas em modo agente na amostra.',
-            ],
+          const denied = () =>
+            heading(
+              'Registro indisponível',
+              'A referência não está disponível neste perfil e retrato.',
+            );
+          if (!centralAllowed()) return denied();
+          const back = btn('← Central ao vivo', 'view', 'central', 'textbtn');
+          const groups = {
+            PENDENTES: centralPending(),
+            ATRASADAS: centralLateDeliveries(),
+            PROXIMAS: centralNextDeliveries(),
+            AGENTE: ['AG-011', 'AG-012'],
           };
-          const [title, detail] = fact
-            ? [fact.name, fact.detail]
-            : q
-              ? [q.state, q.label + ' · ' + q.age + ' minutos úteis de espera.']
-              : aux[selected] || ['Atendimento', 'O estado da fila mudou.'];
+          if (Object.hasOwn(groups, selected)) {
+            const items = groups[selected];
+            return (
+              back +
+              heading(
+                centralGroups[selected],
+                date(today) + ' · ' + items.length + ' registro(s)',
+              ) +
+              area(
+                'Registros',
+                items
+                  .map((id) => {
+                    const r = centralReference(id);
+                    return centralItem(id, r[0], id + ' · ' + r[1]);
+                  })
+                  .join('') || centralEmpty('Nenhum registro nesta fila.'),
+              )
+            );
+          }
+          const event = centralEvents().find((e) => e.id === selected);
+          if (event)
+            return (
+              back +
+              heading(event.name, event.time + ' · ' + event.ref) +
+              area(
+                'Registro da operação',
+                '<p>' +
+                  event.detail +
+                  '</p>' +
+                  (centralReference(event.ref)
+                    ? btn(
+                        'Abrir ' + event.ref + ' →',
+                        'record',
+                        event.ref,
+                        'textbtn',
+                      )
+                    : ''),
+              )
+            );
+          const r = centralReference(selected);
+          if (!r) return back + denied();
+          const action =
+            selected === 'P-1501' && !centralHasFact('EV-20')
+              ? ['confirmar', 'Simular confirmação']
+              : selected === 'LOJA' && !centralHasFact('EV-IMP')
+                ? ['imprimir', 'Simular primeira impressão']
+                : selected === 'P-1198' && !centralHasFact('EV-ENT')
+                  ? ['entregar', 'Simular entrega']
+                  : null;
           return (
-            btn('← Central ao vivo', 'view', 'central', 'textbtn') +
-            heading(title, 'Detalhe simulado · ' + (fact?.ref || selected)) +
+            back +
+            heading(r[0], selected + ' · ' + date(today)) +
             area(
               'Registro da operação',
-              `<p>${detail}</p><p class="muted">${fact ? 'Horário do fato · ' + fact.time : 'Última leitura · ' + nowTime()}</p>`,
+              '<p>' +
+                r[1] +
+                '</p><p class="muted">Última leitura · ' +
+                nowTime() +
+                '</p>' +
+                (action && !live && !centralGap
+                  ? btn(action[1], 'central-action', action[0])
+                  : ''),
             )
           );
         }
+
         const notes = {
           resultado: [
             'Resultado comercial',
@@ -1534,23 +2567,55 @@
           'Adotar a composição da tabela e o detalhe de atendimento',
           'Entregar a Central ao vivo e sua ordem de prioridade',
           'Mostrar a comparação compacta junto ao vendido',
-          'Experimentar a taxa de primeira resposta no prazo por vendedor',
+          'Adotar conversão de ciclos com 30 dias completos junto a resposta no prazo, pedidos e vendido',
         ];
         let choices = decisions.map(() => 'Em revisão'),
           comment = '';
         function planDoc() {
           return `<h2 tabindex="-1" id="doctitle">Plano de entrega e parecer</h2><p>A RFC 073 está em revisão. Use esta ficha para registrar quais pontos podem seguir e quais precisam de ajuste.</p>
- <section><h3>Cobertura da RFC 073</h3><div class="decgrid"><article><b>Dá para experimentar</b><p>Hoje, 7 dias e Mês, composição e série diária, lista conciliada por dia e pessoa, equipe e detalhe, fila, simulação de venda, queda e retomada. O novo indicador de resposta é uma proposta adicional.</p></article><article><b>Prévia parcial</b><p>A equipe tem quatro pessoas ativas. O detalhe usa o recorte herdado e ainda falta o atalho de 30 dias. A fila exemplifica entrega atrasada, loja e agente. Pedidos a confirmar, próximas entregas e a baixa do aviso na primeira impressão aguardam demonstração.</p></article><article><b>Cenários a validar</b><p>A amostra usa 18/11. Faltam virada de mês, mês curto, inativo com venda, reabertura, transferência, reconfirmação e cancelamento. Há simulação de falha inicial; a falha parcial com retenção da última leitura comercial precisa de prova.</p></article><article><b>Depende do CRM integrado</b><p>Permissões por linha e papel, cálculo oficial no servidor, listas reais, atualização de prazos em fila silenciosa, tempo de ponta a ponta e recuperação de lacunas do SSE. A aprovação visual cobre a composição e as interações demonstradas.</p></article></div></section>
+ <section><h3>Roteiro de aprovação</h3><p>Experimente o comportamento proposto em cada cenário. Todos os dados e efeitos são locais a esta prévia.</p><div class="decgrid">${demos.map(([title, what, key]) => `<article><h3>${title}</h3><p>${what}</p>${btn('Testar ' + title.toLocaleLowerCase('pt-BR') + ' →', 'demo', key, 'textbtn')}</article>`).join('')}</div></section>
  <section><h3>O que entra em cada entrega</h3>${phases.map(([title, what, proof, refs]) => `<details><summary>${title}</summary><p>${what}</p><p><b>Aceite.</b> ${proof}</p><p class="meta">${refs}</p></details>`).join('')}</section>
  <section><h3>Regras para a implementação</h3><div class="decgrid"><article><b>Quais datas entram?</b><p>São Paulo. Mês começa no dia 1. Sete dias inclui hoje. Para comparar, usar até ontem e igual número de dias fechados da base. Hoje apresenta ontem como dia completo.</p></article><article><b>Quem pode ver?</b><p>O servidor aplica a permissão a totais, filas, eventos e destinos. A supervisão de outras linhas pessoais requer a conta designada pela ADR 095. O pedido tem autorização comercial própria.</p></article><article><b>Como tratar ausência?</b><p>Venda zero aparece como R$ 0 e ticket sem base como traço. Falha de consulta aparece com nova tentativa. A reconexão identifica o horário da leitura anterior.</p></article><article><b>O que depende de homologação?</b><p>Latência real, permissões no servidor, reconciliação após lacuna e comparação com o checkpoint dependem de integração e testes. Os eventos deste arquivo avançam pelo simulador.</p></article></div></section>
  <section><h3>Parecer sobre a proposta</h3><p>As escolhas ficam nesta sessão. Baixe o texto para guardar ou compartilhar seu parecer.</p>${decisions.map((d, i) => `<label for="pick${i}">${d}</label><select id="pick${i}" data-choice="${i}">${['Em revisão', 'Aceitar', 'Pedir ajuste', 'Adiar'].map((c) => `<option ${choices[i] === c ? 'selected' : ''}>${c}</option>`).join('')}</select>`).join('')}<label for="comment">Ajustes e observações</label><textarea id="comment" rows="3"></textarea>${btn('Baixar parecer em texto', 'download', '1', 'button mainbtn')}</section>`;
         }
+
         function updateSim() {
+          if (!centralAllowed()) {
+            $('sim').innerHTML = centralEmpty(
+              'Controles disponíveis no perfil administrativo.',
+            );
+            return;
+          }
+          const next = centralNext();
           $('sim').innerHTML =
-            `<p class="meta">${step} de 3 eventos · ${live ? 'sem conexão' : 'conectado'}</p>${step < 3 ? btn('Avançar · ' + changes[step].name, 'advance', '1') : ''}${btn(live ? 'Reconectar' : 'Simular desconexão', 'connection', '1')}${visibleStep > 0 ? btn('Repetir último evento', 'replay', '1') : ''}${btn('Reiniciar simulação', 'reset', '1')}${replayed ? '<p>Evento já recebido. Fila e total preservados.</p>' : ''}`;
+            `<p class="meta">Relógio da simulação · ${centralTime(centralElapsed)} · ${step} de ${changes.length} eventos</p>` +
+            (next ? btn('Avançar · ' + next.name, 'advance', '1') : '') +
+            btn('Avançar 1 minuto sem evento', 'central-action', 'minuto') +
+            btn(
+              centralClock ? 'Pausar relógio' : 'Iniciar relógio automático',
+              'central-action',
+              'relogio',
+            ) +
+            btn(live ? 'Reconectar' : 'Simular desconexão', 'connection', '1') +
+            (!live
+              ? btn(
+                  centralGap
+                    ? 'Reler fila e atividade'
+                    : 'Simular lacuna no histórico',
+                  'central-action',
+                  centralGap ? 'reler' : 'lacuna',
+                )
+              : '') +
+            (centralReadEvents.length && !live && !centralGap
+              ? btn('Repetir último evento', 'replay', '1')
+              : '') +
+            btn('Reiniciar simulação', 'reset', '1') +
+            (replayed
+              ? '<p>Evento já recebido. Fila e total preservados.</p>'
+              : '');
         }
         function playbackControl() {
-          if (step < changes.length)
+          if (centralAllowed() && centralNext())
             $('sim').insertAdjacentHTML(
               'beforeend',
               btn(
@@ -1562,15 +2627,274 @@
               ),
             );
         }
+        function centralRefresh() {
+          if (page !== 'painel' || !centralAllowed()) return;
+          // Preserva a leitura e a abertura de detalhes durante atualizações periódicas.
+          const open = [...$('stage').querySelectorAll('details')].map(
+            (d) => d.open,
+          );
+          const focus = document.activeElement;
+          const detailIndex = [
+            ...$('stage').querySelectorAll('summary'),
+          ].indexOf(focus);
+          render();
+          [...$('stage').querySelectorAll('details')].forEach((d, i) => {
+            if (open[i]) d.open = true;
+          });
+          if (detailIndex >= 0)
+            $('stage')
+              .querySelectorAll('summary')
+              [detailIndex]?.focus({ preventScroll: true });
+        }
+        function centralTick() {
+          centralElapsed++;
+          centralSync();
+        }
+        function centralControl(d) {
+          if (!centralAllowed()) return;
+          replayed = false;
+          const action = d.centralAction;
+          if (d.advance) advance();
+          else if (d.play) {
+            if (playback) stopPlayback();
+            else {
+              centralStopClock();
+              playback = setInterval(() => {
+                advance();
+                centralRefresh();
+              }, 3000);
+            }
+          } else if (d.connection) {
+            live = !live;
+            if (!live) {
+              centralGap = false;
+              centralSync();
+            }
+          } else if (d.replay) {
+            if (!live && !centralGap)
+              replayed = !centralEmit(centralReadEvents.at(-1));
+          } else if (d.reset) resetCentral();
+          else if (action === 'minuto') centralTick();
+          else if (action === 'relogio') {
+            if (centralClock) centralStopClock();
+            else {
+              stopPlayback();
+              centralClock = setInterval(() => {
+                centralTick();
+                centralRefresh();
+              }, 3000);
+            }
+          } else if (action === 'lacuna' && !live) centralGap = true;
+          else if (action === 'reler' && !live) {
+            centralGap = false;
+            centralSync();
+          } else if (!live && !centralGap && view === 'record') {
+            if (action === 'confirmar' && selected === 'P-1501')
+              centralEmit(changes[1]);
+            if (action === 'imprimir' && selected === 'LOJA')
+              centralEmit(centralActions.imprimir);
+            if (action === 'entregar' && selected === 'P-1198')
+              centralEmit(centralActions.entregar);
+          } else return;
+          centralRefresh();
+          announce(
+            replayed
+              ? 'Evento já contabilizado'
+              : live || centralGap
+                ? 'Última leitura válida às ' + nowTime()
+                : 'Central atualizada às ' + nowTime(),
+          );
+          if (document.activeElement === document.body)
+            (view === 'record'
+              ? $('viewtitle')
+              : $('sim').querySelector('button')
+            )?.focus({ preventScroll: true });
+        }
+
+        function setSimulationRole(next) {
+          role = next;
+          $('role').value = role;
+          $('roleLabel').textContent = $('role').selectedOptions[0].textContent;
+          readRevision++;
+          loadingPeriod = false;
+          stopPlayback();
+          centralStopClock();
+          if (scenario === 'parcial')
+            lastRead = { period, rows: allDemoOrders(), at: nowTime() };
+          if (!commercialRoles.includes(role)) {
+            view = 'resultado';
+            selected = '';
+            filter = 'all';
+          }
+          if (role === 'vendedor') {
+            view = 'seller';
+            selected = '0';
+          }
+        }
+        function readAllowed() {
+          if (role === 'financeiro') return false;
+          if (role === 'vendedor' && !['seller', 'orders'].includes(view))
+            return false;
+          if (view === 'seller' && !canSeePerson(Number(selected)))
+            return false;
+          if (
+            view === 'orders' &&
+            filter.startsWith('p') &&
+            !canSeePerson(Number(filter.slice(1)))
+          )
+            return false;
+          return true;
+        }
+        function denied() {
+          return (
+            heading(
+              'Acesso restrito',
+              $('role').selectedOptions[0].textContent,
+            ) +
+            area(
+              'Painel administrativo',
+              '<p>Este perfil não tem acesso a esta consulta.</p>' +
+                (role === 'vendedor'
+                  ? btn('Abrir meu desempenho', 'seller', '0')
+                  : ''),
+            )
+          );
+        }
+        function selectPeriod(next) {
+          period = next;
+          if (view === 'resultado') lastResultPeriod = period;
+          const revision = ++readRevision;
+          loadingPeriod = scenario === 'lenta';
+          stateURL();
+          render();
+          if (loadingPeriod)
+            setTimeout(
+              () => {
+                if (revision !== readRevision) return;
+                loadingPeriod = false;
+                render();
+                announce(labels[period] + ' carregado');
+              },
+              next === 'semana' ? 950 : 250,
+            );
+          else announce('Período atualizado · ' + labels[period]);
+        }
+        const demos = [
+          [
+            'Resultado e conciliação',
+            'Abrir os quatro pedidos de R$ 1.100, conferir loja e sem atribuição e experimentar transferência, reabertura, reconfirmação e cancelamento.',
+            'conciliacao',
+          ],
+          [
+            'Desempenho por vendedor',
+            'Comparar as quatro medidas, conferir ciclos convertidos e atendimentos no prazo, a pessoa inativa e o detalhe de 30 dias.',
+            'equipe',
+          ],
+          [
+            'Pendências e primeira impressão',
+            'Abrir pendências e entregas. Imprimir a ficha de uma venda da loja e acompanhar a baixa do aviso.',
+            'central',
+          ],
+          [
+            'Relógio e reconexão',
+            'Avançar um minuto sem mensagem, pausar a conexão, produzir eventos e recuperar a lacuna. Conferir a deduplicação.',
+            'central',
+          ],
+          [
+            'Virada de mês',
+            'Abrir o dia 1 e conferir que não há dias fechados para comparar.',
+            'virada',
+          ],
+          [
+            'Comparação com fevereiro',
+            'Comparar 1–28 de março com 1–28 de fevereiro, mantendo 31/03 no total comercial.',
+            'curto',
+          ],
+          [
+            'Base anterior zerada',
+            'Ver a diferença absoluta entre dias fechados quando não existe base percentual.',
+            'basezero',
+          ],
+          [
+            'Período sem vendas',
+            'Conferir o total zero, o ticket sem base e o atendimento de quem trabalhou no período.',
+            'zero',
+          ],
+          [
+            'Leitura indisponível',
+            'Repetir a primeira leitura e recuperar os dados.',
+            'erro',
+          ],
+          [
+            'Leitura anterior e falha parcial',
+            'Ver o último valor válido. Avançar um evento na Central e repetir a leitura comercial; trocar o recorte exige dados próprios.',
+            'parcial',
+          ],
+          [
+            'Troca rápida de período',
+            'Selecionar 7 dias e imediatamente Mês; somente o pedido mais recente pode preencher o resultado.',
+            'lenta',
+          ],
+          [
+            'Visibilidade por perfil',
+            'Comparar a fila de um administrador comum com a do designado. Alternar para Vendedora e Financeiro nos controles da prévia.',
+            'perfis',
+          ],
+          [
+            'Checkpoint congelado',
+            'Registrar o resumo de ontem, simular um cancelamento posterior e conferir o registro original ao lado da apuração atual.',
+            'checkpoint',
+          ],
+        ];
+        function startDemo(key) {
+          setSimulationRole(key === 'perfis' ? 'admin' : 'designado');
+          changeScenario(
+            ['central', 'perfis', 'equipe', 'checkpoint'].includes(key)
+              ? 'normal'
+              : key,
+          );
+          if (key === 'equipe') {
+            period = 'mes';
+            lastResultPeriod = 'mes';
+            view = 'seller';
+            selected = '0';
+          }
+          if (key === 'central' || key === 'perfis') view = 'central';
+          nav();
+          if (key === 'checkpoint') {
+            const panel = document
+              .querySelector('[data-checkpoint]')
+              ?.closest('details');
+            if (panel) {
+              panel.open = true;
+              panel.querySelector('summary').focus();
+            }
+          }
+        }
         function stateURL(replace = false) {
           const q = new URLSearchParams({ page, view, period });
+          if (scenario !== 'normal') q.set('amostra', scenario);
+          if (lastResultPeriod !== 'hoje') q.set('origem', lastResultPeriod);
           if (selected) q.set('id', selected);
           if (filter !== 'all') q.set('filter', filter);
           if (location.hash.slice(1) !== q.toString())
-            location[replace ? 'replace' : 'assign']('#' + q.toString());
+            history[replace ? 'replaceState' : 'pushState'](
+              null,
+              '',
+              '#' + q.toString(),
+            );
         }
         function readURL() {
           const q = new URLSearchParams(location.hash.slice(1));
+          const key = q.get('amostra') || 'normal';
+          if (
+            key !== scenario &&
+            Array.from($('scenario').options).some((o) => o.value === key)
+          )
+            changeScenario(key);
+          lastResultPeriod = ['mes', 'semana'].includes(q.get('origem'))
+            ? q.get('origem')
+            : 'hoje';
           page = ['antes', 'plano'].includes(q.get('page'))
             ? q.get('page')
             : 'painel';
@@ -1582,22 +2906,13 @@
             : 'resultado';
           const id = q.get('id') || '',
             f = q.get('filter') || 'all';
-          selected = [
-            ...changes.map((x) => x.id),
-            ...facts.map((x) => x.id),
-            ...queue.map((x) => x.id),
-            'LOJA',
-            'AGENTE',
-            'P-1198',
-            '0',
-            '1',
-            '2',
-            '3',
-          ].includes(id)
+          selected = [...centralRecordIds(), '0', '1', '2', '3', '6'].includes(
+            id,
+          )
             ? id
             : '';
-          filter = /^(all|p[0-3]|d(?:[1-9]|1[0-8]))$/.test(f) ? f : 'all';
-          if (view === 'seller' && !/^[0-3]$/.test(selected))
+          filter = /^(all|p[0-36]|d-?\d{1,3})$/.test(f) ? f : 'all';
+          if (view === 'seller' && !/^[0-36]$/.test(selected))
             view = 'resultado';
           if (view === 'record' && !selected) view = 'central';
         }
@@ -1634,18 +2949,35 @@
           } else {
             if (scenario === 'erro' && ['orders', 'seller'].includes(view))
               view = 'resultado';
-            $('stage').innerHTML = {
-              resultado: result,
-              central,
-              seller,
-              orders: ordersView,
-              record,
-            }[view]();
+            const hasRead = readAllowed();
+            const staleDetail =
+              scenario === 'parcial' && ['orders', 'seller'].includes(view);
+            $('stage').innerHTML = !hasRead
+              ? denied()
+              : staleDetail && lastRead.period !== period
+                ? heading('Leitura indisponível', dates()) +
+                  btn('Atualizar leitura comercial', 'partial', 'retry')
+                : (staleDetail
+                    ? '<p class="alertlink">Leitura comercial anterior · ' +
+                      lastRead.at +
+                      ' · ' +
+                      dates() +
+                      '</p>'
+                    : '') +
+                  {
+                    resultado: result,
+                    central,
+                    seller,
+                    orders: ordersView,
+                    record,
+                  }[view]();
             const [title, test, rule] = notes[view];
             $('inspector').innerHTML =
               `<p><strong>${title}</strong></p><p>${test}</p><details><summary>Regra desta tela</summary><p>${rule}</p></details>`;
             updateSim();
-            playbackControl();
+            if (commercialRoles.includes(role)) playbackControl();
+            $('work').querySelector('.appnav').hidden =
+              !commercialRoles.includes(role);
           }
           if (identity && !focused.isConnected) {
             const [k, v] = identity;
@@ -1666,6 +2998,60 @@
           const b = e.target.closest('button');
           if (!b) return;
           const d = b.dataset;
+          if (d.demo) {
+            startDemo(d.demo);
+            return;
+          }
+          if (
+            d.orderOp &&
+            scenario === 'conciliacao' &&
+            commercialRoles.includes(role)
+          ) {
+            if (d.orderOp === 'transferir' && exampleStatus === 'confirmado')
+              exampleOwner = 1;
+            if (d.orderOp === 'reabrir' && exampleStatus === 'confirmado')
+              exampleStatus = 'pendente';
+            if (d.orderOp === 'reconfirmar' && exampleStatus === 'pendente')
+              exampleStatus = 'confirmado';
+            if (d.orderOp === 'cancelar' && exampleStatus === 'confirmado')
+              exampleStatus = 'cancelado';
+            if (d.orderOp === 'restaurar') {
+              exampleOwner = 0;
+              exampleStatus = 'confirmado';
+            }
+            render();
+            announce('Pedido P-A02 atualizado. ' + exampleStatus);
+            return;
+          }
+          if (d.checkpoint && commercialRoles.includes(role)) {
+            const rows = allDemoOrders().filter((o) => o.day === today - 1);
+            if (d.checkpoint === 'fixar' && !checkpoint)
+              checkpoint = { rows: rows.map((o) => ({ ...o })) };
+            if (
+              d.checkpoint === 'corrigir' &&
+              checkpoint &&
+              rows.length &&
+              !checkpointCorrection
+            )
+              checkpointCorrection = rows[0].id;
+            render();
+            const details = document.querySelector('#stage details.checkpoint');
+            if (details) {
+              details.open = true;
+              details.querySelector('summary').focus({ preventScroll: true });
+            }
+            announce('Checkpoint atualizado');
+            return;
+          }
+          if (d.partial) {
+            scenario = 'normal';
+            lastRead = null;
+            $('scenario').value = scenario;
+            stateURL(true);
+            render();
+            announce('Leitura comercial atualizada');
+            return;
+          }
           if (d.page) {
             page = d.page;
             nav();
@@ -1673,8 +3059,8 @@
           }
           if (d.journey) {
             page = 'painel';
-            scenario = 'normal';
-            $('scenario').value = scenario;
+            setSimulationRole('designado');
+            changeScenario('normal');
             view =
               d.journey === 'central'
                 ? 'central'
@@ -1683,10 +3069,13 @@
                   : 'resultado';
             selected = view === 'seller' ? '3' : '';
             period = d.journey === 'serie' ? 'semana' : 'mes';
+            lastResultPeriod = period;
             nav();
             return;
           }
           if (d.view) {
+            if (d.view === 'resultado' && view !== 'resultado')
+              period = lastResultPeriod;
             view = d.view;
             filter = 'all';
             selected = '';
@@ -1694,10 +3083,7 @@
             return;
           }
           if (d.period) {
-            period = d.period;
-            stateURL();
-            render();
-            announce('Resultado atualizado para ' + labels[period]);
+            selectPeriod(d.period);
             return;
           }
           if (d.sort) {
@@ -1707,6 +3093,7 @@
             return;
           }
           if (d.seller !== undefined) {
+            if (view === 'resultado') lastResultPeriod = period;
             view = 'seller';
             selected = d.seller;
             nav();
@@ -1727,6 +3114,7 @@
           if (d.recover) {
             scenario = 'normal';
             $('scenario').value = scenario;
+            stateURL(true);
             render();
             announce('Leitura comercial recuperada');
             return;
@@ -1748,43 +3136,15 @@
             announce('Parecer preparado para download');
             return;
           }
-          replayed = false;
-          if (d.advance) {
-            advance();
-          } else if (d.play) {
-            if (playback) stopPlayback();
-            else
-              playback = setInterval(() => {
-                advance();
-                if (
-                  page === 'painel' &&
-                  (view === 'central' || view === 'resultado')
-                )
-                  render();
-              }, 3000);
-          } else if (d.connection) {
-            live = !live;
-            if (!live) visibleStep = step;
-          } else if (d.replay) {
-            replayed = true;
-          } else if (d.reset) {
-            stopPlayback();
-            step = visibleStep = 0;
-            live = false;
-          } else return;
-          render();
-          announce(
-            replayed
-              ? 'Evento já contabilizado'
-              : live
-                ? 'Simulação sem conexão'
-                : 'Central atualizada às ' + nowTime(),
-          );
           if (
-            !document.activeElement ||
-            document.activeElement === document.body
+            d.advance ||
+            d.play ||
+            d.connection ||
+            d.replay ||
+            d.reset ||
+            d.centralAction
           )
-            $('sim').querySelector('button')?.focus({ preventScroll: true });
+            centralControl(d);
         });
         document.addEventListener('change', (e) => {
           const el = e.target;
@@ -1792,12 +3152,18 @@
             $('screen').classList.toggle('mobile', el.value === 'mobile');
           if (el.id === 'theme')
             $('screen').classList.toggle('night', el.value === 'Escuro');
+          if (el.id === 'role') {
+            setSimulationRole(el.value);
+            nav();
+            announce('Perfil simulado atualizado');
+          }
           if (el.id === 'scenario') {
-            scenario = el.value;
-            view = 'resultado';
-            page = 'painel';
-            stateURL();
-            render();
+            changeScenario(el.value);
+            if (role === 'vendedor') {
+              view = 'seller';
+              selected = '0';
+            }
+            nav();
             announce('Cenário atualizado');
           }
           if (el.dataset.choice !== undefined)
@@ -1807,19 +3173,16 @@
           if (e.target.id === 'comment') comment = e.target.value;
         });
         globalThis.addEventListener('hashchange', () => {
-          const q = new URLSearchParams(location.hash.slice(1));
-          if (
-            q.get('page') === page &&
-            q.get('period') === period &&
-            q.get('view') === view &&
-            (q.get('id') || '') === selected &&
-            (q.get('filter') || 'all') === filter
-          )
-            return;
+          readRevision++;
+          loadingPeriod = false;
           readURL();
           render();
         });
         readURL();
+        if (!location.hash) {
+          period = 'mes';
+          lastResultPeriod = 'mes';
+        }
         render();
       })();
     </script>

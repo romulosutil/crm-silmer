@@ -1,5 +1,7 @@
 import { DashboardError } from './dashboard-runtime.js';
 
+import { dashboardWindowQuery } from './dashboard-routes.js';
+
 const PUBLIC_CODES = new Set([
   'INVALID_REQUEST',
   'INVALID_FILTER',
@@ -9,24 +11,6 @@ const PUBLIC_CODES = new Set([
 
 /** Metric reads are heavier than the action queue; bound them per client. */
 const READ_LIMIT = { rateLimit: { max: 60, timeWindow: '1 minute' } };
-
-/** Strict `?days=7|30`: any other key (actorId, userId, scope) or value is
- * refused instead of trusting the browser (PERF-07).
- * @param {unknown} value
- */
-function period(value) {
-  const query = value ?? {};
-  if (
-    typeof query !== 'object' ||
-    Array.isArray(query) ||
-    Object.keys(query).some((key) => key !== 'days')
-  )
-    throw new DashboardError(400, 'INVALID_REQUEST');
-  const days = /** @type {Record<string, unknown>} */ (query).days;
-  if (days !== undefined && days !== '7' && days !== '30')
-    throw new DashboardError(400, 'INVALID_FILTER');
-  return Number(days ?? 7);
-}
 
 /** @param {any} request @param {any} metrics */
 async function reader(request, metrics) {
@@ -73,13 +57,31 @@ async function respond(reply, work) {
  */
 export function registerDashboardMetricsRoutes(api, metrics) {
   api.get(
+    '/api/v1/dashboard/metrics/cohorts',
+    { config: READ_LIMIT },
+    (request, reply) =>
+      respond(reply, async () => {
+        const { seller, ...rest } = /** @type {Record<string,unknown>} */ (
+          request.query ?? {}
+        );
+        if (
+          seller !== undefined &&
+          (typeof seller !== 'string' || !seller.trim() || seller.length > 255)
+        )
+          throw new DashboardError(400, 'INVALID_FILTER');
+        const filter = dashboardWindowQuery(rest);
+        const { actor } = await reader(request, metrics);
+        return metrics.cohorts({ actor, ...filter, seller });
+      }),
+  );
+  api.get(
     '/api/v1/dashboard/metrics/service',
     { config: READ_LIMIT },
     (request, reply) =>
       respond(reply, async () => {
-        const days = period(request.query);
+        const filter = dashboardWindowQuery(request.query);
         const { actor } = await reader(request, metrics);
-        return metrics.service({ actor, days });
+        return metrics.service({ actor, ...filter });
       }),
   );
   api.get(
@@ -87,9 +89,9 @@ export function registerDashboardMetricsRoutes(api, metrics) {
     { config: READ_LIMIT },
     (request, reply) =>
       respond(reply, async () => {
-        const days = period(request.query);
+        const filter = dashboardWindowQuery(request.query);
         const { actor } = await reader(request, metrics);
-        return metrics.losses({ actor, days });
+        return metrics.losses({ actor, ...filter });
       }),
   );
 }

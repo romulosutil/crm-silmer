@@ -4455,6 +4455,39 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '429': { description: Limite de comandos excedido }
         '503': { $ref: '#/components/responses/Unavailable' }
+  /dashboard/metrics/cohorts:
+    get:
+      operationId: getDashboardSellerCohorts
+      summary: Conversão em 30 dias e primeira resposta em 15 minutos úteis (RFC 073)
+      description: >-
+        Leitura de ciclos com escopo de conversa da ADR 095. Vendedor lê sua linha,
+        administrador comercial lê a equipe. Sem seller, a resposta contém contagens.
+        Com seller, inclui os ciclos elegíveis e as referências comerciais autorizadas.
+        converted/completed e onTime/eligible usam janelas distintas. observing informa ciclos
+        ainda em observação e openLate as esperas vencidas em aberto.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/HumanReadOrigin'
+        - in: query
+          name: period
+          schema: { type: string, enum: [hoje, 7dias, mes] }
+        - in: query
+          name: days
+          description: Atalho alternativo a period, com 7 dias por padrão.
+          schema: { type: string, enum: ['7', '30'] }
+        - in: query
+          name: seller
+          schema: { type: string, maxLength: 255 }
+      responses:
+        '200':
+          description: Período resolvido e linhas agregadas, com memória quando solicitada.
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/InvalidCredentials' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { description: Limite de leituras excedido }
+        '503': { $ref: '#/components/responses/Unavailable' }
   /dashboard/metrics/service:
     get:
       operationId: getDashboardServiceMetrics
@@ -4463,7 +4496,7 @@ paths:
         Ação conversation.read com papel relido no PostgreSQL (PERF-07).
         Vendedor ativo recebe só a própria linha; administrador ativo
         (COMMERCIAL_ADMIN) recebe a equipe e o bloco `team`. Financeiro e
-        conta desativada recebem 403. Qualquer chave além de `days`
+        conta desativada recebem 403. Qualquer chave além de `days` ou `period`
         (actorId, userId, scope) é 400 INVALID_REQUEST; outro valor de
         `days` é 400 INVALID_FILTER. Janela de 7 ou 30 dias civis até hoje
         em São Paulo; coorte = pedidos de atendimento (handoffs) criados na
@@ -4489,6 +4522,10 @@ paths:
       parameters:
         - $ref: '#/components/parameters/HumanReadOrigin'
         - in: query
+          name: period
+          description: Recorte civil de São Paulo, mutuamente exclusivo com days.
+          schema: { type: string, enum: [hoje, 7dias, mes] }
+        - in: query
           name: days
           schema: { type: string, enum: ['7', '30'], default: '7' }
       responses:
@@ -4513,7 +4550,7 @@ paths:
         Mesmo escopo e validação de `/dashboard/metrics/service`: vendedor
         ativo recebe só a própria linha, administrador ativo recebe a equipe
         e `totals`, Financeiro recebe 403 e sem sessão válida é 401
-        INVALID_CREDENTIALS (corpo application/problem+json com `code`); chave além de `days` é 400
+        INVALID_CREDENTIALS (corpo application/problem+json com `code`); chave além de `days` ou `period` é 400
         INVALID_REQUEST e outro valor de `days` é 400 INVALID_FILTER. Uma
         perda é efetiva salvo quando a versão seguinte é uma reabertura
         manual (correção). Cada conversa conta uma vez, pela última perda
@@ -4525,6 +4562,10 @@ paths:
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/HumanReadOrigin'
+        - in: query
+          name: period
+          description: Recorte civil de São Paulo, mutuamente exclusivo com days.
+          schema: { type: string, enum: [hoje, 7dias, mes] }
         - in: query
           name: days
           schema: { type: string, enum: ['7', '30'], default: '7' }
@@ -5500,7 +5541,8 @@ components:
       properties:
         from: { type: string, format: date }
         to: { type: string, format: date }
-        days: { type: integer, enum: [7, 30] }
+        days: { type: integer, minimum: 1, maximum: 31 }
+        period: { type: string, enum: [hoje, 7dias, mes] }
         scope: { type: string, enum: [team, self] }
         generatedAt: { type: string, format: date-time }
         businessHours:
@@ -5646,7 +5688,8 @@ components:
       properties:
         from: { type: string, format: date }
         to: { type: string, format: date }
-        days: { type: integer, enum: [7, 30] }
+        days: { type: integer, minimum: 1, maximum: 31 }
+        period: { type: string, enum: [hoje, 7dias, mes] }
         scope: { type: string, enum: [team, self] }
         generatedAt: { type: string, format: date-time }
         rows:

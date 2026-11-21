@@ -1,3 +1,4 @@
+import { cohortRate } from '../apps/edge-web/src/lib/team-performance.js';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
@@ -179,4 +180,15 @@ test('MET-08: losses group by reason without free text', () => {
   assert.equal(table.rows[0].cells.reason.text, 'Preço (5)');
   assert.equal(table.totalRow?.cells.lost.text, '11');
   assert.deepEqual(lossTable(null).rows, []);
+});
+
+test('RFC 073: absence, valid zero and small first-response samples remain distinguishable', () => {
+  assert.equal(cohortRate(0, 0, 1).text, 'Sem base');
+  assert.equal(cohortRate(0, 3, 1).text, '0%');
+  assert.deepEqual(cohortRate(9, 9, 10), {
+    text: 'Base insuficiente',
+    value: null,
+    note: '9 de 9 ciclos',
+  });
+  assert.equal(cohortRate(8, 10, 10).text, '80%');
 });

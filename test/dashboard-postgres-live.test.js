@@ -1,3 +1,4 @@
+import { readSellerCohorts } from '../apps/api/src/dashboard-seller-cohorts.js';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
@@ -585,6 +586,50 @@ test(
         ])
       ).rows[0].version,
       3,
+    );
+    // Two eligible orders in the same completed window count once even after transfer.
+    const cycle = await conversation('cohort');
+    await pool.query(
+      `INSERT INTO crm.audit_events(id,actor_id,action,target_type,target_id,version,reason,correlation_id,occurred_at)
+      VALUES($1,$2,'conversation.takeover','conversation',$3,'1','Synthetic',$1,'2026-11-01T12:05:00Z')`,
+      [randomUUID(), owner.id, cycle.id],
+    );
+    const one = await order({ conversationId: cycle.id, confirmed: true });
+    const two = await order({ conversationId: cycle.id, confirmed: true });
+    await pool.query(
+      'UPDATE crm.conversations SET assigned_user_id=$2 WHERE id=$1',
+      [cycle.id, other.id],
+    );
+    const wrongCredit = await order({
+      conversationId: cycle.id,
+      confirmed: true,
+    });
+    const read = (/** @type {string} */ day) =>
+      readSellerCohorts(pool, {
+        from: day,
+        to: day,
+        actorId: admin.id,
+        manager: true,
+        seller: owner.id,
+        now: new Date(day + 'T18:00:00Z'),
+      });
+    assert.ok((await read('2026-11-30'))[0].observing > 0);
+    const row = (await read('2026-12-01'))[0];
+    const window = row.conversion.find(
+      (/** @type {any} */ c) => c.cycleId === cycle.id,
+    );
+    assert.deepEqual([window.from, window.to], ['2026-11-01', '2026-11-30']);
+    assert.deepEqual(
+      window.orders.map((/** @type {any} */ o) => o.id).sort(),
+      [one, two].sort(),
+    );
+    assert.ok(
+      !window.orders.some((/** @type {any} */ o) => o.id === wrongCredit),
+    );
+    assert.equal(
+      row.converted,
+      row.conversion.filter((/** @type {any} */ c) => c.orders.length > 0)
+        .length,
     );
   },
 );

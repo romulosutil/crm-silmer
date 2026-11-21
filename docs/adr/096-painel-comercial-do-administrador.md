@@ -1,0 +1,12 @@
+# ADR 096 — Painel comercial do administrador
+
+Decisão do proprietário em 21/11/2026. Aprovada a [RFC 073](../rfc/073-painel-comercial-do-administrador.md) como demonstrada no [protótipo](../prototypes/painel-administrativo.html) do [PR 441](https://github.com/romulosutil/crm-silmer/pull/441).
+
+1. O gestor abre em Resultado comercial. Hoje, sete dias e mês civil em São Paulo governam vendido, quantidade, ticket, equipe, série e listas de conferência. A Central ao vivo apresenta filas atuais. O período e os destinos filtrados sobrevivem à navegação.
+2. O total inclui o dia em curso. A variação de sete dias compara seis dias completos com os seis precedentes. A mensal compara dias completos comuns até ontem. Hoje identifica ontem como dia completo. Base anterior zero suprime o percentual e preserva a diferença absoluta.
+3. A conversão usa os ciclos cuja janela de 30 dias civis se completou no recorte. Conta uma vez cada ciclo com pedido elegível confirmado dentro da janela e creditado à pessoa que assumiu. Ciclos em observação aparecem separados.
+4. A taxa de primeira resposta usa os ciclos cuja janela de 15 minutos úteis venceu até o corte. O crédito pertence a quem assumiu. Esperas vencidas ainda abertas compõem o denominador. Com menos de dez ciclos, mostrar as contagens e a insuficiência da base. A partir de dez, mostrar também o percentual. Mantêm-se PERF-06 e a política versionada de expediente.
+5. Na Central, fila, fatos e destinos aplicam a autorização do recurso no servidor. A supervisão das linhas pessoais segue a ADR 095. A consulta comercial dos pedidos preserva seu escopo próprio. O histórico tem cursor estável e se recompõe após lacuna. Filas envelhecem mesmo sem eventos.
+6. O gestor pode consultar o resumo de ontem. A API distingue prévia e snapshot imutável. A preparação, reserva e comunicação ficam com a integração técnica existente. A medição do SSE em até cinco segundos, o agendamento real às 08h em São Paulo e o resultado do provedor exigem evidência em homologação.
+
+A decisão emenda a composição administrativa de PNL-01–06 e os períodos de PERF-02/MET-12. Mantém a jornada do vendedor e a restrição do Financeiro. Um score composto exige decisão própria. [Requisitos comerciais](../../.specs/features/crm-mvp/spec.md) · [Métricas e checkpoint](../../.specs/features/dashboard-actions/spec.md) · [ACT-T04](../../.specs/features/dashboard-actions/tasks.md).

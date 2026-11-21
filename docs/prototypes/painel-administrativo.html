@@ -1,0 +1,1773 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Silmer · Revisão do painel comercial</title>
+    <style>
+      @font-face {
+        font-family: Poppins;
+        src: url('data:font/woff2;base64,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');
+      }
+      @font-face {
+        font-family: Poppins;
+        src: url('data:font/woff2;base64,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');
+        font-weight: 600;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: auto;
+      }
+      body {
+        margin: 0;
+        background: #f4f3f6;
+        color: #211936;
+        font:
+          14px/1.55 Poppins,
+          Arial,
+          sans-serif;
+        font-variant-numeric: tabular-nums;
+      }
+      button,
+      select,
+      textarea {
+        font: inherit;
+        color: inherit;
+      }
+      button,
+      select {
+        cursor: pointer;
+      }
+      button {
+        min-height: 44px;
+        border: 0;
+        background: transparent;
+        text-align: inherit;
+        font-weight: 600;
+      }
+      button:hover {
+        background: var(--hover, #efedf3);
+      }
+      :focus-visible {
+        outline: 3px solid #986400;
+        outline-offset: 2px;
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+      h1,
+      h2,
+      h3,
+      strong,
+      b {
+        font-weight: 600;
+      }
+      h1 {
+        font-size: clamp(26px, 3vw, 40px);
+        line-height: 1.15;
+        letter-spacing: -0.035em;
+      }
+      h2 {
+        font-size: 21px;
+        line-height: 1.3;
+        letter-spacing: -0.025em;
+      }
+      h3 {
+        font-size: 16px;
+      }
+      small,
+      .muted {
+        color: var(--muted, #635e71);
+        font-size: 13px;
+      }
+      .top {
+        background: #19132f;
+        color: #fff;
+        padding: 0 max(4vw, 16px);
+        min-height: 66px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+      .wordmark {
+        height: 29px;
+        width: 91px;
+        display: block;
+        fill: currentColor;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .brand span {
+        border-left: 1px solid #6c647b;
+        padding-left: 16px;
+        font-weight: 600;
+      }
+      .top small {
+        color: #e3ddec;
+      }
+      .wrap {
+        max-width: 1600px;
+        margin: auto;
+        padding: 26px 4vw 44px;
+      }
+      .mast,
+      .row,
+      .tabs,
+      .tools,
+      .inline {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .mast,
+      .between {
+        justify-content: space-between;
+      }
+      .mast {
+        margin-bottom: 20px;
+      }
+      .mast p {
+        margin-top: 5px;
+        color: #635e71;
+      }
+      .tabs {
+        gap: 4px;
+        border-bottom: 1px solid #d6d2dc;
+        margin-bottom: 22px;
+      }
+      .tabs button {
+        padding: 0 15px;
+        border-bottom: 3px solid transparent;
+      }
+      .tabs button[aria-pressed='true'] {
+        color: #221438;
+        border-bottom-color: #473258;
+      }
+      .button,
+      .tools select {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line, #d3ced9);
+        border-radius: 9px;
+        padding: 5px 13px;
+        background: var(--paper, #fff);
+        min-height: 44px;
+      }
+      .mainbtn {
+        background: #312147;
+        color: white;
+        border-color: #312147;
+      }
+      .mainbtn:hover {
+        background: #4b3268;
+      }
+      #work {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 272px;
+        gap: 18px;
+        align-items: start;
+      }
+      .preview,
+      .notes,
+      .doc {
+        border-radius: 16px;
+        border: 1px solid #dad6e0;
+        background: white;
+        overflow: hidden;
+      }
+      .screen {
+        --paper: #fff;
+        --bg: #faf9fc;
+        --ink: #201735;
+        --muted: #645d70;
+        --line: #dfdbe5;
+        --tint: #f0ecf7;
+        --hover: #f0ecf7;
+        --accent: #583a78;
+        --warm: #fff1dd;
+        --warmink: #704005;
+        --bar: #7860a1;
+        --green: #24684d;
+        background: var(--bg);
+        color: var(--ink);
+        container-type: inline-size;
+        min-width: 0;
+      }
+      .screen.night {
+        --paper: #272139;
+        --bg: #1a1628;
+        --ink: #f7f3ff;
+        --muted: #c1b9cd;
+        --line: #4d435c;
+        --tint: #3a304c;
+        --hover: #41364e;
+        --accent: #d9b8ff;
+        --warm: #443220;
+        --warmink: #ffdbad;
+        --bar: #ba9ae0;
+        --green: #95ddbc;
+        color-scheme: dark;
+      }
+      .screen.mobile {
+        max-width: 390px;
+        margin: auto;
+      }
+      .preview:has(.mobile) {
+        background: #e6e3eb;
+      }
+      .bar {
+        background: var(--paper);
+        border-bottom: 1px solid var(--line);
+        padding: 10px 22px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .appnav {
+        display: flex;
+        gap: 5px;
+      }
+      .appnav button,
+      .seg button {
+        padding: 0 11px;
+        border-radius: 7px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .appnav [aria-pressed='true'],
+      .seg [aria-pressed='true'] {
+        background: var(--tint);
+        color: var(--ink);
+      }
+      .appnav button[aria-pressed='true'] {
+        font-weight: 600;
+      }
+      #stage {
+        padding: 22px;
+        display: grid;
+        gap: 16px;
+      }
+      .seg {
+        border: 1px solid var(--line);
+        background: var(--paper);
+        padding: 3px;
+        display: inline-flex;
+        border-radius: 10px;
+      }
+      .seg button {
+        min-height: 44px;
+      }
+      .alertlink {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        background: var(--warm);
+        color: var(--warmink);
+        border-radius: 9px;
+        padding: 8px 13px;
+        font-size: 13px;
+      }
+      .alertlink:hover {
+        background: var(--warm);
+        text-decoration: underline;
+      }
+      .hero {
+        background: #241736;
+        color: #fff;
+        border-radius: 14px;
+        padding: 22px 25px;
+        display: grid;
+        grid-template-columns: 1.6fr 1fr 1fr;
+        align-items: center;
+        gap: 12px;
+      }
+      .hero b {
+        font-size: 26px;
+        display: block;
+        letter-spacing: -0.035em;
+        line-height: 1.2;
+      }
+      .hero > div:first-child b {
+        font-size: clamp(30px, 3.2vw, 48px);
+      }
+      .hero span {
+        color: #ded2ea;
+        font-size: 13px;
+      }
+      .hero button,
+      .textbtn {
+        color: var(--accent);
+        padding: 4px 0;
+        text-decoration: underline;
+        text-underline-offset: 4px;
+      }
+      .hero button {
+        color: #fff;
+        font-size: 13px;
+      }
+      .hero button:hover {
+        background: #3b294e;
+      }
+      .paper,
+      .doc {
+        background: var(--paper, #fff);
+        padding: 20px;
+        border: 1px solid var(--line, #dad6e0);
+        border-radius: 14px;
+      }
+      .paper > p,
+      .doc p {
+        margin-top: 6px;
+      }
+      .chart {
+        display: flex;
+        align-items: flex-end;
+        gap: 4px;
+        height: 110px;
+        margin: 15px 0 2px;
+        border-bottom: 1px solid var(--line);
+        padding: 0 2px;
+      }
+      .chart i {
+        flex: 1;
+        background: var(--bar);
+        border-radius: 3px 3px 0 0;
+      }
+      .chart i:last-child {
+        background: #c8530a;
+      }
+      .key {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        margin-right: 6px;
+      }
+      .stack {
+        height: 17px;
+        display: flex;
+        overflow: hidden;
+        border-radius: 5px;
+        margin: 16px 0;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px 18px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .summaryline {
+        margin-top: 12px;
+        border-top: 1px solid var(--line);
+        padding-top: 10px;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 26px;
+        border-radius: 20px;
+        background: var(--tint);
+        padding: 2px 10px;
+        color: var(--accent);
+        font-size: 13px;
+      }
+      .pill.good {
+        color: var(--green);
+      }
+      .pill.warn {
+        background: var(--warm);
+        color: var(--warmink);
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 11px;
+      }
+      td,
+      th {
+        padding: 9px 6px;
+        text-align: right;
+        border-bottom: 1px solid var(--line);
+        font-size: 13px;
+      }
+      td:first-child,
+      th:first-child {
+        text-align: left;
+      }
+      th {
+        font-weight: 600;
+        color: var(--muted);
+      }
+      td button {
+        padding: 2px;
+        color: var(--accent);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .metrics div {
+        padding: 10px 0;
+        border-top: 1px solid var(--line);
+      }
+      .metrics b {
+        display: block;
+        font-size: 21px;
+      }
+      .entry {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .entry small {
+        display: block;
+        font-weight: 400;
+      }
+      .entry:last-child {
+        border: 0;
+      }
+      .twocol {
+        display: grid;
+        grid-template-columns: 1.15fr 1fr;
+        gap: 14px;
+      }
+      .notes {
+        padding: 18px;
+      }
+      .notes section + section {
+        border-top: 1px solid #e1dce7;
+        margin-top: 16px;
+        padding-top: 14px;
+      }
+      .notes p,
+      .doc p,
+      .notes li {
+        color: #544c60;
+      }
+      .notes p {
+        margin: 6px 0;
+      }
+      .notes label {
+        display: block;
+        font-size: 13px;
+        margin-top: 8px;
+      }
+      .notes select,
+      .notes button.button {
+        width: 100%;
+        justify-content: flex-start;
+        margin-bottom: 5px;
+        font-size: 13px;
+      }
+      .notes details {
+        margin-top: 10px;
+      }
+      summary {
+        cursor: pointer;
+        font-weight: 600;
+        padding: 10px 0;
+        min-height: 44px;
+      }
+      details p {
+        margin: 5px 0;
+      }
+      .doc {
+        max-width: 1150px;
+        margin: auto;
+      }
+      .doc section + section {
+        border-top: 1px solid #ddd7e2;
+        margin-top: 20px;
+        padding-top: 18px;
+      }
+      .decgrid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 15px;
+      }
+      .decgrid article {
+        padding: 15px;
+        background: #f7f5f9;
+        border-radius: 10px;
+      }
+      .decgrid h3,
+      .doc h2 {
+        margin-bottom: 8px;
+      }
+      .doc select,
+      .doc textarea {
+        display: block;
+        padding: 8px;
+        border: 1px solid #bbb2c4;
+        border-radius: 8px;
+        max-width: 100%;
+        background: white;
+      }
+      .doc textarea {
+        width: 100%;
+        margin: 8px 0;
+      }
+      .doc label {
+        display: block;
+        margin: 12px 0 4px;
+      }
+      .doc .entry {
+        border-color: #ddd7e2;
+      }
+      .screen .muted {
+        color: var(--muted);
+      }
+      .notes h2 {
+        font-size: 18px;
+      }
+      .hidden,
+      [hidden] {
+        display: none !important;
+      }
+      .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+      }
+      .meta {
+        color: #6a6175;
+        font-size: 13px;
+      }
+      a {
+        color: #51356b;
+      }
+      @container (max-width:740px) {
+        .twocol {
+          grid-template-columns: 1fr;
+        }
+        .widecol {
+          display: none;
+        }
+        .hero {
+          padding: 18px;
+        }
+        .bar,
+        #stage {
+          padding: 14px;
+        }
+        .seg button {
+          padding: 0 9px;
+        }
+      }
+      @container (max-width:500px) {
+        #stage > * {
+          min-width: 0;
+        }
+        .teamtable {
+          table-layout: fixed;
+        }
+        .teamtable th button {
+          font-size: 12px;
+          padding: 0;
+          overflow-wrap: anywhere;
+        }
+        .teamtable th:first-child {
+          width: 25%;
+        }
+        .teamtable th:nth-child(2) {
+          width: 21%;
+        }
+        .teamtable th:nth-child(3) {
+          width: 20%;
+        }
+        .teamtable th:nth-child(4) {
+          width: 34%;
+        }
+        .bar {
+          display: block;
+        }
+        .bar > small {
+          display: none;
+        }
+        .hero {
+          grid-template-columns: 1fr 1fr;
+        }
+        .hero > div:first-child {
+          grid-column: 1/-1;
+        }
+        .hero > div:first-child b {
+          font-size: 36px;
+        }
+        .hero b {
+          font-size: 21px;
+        }
+        .paper {
+          padding: 13px;
+        }
+        td,
+        th {
+          padding: 6px 3px;
+        }
+        .datehead {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+        .chart {
+          gap: 2px;
+        }
+        .entry {
+          align-items: flex-start;
+        }
+        .teamtable td:nth-child(5),
+        .teamtable th:nth-child(5),
+        .teamtable td:nth-child(6),
+        .teamtable th:nth-child(6) {
+          display: none;
+        }
+        .appnav button {
+          padding: 0 8px;
+        }
+        .teamtable td,
+        .teamtable th {
+          font-size: 12px;
+        }
+      }
+      @media (max-width: 1000px) {
+        #work {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .notes {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 18px;
+        }
+        .notes section + section {
+          margin: 0;
+          padding: 0;
+          border: 0;
+        }
+      }
+      @media (max-width: 610px) {
+        .wrap {
+          padding: 15px 8px;
+        }
+        .top {
+          padding: 10px 14px;
+          gap: 6px;
+          min-height: 52px;
+        }
+        .brand {
+          gap: 7px;
+        }
+        .brand span {
+          padding-left: 7px;
+        }
+        .top small {
+          font-size: 12px;
+        }
+        .wordmark {
+          width: 64px;
+        }
+        .mast {
+          padding: 4px 5px;
+        }
+        .tabs {
+          flex-wrap: nowrap;
+          gap: 0;
+        }
+        .tabs button {
+          font-size: 13px;
+          padding: 0 7px;
+        }
+        .notes,
+        .decgrid {
+          display: block;
+        }
+        .notes section + section,
+        .decgrid article + article {
+          margin-top: 12px;
+        }
+        .doc {
+          padding: 15px;
+        }
+        .paper .metrics {
+          grid-template-columns: 1fr 1fr;
+        }
+        .top .rfcname {
+          display: none;
+        }
+        .tools {
+          gap: 5px;
+        }
+      }
+      @media print {
+        .top,
+        .tools,
+        .tabs,
+        .notes,
+        .appnav,
+        .alertlink {
+          display: none;
+        }
+        #work,
+        .wrap {
+          display: block;
+        }
+        .wrap {
+          padding: 0;
+        }
+      }
+    </style>
+    <script type="text/plain" id="poppins-license">
+      Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-ThinItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-ExtraLight.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-ExtraLightItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Light.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-LightItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Regular.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Italic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Medium.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-MediumItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-SemiBold.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-SemiBoldItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Bold.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-BoldItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-ExtraBold.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-ExtraBoldItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Black.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-BlackItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins)
+
+      This Font Software is licensed under the SIL Open Font License, Version 1.1.
+      This license is copied below, and is also available with a FAQ at:
+      http://scripts.sil.org/OFL
+
+
+      -----------------------------------------------------------
+      SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+      -----------------------------------------------------------
+
+      PREAMBLE
+      The goals of the Open Font License (OFL) are to stimulate worldwide
+      development of collaborative font projects, to support the font creation
+      efforts of academic and linguistic communities, and to provide a free and
+      open framework in which fonts may be shared and improved in partnership
+      with others.
+
+      The OFL allows the licensed fonts to be used, studied, modified and
+      redistributed freely as long as they are not sold by themselves. The
+      fonts, including any derivative works, can be bundled, embedded,
+      redistributed and/or sold with any software provided that any reserved
+      names are not used by derivative works. The fonts and derivatives,
+      however, cannot be released under any other type of license. The
+      requirement for fonts to remain under this license does not apply
+      to any document created using the fonts or their derivatives.
+
+      DEFINITIONS
+      "Font Software" refers to the set of files released by the Copyright
+      Holder(s) under this license and clearly marked as such. This may
+      include source files, build scripts and documentation.
+
+      "Reserved Font Name" refers to any names specified as such after the
+      copyright statement(s).
+
+      "Original Version" refers to the collection of Font Software components as
+      distributed by the Copyright Holder(s).
+
+      "Modified Version" refers to any derivative made by adding to, deleting,
+      or substituting -- in part or in whole -- any of the components of the
+      Original Version, by changing formats or by porting the Font Software to a
+      new environment.
+
+      "Author" refers to any designer, engineer, programmer, technical
+      writer or other person who contributed to the Font Software.
+
+      PERMISSION & CONDITIONS
+      Permission is hereby granted, free of charge, to any person obtaining
+      a copy of the Font Software, to use, study, copy, merge, embed, modify,
+      redistribute, and sell modified and unmodified copies of the Font
+      Software, subject to the following conditions:
+
+      1) Neither the Font Software nor any of its individual components,
+      in Original or Modified Versions, may be sold by itself.
+
+      2) Original or Modified Versions of the Font Software may be bundled,
+      redistributed and/or sold with any software, provided that each copy
+      contains the above copyright notice and this license. These can be
+      included either as stand-alone text files, human-readable headers or
+      in the appropriate machine-readable metadata fields within text or
+      binary files as long as those fields can be easily viewed by the user.
+
+      3) No Modified Version of the Font Software may use the Reserved Font
+      Name(s) unless explicit written permission is granted by the corresponding
+      Copyright Holder. This restriction only applies to the primary font name as
+      presented to the users.
+
+      4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+      Software shall not be used to promote, endorse or advertise any
+      Modified Version, except to acknowledge the contribution(s) of the
+      Copyright Holder(s) and the Author(s) or with their explicit written
+      permission.
+
+      5) The Font Software, modified or unmodified, in part or in whole,
+      must be distributed entirely under this license, and must not be
+      distributed under any other license. The requirement for fonts to
+      remain under this license does not apply to any document created
+      using the Font Software.
+
+      TERMINATION
+      This license becomes null and void if any of the above conditions are
+      not met.
+
+      DISCLAIMER
+      THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+      EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+      MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+      OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+      COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+      INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+      DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+      FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+      OTHER DEALINGS IN THE FONT SOFTWARE.
+    </script>
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <svg
+          viewBox="0 0 442 136"
+          class="wordmark"
+          role="img"
+          aria-label="Silmer"
+        >
+          <path
+            d="M50.1984 135.093C76.3095 135.093 95.6166 118.36 95.6166 96.295C95.6166 71.4713 80.1709 62.6448 50.9343 58.0477C24.0878 54.0018 19.3069 47.3827 19.3069 34.5111C19.3069 22.1911 28.685 13.1813 46.7053 13.1813C64.9091 13.1813 74.471 19.9846 77.597 36.5341H91.9392C89.3649 13.1813 72.9998 0.310046 46.7053 0.310046C21.8816 0.310046 4.41252 15.7561 4.41252 35.9825C4.41252 59.3347 20.7785 67.9774 48.3603 72.206C73.3676 76.2515 80.1709 82.5039 80.1709 97.3982C80.1709 112.292 67.1153 122.222 50.1984 122.222C23.7199 122.222 17.4679 108.983 15.4455 93.3527H0C2.38977 115.786 15.0777 135.093 50.1984 135.093ZM394.439 133.438H409.701V80.6649C409.701 56.9445 422.021 50.8766 441.329 49.957V35.6147C424.044 36.1659 415.769 43.7054 409.701 54.5542V37.2688H394.439V133.438ZM344.739 135.093C366.437 135.093 382.434 123.843 385.744 105.672H370.482C364.096 129.515 326.291 127.862 317.16 105.029C315.292 100.356 314.247 94.7873 314.032 88.3877H386.48V83.4234C386.48 49.0379 365.517 35.6147 343.268 35.6147C316.79 35.6147 298.218 55.8411 298.218 84.8937V86.3653C298.218 115.969 317.525 135.093 344.739 135.093ZM314.583 76.0677C317.157 58.9673 327.638 48.3021 343.268 48.3021C359.082 48.3021 369.379 56.2083 370.85 76.0677H314.583ZM152.226 133.438H167.488V74.597C167.488 57.3119 180.36 48.8538 192.863 48.8538C206.102 48.8538 213.273 55.8411 213.273 72.7582V133.438H228.535V74.597C228.535 57.3119 241.407 48.8538 253.911 48.8538C267.15 48.8538 274.321 55.8411 274.321 72.7582V133.438H289.583V73.8616C289.583 45.9115 274.505 35.6147 257.221 35.6147C245.269 35.6147 230.926 41.131 224.306 53.6348C219.342 40.7635 208.493 35.6147 196.173 35.6147C182.382 35.6147 171.9 42.97 167.488 51.9798V37.2688H152.226V133.438ZM127.963 133.438H143.408V5.77717e-05H127.963V133.438ZM103.515 133.438H118.777V37.2695H103.515V133.438ZM110.871 20.5366C116.387 20.5366 120.984 15.9395 120.984 10.4232C120.984 4.90689 116.387 0.309753 110.871 0.309753C105.354 0.309753 100.757 4.90689 100.757 10.4232C100.757 15.9395 105.354 20.5366 110.871 20.5366Z"
+          /></svg
+        ><span>CRM</span>
+      </div>
+      <small
+        ><span class="rfcname">RFC 073 · </span>Protótipo com dados
+        fictícios</small
+      >
+    </header>
+    <main class="wrap">
+      <div class="mast">
+        <div>
+          <h1>Painel comercial</h1>
+          <p>Revisão da experiência do administrador</p>
+        </div>
+      </div>
+      <nav class="tabs" aria-label="Documento de decisão">
+        <button data-page="painel">Explorar painel</button
+        ><button data-page="antes">Antes e depois</button
+        ><button data-page="plano">Plano e parecer</button>
+      </nav>
+      <div id="work">
+        <div class="preview">
+          <div class="screen" id="screen">
+            <div class="bar">
+              <nav class="appnav" aria-label="Painel administrativo">
+                <button data-view="resultado">Resultado comercial</button
+                ><button data-view="central">Central ao vivo</button>
+              </nav>
+              <small>Administrador</small>
+            </div>
+            <div id="stage"></div>
+          </div>
+        </div>
+        <aside class="notes" aria-label="Inspetor do protótipo">
+          <section>
+            <h2>Sobre esta tela</h2>
+            <div id="inspector"></div>
+          </section>
+          <section>
+            <h2>Testar o protótipo</h2>
+            <div class="tools">
+              <label for="device">Largura da prévia</label
+              ><select class="button" id="device">
+                <option value="auto">Adaptar à janela</option>
+                <option value="mobile">Celular · até 390 px</option></select
+              ><label for="theme">Tema da prévia</label
+              ><select class="button" id="theme">
+                <option>Claro</option>
+                <option>Escuro</option></select
+              ><label for="scenario">Cenário comercial</label
+              ><select class="button" id="scenario">
+                <option value="normal">Operação habitual</option>
+                <option value="zero">Período sem vendas</option>
+                <option value="erro">Leitura comercial indisponível</option>
+              </select>
+            </div>
+            <details open>
+              <summary>Simulador da Central</summary>
+              <small
+                >Avance o relógio da amostra e acompanhe o mesmo fato nas duas
+                visões.</small
+              >
+              <div id="sim"></div>
+            </details>
+          </section>
+        </aside>
+      </div>
+      <article class="doc" id="document" hidden></article>
+      <div id="announce" class="sr" role="status" aria-live="polite"></div>
+    </main>
+    <script>
+      (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const today = 18;
+        const team = ['Lia', 'Caio', 'Bia', 'Ivo'];
+        const sources = [...team, 'Loja do site', 'Sem atribuição'];
+        const colors = ['#725397', '#df772f', '#a99db9'];
+        const labels = { hoje: 'Hoje', semana: '7 dias', mes: 'Mês' };
+        const money = (n) =>
+          (n / 100).toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+          });
+        const integer = (n) => n.toLocaleString('pt-BR');
+        const date = (day) =>
+          new Date(Date.UTC(2026, 10, day)).toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            timeZone: 'UTC',
+          });
+        const rangeLabel = (a, b) =>
+          a === b ? date(a) : date(a) + ' a ' + date(b);
+        const sum = (rows) => rows.reduce((total, r) => total + r.cents, 0);
+        const ticket = (rows) =>
+          rows.length ? money(Math.round(sum(rows) / rows.length)) : '—';
+        const minuteLabel = (n) => (n === null ? '—' : integer(n) + ' min');
+        const orders = [],
+          activity = [];
+        for (let day = -30; day <= today; day++) {
+          const n = day === today ? 5 : Math.abs(day * 11 + 7) % 8;
+          for (let i = 0; i < n; i++) {
+            const person = [0, 1, 2, 4, 5, 0, 1][(Math.abs(day) + i) % 7];
+            orders.push({
+              id: 'P-' + (1201 + orders.length),
+              day,
+              person,
+              cents: (250 + ((Math.abs(day) * 37 + i * 103) % 1340)) * 100,
+            });
+          }
+          for (let p = 0; p < team.length; p++) {
+            for (let j = 0; j < 2 + (Math.abs(day * 2 + p) % 6); j++) {
+              activity.push({
+                day,
+                p,
+                first: 2 + ((Math.abs(day) + p * 4 + j * 2) % 25),
+                claim: 1 + ((Math.abs(day) + j) % 8),
+                assumed: j % 3 !== 0,
+                closed: j % 3 === 1,
+                lost: j === 3,
+                reason: j === 3 ? (day % 2 ? 'Prazo' : 'Preço') : '',
+              });
+            }
+          }
+        }
+        function stats(rows) {
+          const values = rows.map((r) => r.first).sort((a, b) => a - b);
+          const median = (v) =>
+            v.length
+              ? (v[Math.floor((v.length - 1) / 2)] +
+                  v[Math.floor(v.length / 2)]) /
+                2
+              : null;
+          return {
+            n: rows.length,
+            median: median(values),
+            claim: median(
+              rows
+                .filter((r) => r.assumed)
+                .map((r) => r.claim)
+                .sort((a, b) => a - b),
+            ),
+            p90:
+              values.length >= 5
+                ? values[Math.ceil(values.length * 0.9) - 1]
+                : null,
+            late: rows.filter((r) => r.first > 15).length,
+            assumed: rows.filter((r) => r.assumed).length,
+            closed: rows.filter((r) => r.closed).length,
+            lost: rows.filter((r) => r.lost).length,
+          };
+        }
+        let page = 'painel',
+          view = 'resultado',
+          period = 'hoje',
+          filter = 'all',
+          selected = '',
+          scenario = 'normal',
+          sort = 'sold',
+          desc = true;
+        let live = false,
+          step = 0,
+          visibleStep = 0,
+          replayed = false;
+        let playback = 0;
+        function stopPlayback() {
+          clearInterval(playback);
+          playback = 0;
+        }
+        function advance() {
+          step = Math.min(changes.length, step + 1);
+          if (!live) visibleStep = step;
+          if (step === changes.length) stopPlayback();
+        }
+        const queue = [
+          {
+            id: 'AT-041',
+            state: 'Sem responsável',
+            label: 'Solicitação de atendimento',
+            age: 24,
+          },
+          {
+            id: 'AT-042',
+            state: 'Sem responsável',
+            label: 'Solicitação de atendimento',
+            age: 12,
+          },
+          {
+            id: 'AT-039',
+            state: 'Aguardando resposta',
+            label: 'Conversa de Caio',
+            age: 18,
+          },
+          {
+            id: 'AT-046',
+            state: 'Aguardando resposta',
+            label: 'Conversa de Bia',
+            age: 14,
+          },
+        ];
+        const facts = [
+          {
+            id: 'EV-18',
+            time: '14h31',
+            name: 'Atendimento assumido',
+            ref: 'AT-038',
+            detail: 'Lia assumiu a conversa da fila geral.',
+          },
+          {
+            id: 'EV-17',
+            time: '14h29',
+            name: 'Entrega registrada',
+            ref: 'P-1197',
+            detail:
+              'A equipe registrou a entrega de um pedido anterior ao recorte.',
+          },
+        ];
+        const changes = [
+          {
+            id: 'EV-19',
+            time: '14h33',
+            name: 'Atendimento assumido',
+            ref: 'AT-041',
+            detail: 'Lia assumiu o atendimento que estava sem responsável.',
+          },
+          {
+            id: 'EV-20',
+            time: '14h34',
+            name: 'Pedido confirmado',
+            ref: 'P-1501',
+            detail: 'Venda de R$ 640,00 atribuída a Caio na confirmação.',
+          },
+          {
+            id: 'EV-21',
+            time: '14h35',
+            name: 'Resposta humana enviada',
+            ref: 'AT-039',
+            detail: 'Caio respondeu à conversa e encerrou a espera.',
+          },
+        ];
+        const nowTime = () => ['14h32', '14h33', '14h34', '14h35'][visibleStep];
+        function snapshotOrders() {
+          return scenario === 'zero'
+            ? []
+            : visibleStep >= 2
+              ? [...orders, { id: 'P-1501', day: 18, person: 1, cents: 64000 }]
+              : orders;
+        }
+        function interval() {
+          return [period === 'hoje' ? 18 : period === 'semana' ? 12 : 1, today];
+        }
+        function periodOrders(a, b) {
+          return snapshotOrders().filter((r) => r.day >= a && r.day <= b);
+        }
+        function periodActivity(person) {
+          const [a, b] = interval();
+          return activity.filter(
+            (r) =>
+              r.day >= a &&
+              r.day <= b &&
+              (person === undefined || r.p === person),
+          );
+        }
+        function btn(label, key, val, cls = 'button') {
+          return `<button class="${cls}" data-${key}="${val}">${label}</button>`;
+        }
+        function area(title, body) {
+          return `<section class="paper"><h3>${title}</h3>${body}</section>`;
+        }
+        function heading(title, sub) {
+          return `<div><h2 tabindex="-1" id="viewtitle">${title}</h2><small>${sub}</small></div>`;
+        }
+        function announce(msg) {
+          $('announce').textContent = msg;
+        }
+        function dates() {
+          return rangeLabel(...interval()) + ' · novembro de 2026';
+        }
+        function periodSwitch() {
+          return `<div class="seg" role="group" aria-label="Período comercial">${Object.entries(
+            labels,
+          )
+            .map(
+              ([key, label]) =>
+                `<button data-period="${key}" aria-pressed="${period === key}">${label}</button>`,
+            )
+            .join('')}</div>`;
+        }
+        function filteredLink(f, label) {
+          return btn(label, 'orders', f, 'textbtn');
+        }
+        function comparison(rows) {
+          const [start] = interval();
+          if (period === 'hoje')
+            return `Ontem, dia completo · ${money(sum(periodOrders(17, 17)))}`;
+          const a = period === 'mes' ? -30 : start - 6,
+            b = period === 'mes' ? -14 : start - 1;
+          const recent = periodOrders(start, 17),
+            prior = periodOrders(a, b),
+            diff = sum(recent) - sum(prior);
+          const delta =
+            prior.length && sum(prior)
+              ? ` · ${diff >= 0 ? '+' : ''}${((100 * diff) / sum(prior)).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`
+              : ' · Sem base percentual';
+          return `<b>Comparação por dias completos</b><br>${rangeLabel(start, 17)} · ${money(sum(recent))} · ${recent.length} pedidos · ticket ${ticket(recent)}<br>${rangeLabel(a, b)} · ${money(sum(prior))} · ${prior.length} pedidos · ticket ${ticket(prior)}<br>Diferença de ${money(diff)}${delta}`;
+        }
+        function chart(rows) {
+          const [start, end] = interval();
+          if (start === end) {
+            const sums = [
+                sum(rows.filter((r) => r.person < 4)),
+                sum(rows.filter((r) => r.person === 4)),
+                sum(rows.filter((r) => r.person === 5)),
+              ],
+              total = sum(rows);
+            return area(
+              'Quem compõe o vendido de hoje',
+              `<div class="stack" aria-hidden="true">${sums.map((s, i) => `<i style="width:${total ? (100 * s) / total : 0}%;background:${colors[i]}"></i>`).join('')}</div><div class="legend">${sums.map((s, i) => `<span><i class="key" style="background:${colors[i]}"></i>${['Equipe', 'Loja do site', 'Sem atribuição'][i]} · <b>${money(s)}</b></span>`).join('')}</div>`,
+            );
+          }
+          const days = Array.from({ length: end - start + 1 }, (_, i) => {
+            const d = start + i,
+              s = rows.filter((r) => r.day === d);
+            return { day: d, cents: sum(s), n: s.length };
+          });
+          const max = Math.max(1, ...days.map((d) => d.cents));
+          return area(
+            'Vendas por dia',
+            `<p class="muted">${dates()} · ${money(sum(rows))}</p><div class="chart" aria-hidden="true">${days.map((d) => `<i style="height:${(100 * d.cents) / max}%" title="${date(d.day)} · ${money(d.cents)}"></i>`).join('')}</div><div class="row between"><small>${date(start)}</small><small>${date(end)} · hoje</small></div><details><summary>Conferir valores por dia</summary>${days.map((d) => `<div class="entry"><span>${date(d.day)} · ${d.n} pedidos</span>${filteredLink('d' + d.day, money(d.cents))}</div>`).join('')}</details>`,
+          );
+        }
+        function teamRows(rows) {
+          return sources.map((name, p) => {
+            const sales = rows.filter((r) => r.person === p),
+              m = stats(periodActivity(p));
+            return {
+              name,
+              p,
+              attended: m.n,
+              orders: sales.length,
+              sold: sum(sales),
+              avg: sales.length ? sum(sales) / sales.length : null,
+              response: m.median,
+            };
+          });
+        }
+        function teamTable(rows) {
+          const people = teamRows(rows);
+          const compare = (a, b) => {
+            if (a[sort] === null) return b[sort] === null ? 0 : 1;
+            if (b[sort] === null) return -1;
+            return (
+              (typeof a[sort] === 'string'
+                ? a[sort].localeCompare(b[sort])
+                : a[sort] - b[sort]) * (desc ? -1 : 1)
+            );
+          };
+          const cols = [
+            ['name', 'Pessoa'],
+            ['attended', 'Atendeu'],
+            ['orders', 'Pedidos'],
+            ['sold', 'Vendido'],
+            ['avg', 'Ticket'],
+            ['response', '1ª resposta'],
+          ];
+          return area(
+            'Desempenho da equipe',
+            `<p class="muted">Selecione uma pessoa para conferir vendas e atendimento.</p><table class="teamtable"><thead><tr>${cols.map(([key, label]) => `<th scope="col" ${sort === key ? `aria-sort="${desc ? 'descending' : 'ascending'}"` : ''}>${btn(label + (sort === key ? (desc ? ' ↓' : ' ↑') : ''), 'sort', key, '')}</th>`).join('')}</tr></thead><tbody>${[...people.slice(0, 4).sort(compare), ...people.slice(4)].map((r) => `<tr><td>${r.p < 4 ? btn(r.name, 'seller', r.p, '') : r.name}</td><td>${r.p < 4 ? r.attended : '—'}</td><td>${r.orders}</td><td>${money(r.sold)}</td><td>${r.avg === null ? '—' : money(Math.round(r.avg))}</td><td>${r.p < 4 ? minuteLabel(r.response) : '—'}</td></tr>`).join('')}</tbody><tfoot><tr><th>Total</th><td>—</td><td>${rows.length}</td><td>${money(sum(rows))}</td><td>${ticket(rows)}</td><td>—</td></tr></tfoot></table>`,
+          );
+        }
+        function activeQueue() {
+          return queue
+            .filter(
+              (q) =>
+                !(q.id === 'AT-041' && visibleStep >= 1) &&
+                !(q.id === 'AT-039' && visibleStep >= 3),
+            )
+            .map((q) => ({ ...q, age: q.age + visibleStep }));
+        }
+        function result() {
+          const rows = periodOrders(...interval()),
+            count = activeQueue().filter(
+              (q) => q.state === 'Sem responsável',
+            ).length;
+          return `<div class="row between datehead">${heading('Resultado comercial', dates() + ' · São Paulo')}${periodSwitch()}</div>${btn(count + ' ' + (count === 1 ? 'conversa espera' : 'conversas esperam') + ' vendedor · Abrir central →', 'view', 'central', 'alertlink')}${scenario === 'erro' ? area('Vendas indisponíveis', `<p>A leitura do período falhou.</p>${btn('Tentar novamente', 'recover', '1')}`) : `<div class="hero"><div><span>Vendido no período</span><b>${money(sum(rows))}</b>${btn('Conferir pedidos →', 'orders', 'all', '')}</div><div><span>Pedidos confirmados</span><b>${integer(rows.length)}</b></div><div><span>Ticket médio</span><b>${ticket(rows)}</b></div></div>${chart(rows)}${teamTable(rows)}${area('Como o resultado variou', `<p>${comparison(rows)}</p>`)}`}`;
+        }
+        function metrics(pairs) {
+          return `<div class="metrics">${pairs.map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>`;
+        }
+        function seller() {
+          const p = Number(selected),
+            sales = periodOrders(...interval()).filter((r) => r.person === p),
+            activityRows = periodActivity(p),
+            m = stats(activityRows);
+          return (
+            btn('← Resultado comercial', 'view', 'resultado', 'textbtn') +
+            heading(team[p] + ' · desempenho', dates()) +
+            area(
+              'Vendas atribuídas',
+              metrics([
+                ['Vendido', money(sum(sales))],
+                ['Confirmados', sales.length],
+                ['Ticket médio', ticket(sales)],
+              ]) + filteredLink('p' + p, 'Conferir pedidos de ' + team[p]),
+            ) +
+            area(
+              'Atendimento no expediente',
+              metrics([
+                ['Conversas atendidas', m.n],
+                ['Assumidas', m.assumed],
+                ['Encerradas', m.closed],
+                ['1ª resposta · mediana', minuteLabel(m.median)],
+                ['1ª resposta · p90', minuteLabel(m.p90)],
+                ['Amostras de resposta', m.n],
+                ['Para assumir · mediana', minuteLabel(m.claim)],
+                ['Esperas acima de 15 min', m.late],
+              ]),
+            ) +
+            area(
+              'Perdas declaradas',
+              `<p>${m.lost} no período · ${['Preço', 'Prazo'].map((reason) => reason + ' ' + activityRows.filter((r) => r.reason === reason).length).join(' · ')}</p>`,
+            )
+          );
+        }
+        function ordersView() {
+          let rows = periodOrders(...interval());
+          if (filter.startsWith('p'))
+            rows = rows.filter((r) => r.person === Number(filter.slice(1)));
+          if (filter.startsWith('d'))
+            rows = rows.filter((r) => r.day === Number(filter.slice(1)));
+          const origin = filter.startsWith('p')
+            ? team[Number(filter.slice(1))]
+            : filter.startsWith('d')
+              ? date(Number(filter.slice(1)))
+              : 'Todas as origens';
+          return (
+            (filter.startsWith('p')
+              ? btn(
+                  '← Desempenho de ' + origin,
+                  'seller',
+                  filter.slice(1),
+                  'textbtn',
+                )
+              : btn('← Resultado comercial', 'view', 'resultado', 'textbtn')) +
+            heading('Pedidos confirmados', dates() + ' · ' + origin) +
+            area(
+              rows.length + ' pedidos · ' + money(sum(rows)),
+              rows.length
+                ? rows
+                    .slice()
+                    .reverse()
+                    .map(
+                      (r) =>
+                        `<div class="entry"><span><b>${r.id}</b><small>${date(r.day)} · ${sources[r.person]}</small></span><strong>${money(r.cents)}</strong></div>`,
+                    )
+                    .join('')
+                : '<p>Nenhum pedido confirmado neste recorte.</p>',
+            )
+          );
+        }
+        function central() {
+          const q = activeQueue(),
+            unclaimed = q.filter((r) => r.state === 'Sem responsável'),
+            late = q.filter(
+              (r) => r.state === 'Aguardando resposta' && r.age > 15,
+            );
+          const events = [...changes.slice(0, visibleStep).reverse(), ...facts];
+          return (
+            heading(
+              'Central ao vivo',
+              '18 de novembro de 2026 · relógio simulado de São Paulo',
+            ) +
+            `<div class="row"><span class="pill ${live ? 'warn' : 'good'}">${live ? 'Reconectando' : 'Ao vivo · simulação'}</span><small>Última leitura válida às ${nowTime()}</small></div>` +
+            area(
+              'Operação agora',
+              metrics([
+                ['Sem responsável', unclaimed.length],
+                ['Resposta acima de 15 min úteis', late.length],
+                [
+                  'Espera mais antiga',
+                  minuteLabel(Math.max(...q.map((r) => r.age))),
+                ],
+                ['Entregas atrasadas', '1'],
+              ]),
+            ) +
+            `<div class="twocol">${area(
+              'Fila de atenção',
+              q
+                .toSorted((a, b) => b.age - a.age)
+                .map(
+                  (r) =>
+                    `<button class="entry" data-record="${r.id}"><span>${r.state}<small>${r.id} · ${r.label}</small></span><span class="pill ${r.age > 15 ? 'warn' : ''}">${r.age} min</span></button>`,
+                )
+                .join('') +
+                btn(
+                  'P-1198 · Entrega atrasada →',
+                  'record',
+                  'P-1198',
+                  'textbtn',
+                ),
+            )}${area('Atividade recente', events.map((e) => `<button class="entry" data-record="${e.id}"><span>${e.name}<small>${e.ref}</small></span><small>${e.time}</small></button>`).join(''))}</div>` +
+            area(
+              'Outras pendências',
+              btn(
+                'Pedido da loja aguardando primeira impressão →',
+                'record',
+                'LOJA',
+                'textbtn',
+              ) +
+                '<br>' +
+                btn(
+                  'Consultar atendimento do agente →',
+                  'record',
+                  'AGENTE',
+                  'textbtn',
+                ),
+            )
+          );
+        }
+        function record() {
+          const fact = [...changes, ...facts].find((e) => e.id === selected),
+            q = activeQueue().find((r) => r.id === selected);
+          const aux = {
+            'P-1198': [
+              'Entrega atrasada',
+              'Entrega prometida para 17/11. Conferir o pedido com o responsável.',
+            ],
+            LOJA: [
+              'Pedido da loja',
+              'Um pedido da loja aguarda a primeira impressão da ficha.',
+            ],
+            AGENTE: [
+              'Atendimento do agente',
+              'Duas conversas em modo agente na amostra.',
+            ],
+          };
+          const [title, detail] = fact
+            ? [fact.name, fact.detail]
+            : q
+              ? [q.state, q.label + ' · ' + q.age + ' minutos úteis de espera.']
+              : aux[selected] || ['Atendimento', 'O estado da fila mudou.'];
+          return (
+            btn('← Central ao vivo', 'view', 'central', 'textbtn') +
+            heading(title, 'Detalhe simulado · ' + (fact?.ref || selected)) +
+            area(
+              'Registro da operação',
+              `<p>${detail}</p><p class="muted">${fact ? 'Horário do fato · ' + fact.time : 'Última leitura · ' + nowTime()}</p>`,
+            )
+          );
+        }
+        const notes = {
+          resultado: [
+            'Resultado comercial',
+            'Troque para Mês e abra Conferir pedidos. A soma da lista deve bater com o valor em destaque. Ivo aparece mesmo quando atende e fecha zero vendas.',
+            'Pedidos confirmados entram pela data comercial e pelo valor final com frete. Testes, cancelados e pendentes ficam fora. O ticket divide o vendido pelo número de pedidos.',
+          ],
+          seller: [
+            'Detalhe da pessoa',
+            'Confira a quantidade de amostras junto à mediana e abra os pedidos da pessoa. Voltar recupera o período.',
+            'O crédito fica com o responsável na confirmação. Cada conversa com resposta humana efetiva conta uma vez por pessoa. O p90 exige cinco amostras.',
+          ],
+          orders: [
+            'Conferência do valor',
+            'Compare o cabeçalho com os pedidos listados. Se chegou por um vendedor ou dia, só esse recorte aparece.',
+            'O produto precisará transportar período, dia e atribuição na URL e revalidar cada filtro na API.',
+          ],
+          central: [
+            'Operação ao vivo',
+            'Avance um evento. O primeiro tira uma conversa da fila. O segundo acrescenta R$ 640 ao vendido. Desconecte e avance para testar a recuperação.',
+            'O aviso traz a hora da última leitura. A conexão retomada relê fila e fatos antes de voltar ao vivo. Um replay preserva o total.',
+          ],
+          record: [
+            'Detalhe operacional',
+            'Confira a referência e o horário que explicam a linha escolhida. Voltar recupera a fila.',
+            'No produto, o destino será o pedido ou a conversa autorizada. A simulação usa registros fictícios e não contém mensagens de clientes.',
+          ],
+        };
+        const changesDoc = [
+          [
+            'Período comercial',
+            'Ao escolher Mês, só o card Vendido e seus detalhes mudam. A série e a equipe continuam em sete dias.',
+            'O seletor governa total, pedidos, ticket, gráfico, equipe e listas. Hoje mostra composição e os intervalos maiores mostram dias.',
+            'Mude de Hoje para Mês e confira a lista de pedidos.',
+          ],
+          [
+            'Atuação dos vendedores',
+            'O resumo mostra até cinco pessoas. Atendimento, pedidos, ticket e perdas ficam distribuídos em leituras com períodos diferentes.',
+            'O resumo cruza esforço e resultado. A linha abre atividade, tempos úteis, amostras e perdas da mesma pessoa.',
+            'Abra Ivo e compare atendimentos com zero pedidos.',
+          ],
+          [
+            'Pendências e entregas',
+            'Próximo passo, atendimento, fila de espera e entregas competem pela primeira dobra.',
+            'Uma chamada compacta leva à urgência. A Central reúne filas, entrega, loja e atividade recente.',
+            'Assuma um atendimento pelo simulador e observe a fila.',
+          ],
+          [
+            'Confiança no número',
+            'O link do card abre todos os confirmados. O gráfico da semana pode divergir do total selecionado.',
+            'A lista explica o número. Loja e sem atribuição fecham a soma. A variação usa intervalos fechados identificados.',
+            'Na série diária, abra um dia e confira pedidos e montante.',
+          ],
+        ];
+        function beforeDoc() {
+          return `<h2 tabindex="-1" id="doctitle">Antes e depois</h2><p>Quatro mudanças para avaliar no painel administrativo.</p>${changesDoc.map(([title, old, next, test], i) => `<section><h3>${title}</h3><div class="decgrid"><article><b>Hoje no CRM</b><p>${old}</p></article><article><b>Proposta</b><p>${next}</p></article></div><p>${test}</p>${btn('Experimentar →', 'journey', ['mes', 'ivo', 'central', 'serie'][i], 'textbtn')}</section>`).join('')}`;
+        }
+        const phases = [
+          [
+            'P0 · Período e resultado',
+            'Refatorar a resolução de datas no servidor. Estender resumo, série e consultas de equipe. Carregar o recorte nos links e retirar a legenda “Vale para Vendido”.',
+            'Cartão, série, lista e equipe reconciliam em centavos na virada do mês e após troca rápida de período.',
+            'PNL-02/05 · FIN-02 · PERF-02',
+          ],
+          [
+            'P0 · Equipe',
+            'Reutilizar desempenho, serviço e perdas. Preservar crédito histórico, inativos com atividade e linhas de loja e sem atribuição.',
+            'Uma transferência conserva o crédito. Reabertura retira o pedido. Reconfirmação conta uma vez. A tabela inclui atendimento sem venda.',
+            'PERF-01–08 · MET-01–08/12',
+          ],
+          [
+            'P1 · Central ao vivo',
+            'Agrupar as releituras pelo SSE existente. Obter fatos verificáveis com horário, ID estável e destino autorizado. Recalcular idade e prazo mesmo sem novas mensagens.',
+            'Uma tomada atualiza a fila e o histórico uma vez. A meta proposta é até 5 s com conexão saudável. Após queda, reler antes de declarar Ao vivo.',
+            'PNL-01/03/06 · ACT-09–12 · ADR 095',
+          ],
+          [
+            'P2 · Comparação',
+            'Mostrar diferença absoluta e percentual entre intervalos completos. Evidenciar pedidos e ticket de cada base.',
+            'Base zero omite percentual. No primeiro dia do mês, indicar ausência de dias completos. Dias em curso ficam no total principal.',
+            'FIN-02 · PERF-02/08',
+          ],
+        ];
+        const decisions = [
+          'Abrir em Resultado comercial, com atalho para a urgência',
+          'Aplicar Hoje, 7 dias e Mês a todo o resultado',
+          'Adotar a composição da tabela e o detalhe de atendimento',
+          'Entregar a Central ao vivo e sua ordem de prioridade',
+          'Comparar apenas dias completos',
+        ];
+        let choices = decisions.map(() => 'Em revisão'),
+          comment = '';
+        function planDoc() {
+          return `<h2 tabindex="-1" id="doctitle">Plano de entrega e parecer</h2><p>A RFC 073 está em revisão. Use esta ficha para registrar quais pontos podem seguir e quais precisam de ajuste.</p>
+ <section><h3>O que entra em cada entrega</h3>${phases.map(([title, what, proof, refs]) => `<details><summary>${title}</summary><p>${what}</p><p><b>Aceite.</b> ${proof}</p><p class="meta">${refs}</p></details>`).join('')}</section>
+ <section><h3>Regras para a implementação</h3><div class="decgrid"><article><b>Quais datas entram?</b><p>São Paulo. Mês começa no dia 1. Sete dias inclui hoje. Para comparar, usar até ontem e igual número de dias fechados da base. Hoje apresenta ontem como dia completo.</p></article><article><b>Quem pode ver?</b><p>O servidor aplica a permissão a totais, filas, eventos e destinos. A supervisão de outras linhas pessoais requer a conta designada pela ADR 095. O pedido tem autorização comercial própria.</p></article><article><b>Como tratar ausência?</b><p>Venda zero aparece como R$ 0 e ticket sem base como traço. Falha de consulta aparece com nova tentativa. A reconexão identifica o horário da leitura anterior.</p></article><article><b>O que depende de homologação?</b><p>Latência real, permissões no servidor, reconciliação após lacuna e comparação com o checkpoint dependem de integração e testes. Os eventos deste arquivo avançam pelo simulador.</p></article></div></section>
+ <section><h3>Parecer sobre a proposta</h3><p>As escolhas ficam nesta sessão. Baixe o texto para guardar ou compartilhar seu parecer.</p>${decisions.map((d, i) => `<label for="pick${i}">${d}</label><select id="pick${i}" data-choice="${i}">${['Em revisão', 'Aceitar', 'Pedir ajuste', 'Adiar'].map((c) => `<option ${choices[i] === c ? 'selected' : ''}>${c}</option>`).join('')}</select>`).join('')}<label for="comment">Ajustes e observações</label><textarea id="comment" rows="3"></textarea>${btn('Baixar parecer em texto', 'download', '1', 'button mainbtn')}</section>`;
+        }
+        function updateSim() {
+          $('sim').innerHTML =
+            `<p class="meta">${step} de 3 eventos · ${live ? 'sem conexão' : 'conectado'}</p>${step < 3 ? btn('Avançar · ' + changes[step].name, 'advance', '1') : ''}${btn(live ? 'Reconectar' : 'Simular desconexão', 'connection', '1')}${visibleStep > 0 ? btn('Repetir último evento', 'replay', '1') : ''}${btn('Reiniciar simulação', 'reset', '1')}${replayed ? '<p>Evento já recebido. Fila e total preservados.</p>' : ''}`;
+        }
+        function playbackControl() {
+          if (step < changes.length)
+            $('sim').insertAdjacentHTML(
+              'beforeend',
+              btn(
+                playback
+                  ? 'Pausar sequência'
+                  : 'Reproduzir sequência automática',
+                'play',
+                '1',
+              ),
+            );
+        }
+        function stateURL(replace = false) {
+          const q = new URLSearchParams({ page, view, period });
+          if (selected) q.set('id', selected);
+          if (filter !== 'all') q.set('filter', filter);
+          if (location.hash.slice(1) !== q.toString())
+            location[replace ? 'replace' : 'assign']('#' + q.toString());
+        }
+        function readURL() {
+          const q = new URLSearchParams(location.hash.slice(1));
+          page = ['antes', 'plano'].includes(q.get('page'))
+            ? q.get('page')
+            : 'painel';
+          period = Object.hasOwn(labels, q.get('period'))
+            ? q.get('period')
+            : 'hoje';
+          view = Object.hasOwn(notes, q.get('view'))
+            ? q.get('view')
+            : 'resultado';
+          const id = q.get('id') || '',
+            f = q.get('filter') || 'all';
+          selected = [
+            ...changes.map((x) => x.id),
+            ...facts.map((x) => x.id),
+            ...queue.map((x) => x.id),
+            'LOJA',
+            'AGENTE',
+            'P-1198',
+            '0',
+            '1',
+            '2',
+            '3',
+          ].includes(id)
+            ? id
+            : '';
+          filter = /^(all|p[0-3]|d(?:[1-9]|1[0-8]))$/.test(f) ? f : 'all';
+          if (view === 'seller' && !/^[0-3]$/.test(selected))
+            view = 'resultado';
+          if (view === 'record' && !selected) view = 'central';
+        }
+        function render() {
+          const focused = document.activeElement;
+          const identity =
+            focused?.tagName === 'BUTTON'
+              ? Object.entries(focused.dataset)[0]
+              : null;
+          document
+            .querySelectorAll('[data-page]')
+            .forEach((b) =>
+              b.setAttribute('aria-pressed', String(b.dataset.page === page)),
+            );
+          document
+            .querySelectorAll('.appnav [data-view]')
+            .forEach((b) =>
+              b.setAttribute(
+                'aria-pressed',
+                String(
+                  b.dataset.view ===
+                    (['central', 'record'].includes(view)
+                      ? 'central'
+                      : 'resultado'),
+                ),
+              ),
+            );
+          $('work').hidden = page !== 'painel';
+          $('document').hidden = page === 'painel';
+          if (page !== 'painel') {
+            $('document').innerHTML =
+              page === 'antes' ? beforeDoc() : planDoc();
+            if ($('comment')) $('comment').value = comment;
+          } else {
+            if (scenario === 'erro' && ['orders', 'seller'].includes(view))
+              view = 'resultado';
+            $('stage').innerHTML = {
+              resultado: result,
+              central,
+              seller,
+              orders: ordersView,
+              record,
+            }[view]();
+            const [title, test, rule] = notes[view];
+            $('inspector').innerHTML =
+              `<p><strong>${title}</strong></p><p>${test}</p><details><summary>Regra desta tela</summary><p>${rule}</p></details>`;
+            updateSim();
+            playbackControl();
+          }
+          if (identity && !focused.isConnected) {
+            const [k, v] = identity;
+            Array.from(document.querySelectorAll('button'))
+              .find((b) => b.dataset[k] === v && !b.closest('[hidden]'))
+              ?.focus({ preventScroll: true });
+          }
+        }
+        function nav() {
+          page = page || 'painel';
+          stateURL();
+          render();
+          (page === 'painel' ? $('viewtitle') : $('doctitle'))?.focus({
+            preventScroll: true,
+          });
+        }
+        document.addEventListener('click', (e) => {
+          const b = e.target.closest('button');
+          if (!b) return;
+          const d = b.dataset;
+          if (d.page) {
+            page = d.page;
+            nav();
+            return;
+          }
+          if (d.journey) {
+            page = 'painel';
+            scenario = 'normal';
+            $('scenario').value = scenario;
+            view =
+              d.journey === 'central'
+                ? 'central'
+                : d.journey === 'ivo'
+                  ? 'seller'
+                  : 'resultado';
+            selected = view === 'seller' ? '3' : '';
+            period = d.journey === 'serie' ? 'semana' : 'mes';
+            nav();
+            return;
+          }
+          if (d.view) {
+            view = d.view;
+            filter = 'all';
+            selected = '';
+            nav();
+            return;
+          }
+          if (d.period) {
+            period = d.period;
+            stateURL();
+            render();
+            announce('Resultado atualizado para ' + labels[period]);
+            return;
+          }
+          if (d.sort) {
+            desc = sort === d.sort ? !desc : d.sort !== 'name';
+            sort = d.sort;
+            render();
+            return;
+          }
+          if (d.seller !== undefined) {
+            view = 'seller';
+            selected = d.seller;
+            nav();
+            return;
+          }
+          if (d.orders) {
+            view = 'orders';
+            filter = d.orders;
+            nav();
+            return;
+          }
+          if (d.record) {
+            view = 'record';
+            selected = d.record;
+            nav();
+            return;
+          }
+          if (d.recover) {
+            scenario = 'normal';
+            $('scenario').value = scenario;
+            render();
+            announce('Leitura comercial recuperada');
+            return;
+          }
+          if (d.download) {
+            const out = [
+              'RFC 073 · Parecer sobre o protótipo',
+              ...decisions.map((t, i) => choices[i] + ' — ' + t),
+              comment,
+            ].join('\n\n');
+            const u = URL.createObjectURL(
+              new Blob([out], { type: 'text/plain;charset=utf-8' }),
+            );
+            const a = document.createElement('a');
+            a.href = u;
+            a.download = 'parecer-painel-administrativo.txt';
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(u), 1000);
+            announce('Parecer preparado para download');
+            return;
+          }
+          replayed = false;
+          if (d.advance) {
+            advance();
+          } else if (d.play) {
+            if (playback) stopPlayback();
+            else
+              playback = setInterval(() => {
+                advance();
+                if (
+                  page === 'painel' &&
+                  (view === 'central' || view === 'resultado')
+                )
+                  render();
+              }, 3000);
+          } else if (d.connection) {
+            live = !live;
+            if (!live) visibleStep = step;
+          } else if (d.replay) {
+            replayed = true;
+          } else if (d.reset) {
+            stopPlayback();
+            step = visibleStep = 0;
+            live = false;
+          } else return;
+          render();
+          announce(
+            replayed
+              ? 'Evento já contabilizado'
+              : live
+                ? 'Simulação sem conexão'
+                : 'Central atualizada às ' + nowTime(),
+          );
+          if (
+            !document.activeElement ||
+            document.activeElement === document.body
+          )
+            $('sim').querySelector('button')?.focus({ preventScroll: true });
+        });
+        document.addEventListener('change', (e) => {
+          const el = e.target;
+          if (el.id === 'device')
+            $('screen').classList.toggle('mobile', el.value === 'mobile');
+          if (el.id === 'theme')
+            $('screen').classList.toggle('night', el.value === 'Escuro');
+          if (el.id === 'scenario') {
+            scenario = el.value;
+            view = 'resultado';
+            page = 'painel';
+            stateURL();
+            render();
+            announce('Cenário atualizado');
+          }
+          if (el.dataset.choice !== undefined)
+            choices[Number(el.dataset.choice)] = el.value;
+        });
+        document.addEventListener('input', (e) => {
+          if (e.target.id === 'comment') comment = e.target.value;
+        });
+        globalThis.addEventListener('hashchange', () => {
+          const q = new URLSearchParams(location.hash.slice(1));
+          if (
+            q.get('page') === page &&
+            q.get('period') === period &&
+            q.get('view') === view &&
+            (q.get('id') || '') === selected &&
+            (q.get('filter') || 'all') === filter
+          )
+            return;
+          readURL();
+          render();
+        });
+        readURL();
+        render();
+      })();
+    </script>
+  </body>
+</html>

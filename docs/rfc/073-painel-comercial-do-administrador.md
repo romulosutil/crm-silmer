@@ -2,6 +2,8 @@
 
 Proposta de 21/11/2026 para revisão pelo proprietário do produto. Responsável pela proposta e integração das futuras entregas é o Tech Lead. Base examinada: `4f75ab7b`. A implementação depende da decisão sobre esta RFC.
 
+Abra o [protótipo navegável para decisão](../prototypes/painel-administrativo.html) no navegador. As abas **Explorar painel**, **Antes e depois** e **Plano e parecer** permitem conferir a amostra, simular eventos e registrar ajustes antes de aprovar o escopo.
+
 ## O que o gestor precisa descobrir
 
 Em até 30 segundos no celular, o administrador deve conseguir dizer quanto vendeu no período, se o resultado veio de mais pedidos ou de pedidos de maior valor, quem atendeu e quem fechou vendas. Se um cliente estiver esperando, deve conseguir abrir a fila certa a partir da mesma tela.

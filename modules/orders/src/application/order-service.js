@@ -1,4 +1,5 @@
 import { projectOrderSource, orderSourceView } from '../domain/order-source.js';
+import { comparisonRanges, commercialResult } from './commercial-result.js';
 import { randomUUID } from 'node:crypto';
 
 import {
@@ -32,6 +33,7 @@ import {
 import { parseBrlAmount } from '../domain/money.js';
 import {
   confirmOrder,
+  isCalendarDay,
   missingForConfirmation,
   operationalDay,
   promisedDeliveryOn,
@@ -112,6 +114,10 @@ export const ORDER_SECTIONS = Object.freeze(
 export const DEFAULT_ORDER_PAGE_SIZE = 25;
 const MAX_QUERY_LENGTH = 120;
 const LIST_KEYS = new Set([
+  'from',
+  'to',
+  'credit',
+  'firstPrint',
   'cancellation',
   'status',
   'origin',
@@ -696,6 +702,24 @@ export function createOrderService(options) {
       };
     },
 
+    /** @param {Parameters<typeof summaryPeriod>[0]} key @param {OrderActor} actor */
+    async commercialResult(key, actor) {
+      if (
+        actor?.kind !== 'human' ||
+        !actor.id ||
+        !actor.capabilities?.includes('COMMERCIAL_ADMIN')
+      )
+        throw new OrderForbiddenError();
+      const period = summaryPeriod(key, clock());
+      const ranges = comparisonRanges(period);
+      const groups = await repository.commercialSales({
+        from: ranges?.previous.from ?? period.from,
+        to: period.to,
+        visibilityActorId: actor.id,
+      });
+      return commercialResult(period, ranges, groups);
+    },
+
     /**
      * ADR 031: a person printed or downloaded a store order's ficha. The
      * first print records who and when, and takes the order out of the
@@ -988,7 +1012,7 @@ export function createOrderService(options) {
      *
      * `ownerId` (Painel, "Meus pedidos") keeps one seller's orders.
      *
-     * @param {{cancellation?: 'active'|'cancelled'|'all', status?: string, origin?: string, q?: string, cursor?: string|null, limit?: number, delivery?: string, ownerId?: string}} [input]
+     * @param {{cancellation?: 'active'|'cancelled'|'all', status?: string, origin?: string, q?: string, cursor?: string|null, limit?: number, delivery?: string, ownerId?: string, from?:string, to?:string, credit?:string, firstPrint?:string}} [input]
      * @param {any} [reader]
      */
     async list(input = {}, reader = {}) {
@@ -1010,14 +1034,54 @@ export function createOrderService(options) {
       if (q.length > MAX_QUERY_LENGTH) {
         throw new OrderInputError('q is too long', ['q']);
       }
+      if (
+        input.from !== undefined ||
+        input.to !== undefined ||
+        input.credit !== undefined
+      ) {
+        if (
+          !isCalendarDay(input.from) ||
+          !isCalendarDay(input.to) ||
+          String(input.from) > String(input.to) ||
+          input.status !== 'confirmado' ||
+          (input.cancellation && input.cancellation !== 'active')
+        )
+          throw new OrderInputError('commercial interval is invalid', [
+            'from',
+            'to',
+          ]);
+        if (
+          input.credit !== undefined &&
+          (typeof input.credit !== 'string' ||
+            !/^[\w.-]{1,128}$/u.test(input.credit))
+        )
+          throw new OrderInputError('credit is invalid', ['credit']);
+        if (input.credit && !reader.readAll && input.credit !== reader.actorId)
+          throw new OrderForbiddenError();
+      }
+      if (
+        input.firstPrint !== undefined &&
+        (input.firstPrint !== 'pending' ||
+          input.origin !== 'loja' ||
+          (input.cancellation && input.cancellation !== 'active'))
+      )
+        throw new OrderInputError('firstPrint is invalid', ['firstPrint']);
       if (input.delivery !== undefined) {
         // A delivery view is one short list in promised order: it does not
         // combine with the other filters or page with a cursor.
         if (
           !DELIVERY_FILTERS.has(/** @type {string} */ (input.delivery)) ||
-          ['cancellation', 'status', 'origin', 'q', 'cursor', 'ownerId'].some(
-            (key) => /** @type {any} */ (input)[key] !== undefined,
-          )
+          [
+            'cancellation',
+            'status',
+            'origin',
+            'q',
+            'cursor',
+            'ownerId',
+            'from',
+            'to',
+            'firstPrint',
+          ].some((key) => /** @type {any} */ (input)[key] !== undefined)
         ) {
           throw new OrderInputError('delivery is invalid', ['delivery']);
         }
@@ -1041,6 +1105,10 @@ export function createOrderService(options) {
         limit: input.limit ?? DEFAULT_ORDER_PAGE_SIZE,
         status: /** @type {any} */ (input.status),
         ...listReader,
+        from: input.from,
+        to: input.to,
+        credit: input.credit,
+        firstPrint: input.firstPrint,
       };
       if (input.origin !== undefined) {
         query.origin = /** @type {any} */ (input.origin);

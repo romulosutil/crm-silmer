@@ -274,6 +274,58 @@ async function createConfirmed(runtime, conversationId, summary) {
   );
 }
 
+test('RFC 073: result is administrative; the order date filter agrees with the aggregate', async (t) => {
+  const admin = { ...SELLER, capabilities: ['COMMERCIAL_ADMIN'] };
+  const { api, runtime } = orderHarness({ readActor: admin });
+  t.after(() => api.close());
+  const order = await createConfirmed(runtime, 'conversation-1');
+  await createPending(runtime, 'conversation-2');
+  const read = (/** @type {string} */ url) =>
+    api.inject({ method: 'GET', headers: readHeaders, url });
+  const result = await read('/api/v1/orders/commercial-result?period=mes');
+  assert.equal(result.statusCode, 200);
+  const { period, daily, comparison } = result.json();
+  assert.equal(period.confirmedCount, 1);
+  assert.equal(period.soldAmountCents, 482000);
+  assert.equal(daily.length, 12);
+  assert.equal(comparison.current.to, '2026-09-11');
+  const url =
+    '/api/v1/orders?status=confirmado&from=' + period.from + '&to=' + period.to;
+  const page = await read(url);
+  assert.equal(page.statusCode, 200);
+  assert.equal(page.json().counts.confirmado, period.confirmedCount);
+  assert.equal(page.json().items[0].id, order.id);
+  assert.equal(
+    (await read(url.replace(period.to, '2026-09-11'))).json().counts.confirmado,
+    0,
+  );
+  assert.equal(
+    (await read(url.replace(period.to, '2026-09-31'))).statusCode,
+    400,
+  );
+  assert.equal(
+    (await read('/api/v1/orders?firstPrint=pending')).statusCode,
+    400,
+  );
+  const unauthorized = orderHarness({ readActor: SELLER }).api;
+  t.after(() => unauthorized.close());
+  for (const path of [
+    '/api/v1/orders/commercial-result?period=hoje',
+    url + '&credit=other',
+  ]) {
+    assert.equal(
+      (
+        await unauthorized.inject({
+          method: 'GET',
+          headers: readHeaders,
+          url: path,
+        })
+      ).statusCode,
+      403,
+    );
+  }
+});
+
 test('summary aggregates all confirmed orders and requires a read session', async () => {
   const { api, runtime } = orderHarness();
   await createConfirmed(runtime, 'conversation-1');

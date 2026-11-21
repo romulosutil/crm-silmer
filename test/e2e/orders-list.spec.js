@@ -9,6 +9,40 @@ import {
   pendingOrder,
 } from './support/orders-mock.js';
 
+test('RFC 073: Ver mais reaches delivery 101 from the Central destination', async ({
+  page,
+}) => {
+  const deliveries = Array.from({ length: 101 }, (_, i) => ({
+    ...confirmedOrder,
+    id: 'delivery-' + i,
+    number: i + 1 + '-CRM',
+  }));
+  /** @type {URLSearchParams[]} */
+  const requests = [];
+  await mockOrders(page, {
+    orders: deliveries,
+    pages: [deliveries.slice(0, 100), deliveries.slice(100)],
+    onList: (params) => requests.push(params),
+  });
+  await page.goto('/pedidos?entrega=atrasada');
+  const region = page.getByRole('region', { name: /Confirmados/u });
+  await expect(region.getByRole('row')).toHaveCount(101);
+  const more = page.getByRole('button', { name: 'Ver mais' });
+  await more.focus();
+  await page.keyboard.press('Enter');
+  await expect(region.getByRole('row')).toHaveCount(102);
+  await expect(
+    region.getByRole('row').filter({ hasText: '101-CRM' }),
+  ).toHaveCount(1);
+  await expect(more).toHaveCount(0);
+  expect(
+    requests.map((params) => [params.get('delivery'), params.get('cursor')]),
+  ).toEqual([
+    ['overdue', null],
+    ['overdue', 'cursor-1'],
+  ]);
+});
+
 test('groups orders by status with counts, columns and actions', async ({
   page,
 }) => {

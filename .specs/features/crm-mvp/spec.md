@@ -341,8 +341,9 @@ ACL, filas, contagens, estados comerciais ou comandos de envio.
   o histórico, trocar endereço, apagar rascunho ou alterar filtros. Reflow
   móvel SHALL preservar a navegação lista/conversa e o compositor disponível.
 - **PCX-16f:** controle de expandir/recolher navegação SHALL usar só ícone,
-  nome acessível, dica e estado. Preferência manual continua persistida; na
-  Inbox expandida a navegação sobrepõe a lista sem estreitar a conversa.
+  nome acessível, dica e estado. A Inbox SHALL usar a mesma coluna de navegação
+  das outras telas, com preferência manual persistida entre rotas e recargas.
+  Expandir SHALL reservar espaço ao lado da fila e manter seus controles acessíveis.
 - **PCX-16g:** atenção/pendência, informação/sugestão, sucesso e erro SHALL
   usar tokens semânticos atuais com texto/ícone, sem depender só de cor.
   Laranja permanece reservado às ações primárias; seleção continua neutra.

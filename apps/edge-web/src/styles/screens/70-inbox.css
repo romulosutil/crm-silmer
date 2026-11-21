@@ -9,7 +9,6 @@
  * conversation opened by its address (/inbox/:conversationId).
  */
 .app-shell:has(.inbox-page) {
-  --sidebar-rail-size: var(--inbox-rail-inline-size);
   --topbar-block-size: var(--inbox-topbar-block-size);
 }
 
@@ -2117,25 +2116,11 @@
   background: var(--status-success-surface);
 }
 @media (min-width: 769px) {
-  .app-shell:has(.inbox-page) {
-    grid-template-columns: var(--inbox-rail-inline-size) minmax(0, 1fr);
-  }
-  .app-shell:has(.inbox-page) .app-frame {
-    grid-column: 2;
-  }
   .app-shell:has(.inbox-page) .app-topbar {
     min-block-size: var(--inbox-topbar-block-size);
     padding: var(--space-1) var(--space-4);
     background: var(--color-page);
     backdrop-filter: none;
-  }
-  .app-shell[data-sidebar='expanded']:has(.inbox-page) .app-sidebar {
-    position: fixed;
-    inset-block: 0;
-    inset-inline-start: 0;
-    inline-size: var(--sidebar-inline-size);
-    box-shadow: var(--shadow-overlay);
-    border-inline-end: 1px solid var(--color-border);
   }
 }
 @media (max-width: 768px) {

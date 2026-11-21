@@ -5,7 +5,10 @@ import {
   createOperationReadRuntime,
   createOperationReadService,
 } from '../apps/api/src/operation-runtime.js';
-import { handoffSummaryLines } from '../apps/edge-web/src/lib/handoff-summary.js';
+import {
+  handoffPendingReply,
+  handoffSummaryLines,
+} from '../apps/edge-web/src/lib/handoff-summary.js';
 import { encryptJson } from '../modules/n8n-integration/src/crypto.js';
 import { PostgresHandoffReadRepository } from '../modules/work-management/src/index.js';
 import { createHandoffCipher } from '../modules/work-management/src/cipher.js';
@@ -301,4 +304,45 @@ test('INBOX-HANDOFF-01: reads the VND-L02 summary, with questions right after th
       ['Dica', 'Possível parceria/revenda.', []],
     ],
   );
+});
+
+test('VND-L07: only the explicit pending work is lifted from the full handoff', () => {
+  for (const [content, expected] of [
+    [
+      'Cliente cobra retorno: Ainda aguardo nosso orçamento. Retomar a pendência sem reiniciar a ficha.',
+      'Retomar o orçamento solicitado',
+    ],
+    [
+      'Cliente cobra retorno: Ainda aguardamos retorno de vocês. Retomar a pendência sem reiniciar a ficha.',
+      'Dar o retorno solicitado',
+    ],
+    [
+      'Reconfirmar o valor antes de alterar o pedido. Simulação do cliente: E se mudar o tecido?',
+      'Confirmar o valor da alteração simulada',
+    ],
+    ['Responder valor e prazo solicitados juntos.', 'Informar valor e prazo'],
+    [
+      'Perguntas do cliente: • Orçamento para dois volumes Alternativas para orçamento: 32 e 64 pecas; quantidade não confirmada.',
+      'Cotar 32 e 64 peças',
+    ],
+    [
+      'Responder valor e prazo solicitados juntos. Alternativas para orçamento: 32 e 64 unidades; quantidade não confirmada.',
+      'Informar valor e prazo · Cotar 32 e 64 unidades',
+    ],
+    ['IA: o cliente disse: Simulação do cliente: sem indicação do agente.', ''],
+    ['Perguntas do cliente: • Posso mudar o tecido?', ''],
+  ]) {
+    const lines = handoffSummaryLines(
+      'Motivo: Requer atendimento. ' + content + ' Ficha: 4 de 7.',
+    );
+    assert.equal(handoffPendingReply(lines), expected);
+  }
+  assert.equal(handoffPendingReply(handoffSummaryLines(SUMMARY)), '');
+  assert.equal(
+    handoffPendingReply(
+      handoffSummaryLines('Cliente cobra retorno: exemplo humano.'),
+    ),
+    '',
+  );
+  assert.equal(handoffPendingReply([]), '');
 });

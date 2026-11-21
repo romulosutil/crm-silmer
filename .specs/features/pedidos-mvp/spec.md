@@ -1324,9 +1324,10 @@ resumo em painel recolhível com botão `Detalhes` de texto visível no
 desktop/tablet e título `Detalhes do atendimento`; no celular a entrada fica
 em Mais. Abertura e fechamento preservam foco, Escape e preferência anterior.
 Os nomes completos de PCX-14 podem ocupar mais de uma linha sem scroll
-horizontal, mantendo os alvos de toque. O menu principal começa compacto na
-Inbox quando não existe preferência válida; a escolha manual Expandir/Recolher
-prevalece entre rotas e recargas no navegador, com fallback sem storage.
+horizontal, mantendo os alvos de toque. Na revisão de 20/11/2026 de PCX-16f,
+o menu principal da Inbox acompanha o padrão responsivo do shell. A escolha
+manual Expandir/Recolher prevalece entre rotas e recargas no navegador,
+com fallback para a largura da janela quando o storage está indisponível.
 Destinos, autorização e navegação inferior móvel permanecem os mesmos.
 Benchmark e limites: [registro de produto](../../../docs/product/benchmark-inbox-2026-10-29.md).
 

@@ -1040,6 +1040,14 @@ em claro/escuro, desktop, celular e 320 px. Detalhes no runbook.
 
 Operação e rollback em [inbox-compacta](../../../docs/runbooks/inbox-compacta.md).
 
+## INBOX-UX-07 — Pendência da transferência e navegação compartilhada
+
+AGT-03, INB-01 e PCX-16f. Continuação da VND-L07 na interface do vendedor.
+
+- Mostrar no resumo recolhido o que o cliente pediu para o vendedor responder, a partir dos marcadores explícitos de cobrança, simulação, preço com prazo e volumes alternativos. O rótulo distingue a transferência pendente do contexto histórico de uma transferência aceita.
+- Aplicar a preferência e a largura do menu compartilhado na Caixa, com acesso por teclado e espaço próprio para a fila e o chat. Manter a navegação inferior no celular.
+- Verificar as duas rotas, a expansão manual e o resumo com e sem permissão, usando conversas fictícias nas regressões locais.
+
 ## VND-L07 — Espera, preço e opções de orçamento (20/11/2026)
 
 AGT-01–05/08/10 e ORC-03/05/07. [Análise, exemplos fictícios e critérios de acompanhamento](../../../docs/integrations/n8n/revisao-2026-11-20.md).

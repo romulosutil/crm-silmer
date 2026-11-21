@@ -3,7 +3,10 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import AppIcon from '../AppIcon.vue';
 import { request } from '../../lib/api-client.js';
 import { preferredSellerFirstName } from '../../lib/assistant-context.js';
-import { handoffSummaryLines } from '../../lib/handoff-summary.js';
+import {
+  handoffPendingReply,
+  handoffSummaryLines,
+} from '../../lib/handoff-summary.js';
 
 /**
  * INBOX-HANDOFF-01 / AGT-03: what the agent handed over with the conversation
@@ -30,12 +33,22 @@ const expanded = ref(false);
 let controller;
 
 const lines = computed(() => handoffSummaryLines(summary.value));
+const pendingReply = computed(() => handoffPendingReply(lines.value));
 const collected = computed(
   () => lines.value.find((line) => line.label === 'Ficha')?.text ?? '',
 );
 const warnings = computed(() =>
   lines.value.filter((line) => line.tone === 'warning'),
 );
+const title = computed(() => {
+  if (pendingReply.value) {
+    const label =
+      props.handoff?.status === 'pending' ? 'A responder' : 'Na transferência';
+    return label + ': ' + pendingReply.value;
+  }
+  if (collected.value) return 'Dados coletados · ' + collected.value;
+  return 'Resumo da transferência';
+});
 const bodyId = computed(() => `handoff-summary-${props.conversationId}`);
 const visible = computed(
   () =>
@@ -123,18 +136,16 @@ onBeforeUnmount(() => controller?.abort());
         type="button"
         class="quiet"
         :aria-label="
-          collected
-            ? `Resumo da transferência · Dados coletados · ${collected}`
+          pendingReply || collected
+            ? `Resumo da transferência · ${title}`
             : 'Resumo da transferência'
         "
         :aria-expanded="expanded ? 'true' : 'false'"
         :aria-controls="bodyId"
         @click="expanded = !expanded"
       >
-        <span>{{
-          collected
-            ? `Dados coletados · ${collected}`
-            : 'Resumo da transferência'
+        <span :class="{ 'handoff-pending-reply': pendingReply }">{{
+          title
         }}</span>
         <AppIcon name="chevron-down" />
       </button>
@@ -235,6 +246,11 @@ onBeforeUnmount(() => controller?.abort());
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.handoff-summary-title button .handoff-pending-reply {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-weight: 600;
 }
 .handoff-summary-preview {
   flex: 0 1 auto;

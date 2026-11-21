@@ -8,6 +8,10 @@
 /** Openings of the agent's sentences, in the order its summary writes them. */
 const OPENINGS = [
   'Motivo',
+  'Cliente cobra retorno',
+  'Simulação do cliente',
+  'Responder valor e prazo solicitados juntos',
+  'Alternativas para orçamento',
   'Perguntas do cliente',
   'Perguntou o valor',
   'Vendedor pedido',
@@ -22,7 +26,12 @@ const OPENINGS = [
   'IA',
 ];
 /** Sentences the agent writes without a label. */
-const UNLABELLED = new Set(['Perguntou o valor', 'Pré-ficha completa']);
+const PRICE_AND_TIME = 'Responder valor e prazo solicitados juntos';
+const UNLABELLED = new Set([
+  'Perguntou o valor',
+  'Pré-ficha completa',
+  PRICE_AND_TIME,
+]);
 const LABELLED = new Set(
   OPENINGS.filter((opening) => !UNLABELLED.has(opening)),
 );
@@ -72,6 +81,36 @@ export function handoffSummaryLines(summary) {
     rest = rest.slice(match.index + match[0].length);
   }
   return parts.map((part, index) => lineOf(part.trim(), index));
+}
+
+/**
+ * Only the producer's explicit handoff markers describe a pending reply.
+ * Free summaries, customer question lists and model reasoning stay in the disclosure.
+ * @param {SummaryLine[]} lines
+ */
+export function handoffPendingReply(lines) {
+  if (lines[0]?.label !== 'Motivo') return '';
+  const actions = [];
+  for (const line of lines) {
+    if (line.label === 'Cliente cobra retorno')
+      actions.push(
+        /\borçamento\b/iu.test(line.text)
+          ? 'Retomar o orçamento solicitado'
+          : 'Dar o retorno solicitado',
+      );
+    if (line.label === 'Simulação do cliente')
+      actions.push('Confirmar o valor da alteração simulada');
+    if (!line.label && line.text === PRICE_AND_TIME + '.')
+      actions.push('Informar valor e prazo');
+    if (line.label === 'Alternativas para orçamento') {
+      const volumes =
+        /^(\d{1,5} e \d{1,5} (?:pe[cç]as?|unidades?|camisas?|camisetas?)); quantidade não confirmada\.$/iu.exec(
+          line.text,
+        );
+      if (volumes) actions.push('Cotar ' + volumes[1].replace(/peca/u, 'peça'));
+    }
+  }
+  return actions.join(' · ');
 }
 
 /** @param {string} part @param {number} index @returns {SummaryLine} */

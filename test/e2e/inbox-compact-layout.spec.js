@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { AxeBuilder } from '@axe-core/playwright';
 import { readFile } from 'node:fs/promises';
+import { installMocks } from './support/inbox-vez-mock.js';
+import { threadOf } from './support/inbox-vez-fixtures.js';
 
 /**
  * Mirrors the API: in tab mode every returned item carries the requested
@@ -290,6 +292,136 @@ async function setupInbox(page, options = {}) {
     return route.fulfill({ json: { items: [], totalCount: 0 } });
   });
   return { archives, closes, initialOrder, order, orderMutations };
+}
+
+for (const [appearance, width, height] of /** @type {const} */ ([
+  ['light', 1366, 768],
+  ['dark', 1366, 768],
+  ['light', 390, 844],
+  ['dark', 390, 844],
+  ['light', 820, 1180],
+])) {
+  test(`INBOX-UX-08: populated queue and seller conversation at ${width}px in ${appearance}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height });
+    await page.addInitScript(
+      (theme) => localStorage.setItem('silmer-theme', theme),
+      appearance,
+    );
+    const writes =
+      /** @type {Array<{method: string, path: string, body: any}>} */ ([]);
+    await installMocks(
+      page,
+      { writes },
+      {
+        enforceVisibility: true,
+        extras: true,
+        thread(item) {
+          const base = threadOf(item);
+          if (item.id !== 'r-joao') return base;
+          /** @type {Array<[Record<string, any>, number, string]>} */
+          const dialogue = [
+            [
+              base[0],
+              27,
+              'São uniformes para a nossa cafeteria. Pensei em 24 polos.',
+            ],
+            [
+              base[1],
+              22,
+              'Anotei as 24 polos. Você já tem o desenho do bordado?',
+            ],
+            [
+              base[0],
+              18,
+              'Tenho sim. O logo é pequeno e vai do lado esquerdo.',
+            ],
+            [
+              base[1],
+              12,
+              'Vou considerar o logo no peito. Quer comparar outra quantidade também?',
+            ],
+            [base[0], 8, 'Sim, queria comparar com um lote de 36 peças.'],
+          ];
+          return [
+            ...base.slice(0, 2),
+            ...dialogue.map(([message, minutes, text], index) => ({
+              ...message,
+              id: 'quote-turn-' + index,
+              text,
+              preview: text,
+              occurredAt: new Date(
+                Date.parse(item.turnSince) - minutes * 60_000,
+              ).toISOString(),
+            })),
+            item.lastMessage,
+          ];
+        },
+      },
+    );
+    await page.goto('/inbox');
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-theme',
+      appearance,
+    );
+    const row = page.locator('[data-conversation-id="r-joao"]');
+    const rows = page
+      .getByRole('list', { name: 'Conversas', exact: true })
+      .getByRole('button');
+    await expect(row).toBeVisible();
+    const initialOrder = await rows.evaluateAll((buttons) =>
+      buttons.map((button) => button.getAttribute('data-conversation-id')),
+    );
+    expect(initialOrder.length).toBeGreaterThan(3);
+    await page.screenshot({
+      path: testInfo.outputPath('fila-' + width + '-' + appearance + '.png'),
+    });
+    await row.focus();
+    await row.press('Enter');
+    const heading = page.getByRole('heading', {
+      name: 'Cliente João V.',
+      exact: true,
+    });
+    await expect(heading).toBeVisible();
+    // In two panes the queue keeps the focus so the seller can continue triage.
+    // On a phone the queue disappears and focus follows the opened conversation.
+    if (await row.isVisible()) await expect(row).toBeFocused();
+    else await expect(heading).toBeFocused();
+    const history = page.getByRole('list', { name: 'Histórico da conversa' });
+    await expect(
+      history.getByText(
+        'Anotei as 24 polos. Você já tem o desenho do bordado?',
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      history.getByText('Qual o prazo para bordado no peito?', { exact: true }),
+    ).toBeInViewport();
+    const reply = page.getByRole('textbox', { name: 'Responder', exact: true });
+    await expect(reply).toBeEnabled();
+    await reply.fill('Vou conferir o prazo do bordado para os dois lotes.');
+    await expect(reply).toBeInViewport({ ratio: 1 });
+    await expect(reply).toBeFocused();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
+    if (await row.isVisible()) {
+      expect(
+        await rows.evaluateAll((buttons) =>
+          buttons.map((button) => button.getAttribute('data-conversation-id')),
+        ),
+      ).toEqual(initialOrder);
+    }
+    await page.screenshot({
+      path: testInfo.outputPath(
+        'conversa-' + width + '-' + appearance + '.png',
+      ),
+    });
+    expect(writes.filter((write) => write.path.endsWith('/messages'))).toEqual(
+      [],
+    );
+  });
 }
 
 test('OPS-INBOX-SEND-08: refusing a test conversation preserves the text draft and announces the explicit reason', async ({

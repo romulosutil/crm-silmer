@@ -63,6 +63,7 @@ const SILENT_AFTER_MINUTES = 72 * 60;
  *   admin?: boolean,       // the session user is a COMMERCIAL_ADMIN
  *   canReadAllPersonalWhatsApp?: boolean,
  *   enforceVisibility?: boolean, // CONV-ACL-01 in focused authorization UI scenes
+ *   thread?: typeof threadOf, // optional scenario-specific conversation history
  *   failBuckets?: boolean,  // GET /inbox/buckets answers 503
  *   commandErrors?: Record<string, {status: number, code: string}>, // forced refusal per command path ('lead-outcome', 'reminder')
  *   legacyApi?: boolean,   // P1-D: pre-RFC-052 API (no bucket/turnAsOf, no /inbox/buckets)
@@ -398,7 +399,7 @@ export async function installMocks(page, log = {}, options = {}) {
       if (!tail)
         return json({
           conversation: present(item, asOf),
-          messages: threadOf(item),
+          messages: (options.thread ?? threadOf)(item),
           suggestion: null,
         });
     }

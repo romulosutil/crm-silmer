@@ -1040,6 +1040,10 @@ em claro/escuro, desktop, celular e 320 px. Detalhes no runbook.
 
 Operação e rollback em [inbox-compacta](../../../docs/runbooks/inbox-compacta.md).
 
+## INBOX-UX-08 — Redesenho da fila e do histórico
+
+INB-01, AGT-03 e PCX-16f. A fila apresenta nome, espera, prévia e estados em ordem de leitura. O histórico agrupa as mensagens por dia, distingue os interlocutores e mantém as ferramentas de resposta junto ao campo de texto. As regressões usam uma fila e um atendimento preenchidos, em temas claro e escuro, no desktop e no celular. Os padrões e tokens estão na seção 21 de `design.md`.
+
 ## INBOX-UX-07 — Pendência da transferência e navegação compartilhada
 
 AGT-03, INB-01 e PCX-16f. Continuação da VND-L07 na interface do vendedor.

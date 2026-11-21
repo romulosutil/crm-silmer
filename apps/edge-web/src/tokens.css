@@ -113,6 +113,9 @@
        near 70 characters. */
     --inbox-thread-max-inline-size: 48rem;
     --inbox-message-max-inline-size: 34rem;
+    --inbox-history-surface: var(--color-surface-muted);
+    --inbox-received-surface: var(--color-surface);
+    --inbox-sent-surface: var(--color-selected);
     /* Bottom tab bar on phones; screens reserve it above their own footer. */
     --mobile-nav-block-size: 4rem;
     --shell-gap: 0.5rem;

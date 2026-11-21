@@ -342,11 +342,10 @@ onBeforeUnmount(() => {
         </div>
       </template>
       <p v-else-if="!queueError">Consultando fila…</p>
-      <RouterLink to="/inbox?situacao=agente"
-        >Conversas com o agente<span v-if="queue">
-          · {{ queue.withAgent }}</span
-        ></RouterLink
-      >
+      <p v-if="queue">
+        Com o agente · {{ queue.withAgent }}
+        {{ queue.withAgent === 1 ? 'conversa' : 'conversas' }}
+      </p>
     </section>
     <section aria-labelledby="live-orders-title" class="live-panel">
       <h2 tabindex="-1" id="live-orders-title">Pedidos e entregas</h2>

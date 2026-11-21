@@ -299,6 +299,9 @@ const connectionDetail = computed(() => {
 // One live connection per session: the topic follows the route, because the
 // server caps concurrent SSE streams and a second connection per user would
 // halve how many people can stay online.
+const readingCommercialDashboard = computed(
+  () => route.path === '/dashboard' && isAdmin.value,
+);
 const liveEvent = ref(null);
 const liveTopic = computed(() => (isFinance.value ? null : 'inbox'));
 const stream = new LiveEventStream({
@@ -312,14 +315,16 @@ const stream = new LiveEventStream({
     activeView.value?.refreshFromEvent(event);
     liveEvent.value = { ...event, receivedAt: Date.now() };
     lastUpdatedAt.value = Date.now();
-    announce('Conteúdo atualizado automaticamente.');
+    if (!readingCommercialDashboard.value)
+      announce('Conteúdo atualizado automaticamente.');
   },
   onReset() {
     clearUnreadState();
     void refreshShellSession();
     activeView.value?.reset();
     liveEvent.value = { receivedAt: Date.now(), reset: true };
-    announce('A conexão foi ressincronizada.');
+    if (!readingCommercialDashboard.value)
+      announce('A conexão foi ressincronizada.');
   },
   onSessionExpired() {
     clearUnreadState();
@@ -359,7 +364,7 @@ watch(
 const toast = ref(null);
 /**
  * @param {string} message
- * @param {{actionLabel?: string, onAction?: () => unknown}} [options]
+ * @param {{actionLabel?: string, onAction?: () => unknown, informational?: boolean}} [options]
  */
 function notify(message, options) {
   toast.value?.notify(message, options);
@@ -459,7 +464,12 @@ function commitUnreadState(next) {
 
 /** @param {unknown[]} arrived */
 function announceArrival(arrived) {
-  if (!Array.isArray(arrived) || arrived.length === 0) return;
+  if (
+    readingCommercialDashboard.value ||
+    !Array.isArray(arrived) ||
+    arrived.length === 0
+  )
+    return;
   // `announce` ignores a repeat of the last message; every arrival must be heard.
   lastAnnouncement = '';
   announce(NEW_MESSAGE_ANNOUNCEMENT);

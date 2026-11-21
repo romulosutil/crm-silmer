@@ -1,72 +1,50 @@
-import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { QUEUE, actionItems, mockPainel } from './support/painel-mock.js';
+import { actionItems, mockPainel } from './support/painel-mock.js';
 
-test('the manager keeps a single next step and the sales selector names its scope', async ({
+test('o atalho abre a fila da urgência com o mesmo recorte ao voltar', async ({
   page,
 }) => {
   await mockPainel(page);
-  await page.goto('/dashboard');
-  const step = page.getByRole('region', { name: 'Próximo passo' });
-  await expect(step).toContainText('Atender 1 conversa fora do prazo');
-  await expect(step.getByRole('link')).toHaveCount(1);
-  await expect(step.getByRole('link')).toHaveText('Ver conversas');
-  await expect(step.getByRole('link')).toHaveAttribute(
-    'href',
-    '/inbox?situacao=aguardando',
-  );
-  const period = page.getByRole('group', { name: 'Período das vendas' });
-  await expect(period).toHaveAccessibleDescription('Vale para Vendido');
-  await period.getByRole('button', { name: 'Mês', exact: true }).click();
+  await page.goto('/dashboard?periodo=7dias');
+  const urgency = page.getByRole('region', { name: 'Urgência da fila' });
+  await expect(urgency).toContainText('1 conversa espera vendedor');
+  await expect(urgency).toContainText('42 min');
+  await urgency.getByRole('button', { name: 'Abrir fila' }).press('Enter');
+  await expect(page).toHaveURL(/visao=central&fila=sem-responsavel/u);
   await expect(
-    page.getByRole('link', { name: /^Vendido no mês/u }),
-  ).toContainText('R$ 24.800,00');
-  // The sales period never changes the team block, which stays at 7 days.
-  const team = page.getByRole('region', { name: 'Equipe nos últimos 7 dias' });
-  await expect(team).toContainText('R$ 16.400,00');
+    page.getByRole('heading', { name: 'Fila da Central ao vivo' }),
+  ).toBeFocused();
+  await page.goBack();
+  await expect(
+    page.getByRole('radio', { name: '7 dias', exact: true }),
+  ).toBeChecked();
+  await expect(urgency).toBeVisible();
 });
 
-test('PNL-06: a seller with unanswered conversations opens the Inbox on their conversations', async ({
+test('o período altera resultado, equipe e destinos mantendo a urgência atual', async ({
   page,
 }) => {
-  const mock = await mockPainel(page, {
-    queue: {
-      ...QUEUE,
-      waitingHandoff: { ...QUEUE.waitingHandoff, overdueCount: 0 },
-    },
-  });
-  await page.goto('/dashboard');
-  const step = page.getByRole('region', { name: 'Próximo passo' });
-  await expect(step).toContainText(
-    'Vendedor S. tem 3 conversas sem resposta há mais de 15 minutos.',
+  await mockPainel(page);
+  await page.goto('/dashboard?periodo=hoje');
+  const urgency = page.getByRole('region', { name: 'Urgência da fila' });
+  await expect(urgency).toContainText('1 conversa espera vendedor');
+  await page.getByRole('radio', { name: 'Hoje', exact: true }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(
+    page.getByRole('radio', { name: '7 dias', exact: true }),
+  ).toBeChecked();
+  const result = page.getByRole('region', { name: 'Vendas do período' });
+  await expect(result.locator('dd').first()).toHaveText('R$ 800,00');
+  await expect(
+    result.getByRole('link', { name: 'Conferir pedidos', exact: true }),
+  ).toHaveAttribute(
+    'href',
+    '/pedidos?status=confirmado&de=2026-10-09&ate=2026-10-15',
   );
-  const link = step.getByRole('link', {
-    name: 'Ver conversas de Vendedor',
-    exact: true,
-  });
-  await expect(link).toHaveAttribute('href', '/inbox?responsavel=seller-2');
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  await link.focus();
-  await page.keyboard.press('Enter');
-  await expect(page).toHaveURL('/inbox?responsavel=seller-2');
-  await expect
-    .poll(() => mock.inboxLists.at(-1)?.get('assignedUserId'))
-    .toBe('seller-2');
-  // The filter is visible and removable by keyboard.
-  const chip = page.getByRole('button', {
-    name: 'Remover filtro Conversas de Vendedor Sintético',
-  });
-  await expect(chip).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Filtro:' })).toContainText(
-    'Conversas de Vendedor Sintético',
+  await expect(page.getByRole('region', { name: 'Vendedores' })).toContainText(
+    'R$ 500,00',
   );
-  const lists = mock.inboxLists.length;
-  await chip.focus();
-  await page.keyboard.press('Enter');
-  await expect(chip).toHaveCount(0);
-  await expect.poll(() => mock.inboxLists.length).toBeGreaterThan(lists);
-  expect(mock.inboxLists.at(-1)?.has('assignedUserId')).toBe(false);
-  await expect(page.getByRole('button', { name: 'Filtros' })).toBeFocused();
+  await expect(urgency).toContainText('1 conversa espera vendedor');
 });
 
 test('unavailable actions are unknown, never an empty queue or zero, while own performance remains readable', async ({

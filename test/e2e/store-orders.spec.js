@@ -1,5 +1,6 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { mockDashboardRead } from './support/painel-mock.js';
 
 // ADRs 027 and 028 (LOJ-08, LOJ-10, LOJ-14, LOJ-22..24): a site shop order
 // paid through InfinitePay, in the list and on its page — the "Loja · LJ-…"
@@ -187,6 +188,7 @@ async function mockStore(page, options = {}) {
       });
       return;
     }
+    if (await mockDashboardRead(route)) return;
     if (path === '/api/v1/orders/delivery-tasks') {
       await route.fulfill({
         contentType: 'application/json',
@@ -369,7 +371,10 @@ test('LOJ-31/LOJ-32: the Dashboard notice is one link to the site orders, and th
     .locator('#main-content')
     .getByRole('link', { name: /pedidos novos do site/u });
   await expect(notice).toHaveCount(1);
-  await expect(notice).toHaveAttribute('href', '/pedidos?origem=loja');
+  await expect(notice).toHaveAttribute(
+    'href',
+    '/pedidos?origem=loja&impressao=pendente',
+  );
   await expect(notice).toContainText('2 pedidos novos do site');
   await expect(notice).toContainText(
     'Confirmados e pagos por Pix, o mais antigo em 07/10, 23:15. Gere os PDFs das fichas para começar a produção.',
@@ -393,11 +398,12 @@ test('LOJ-31/LOJ-32: the Dashboard notice is one link to the site orders, and th
   // Keyboard: Enter on the notice opens the list already on "Loja do site".
   await notice.focus();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL('/pedidos?origem=loja');
+  await expect(page).toHaveURL('/pedidos?origem=loja&impressao=pendente');
   // PLI-10: the filter lives in the sheet, so the list names it.
   await expect(page.locator('.orders-active-filter')).toContainText(
-    'Filtro: Loja do site',
+    'primeira impressão pendente',
   );
+  await expect.poll(() => lists.at(-1)?.get('firstPrint')).toBe('pending');
   await expect.poll(() => lists.at(-1)?.get('origin') ?? null).toBe('loja');
 });
 
@@ -419,7 +425,9 @@ test('LOJ-31: one new site order reads in the singular; none hides the notice', 
   const empty = await page.context().newPage();
   await mockStore(empty, { summary: () => summaryWith(0, null) });
   await empty.goto('/dashboard');
-  await expect(empty.getByText('Vendido hoje', { exact: true })).toBeVisible();
+  await expect(
+    empty.getByRole('link', { name: 'Conferir pedidos', exact: true }),
+  ).toBeVisible();
   await expect(empty.locator('.store-notice')).toHaveCount(0);
   await expect(
     empty

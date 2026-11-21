@@ -604,17 +604,13 @@ migração: o Painel usa os resumos que já lê. Tarefas T130 e T131 em
 
 **Critérios de aceite:**
 
-1. **PNL-01:** WHEN um vendedor ou um gestor abre o Painel THEN o topo SHALL
-   mostrar um único cartão "Próximo passo", com uma frase e um link para a
-   lista já filtrada, escolhido pela primeira condição verdadeira na ordem do
-   papel. Vendedor: conversas suas a responder → conversas aguardando vendedor
-   para assumir → seus pedidos pendentes a completar → entregas atrasadas →
-   "Nada urgente agora", sem link. Gestor: conversas fora do SLA (Esperando
-   vendedor) → vendedor com conversas sem resposta há mais de 15 min
-   (PNL-06) → entregas atrasadas → agente parado → pedidos a confirmar. WHEN
-   a fonte de uma condição falhou THEN o cartão SHALL NOT pular essa condição
-   nem dizer "Nada urgente agora": SHALL dizer que não conseguiu ler aquela
-   informação, com "Tentar novamente".
+1. **PNL-01:** O vendedor vê a próxima ação na ordem de conversas próprias a
+   responder, atendimentos a assumir, pedidos pendentes e entregas atrasadas.
+   O gestor abre em Resultado comercial e vê a urgência da fila atual. A
+   prioridade é sem responsável, resposta humana atrasada e demais respostas
+   em espera. O atalho abre a fila correspondente na Central. Com uma leitura
+   válida e vazia, a interface identifica a fila vazia. Em falha de leitura,
+   a própria região informa a indisponibilidade e oferece nova tentativa.
 2. **PNL-02:** Hoje, 7 dias e Mês governam vendido, pedidos, ticket, equipe,
    série e destinos de conferência do Resultado comercial. O servidor resolve as
    datas em São Paulo. A URL conserva o recorte ao voltar, e uma resposta de um

@@ -307,6 +307,7 @@ async function addShippingDraft(text) {
   if (next.length > 2000) {
     notify(
       'A resposta ultrapassa 2.000 caracteres. Reduza o rascunho antes de acrescentar o frete.',
+      { informational: true },
     );
     return;
   }
@@ -1163,7 +1164,7 @@ async function loadContactDetails() {
     ) {
       clearPrivateConversation(activeId.value, true);
       error.value = 'Esta conversa não está disponível para seu acesso.';
-      notify(error.value);
+      notify(error.value, { informational: true });
     } else if (controller === contactController && cause?.name !== 'AbortError')
       contactError.value =
         'Não foi possível carregar os dados completos do contato.';
@@ -1804,7 +1805,7 @@ async function checkMessageDelivery(messageId) {
     if ([403, 404].includes(Number(cause?.status))) {
       clearPrivateConversation(id, true);
       error.value = 'Esta conversa não está disponível para seu acesso.';
-      notify(error.value);
+      notify(error.value, { informational: true });
       return;
     }
     deliveryCheckFailedId.value = messageId;
@@ -2260,7 +2261,7 @@ async function readConversation(id, silent = false) {
       if ([403, 404].includes(Number(cause?.status))) {
         clearPrivateConversation(id, true);
         error.value = 'Esta conversa não está disponível para seu acesso.';
-        notify(error.value);
+        notify(error.value, { informational: true });
       } else {
         error.value = 'Não foi possível carregar a conversa selecionada.';
         if (!silent || !renaming.value) detail.value = null;
@@ -2352,7 +2353,7 @@ async function readSubjects(conversationId) {
       if ([403, 404].includes(Number(cause?.status))) {
         clearPrivateConversation(conversationId, true);
         error.value = 'Esta conversa não está disponível para seu acesso.';
-        notify(error.value);
+        notify(error.value, { informational: true });
         return;
       }
       subjectError.value =

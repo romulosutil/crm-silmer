@@ -42,6 +42,8 @@ No celular, usar uma coluna, valor vendido como primeiro número e uma linha por
 
 ## Pacote de entrega
 
+A revisão do protótipo retira o bloco “Como o resultado variou”. Hoje traz uma referência curta ao valor de ontem. Em 7 dias e Mês, uma linha junto ao vendido mostra a diferença entre dias fechados. Ao expandir, o gestor confere datas, quantidade de pedidos e ticket lado a lado. O critério de comparação de P2 continua em avaliação.
+
 | Prioridade e tipo              | Entrega                                                                                                                                                                                                                                                                                    | Critério para aceitar                                                                                                                                                                                                                         |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | P0 · Refatoração               | Resolver o período uma vez no servidor e devolvê-lo em cada leitura. Estender resumo, série e métricas de equipe, preservando os consumidores de 7/30 dias. Representar o recorte na URL e nos links para Pedidos e Equipe.                                                                | Na virada de mês em São Paulo, cartão, série, equipe e lista detalhada usam as mesmas datas. Alternar rapidamente o período e simular falha parcial conserva o rótulo correto em cada região.                                                 |
@@ -64,6 +66,18 @@ Cada região conserva o último horário válido. Falha inicial mostra indispon�
 4. No celular e por teclado, partir do vendido até o detalhe de uma pessoa e da espera mais antiga até a Inbox. Verificar foco, leitura dos valores sem depender de cor, reflow a 320 px e atualização sem interromper quem lê. Repetir com uma linha pessoal fora do escopo do administrador comum.
 
 ## Decisão e rastreabilidade
+
+### Cobertura da prévia
+
+O HTML permite experimentar os três recortes, a conciliação entre valor, equipe e pedidos, os detalhes individuais, a fila e a sequência de eventos com reconexão. A aba **Plano e parecer** identifica a cobertura parcial. Entre os caminhos ainda sem demonstração estão o atalho de 30 dias no detalhe, pedidos a confirmar, próximas entregas e retirada do aviso da loja na primeira impressão. A amostra usa uma única data de referência e pessoas ativas. Viradas de calendário, inativos com histórico, transferência, cancelamento, reabertura e reconfirmação integram o aceite da implementação. Permissões reais, checkpoint, atualização em fila silenciosa, falha parcial e latência SSE exigem testes integrados.
+
+### Proposta adicional para o vendedor
+
+No detalhe da pessoa, experimentar **Primeira resposta no prazo**. É uma medida específica de atendimento. Para cada ciclo humano, usar o início da espera e a atribuição de MET-03. A base é o conjunto de ciclos cuja janela de 15 minutos de expediente terminou dentro do período e antes do instante de corte. Contar cada ciclo uma vez, inclusive se a espera vencida continua aberta. O numerador conta os ciclos dessa mesma base com primeira resposta humana efetiva em até 15 minutos úteis. Crédito a quem assumiu, inclusive quando outra pessoa respondeu. Um handoff ainda sem responsável fica na Central.
+
+Exibir numerador, denominador, percentual e quantas esperas vencidas continuam abertas. Com 16 respostas dentro do prazo em 20 ciclos elegíveis, o indicador é 80%. Uma resposta no 16º minuto já ficou fora do prazo e conta uma vez, inclusive se houve outras mensagens no mesmo ciclo. Sugestão para o piloto: abaixo de dez ciclos, exibir as contagens e “Base insuficiente”. O limiar e o corte de 15 minutos para primeira resposta estão em revisão. MET-05 já usa 15 minutos para episódios de espera, que são uma população diferente. A API precisará apurar esta coorte por ciclo e expediente; medianas e p90 isolados não permitem recuperar a fração.
+
+O gestor lê essa taxa ao lado de atendimentos, pedidos, valor atribuído e ticket. Assim pode investigar tanto uma boa resposta com poucas vendas quanto atrasos em uma carteira de alto valor. Uma nota composta que misture metas comerciais e atendimento exige decisão do proprietário sobre a mudança de [PERF-06](../../.specs/features/dashboard-actions/spec.md) e [ADR 059](../adr/059-central-de-acoes-e-performance-comercial.md), além da definição das metas, oportunidades comparáveis e pesos. O parecer do protótipo oferece uma escolha específica sobre experimentar a taxa.
 
 Alternativas consideradas: aplicar o período também às pendências exigiria reconstruir o estado histórico das filas e mudaria a pergunta operacional. Criar outro relatório deixaria o filtro fragmentado na página inicial. A recomendação é evoluir o painel atual com um resultado filtrável e uma central com estado atual.
 

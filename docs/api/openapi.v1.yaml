@@ -4455,6 +4455,32 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '429': { description: Limite de comandos excedido }
         '503': { $ref: '#/components/responses/Unavailable' }
+  /dashboard/live:
+    get:
+      operationId: getDashboardLive
+      summary: Fila atual ou fatos recentes da Central administrativa (RFC 073)
+      description: >-
+        Cada consulta verifica um administrador comercial ativo. A fila e os fatos de
+        conversas aplicam a supervisão da ADR 095. Fatos de pedido obedecem ao escopo
+        comercial. O relógio do servidor e o expediente-v1 governam as esperas atuais.
+        O histórico usa o cursor decimal estável de cada fato e omite payloads pessoais.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/HumanReadOrigin'
+        - { in: query, name: region, required: true, schema: { type: string, enum: [queue, facts] } }
+        - { in: query, name: filter, description: 'Somente queue', schema: { type: string, enum: [todas, sem-responsavel, resposta, atrasada] } }
+        - { in: query, name: page, description: 'Página da fila com 20 registros', schema: { type: integer, minimum: 1, maximum: 999999 } }
+        - { in: query, name: before, description: 'Cursor exclusivo da página anterior de fatos', schema: { type: string, pattern: '^[1-9][0-9]{0,17}$' } }
+      responses:
+        '200':
+          description: >-
+            generatedAt e retrato do filtro com total, espera útil mais longa,
+            contagens por fila e rows. Para facts, contém facts em ordem
+            decrescente de cursor e nextCursor nulo ao terminar.
+        '400': { description: Filtro inválido }
+        '401': { description: Sessão inválida }
+        '403': { description: Perfil sem capacidade administrativa }
+        '503': { description: Leitura indisponível }
   /dashboard/metrics/service:
     get:
       operationId: getDashboardServiceMetrics

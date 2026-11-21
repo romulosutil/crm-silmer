@@ -16,6 +16,7 @@ import {
   promisedDeliveryOn,
 } from '@crm-silmer/orders';
 
+import { readDashboardLive } from './dashboard-live-runtime.js';
 import { activeLeadLossSql } from './lead-outcome-sql.js';
 
 export const DASHBOARD_ACTION_LIMIT = 100;
@@ -439,6 +440,9 @@ export function createDashboardRuntime(database, options) {
     authorizeRead: (input) => access.authorizeRead(input),
     /** @param {any} input */
     authorizeWrite: (input) => access.authorizeWrite(input),
+    /** @param {{actor:any,query:Record<string,unknown>}} input */
+    live: (input) =>
+      readDashboardLive(database, input.actor, input.query, clock()),
     /** @param {{actor:any}} input */
     async actions(input) {
       const now = clock();

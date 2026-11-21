@@ -1,9 +1,9 @@
 # Request for Comments
 
-## Proposta de 21/11/2026
+## Decisão de 21/11/2026
 
 - [073 — Vendas, equipe e central ao vivo do administrador](073-painel-comercial-do-administrador.md).
-  Pacote em avaliação para unificar o período comercial e acompanhar a operação em tempo real.
+  Aprovada pelo proprietário na [ADR 096](../adr/096-painel-comercial-do-administrador.md).
 
 ## Decisão de 20/11/2026
 

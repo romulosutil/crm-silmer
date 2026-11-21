@@ -64,7 +64,7 @@ Complementa FIN-01–03, PNL-01–04, PLA-04–12 e FINQ-04/18/19.
 1. **PERF-01:** capturar responsável comercial na confirmação, separado do
    executor. Preservar em transferência/reconfirmação. Histórico sem evidência
    fica sem atribuição; não reconstruir vendas com o dono atual da conversa.
-2. **PERF-02:** 7/30 dias civis até hoje em São Paulo. Receita/pedidos/ticket
+2. **PERF-02:** Hoje, 7 dias civis e Mês até hoje em São Paulo no Resultado comercial, com atalho de 30 dias no detalhe e suporte a consultas existentes. Receita/pedidos/ticket
    usam confirmados não teste pela data comercial. Reabertura retira do total
    atual; reconfirmação não duplica. Não calcular recebimento ou lucro.
 3. **PERF-03:** contar ciclos distintos com resposta humana efetivamente
@@ -77,7 +77,7 @@ Complementa FIN-01–03, PNL-01–04, PLA-04–12 e FINQ-04/18/19.
 5. **PERF-05:** loja e sem atribuição ficam separados; soma financeira reconcilia
    com total. Mostrar cobertura histórica e limites da atribuição.
 6. **PERF-06:** sem nota única/ranking punitivo/conversão por denominador de
-   outra coorte. Coortes, expediente e índices calibrados seguem como evolução.
+   outra coorte. A conversão usa ciclos com janela civil de 30 dias completa, crédito de quem assumiu e ao menos um pedido elegível no ciclo e na janela. A primeira resposta em até 15 minutos úteis usa a coorte com prazo vencido, inclusive esperas abertas. Exibir numerador e denominador, e percentual de resposta a partir de dez ciclos. Detalhes na [ADR 096](../../../docs/adr/096-painel-comercial-do-administrador.md).
 7. **PERF-07:** API permite apenas linha própria ao vendedor e conjunto ao
    administrador ativo, mesmo se URL/parâmetros forem manipulados.
 8. **PERF-08:** painel e checkpoint usam a mesma apuração, datas e critérios,
@@ -119,7 +119,7 @@ contato acontece sempre por iniciativa do cliente.
    sem reescrever a `_v1`. Prova: virada de dia, almoço, fim de semana e
    intervalo que começa ou termina fora do expediente.
 2. **MET-02 — Tempo para assumir:** do pedido de atendimento (handoff) até a
-   tomada, em minutos de expediente, na janela PERF-02 (7/30 dias). Crédito a
+   tomada, em minutos de expediente, na janela PERF-02. Crédito a
    quem assumiu. Pedido ainda sem tomada aparece como aberto, com idade, e
    nunca é omitido. Tomada direta sem pedido não gera amostra.
 3. **MET-03 — Tempo até a 1ª resposta:** até a primeira resposta humana
@@ -176,7 +176,7 @@ contato acontece sempre por iniciativa do cliente.
     começa no início da cobertura e a resposta declara isso.
 12. **MET-12 — Acesso e contrato:** administrador ativo vê a equipe;
     vendedor só a própria linha (PERF-07), mesmo com parâmetros manipulados;
-    Financeiro não tem acesso. Leituras privadas/no-store em
+    Financeiro não tem acesso. Consultas por período civil no painel seguem PERF-02 e ADR 095. Mantêm-se as leituras privadas/no-store em
     `GET /api/v1/dashboard/metrics/{service,losses,presence}?days=7|30` e
     `GET /api/v1/conversations/:id/lead-outcome`; comando em
     `POST /api/v1/conversations/:id/lead-outcome`. Não altera

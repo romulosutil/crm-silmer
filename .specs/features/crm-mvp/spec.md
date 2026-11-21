@@ -615,9 +615,10 @@ migração: o Painel usa os resumos que já lê. Tarefas T130 e T131 em
    a fonte de uma condição falhou THEN o cartão SHALL NOT pular essa condição
    nem dizer "Nada urgente agora": SHALL dizer que não conseguiu ler aquela
    informação, com "Tentar novamente".
-2. **PNL-02:** O seletor de período SHALL declarar em texto visível "Vale para
-   Vendido"; trocar o período SHALL mudar só o indicador Vendido e anunciá-lo,
-   sem mudar os demais (FIN-02).
+2. **PNL-02:** Hoje, 7 dias e Mês governam vendido, pedidos, ticket, equipe,
+   série e destinos de conferência do Resultado comercial. O servidor resolve as
+   datas em São Paulo. A URL conserva o recorte ao voltar, e uma resposta de um
+   período anterior não substitui o selecionado. A Central lê as filas atuais.
 3. **PNL-03:** WHEN a leitura da fila falha THEN a seção da fila (Atendimento
    do gestor, Minha fila do vendedor) SHALL continuar visível, com "—" no
    lugar de cada número e "Tentar novamente"; a seção SHALL NOT sumir e
@@ -628,24 +629,16 @@ migração: o Painel usa os resumos que já lê. Tarefas T130 e T131 em
    (pergunta D3 do RFC 024): não implementar; o login continua levando ao
    Painel ou à rota pedida (LOJ-24). A tarefa T131 fica sem implementação
    ativa até nova decisão.
-5. **PNL-05:** WHEN o gestor abre o Painel THEN o sistema SHALL mostrar
-   "Vendido por dia": uma barra por dia dos últimos 7 dias de São Paulo,
-   terminando em hoje (destacado), com o valor confirmado de cada dia e o
-   total da semana em valor e pedidos, no mesmo universo de FIN-02
-   (confirmados, sem pedidos de teste, por data do pedido). O gráfico SHALL
-   ter descrição textual com cada dia e valor. WHEN o resumo de pedidos
-   falhou THEN SHALL dizer que não há dados, nunca mostrar zeros.
-6. **PNL-06:** WHEN o gestor abre o Painel THEN o sistema SHALL mostrar
-   "Atendimento agora" com três linhas, cada uma um link para a Inbox
-   filtrada: esperando vendedor (com a espera da mais antiga), com o
-   assistente (com a saúde dele) e conversas de um vendedor sem resposta há
-   mais de 15 minutos (última mensagem do cliente), com a quebra por
-   vendedor. A quebra por vendedor SHALL vir só para quem tem
-   `COMMERCIAL_ADMIN`. No Próximo passo do gestor, a regra "<vendedor> tem N
-   conversas sem resposta há mais de 15 minutos" entra logo depois das
-   conversas fora do SLA e abre a Inbox com as conversas desse vendedor. Com a
-   fila em falha valem as regras de PNL-03. O Painel do gestor deixa de
-   mostrar o "Checkpoint dos sócios" e "Minhas providências".
+5. **PNL-05:** Hoje mostra a composição entre equipe, loja e sem atribuição.
+   Sete dias e Mês mostram série diária com valor, quantidade, seleção por
+   teclado e conferência dos pedidos do dia. Gráfico e tabela de comparação
+   usam intervalos completos equivalentes e bases explícitas conforme a ADR 096.
+6. **PNL-06:** O gestor abre em Resultado comercial, com atalho para a urgência
+   de maior prioridade de PNL-01 e acesso à Central ao vivo. Cada fila expõe
+   contagem, espera útil, filtro, hora e destino autorizados, inclusive vazios.
+   O histórico usa fatos verificáveis e cursor estável. Uma lacuna exige nova
+   leitura; a espera avança mesmo sem eventos. O gestor pode consultar o resumo
+   automático de ontem por CHK-08. Minhas providências continua na jornada pessoal.
 
 **Teste independente:** como vendedor com uma conversa a responder, ver o
 cartão apontar para "Minhas conversas"; derrubar a leitura da fila e ver "—"

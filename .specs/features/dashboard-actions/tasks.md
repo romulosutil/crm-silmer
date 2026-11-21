@@ -29,6 +29,8 @@ autoriza restauração de banco ou alteração de workflows comerciais existente
 
 ## ACT-T04 — Refinamento do Dashboard por papel e métricas novas (05/11/2026)
 
+Extensão aprovada em 21/11/2026 na [ADR 096](../../../docs/adr/096-painel-comercial-do-administrador.md). Entregas em Resultado e comparação, métricas de vendedores, Central e resumo diário. A integração valida as jornadas reais em Vue e a reconciliação com a API. A evidência remota de SSE, agenda e provedor é registrada separadamente.
+
 Implementação autorizada pelo PO em 05/11/2026, **backend primeiro**: a
 interface do redesenho espera a fatia de interface de outra sessão (ACT-T03)
 chegar ao master. Componentes e práticas na §18–19 do

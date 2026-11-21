@@ -1,5 +1,9 @@
 # Architecture Decision Records
 
+## Decisão de 21/11/2026
+
+- [096 — Painel comercial do administrador](096-painel-comercial-do-administrador.md). Aprovação dos períodos, das coortes por pessoa, da Central ao vivo e do resumo de ontem.
+
 ## Decisão de 20/11/2026
 
 - [095 — Supervisão das linhas pessoais](095-supervisao-das-linhas-pessoais.md).

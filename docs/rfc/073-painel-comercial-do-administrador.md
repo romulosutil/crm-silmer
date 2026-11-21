@@ -1,6 +1,6 @@
 # RFC 073 — Vendas, equipe e central ao vivo do administrador
 
-Proposta de 21/11/2026 para revisão pelo proprietário do produto. Responsável pela proposta e integração das futuras entregas é o Tech Lead. Base examinada: `4f75ab7b`. A implementação depende da decisão sobre esta RFC.
+Aprovada pelo proprietário em 21/11/2026 como demonstrada no protótipo. A [ADR 096](../adr/096-painel-comercial-do-administrador.md) registra a decisão, inclusive a janela de conversão de 30 dias civis, a primeira resposta em até 15 minutos úteis e o mínimo de dez ciclos para exibir essa taxa. O Tech Lead coordena a implementação. A descrição da proposta abaixo documenta a revisão sobre a base `4f75ab7b`.
 
 Abra o [protótipo navegável para decisão](../prototypes/painel-administrativo.html) no navegador. As abas **Explorar painel**, **Antes e depois** e **Plano e parecer** permitem conferir a amostra, simular eventos e registrar ajustes antes de aprovar o escopo.
 

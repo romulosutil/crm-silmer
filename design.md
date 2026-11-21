@@ -963,7 +963,7 @@ depende de decisão ainda não registrada, isso está dito no próprio item.
 
 #### Feedback e leitura operacional do painel
 
-Proposta em revisão na [RFC 073](docs/rfc/073-painel-comercial-do-administrador.md). Aplica os componentes de período, tabela, fila e feedback à jornada do administrador. Os estados podem ser experimentados no [protótipo](docs/prototypes/painel-administrativo.html).
+Decisão da [ADR 096](docs/adr/096-painel-comercial-do-administrador.md), conforme a [RFC 073](docs/rfc/073-painel-comercial-do-administrador.md). Aplica os componentes de período, tabela, fila e feedback à jornada do administrador. Os estados podem ser experimentados no [protótipo](docs/prototypes/painel-administrativo.html).
 
 | Situação | Componente e comportamento |
 | --- | --- |

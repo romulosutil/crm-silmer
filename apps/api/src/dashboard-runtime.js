@@ -11,6 +11,7 @@ import {
 } from '@crm-silmer/integration-reliability';
 import {
   operationalDay,
+  summaryPeriod,
   orderReadable,
   PostgresOrderRepository,
   promisedDeliveryOn,
@@ -74,6 +75,17 @@ function calendarDay(value) {
 
 /** @param {Date} now @param {unknown} days */
 export function dashboardPeriod(now, days = 7) {
+  if (days === 'hoje' || days === '7dias' || days === 'mes') {
+    const window = summaryPeriod(days, now);
+    return {
+      from: window.from,
+      to: window.to,
+      timeZone: window.timeZone,
+      days:
+        days === '7dias' ? 7 : days === 'hoje' ? 1 : Number(window.to.slice(8)),
+      period: days,
+    };
+  }
   if (days !== 7 && days !== 30) {
     throw new DashboardError(400, 'INVALID_FILTER');
   }
@@ -572,10 +584,10 @@ export function createDashboardRuntime(database, options) {
         };
       });
     },
-    /** @param {{actor:any,days?:number}} input */
+    /** @param {{actor:any,days?:number,period?:string}} input */
     async performance(input) {
       const now = clock();
-      const period = dashboardPeriod(now, input.days ?? 7);
+      const period = dashboardPeriod(now, input.period ?? input.days ?? 7);
       return database.transaction(async (/** @type {any} */ client) => {
         const actor = await lockActor(client, input.actor, false);
         const report = await readDashboardPerformance(client, {
@@ -584,7 +596,12 @@ export function createDashboardRuntime(database, options) {
           actorId: actor.id,
           manager: actor.capabilities.includes('COMMERCIAL_ADMIN'),
         });
-        return { ...report, days: period.days, generatedAt: now.toISOString() };
+        return {
+          ...report,
+          ...(input.period ? { period: input.period } : {}),
+          days: period.days,
+          generatedAt: now.toISOString(),
+        };
       });
     },
     /** @param {{actor:any,actionId:string,decision:string,expectedVersion:number,sourceRevision:string,expectedDecisionVersion:number,remindAt?:unknown,idempotencyKey:string,correlationId:string}} input */

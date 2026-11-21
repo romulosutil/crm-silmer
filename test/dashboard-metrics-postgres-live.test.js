@@ -718,6 +718,59 @@ test(
       ).claim.samples;
     assert.equal(await samples(admin), 2);
     assert.equal(await samples(sellerB), 3);
+    const detail = (/** @type {any} */ actor) =>
+      runtime.cohorts({ actor, seller: sellerB.id, period: 'mes' });
+    const priorOwner = await runtime.cohorts({
+      actor: sellerA,
+      seller: sellerA.id,
+      period: 'mes',
+    });
+    assert.equal(
+      priorOwner.rows[0].service.some(
+        (/** @type {any} */ c) => c.cycleId === transferred,
+      ),
+      false,
+    );
+    const managerView = await runtime.cohorts({
+      actor: admin,
+      seller: sellerA.id,
+      period: 'mes',
+    });
+    assert.equal(
+      managerView.rows[0].service.some(
+        (/** @type {any} */ c) => c.cycleId === transferred,
+      ),
+      true,
+    );
+    const limited = await detail(admin);
+    assert.equal(
+      limited.rows[0].service.some((/** @type {any} */ c) => c.cycleId === b2),
+      false,
+    );
+    const personal = await detail(sellerB);
+    const openCycle = personal.rows[0].service.find(
+      (/** @type {any} */ c) => c.cycleId === b2,
+    );
+    assert.ok(openCycle.open && !openCycle.onTime);
+    assert.ok(personal.rows[0].openLate >= 1);
+    assert.equal(
+      personal.rows[0].service.find((/** @type {any} */ c) => c.cycleId === b1)
+        .onTime,
+      true,
+    );
+    assert.equal(
+      personal.rows[0].service.find((/** @type {any} */ c) => c.cycleId === b3)
+        .open,
+      false,
+    );
+    await assert.rejects(detail(sellerA), { statusCode: 403 });
+    await assert.rejects(detail(financial), { statusCode: 403 });
+    assert.deepEqual(
+      (await runtime.cohorts({ actor: sellerB, period: 'mes' })).rows[0]
+        .service,
+      [],
+    );
+
     const managerPerformance = new PostgresInboxReadRepository({
       database,
       contactEnvelopeKey: CONTACT_KEY,
@@ -787,6 +840,12 @@ test(
         (/** @type {any} */ fact) =>
           BigInt(fact.cursor) < BigInt(visibleClaim.cursor),
       ),
+    );
+    assert.equal(
+      (await detail(admin)).rows[0].service.some(
+        (/** @type {any} */ c) => c.cycleId === b2,
+      ),
+      true,
     );
     const supervisor = await assistantReport(admin.id);
     assert.equal(supervisor.handoffs.total, ordinary.handoffs.total + 1);
@@ -1012,6 +1071,10 @@ test(
     await pool.query('ANALYZE');
     await measure('analyzed');
 
+    const cohortSummary = await runtime.cohorts({ actor, days: 30 });
+    assert.equal(cohortSummary.rows[0].userId, seller);
+    assert.equal(cohortSummary.rows[0].eligible, 1000);
+    assert.deepEqual(cohortSummary.rows[0].service, []);
     // The statement timeout is real: an impossible budget cancels the read
     // (57014), which the route turns into 503.
     await assert.rejects(

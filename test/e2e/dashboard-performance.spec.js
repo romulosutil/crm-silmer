@@ -1,6 +1,11 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { mockPainel, performanceSummary } from './support/painel-mock.js';
+import {
+  mockPainel,
+  performanceSummary,
+  serviceMetrics,
+  lossMetrics,
+} from './support/painel-mock.js';
 
 // ACT-T04: "Seu resultado" is text without controls (7 days); the period
 // choice and its race protection live on "Desempenho da equipe".
@@ -127,4 +132,94 @@ test('a failed read on the team page stays in its region with retry and a dash',
   await expect(
     reasons.getByRole('heading', { name: 'Por que perdemos' }),
   ).toBeFocused();
+});
+
+test('período, barras, tabela e memória da pessoa conciliam pelo caminho Vue', async ({
+  page,
+}) => {
+  await mockPainel(page);
+  await page.route(
+    /\/api\/v1\/dashboard\/(performance|metrics\/(cohorts|service|losses))\?/,
+    async (route) => {
+      const url = new URL(route.request().url());
+      const period = url.searchParams.get('period');
+      if (!period) return route.fallback();
+      const seller = url.searchParams.get('seller');
+      const cohort = {
+        userId: 'seller-1',
+        name: 'Atendente Sintética',
+        active: true,
+        completed: 4,
+        converted: 1,
+        eligible: 10,
+        onTime: 8,
+        observing: 2,
+        openLate: 1,
+        conversion: seller
+          ? [
+              {
+                cycleId: 'ciclo-a',
+                from: '2026-09-10',
+                to: '2026-10-09',
+                orders: [{ id: 'pedido-a', number: '12-CRM' }],
+              },
+            ]
+          : [],
+        service: [],
+      };
+      const report = url.pathname.endsWith('cohorts')
+        ? { rows: [cohort], seller }
+        : url.pathname.endsWith('service')
+          ? serviceMetrics(true, 7)
+          : url.pathname.endsWith('losses')
+            ? lossMetrics(true, 7)
+            : performanceSummary(true, 7);
+      return route.fulfill({
+        json: { ...report, period, from: '2026-10-09', to: '2026-10-15' },
+      });
+    },
+  );
+  await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+  await page.goto('/dashboard');
+  const team = page.getByRole('region', { name: 'Vendedores', exact: true });
+  const bar = team.getByRole('link', { name: /Atendente Sintética/u });
+  for (const width of [320, 390, 1366]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(bar).toContainText('25%');
+    await expect(bar).toContainText('80%');
+    expect(
+      await team.evaluate((el) => el.scrollWidth - el.clientWidth),
+    ).toBeLessThanOrEqual(1);
+  }
+  await team.getByRole('button', { name: 'Conversão', exact: true }).click();
+  await expect(bar.locator('.dashboard-meter > span')).toHaveCSS(
+    'inline-size',
+    /px$/u,
+  );
+  expect(
+    await bar
+      .locator('.dashboard-meter > span')
+      .evaluate((el) => el.style.inlineSize),
+  ).toBe('25%');
+  await team.getByRole('button', { name: 'Tabela', exact: true }).click();
+  await expect(
+    team.getByRole('row', { name: /Atendente Sintética/u }),
+  ).toContainText('8 de 10 ciclos');
+  await bar.focus();
+  await page.keyboard.press('Enter');
+  await expect(
+    page.getByRole('heading', { name: 'Desempenho do vendedor' }),
+  ).toBeFocused();
+  const detail = page.getByRole('region', { name: 'Atendente Sintética' });
+  await detail.getByText('Como foi calculada a conversão').click();
+  await expect(detail).toContainText('2 em observação');
+  await expect(detail.getByRole('link', { name: '12-CRM' })).toHaveAttribute(
+    'href',
+    '/pedidos/pedido-a',
+  );
+  await expect(
+    detail.getByRole('link', { name: /Conferir pedidos/u }),
+  ).toHaveAttribute('href', /credito=seller-1/u);
+  await page.goBack();
+  await expect(team).toBeVisible();
 });

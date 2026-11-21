@@ -1,5 +1,28 @@
 import { DashboardError } from './dashboard-runtime.js';
 
+/** @param {unknown} value */
+export function dashboardWindowQuery(value) {
+  const query = /** @type {Record<string,unknown>} */ (value ?? {});
+  if (
+    typeof query !== 'object' ||
+    Array.isArray(query) ||
+    Object.keys(query).some((key) => !['days', 'period'].includes(key)) ||
+    (query.period !== undefined && query.days !== undefined)
+  )
+    throw new DashboardError(400, 'INVALID_REQUEST');
+  if (query.period !== undefined) {
+    if (
+      typeof query.period !== 'string' ||
+      !['hoje', '7dias', 'mes'].includes(query.period)
+    )
+      throw new DashboardError(400, 'INVALID_FILTER');
+    return { period: query.period };
+  }
+  if (query.days !== undefined && query.days !== '7' && query.days !== '30')
+    throw new DashboardError(400, 'INVALID_FILTER');
+  return { days: Number(query.days ?? 7) };
+}
+
 const PUBLIC_CODES = new Set([
   'INVALID_REQUEST',
   'INVALID_FILTER',
@@ -96,11 +119,9 @@ export function registerDashboardRoutes(api, dashboard, contextFor) {
   );
   api.get('/api/v1/dashboard/performance', (request, reply) =>
     respond(reply, async () => {
-      const query = object(request.query ?? {}, ['days']);
-      if (query.days !== undefined && !['7', '30'].includes(query.days))
-        throw new DashboardError(400, 'INVALID_FILTER');
+      const filter = dashboardWindowQuery(request.query);
       const { actor } = await principal(request, dashboard, false);
-      return dashboard.performance({ actor, days: Number(query.days ?? 7) });
+      return dashboard.performance({ actor, ...filter });
     }),
   );
   api.post(

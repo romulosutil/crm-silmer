@@ -179,9 +179,10 @@ const allRows = computed(() => [
             role="rowheader"
             :headers="`${idPrefix}-seller`"
           >
-            <span class="dashboard-person-name" :title="entry.row.name">{{
-              entry.row.name
-            }}</span
+            <slot name="person" :row="entry.row" :kind="entry.kind"
+              ><span class="dashboard-person-name" :title="entry.row.name">{{
+                entry.row.name
+              }}</span></slot
             ><span v-if="entry.row.note" class="dashboard-cell-note">{{
               entry.row.note
             }}</span>

@@ -4,6 +4,7 @@ import {
   ownershipProbes,
 } from './dashboard-wait-sql.js';
 import { contactConversationVisible } from '@crm-silmer/contacts';
+import { readSellerCohorts } from './dashboard-seller-cohorts.js';
 import { lockDashboardReader } from './dashboard-access.js';
 import { DashboardError, dashboardPeriod } from './dashboard-runtime.js';
 import { EFFECTIVE_HUMAN_SEND } from './lead-outcome-sql.js';
@@ -562,10 +563,39 @@ export function createDashboardMetricsRuntime(database, options) {
   return Object.freeze({
     /** @param {any} input */
     authorizeRead: (input) => access.authorizeRead(input),
-    /** @param {{actor:any,days?:number}} input */
+    /** @param {{actor:any,days?:number,period?:string,seller?:string}} input */
+    async cohorts(input) {
+      const now = clock();
+      const window = dashboardPeriod(now, input.period ?? input.days ?? 7);
+      return database.transaction(async (/** @type {any} */ client) => {
+        await boundStatements(client, statementTimeout);
+        const reader = await lockDashboardReader(client, input.actor);
+        if (
+          input.seller &&
+          reader.scope === 'self' &&
+          input.seller !== reader.id
+        )
+          throw new DashboardError(403, 'FORBIDDEN');
+        const rows = await readSellerCohorts(client, {
+          ...window,
+          now,
+          actorId: reader.id,
+          seller: input.seller,
+          manager: reader.scope === 'team',
+        });
+        return {
+          ...window,
+          ...(input.seller ? { seller: input.seller } : {}),
+          scope: reader.scope,
+          rows,
+          generatedAt: now.toISOString(),
+        };
+      });
+    },
+    /** @param {{actor:any,days?:number,period?:string}} input */
     async service(input) {
       const now = clock();
-      const period = dashboardPeriod(now, input.days ?? 7);
+      const period = dashboardPeriod(now, input.period ?? input.days ?? 7);
       return database.transaction(async (/** @type {any} */ client) => {
         await boundStatements(client, statementTimeout);
         const reader = await lockDashboardReader(client, input.actor);
@@ -580,6 +610,7 @@ export function createDashboardMetricsRuntime(database, options) {
           from: report.from,
           to: report.to,
           days: period.days,
+          ...(input.period ? { period: input.period } : {}),
           scope: report.scope,
           generatedAt: now.toISOString(),
           businessHours: BUSINESS_HOURS,
@@ -588,10 +619,10 @@ export function createDashboardMetricsRuntime(database, options) {
         };
       });
     },
-    /** @param {{actor:any,days?:number}} input */
+    /** @param {{actor:any,days?:number,period?:string}} input */
     async losses(input) {
       const now = clock();
-      const period = dashboardPeriod(now, input.days ?? 7);
+      const period = dashboardPeriod(now, input.period ?? input.days ?? 7);
       return database.transaction(async (/** @type {any} */ client) => {
         await boundStatements(client, statementTimeout);
         const reader = await lockDashboardReader(client, input.actor);
@@ -606,6 +637,7 @@ export function createDashboardMetricsRuntime(database, options) {
           from: report.from,
           to: report.to,
           days: period.days,
+          ...(input.period ? { period: input.period } : {}),
           scope: report.scope,
           generatedAt: now.toISOString(),
           rows: report.rows,

@@ -85,6 +85,97 @@ function decide(text, inbound = {}, output = {}) {
   );
 }
 
+// VND-L07: use the same generated context and decision nodes as the continuity cases.
+for (const text of [
+  'Ainda estamos aguardando o orçamento.',
+  'Olá, ainda estou esperando vocês me enviarem o orçamento!',
+  'Não recebemos nosso orçamento.',
+]) {
+  test(`pending quote gets a human continuation: ${text}`, () => {
+    const result = decide(text);
+    assert.equal(result.handoff_reason, 'complaint');
+    assert.match(result.reply_text, /aguardando/i);
+    assert.match(result.reasoning, /cobra retorno.*orçamento/i);
+    assert.equal(result.asked_point, null);
+    assert.equal(result.open_order, false);
+  });
+}
+
+for (const text of [
+  'Ainda estou aguardando o orçamento da minha diretoria.',
+  'Obrigado, vou aguardar vocês.',
+  '??',
+  'Quero um orçamento.',
+]) {
+  test(`no inferred wait complaint: ${text}`, () => {
+    assert.notEqual(decide(text).handoff_reason, 'complaint');
+  });
+}
+
+test('variant quote preserves the original choice despite model extraction', () => {
+  const result = decide(
+    'Se eu trocar a cor da manga, continua o mesmo preço?',
+    { briefing: { product_type: 'camiseta', colors: 'verde' } },
+    { briefing_patch: { colors: 'azul' } },
+  );
+  assert.equal(result.handoff_required, true);
+  assert.equal(result.briefing_patch, null);
+  assert.match(result.reasoning, /simulação.*cor da manga/i);
+  assert.equal(result.open_order, false);
+});
+
+test('comparative price does not turn a hypothetical color into a choice', () => {
+  const result = decide(
+    'Se eu mudar a cor, fica mais caro?',
+    { briefing: { colors: 'verde' } },
+    { briefing_patch: { colors: 'laranja' } },
+  );
+  assert.equal(result.handoff_required, true);
+  assert.equal(result.briefing_patch, null);
+  assert.match(result.reasoning, /Reconfirmar o valor/);
+});
+
+test('price with an unspecified lead time retains the second question', () => {
+  const result = decide('Qual o preço e o prazo?');
+  assert.equal(result.handoff_required, false);
+  assert.match(result.reply_text, /valor e o prazo/);
+  assert.match(result.briefing_patch?.notes ?? '', /valor e prazo/);
+});
+
+test('two volumes without units refer to alternatives for a known product', () => {
+  const result = decide(
+    'Orçamento para 48 e 96 por favor',
+    { briefing: { product_type: 'camiseta', quantity: 24 } },
+    { briefing_patch: { quantity: 144 } },
+  );
+  assert.equal(result.trigger, 'commercial_question');
+  assert.equal(result.briefing_patch?.quantity, undefined);
+  assert.match(result.reasoning, /48 e 96 peças/);
+});
+
+for (const text of [
+  'Orçamento para 48 e 96 reais',
+  'Orçamento para 12 P e 24 M',
+  'Orçamento para 20 e 30 de novembro',
+]) {
+  test(`no unitless volume inference from another dimension: ${text}`, () => {
+    const result = decide(text, { briefing: { product_type: 'camiseta' } });
+    assert.doesNotMatch(result.reasoning, /Alternativas para orçamento/);
+    assert.doesNotMatch(
+      result.briefing_patch?.notes ?? '',
+      /Alternativas de quantidade/,
+    );
+  });
+}
+
+test('first price and production time question acknowledges both without promising either', () => {
+  const result = decide('Qual o preço da unidade e o prazo de produção?');
+  assert.equal(result.handoff_required, false);
+  assert.match(result.reply_text, /confirma o valor e o prazo/i);
+  assert.match(result.briefing_patch?.notes ?? '', /valor e prazo/);
+  assert.doesNotMatch(result.reply_text, /R\$|\d+ dias/i);
+});
+
 for (const text of [
   'Olá! Vi as fotos de peças no site e quero um orçamento.',
   'Vi fotos de camisetas no site.',

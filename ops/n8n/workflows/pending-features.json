@@ -256,6 +256,49 @@
           "afterSha256": "39598f98b543ca0c1d1b92af01d7a0df2ebc29bfad2dcf84f772cfd9033fae0e"
         }
       ]
+    },
+    {
+      "task": "VND-L07",
+      "date": "2026-11-20",
+      "candidateVersion": "mvp-simple-25",
+      "status": "prepared_not_published",
+      "requirements": [
+        "AGT-01",
+        "AGT-02",
+        "AGT-03",
+        "AGT-04",
+        "AGT-05",
+        "AGT-08",
+        "AGT-10",
+        "ORC-03",
+        "ORC-05",
+        "ORC-07"
+      ],
+      "runbook": "docs/integrations/n8n/revisao-2026-11-20.md",
+      "baseCandidateCommit": "71b4fbce9631ff6983616f75762f2d520985990a",
+      "operationalReferenceChanged": false,
+      "changedArtifacts": [
+        {
+          "path": "ops/n8n/workflows/k7tI6T4RhQPyJkn9-mvp-simple.sdk.js",
+          "beforeSha256": "3cf60daf0808f3504f6827677de089bb1ef46fc1976c2f4b14d8a014374acc9a",
+          "afterSha256": "0d464db34e64bf3da0e9327e972ccae5efc106749ddbabb11948ef02ed414c99"
+        },
+        {
+          "path": "ops/n8n/workflows/k7tI6T4RhQPyJkn9-mvp-simple.sanitized.json",
+          "beforeSha256": "80b76145d192a777330a591653c1b9c3e41624672fccdb623501eadc1c61512d",
+          "afterSha256": "0bb3492e84358a348773fa340e4ed95c41da5c5198b64c24cfb78e128c8cbc40"
+        },
+        {
+          "path": "ops/n8n/workflows/0S5ZS1xeDCSoWovs-dev-test.sanitized.json",
+          "beforeSha256": "abdb3737c4b7a52b43b00d99f87a60548cd682f8b77963c6e1dced754590290d",
+          "afterSha256": "4f1cd6624f19550b821ba1221257bac70ffe0bcb4f6f26e02b8aeef044eb3d76"
+        },
+        {
+          "path": "ops/n8n/workflows/0S5ZS1xeDCSoWovs-local-test.sanitized.json",
+          "beforeSha256": "39598f98b543ca0c1d1b92af01d7a0df2ebc29bfad2dcf84f772cfd9033fae0e",
+          "afterSha256": "21925622705b96f6b972c8d23fc10141fb1638e783c964a035ce4dc5251afefb"
+        }
+      ]
     }
   ]
 }

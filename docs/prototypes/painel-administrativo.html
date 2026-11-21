@@ -356,19 +356,53 @@
         color: #ded2ea;
         font-size: 13px;
       }
-      .hero button,
       .textbtn {
         color: var(--accent);
         padding: 4px 0;
         text-decoration: underline;
         text-underline-offset: 4px;
       }
-      .hero button {
-        color: #fff;
+      .hero .orders-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        border-radius: 8px;
+        border: 1px solid #dfcfea;
+        margin-top: 12px;
+        padding: 8px 14px;
+        background: #fbf7ff;
+        color: #2e1c43;
         font-size: 13px;
       }
-      .hero button:hover {
-        background: #3b294e;
+      .orders-action::after {
+        content: '›';
+        font-size: 22px;
+        line-height: 1;
+      }
+      .hero .orders-action:hover {
+        background: #e6d9f5;
+        color: #231438;
+      }
+      .hero .orders-action:active {
+        background: #ceb7e3;
+      }
+      .hero .orders-action:focus-visible {
+        outline-color: white;
+        outline-offset: 3px;
+      }
+      button:not(:disabled):active {
+        box-shadow: inset 0 0 0 2px currentColor;
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .orders-action,
+        .preview-choice label,
+        .button,
+        .seg button {
+          transition:
+            background-color 130ms ease,
+            border-color 130ms ease;
+        }
       }
       .paper,
       .doc {
@@ -508,6 +542,88 @@
       }
       .notes details {
         margin-top: 10px;
+      }
+      .notes .tools {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 4px;
+      }
+      .preview-choice {
+        border: 0;
+        padding: 0;
+        margin: 7px 0 0;
+        min-inline-size: 0;
+      }
+      .preview-choice legend {
+        font-size: 13px;
+        padding: 0;
+        margin-bottom: 5px;
+      }
+      .preview-choice > div {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 4px;
+      }
+      .notes .preview-choice label {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 44px;
+        padding: 4px 10px;
+        margin: 0;
+        border: 1px solid #c6bfce;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .preview-choice input {
+        width: 16px;
+        height: 16px;
+        flex: none;
+        accent-color: #563370;
+        margin: 0;
+      }
+      .preview-choice label:has(:checked) {
+        border-color: #775889;
+        background: #f1ebf7;
+        color: #362042;
+        font-weight: 600;
+      }
+      .preview-choice label:hover {
+        border-color: #6f5a80;
+      }
+      .preview-choice label:has(:focus-visible) {
+        outline: 3px solid #986400;
+        outline-offset: 1px;
+      }
+      .preview-return {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .preview-return .textbtn {
+        color: #51356b;
+      }
+      #preview-mode {
+        font-size: 12px;
+        color: #61566a;
+        margin: 3px 0;
+      }
+      .tools select.button,
+      .screen select,
+      .doc select {
+        min-height: 44px;
+        border: 1px solid var(--line, #bfb7c9);
+        border-radius: 8px;
+        padding-inline: 11px;
+        background-color: var(--paper, white);
+        color: var(--ink, #251934);
+      }
+      .tools select.button:hover,
+      .screen select:hover,
+      .doc select:hover {
+        border-color: var(--accent, #66447b);
       }
       summary {
         cursor: pointer;
@@ -743,8 +859,7 @@
       }
       .closing-head,
       .queue-toolbar,
-      .queue-urgency,
-      .closing-actions {
+      .queue-urgency {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -762,32 +877,6 @@
         font-size: 13px;
         font-weight: 600;
       }
-      [data-checkpoint-state='divergente'] .closing-state {
-        background: var(--warm);
-        color: var(--warmink);
-      }
-      .closing-values {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 14px;
-        margin: 18px 0;
-        padding: 14px 0;
-        border-block: 1px solid var(--line);
-      }
-      .closing-values dt {
-        font-size: 13px;
-        color: var(--muted);
-      }
-      .closing-values dd {
-        margin: 1px 0;
-        font-weight: 600;
-        font-size: 18px;
-        overflow-wrap: anywhere;
-      }
-      .closing-values small {
-        display: block;
-        font-weight: 400;
-      }
       .closing-breakdown {
         display: flex;
         gap: 5px 16px;
@@ -797,9 +886,6 @@
         list-style: none;
         font-size: 13px;
         color: var(--muted);
-      }
-      .closing-actions {
-        justify-content: flex-start;
       }
       .queue-urgency {
         padding: 14px 18px;
@@ -847,20 +933,91 @@
         background: var(--tint);
         border-color: var(--accent);
       }
-      @container (max-width:600px) {
-        .closing-values {
-          grid-template-columns: 1fr;
-          gap: 7px;
+
+      .daily-read {
+        margin: 16px 0 8px;
+        padding: 10px 0;
+        border-block: 1px solid var(--line);
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .daily-read strong {
+        font-size: 24px;
+        letter-spacing: -0.025em;
+      }
+      .order-queue-bars {
+        display: grid;
+        gap: 3px;
+        margin-top: 12px;
+      }
+      .order-queue {
+        border-radius: 8px;
+        display: grid;
+        align-items: center;
+        gap: 12px;
+        grid-template-columns: minmax(12rem, 0.8fr) minmax(
+            3rem,
+            1.3fr
+          ) 2.5ch 16px;
+        width: 100%;
+        padding: 9px 8px;
+        min-height: 52px;
+        color: var(--ink);
+        background: var(--paper);
+      }
+      .order-queue:hover,
+      .order-queue:focus-visible {
+        background: var(--tint);
+      }
+      .order-queue:active {
+        background: var(--hover);
+      }
+      .order-queue-label strong,
+      .order-queue-label small {
+        display: block;
+      }
+      .order-queue-label small {
+        color: var(--muted);
+        font-weight: 400;
+      }
+      .order-queue-track {
+        height: 9px;
+        background: var(--tint);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .order-queue-track i {
+        display: block;
+        height: 100%;
+        background: var(--bar);
+      }
+      .order-queue-count {
+        text-align: right;
+        font-size: 16px;
+      }
+      @container (max-width:580px) {
+        .order-queue {
+          grid-template-columns: minmax(0, 1fr) auto 16px;
+          gap: 4px 8px;
+          padding: 9px 4px;
         }
-        .closing-values > div {
-          display: flex;
-          align-items: baseline;
-          justify-content: space-between;
-          gap: 10px;
+        .order-queue-label {
+          grid-column: 1;
         }
-        .closing-values dd {
-          text-align: right;
-          font-size: 16px;
+        .order-queue-count {
+          grid-row: 1;
+          grid-column: 2;
+        }
+        .order-queue svg {
+          grid-row: 1;
+          grid-column: 3;
+        }
+        .order-queue-track {
+          grid-row: 2;
+          grid-column: 1/-1;
+          height: 7px;
         }
       }
       @media print {
@@ -1051,7 +1208,6 @@
       .revenue-compare-table td:last-child {
         color: var(--muted);
       }
-      .revenue-yesterday,
       .revenue-day-detail,
       .revenue-series-head {
         display: flex;
@@ -1060,29 +1216,8 @@
         flex-wrap: wrap;
         gap: 8px 16px;
       }
-      .revenue-yesterday {
-        margin-top: 12px;
-      }
-      .revenue-yesterday small,
-      .revenue-origins small,
       .revenue-day-detail small {
         display: block;
-      }
-      .revenue-origins {
-        padding: 0;
-        margin: 10px 0 0;
-        list-style: none;
-      }
-      .revenue-origins li {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto minmax(70px, auto);
-        align-items: baseline;
-        gap: 8px;
-        padding: 8px 0;
-        border-top: 1px solid var(--line);
-      }
-      .revenue-origins li small {
-        text-align: right;
       }
       .revenue-plot {
         display: grid;
@@ -1119,17 +1254,38 @@
         inset: 50% 0 auto;
         border-top: 1px dashed var(--line);
       }
-      .revenue-bars i {
+      .revenue-bars button {
         position: relative;
         flex: 1;
         min-width: 0;
+        height: 100%;
+        padding: 0;
+        display: flex;
+        align-items: end;
+      }
+      .revenue-bars button:hover,
+      .revenue-bars button:focus-visible {
+        background: var(--tint);
+      }
+      .revenue-bars button:focus-visible {
+        z-index: 1;
+      }
+      .revenue-bars i {
+        width: 100%;
         background: var(--bar);
         border-radius: 3px 3px 0 0;
       }
-      .revenue-bars i.is-picked {
+      .revenue-bars button[aria-checked='true'] i {
         background: var(--accent);
         outline: 1px solid var(--ink);
         outline-offset: -1px;
+      }
+      .revenue-bars button[aria-checked='true']::after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        inset-inline: 0;
+        border-bottom: 3px solid var(--ink);
       }
       .revenue-ticks {
         grid-column: 2;
@@ -1190,12 +1346,6 @@
         .revenue-comparison .revenue-movement strong {
           font-size: 18px;
         }
-        .revenue-origins li {
-          grid-template-columns: minmax(0, 1fr) auto;
-        }
-        .revenue-origins li small {
-          grid-column: 2;
-        }
         .revenue-plot {
           gap: 4px;
           grid-template-rows: 100px auto;
@@ -1211,6 +1361,208 @@
         .revenue-day-detail .textbtn {
           flex-basis: 100%;
           text-align: left;
+        }
+      }
+
+      .paired-head,
+      .compare-key,
+      .team-graph-controls,
+      .ledger-links,
+      .ledger-pages {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+      }
+      .paired-head h4,
+      .paired-group h4 {
+        font-size: 15px;
+        margin: 0;
+        color: var(--ink);
+      }
+      .compare-key {
+        justify-content: flex-start;
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .compare-swatch {
+        display: inline-block;
+        width: 12px;
+        height: 8px;
+        margin-right: 5px;
+        border-radius: 2px;
+      }
+      .paired-groups {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        margin: 18px 0 8px;
+      }
+      .paired-group + .paired-group {
+        border-inline-start: 1px solid var(--line);
+        padding-inline-start: 16px;
+      }
+      .paired-value {
+        margin: 8px 0;
+      }
+      .paired-value > div:first-child {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .paired-value span,
+      .paired-group > small,
+      .comparison-ledger small {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .paired-track,
+      .team-chart-track {
+        display: block;
+        overflow: hidden;
+        height: 10px;
+        border-radius: 3px;
+        background: var(--tint);
+      }
+      .paired-track {
+        margin-top: 2px;
+      }
+      .paired-track i,
+      .team-chart-track i {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+      }
+      .paired-track .c0,
+      .compare-swatch.c0,
+      .team-chart-track i {
+        background: var(--bar);
+      }
+      .paired-track .c1,
+      .compare-swatch.c1 {
+        background: var(--paper);
+        border: 1px solid var(--accent);
+      }
+      .paired-track i[style='width:0%'] {
+        border: 0;
+      }
+      .comparison-outcome strong {
+        font-size: 21px;
+      }
+      .ledger-links {
+        justify-content: flex-start;
+        border-top: 1px solid var(--line);
+        margin-top: 12px;
+        padding-top: 4px;
+      }
+      .comparison-ledger {
+        padding-top: 12px;
+      }
+      .comparison-ledger ul,
+      .team-chart-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .comparison-ledger li {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: center;
+        padding: 7px 0;
+        border-top: 1px solid var(--line);
+      }
+      .comparison-ledger li small,
+      .team-breakdown span > b {
+        display: block;
+      }
+      .ledger-pages {
+        justify-content: flex-start;
+      }
+      .team-graph-controls {
+        justify-content: flex-start;
+        margin: 13px 0;
+      }
+      .team-graph-controls label,
+      .team-graph-controls select {
+        font-size: 13px;
+      }
+      .team-graph-controls select {
+        max-width: 100%;
+        min-height: 44px;
+        background: var(--paper);
+        color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 5px 10px;
+      }
+      .team-chart-list li {
+        border-top: 1px solid var(--line);
+      }
+      .team-chart-list button {
+        width: 100%;
+        display: grid;
+        grid-template-columns: minmax(80px, 1fr) minmax(0, 3fr) minmax(
+            100px,
+            auto
+          );
+        align-items: center;
+        gap: 8px 14px;
+        text-align: left;
+        padding: 10px 2px;
+      }
+      .team-chart-person {
+        color: var(--accent);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+      .team-chart-person .team-chart-more {
+        padding-left: 5px;
+      }
+      .team-chart-list button > strong {
+        text-align: right;
+      }
+      .team-chart-list small {
+        font-weight: 400;
+        color: var(--muted);
+        display: block;
+        margin-top: 3px;
+      }
+      .team-breakdown {
+        margin-top: 14px;
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+      }
+      .team-breakdown > div:last-child {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
+        margin-top: 8px;
+      }
+      @container (max-width:680px) {
+        .paired-groups {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+        .paired-group + .paired-group {
+          border-inline-start: 0;
+          border-top: 1px solid var(--line);
+          padding: 12px 0 0;
+        }
+        .team-chart-list button {
+          grid-template-columns: minmax(0, 1fr) minmax(70px, auto);
+        }
+        .team-chart-bar-block {
+          grid-column: 1/-1;
+          grid-row: 2;
+        }
+        .team-chart-list button > strong {
+          grid-column: 2;
+          grid-row: 1;
         }
       }
     </style>
@@ -1362,16 +1714,53 @@
           <section>
             <h2>Testar o protótipo</h2>
             <div class="tools">
-              <label for="device">Largura da prévia</label
-              ><select class="button" id="device">
-                <option value="auto">Adaptar à janela</option>
-                <option value="mobile">Celular · até 390 px</option></select
-              ><label for="theme">Tema da prévia</label
-              ><select class="button" id="theme">
-                <option>Claro</option>
-                <option>Escuro</option></select
-              ><label for="scenario">Cenário comercial</label
-              ><select class="button" id="scenario">
+              <fieldset class="preview-choice">
+                <legend>Largura da prévia</legend>
+                <div>
+                  <label
+                    ><input
+                      type="radio"
+                      name="device"
+                      data-device="auto"
+                      checked
+                    /><span>Janela</span></label
+                  >
+                  <label
+                    ><input
+                      type="radio"
+                      name="device"
+                      data-device="mobile"
+                    /><span>Celular</span></label
+                  >
+                </div>
+              </fieldset>
+              <fieldset class="preview-choice">
+                <legend>Tema da prévia</legend>
+                <div>
+                  <label
+                    ><input
+                      type="radio"
+                      name="theme"
+                      data-theme="light"
+                      checked
+                    /><span>Claro</span></label
+                  >
+                  <label
+                    ><input type="radio" name="theme" data-theme="dark" /><span
+                      >Escuro</span
+                    ></label
+                  >
+                </div>
+              </fieldset>
+              <div class="preview-return">
+                <output id="preview-mode" aria-live="off"
+                  >Largura da janela · tema claro</output
+                ><button type="button" class="textbtn" data-preview-jump="1">
+                  Ver prévia
+                </button>
+              </div>
+              <label for="scenario">Cenário comercial</label>
+              <select class="button" id="scenario">
                 <option value="normal">Operação habitual</option>
                 <option value="conciliacao">
                   Conciliação e ciclo dos pedidos
@@ -1387,6 +1776,16 @@
                 <option value="lenta">Trocas rápidas de período</option>
                 <option value="zero">Período sem vendas</option>
                 <option value="erro">Leitura comercial indisponível</option>
+              </select>
+              <label for="closing-sample">Leitura do resumo automático</label>
+              <select class="button" id="closing-sample">
+                <option value="registrado">Registro disponível</option>
+                <option value="previa">Prévia antes das 08h</option>
+                <option value="aguardando">
+                  Após 08h, aguardando registro
+                </option>
+                <option value="indisponivel">Consulta indisponível</option>
+                <option value="desativado">Automação desativada</option>
               </select>
               <label for="role">Perfil simulado</label
               ><select id="role" class="button">
@@ -1425,8 +1824,6 @@
         let lastRead = null;
         let loadingPeriod = false;
         let readRevision = 0;
-        let checkpoint = null;
-        let checkpointCorrection = null;
         function canSeePerson(p) {
           return role !== 'financeiro' && (role !== 'vendedor' || p === 0);
         }
@@ -1755,6 +2152,7 @@
           },
         };
         const centralGroups = {
+          FICHAS: 'Fichas da loja a imprimir',
           PENDENTES: 'Pedidos a confirmar',
           PROXIMAS: 'Próximas entregas',
           ATRASADAS: 'Entregas atrasadas',
@@ -1766,7 +2164,7 @@
           'P-1198',
           'P-1197',
           'AT-038',
-          'ENTREGA-PROXIMA',
+          ...centralNextDeliveries(),
           'AG-011',
           'AG-012',
         ];
@@ -1844,7 +2242,6 @@
               canSeePerson(o.person) &&
               !o.test &&
               (!o.status || o.status === 'confirmado') &&
-              o.id !== checkpointCorrection &&
               (scenario !== 'basezero' || o.day >= monthStart(today)),
           );
         }
@@ -1883,8 +2280,7 @@
           lastResultPeriod = period;
           exampleOwner = 0;
           exampleStatus = 'confirmado';
-          checkpoint = null;
-          checkpointCorrection = null;
+          $('closing-sample').value = 'registrado';
           readRevision++;
           loadingPeriod = false;
           lastRead = null;
@@ -1923,62 +2319,87 @@
 
         function checkpointView() {
           const day = today - 1;
-          const stale = scenario === 'parcial';
-          const source = stale ? (lastRead?.rows ?? []) : allDemoOrders();
-          const rows = source.filter((o) => o.day === day);
-          const previous = checkpoint?.rows;
-          const reference = previous ?? rows;
-          const amountChange = sum(rows) - sum(reference);
-          const orderChange = rows.length - reference.length;
-          const state = !checkpoint
-            ? 'previa'
-            : amountChange || orderChange
-              ? 'divergente'
-              : 'registrado';
-          const labels = {
-            previa: 'Prévia',
-            registrado: 'Registrado às 08h',
-            divergente: 'Apuração alterada',
+          const mode = $('closing-sample').value;
+          const states = {
+            registrado: [
+              'Registro disponível',
+              '08h02',
+              'O fluxo das 08h preparou o resumo de ' + date(day) + '.',
+            ],
+            previa: [
+              'Prévia dinâmica',
+              '07h55',
+              'O processamento está agendado para as 08h. Os valores da prévia podem mudar até a preparação.',
+            ],
+            aguardando: [
+              'Aguardando registro',
+              '08h10',
+              'A consulta ainda retornou uma prévia para esse dia. O horário agendado já passou.',
+            ],
+            indisponivel: [
+              'Consulta indisponível',
+              '08h03',
+              'Não foi possível consultar o resumo automático deste dia.',
+            ],
+            desativado: [
+              'Automação desativada',
+              '08h10',
+              'Os valores vêm da prévia dinâmica. A automação está desativada na amostra.',
+            ],
           };
-          const count = (n) => n + ' ' + (n === 1 ? 'pedido' : 'pedidos');
-          const values = (key, title, moneyValue, description) =>
-            `<div data-checkpoint-summary="${key}"><dt>${title}</dt><dd>${moneyValue}<small>${description}</small></dd></div>`;
-          const groups = sources.flatMap((name, p) => {
-            const attributed = reference.filter((o) => o.person === p);
+          const [label, at, status] = states[mode];
+          const header = `<div class="closing-head"><div><h3 class="closing-title" id="checkpoint-title" tabindex="-1">Resumo automático de ontem</h3><small>Dia comercial ${date(day)} · São Paulo</small></div><span class="closing-state">${label}</span></div>`;
+          const region =
+            '<section class="paper checkpoint" data-checkpoint-state="' +
+            mode +
+            '" aria-labelledby="checkpoint-title">';
+          if (mode === 'indisponivel')
+            return (
+              region +
+              header +
+              '<p>' +
+              status +
+              '</p><small>Consulta de exemplo às ' +
+              at +
+              '. Totais e envios indisponíveis.</small></section>'
+            );
+          // A cópia registrada parte dos pedidos originais da amostra. A consulta
+          // dinâmica usa a apuração do momento. Os comandos do painel alcançam
+          // somente pedidos, filas e as leituras sintéticas do inspetor.
+          const baseline =
+            scenario === 'zero'
+              ? []
+              : scenario === 'conciliacao'
+                ? exampleOrders
+                : [...orders, ...cohortOrders()];
+          const rows = (
+            mode === 'registrado' ? baseline : allDemoOrders()
+          ).filter(
+            (o) =>
+              o.day === day &&
+              !o.test &&
+              (!o.status || o.status === 'confirmado'),
+          );
+          const breakdown = sources.flatMap((name, i) => {
+            const attributed = rows.filter((o) => o.person === i);
             return attributed.length
               ? [`<li>${name} · ${money(sum(attributed))}</li>`]
               : [];
           });
-          const canCorrect =
-            !!checkpoint && !!rows.length && !checkpointCorrection;
-          const action = stale
-            ? btn('Atualizar leitura comercial', 'partial', 'retry', 'button')
-            : !checkpoint
-              ? btn(
-                  'Registrar fechamento simulado',
-                  'checkpoint',
-                  'fixar',
-                  'button mainbtn',
-                )
-              : canCorrect
-                ? btn(
-                    'Simular cancelamento de ' + rows[0].id,
-                    'checkpoint',
-                    'corrigir',
-                    'button',
-                  )
-                : '';
-          const context =
-            state === 'divergente'
-              ? `O pedido ${checkpointCorrection ?? ''} saiu da apuração após o registro.`
-              : !rows.length
-                ? 'Nenhuma venda elegível nesse dia.'
-                : checkpoint
-                  ? 'O valor registrado coincide com a apuração atual.'
-                  : 'O registro guarda os valores deste dia para conferências posteriores.';
-          return `<section class="paper checkpoint" data-checkpoint-state="${state}" aria-labelledby="checkpoint-title"><div class="closing-head"><div><h3 class="closing-title" id="checkpoint-title" tabindex="-1">Fechamento de ontem</h3><small>Dia comercial ${date(day)} · São Paulo</small></div><span class="closing-state">${labels[state]}</span></div><dl class="closing-values">${values('salvo', checkpoint ? 'Resumo registrado às 08h' : 'Registro das 08h', checkpoint ? money(sum(reference)) : '—', checkpoint ? count(reference.length) : 'Aguardando registro')}${values('atual', 'Apuração atual do mesmo dia', money(sum(rows)), count(rows.length))}${values('diferenca', 'Diferença para o registro', checkpoint ? money(amountChange) : '—', checkpoint ? count(orderChange) : 'Disponível após registrar')}</dl><p>${context}</p>${groups.length ? `<ul class="closing-breakdown" aria-label="${checkpoint ? 'Composição registrada' : 'Composição da prévia'}">${groups.join('')}</ul>` : ''}${stale ? `<p class="muted">Última leitura comercial válida às ${lastRead.at}.</p>` : ''}${action ? `<div class="closing-actions">${action}</div>` : ''}</section>`;
+          const count =
+            rows.length +
+            ' ' +
+            (rows.length === 1 ? 'pedido confirmado' : 'pedidos confirmados');
+          const recorded = mode === 'registrado';
+          const deliveries = recorded
+            ? '<p class="muted">Destino A · Aceito pelo provedor. Destino B · Conferir envio.</p>'
+            : '<p class="muted">Envios · sem registro de preparação para este dia.</p>';
+          return (
+            region +
+            header +
+            `<div data-checkpoint-summary="total" class="daily-read"><strong>${money(sum(rows))}</strong><span>${count}</span></div><p>${status}</p>${breakdown.length ? '<ul class="closing-breakdown" aria-label="Composição por origem">' + breakdown.join('') + '</ul>' : ''}<small>Consulta de exemplo às ${at} · configuração da amostra: ${mode === 'desativado' ? 'desativada' : 'ativa, dois destinos configurados'}.</small>${deliveries}</section>`
+          );
         }
-
         function btn(label, key, val, cls = 'button') {
           return `<button class="${cls}" data-${key}="${val}">${label}</button>`;
         }
@@ -2090,96 +2511,237 @@
           return btn(label, 'orders', f, 'textbtn');
         }
         // FIN-02 / PNL-02 / PNL-05 · comparar intervalos de dias civis já fechados.
+        let comparisonDisplay = 'grafico';
+        let compareLedger = '';
+        let comparePage = 0;
+        let compareContext = '';
+        let teamDisplay = 'grafico';
+        let teamChartMetric = 'sold';
+        const graphMetrics = {
+          sold: 'Vendido',
+          conversion: 'Conversão',
+          timely: 'Resposta no prazo',
+          orders: 'Pedidos',
+          attended: 'Conversas atendidas',
+        };
+        function displayButtons(scope, mode) {
+          const name =
+            scope === 'comparison'
+              ? 'Apresentação da comparação'
+              : 'Apresentação da equipe';
+          return `<div role="group" class="seg" aria-label="${name}">${[
+            ['grafico', 'Gráfico'],
+            ['tabela', 'Tabela'],
+          ]
+            .map(
+              ([key, label]) =>
+                `<button data-${scope}-mode="${key}" aria-pressed="${mode === key}">${label}</button>`,
+            )
+            .join('')}</div>`;
+        }
+        function revealComparedOrders(key, rows, label) {
+          if (compareLedger !== key) return '';
+          const size = 6;
+          const pages = Math.max(1, Math.ceil(rows.length / size));
+          const pageNo = Math.min(comparePage, pages - 1);
+          const slice = rows
+            .slice()
+            .sort((a, b) => b.day - a.day || a.id.localeCompare(b.id))
+            .slice(pageNo * size, (pageNo + 1) * size);
+          return `<div class="comparison-ledger" data-comparison-list="${key}"><div class="paired-head"><h4>Pedidos · ${label}</h4><button class="textbtn" data-comparison-close="${key}">Fechar lista</button></div><p class="muted">${rows.length} pedidos · ${money(sum(rows))}</p>${slice.length ? `<ul>${slice.map((o) => `<li><span><strong>${o.id}</strong><small>${date(o.day)} · ${sources[o.person]}</small></span><b>${money(o.cents)}</b></li>`).join('')}</ul>` : '<p>Nenhum pedido confirmado neste intervalo.</p>'}${pages > 1 ? `<div class="ledger-pages"><button class="button" data-comparison-page="prev" ${pageNo === 0 ? 'disabled' : ''}>Anterior</button><small>Página ${pageNo + 1} de ${pages}</small><button class="button" data-comparison-page="next" ${pageNo === pages - 1 ? 'disabled' : ''}>Próxima</button></div>` : ''}</div>`;
+        }
         function comparison() {
           const [start] = interval();
-          const wrap = (body) =>
-            `<section class="paper revenue-comparison sales-context" aria-labelledby="revenue-compare-title"><h3 id="revenue-compare-title">Comparação de vendas</h3>${body}</section>`;
-          if (period === 'hoje') {
-            const yesterday = today - 1;
-            const previous = periodOrders(yesterday, yesterday);
-            return wrap(
-              `<div class="revenue-yesterday"><div><strong>Ontem · ${date(yesterday)}</strong><small>Dia completo</small></div><div><b>${money(sum(previous))}</b><small>${previous.length} ${previous.length === 1 ? 'pedido' : 'pedidos'} · ticket médio ${ticket(previous)}</small></div></div>`,
-            );
+          const context = [start, today, period, scenario, role].join('/');
+          if (context !== compareContext) {
+            compareContext = context;
+            compareLedger = '';
+            comparePage = 0;
           }
+          const partial = period === 'hoje';
           const priorMonthEnd = monthStart(today) - 1;
-          const previousStart =
-            period === 'mes'
+          const previousStart = partial
+            ? today - 1
+            : period === 'mes'
               ? monthStart(priorMonthEnd)
               : start - (today - start);
-          const dayCount =
-            period === 'mes'
+          const count = partial
+            ? 1
+            : period === 'mes'
               ? Math.min(today - start, priorMonthEnd - previousStart + 1)
               : today - start;
-          if (!dayCount) {
-            return wrap(
-              `<p class="muted">Primeiro dia do mês. O primeiro dia completo para comparação será ${date(today)}, após o encerramento de hoje.</p>`,
+          const shell = (body, showSwitch = true) =>
+            `<section class="paper revenue-comparison sales-context" aria-labelledby="revenue-compare-title"><div class="paired-head"><h3 id="revenue-compare-title">Comparação de vendas</h3>${showSwitch ? displayButtons('comparison', comparisonDisplay) : ''}</div>${body}</section>`;
+          if (count === 0)
+            return shell(
+              '<p class="muted">Primeiro dia do mês. A comparação começa após o encerramento do primeiro dia.</p>',
+              false,
             );
-          }
-          const currentEnd = start + dayCount - 1;
-          const previousEnd = previousStart + dayCount - 1;
-          const current = periodOrders(start, currentEnd);
-          const previous = periodOrders(previousStart, previousEnd);
-          const sold = sum(current);
-          const base = sum(previous);
-          const diff = sold - base;
-          const percent =
+          const current = periodOrders(start, start + count - 1);
+          const previous = periodOrders(
+            previousStart,
+            previousStart + count - 1,
+          );
+          const sets = [
+            {
+              id: 'atual',
+              name: partial ? 'Hoje em andamento' : 'Atual',
+              dates: rangeLabel(start, start + count - 1),
+              orders: current,
+            },
+            {
+              id: 'anterior',
+              name: partial ? 'Ontem, dia completo' : 'Anterior',
+              dates: rangeLabel(previousStart, previousStart + count - 1),
+              orders: previous,
+            },
+          ];
+          const base = sum(previous),
+            sold = sum(current),
+            diff = sold - base;
+          const centsDiff = (n) =>
+            (n > 0 ? '+ ' : n < 0 ? '− ' : '') + money(Math.abs(n));
+          const qtyDiff = (n) =>
+            (n > 0 ? '+' : n < 0 ? '−' : '') + integer(Math.abs(n));
+          const pairs = [
+            {
+              title: 'Vendido',
+              key: 'sold',
+              values: [sold, base],
+              fmt: money,
+              delta: centsDiff(diff),
+            },
+            {
+              title: 'Pedidos',
+              key: 'orders',
+              values: [current.length, previous.length],
+              fmt: integer,
+              delta: qtyDiff(current.length - previous.length),
+            },
+            {
+              title: 'Ticket médio',
+              key: 'avg',
+              values: [
+                current.length ? Math.round(sold / current.length) : null,
+                previous.length ? Math.round(base / previous.length) : null,
+              ],
+              fmt: money,
+              delta: null,
+            },
+          ];
+          const avg = pairs[2];
+          if (avg.values.every((v) => v !== null))
+            avg.delta = centsDiff(avg.values[0] - avg.values[1]);
+          let contextLine = partial
+            ? 'Hoje está em andamento. Ontem é a referência de dia completo.'
+            : (count === 1 ? '1 dia completo' : count + ' dias completos') +
+              ' em cada intervalo. O vendido do painel inclui hoje.';
+          const movement =
+            diff === 0
+              ? 'Mesmo valor vendido'
+              : money(Math.abs(diff)) + (diff > 0 ? ' a mais' : ' a menos');
+          const change =
             base > 0
               ? ((100 * Math.abs(diff)) / base).toLocaleString('pt-BR', {
                   maximumFractionDigits: 1,
                 }) + '%'
               : '';
-          const direction = diff > 0 ? 'a mais' : 'a menos';
-          const movement =
-            diff === 0
-              ? 'Mesmo valor vendido'
-              : money(Math.abs(diff)) + ' ' + direction;
-          const amountChange = (n) =>
-            n === 0 ? money(0) : (n > 0 ? '+' : '−') + ' ' + money(Math.abs(n));
-          const countChange = (n) =>
-            (n > 0 ? '+' : n < 0 ? '−' : '') + integer(Math.abs(n));
-          const averageChange =
-            current.length && previous.length
-              ? amountChange(
-                  Math.round(sold / current.length) -
-                    Math.round(base / previous.length),
-                )
-              : '—';
-          const rows = [
-            ['Vendido', money(sold), money(base), amountChange(diff)],
-            [
-              'Pedidos',
-              integer(current.length),
-              integer(previous.length),
-              countChange(current.length - previous.length),
-            ],
-            ['Ticket médio', ticket(current), ticket(previous), averageChange],
-          ];
-          const periodText =
-            dayCount === 1 ? '1 dia completo' : dayCount + ' dias completos';
-          return wrap(
-            `<div class="revenue-movement"><strong>${movement}</strong>${percent ? `<span>${percent} ${diff === 0 ? 'de variação' : diff > 0 ? 'de aumento' : 'de queda'}</span>` : ''}</div><p class="muted">${periodText} em cada intervalo. Hoje entra no total do painel.</p><table class="revenue-compare-table"><caption class="sr">Indicadores nos intervalos atual e anterior</caption><thead><tr><th scope="col">Indicador</th><th scope="col">Atual<small>${rangeLabel(start, currentEnd)}</small></th><th scope="col">Anterior<small>${rangeLabel(previousStart, previousEnd)}</small></th><th scope="col">Diferença</th></tr></thead><tbody>${rows.map(([label, now, prior, delta]) => `<tr><th scope="row">${label}</th><td>${now}</td><td>${prior}</td><td>${delta}</td></tr>`).join('')}</tbody></table>${base === 0 ? '<p class="muted">Base anterior igual a zero. A diferença é apresentada em valor absoluto.</p>' : ''}`,
+          const reading = partial
+            ? ''
+            : `<p class="comparison-outcome"><strong>${movement}</strong>${change ? ` · ${change} ${diff === 0 ? 'de variação' : diff > 0 ? 'de aumento' : 'de queda'}` : ''}</p>`;
+          const datesLine = `<div class="compare-key">${sets.map((s, i) => `<span><i class="compare-swatch c${i}" aria-hidden="true"></i><b>${s.name}</b> · ${s.dates}</span>`).join('')}</div>`;
+          let viewBody;
+          if (comparisonDisplay === 'grafico') {
+            viewBody = `<div class="paired-groups" data-comparison-graph>${pairs
+              .map((m) => {
+                const mx = Math.max(0, ...m.values.filter((v) => v !== null));
+                return `<div class="paired-group" data-comparison-metric="${m.key}"><h4>${m.title}</h4>${m.values.map((v, i) => `<div class="paired-value"><div><span>${sets[i].name}</span><strong>${v === null ? '—' : m.fmt(v)}</strong></div><div class="paired-track" aria-hidden="true"><i class="c${i}" style="width:${mx && v !== null ? (100 * v) / mx : 0}%"></i></div></div>`).join('')}${partial ? '' : `<small>Diferença · ${m.delta ?? '—'}</small>`}</div>`;
+              })
+              .join('')}</div>`;
+          } else {
+            viewBody = `<table class="revenue-compare-table"><caption class="sr">Indicadores nos intervalos atual e anterior</caption><thead><tr><th scope="col">Indicador</th>${sets.map((s) => `<th scope="col">${s.name}<small>${s.dates}</small></th>`).join('')}${partial ? '' : '<th scope="col">Diferença</th>'}</tr></thead><tbody>${pairs.map((m) => `<tr><th scope="row">${m.title}</th>${m.values.map((v) => `<td>${v === null ? '—' : m.fmt(v)}</td>`).join('')}${partial ? '' : `<td>${m.delta ?? '—'}</td>`}</tr>`).join('')}</tbody></table>`;
+          }
+          const openers = `<div class="ledger-links">${sets.map((s) => `<button class="textbtn" data-comparison-ledger="${s.id}" aria-expanded="${compareLedger === s.id}">Ver pedidos · ${s.name}</button>`).join('')}</div>`;
+          const ledger = sets
+            .map((s) =>
+              revealComparedOrders(s.id, s.orders, s.name + ' · ' + s.dates),
+            )
+            .join('');
+          return shell(
+            reading +
+              `<p class="muted">${contextLine}</p>` +
+              datesLine +
+              viewBody +
+              (!partial && base === 0
+                ? '<p class="muted">Base anterior igual a zero.</p>'
+                : '') +
+              openers +
+              ledger,
           );
         }
+        document.addEventListener('click', (event) => {
+          const b = event.target.closest('button');
+          if (!b) return;
+          const d = b.dataset;
+          let msg = '';
+          if (d.comparisonMode) {
+            comparisonDisplay = d.comparisonMode;
+            msg =
+              'Comparação em ' +
+              (comparisonDisplay === 'tabela' ? 'tabela' : 'gráfico');
+          } else if (d.teamMode) {
+            teamDisplay = d.teamMode;
+            msg =
+              'Equipe em ' + (teamDisplay === 'tabela' ? 'tabela' : 'gráfico');
+          } else if (d.comparisonLedger) {
+            compareLedger =
+              compareLedger === d.comparisonLedger ? '' : d.comparisonLedger;
+            comparePage = 0;
+            msg = compareLedger
+              ? 'Lista de pedidos aberta'
+              : 'Lista de pedidos fechada';
+          } else if (d.comparisonClose) {
+            compareLedger = '';
+            comparePage = 0;
+            msg = 'Lista de pedidos fechada';
+          } else if (d.comparisonPage) {
+            comparePage = Math.max(
+              0,
+              comparePage + (d.comparisonPage === 'next' ? 1 : -1),
+            );
+            msg = 'Página de pedidos atualizada';
+          } else return;
+          render();
+          if (d.comparisonClose)
+            document
+              .querySelector(`[data-comparison-ledger="${d.comparisonClose}"]`)
+              ?.focus({ preventScroll: true });
+          if (d.comparisonPage) {
+            const nav = document.querySelector('.ledger-pages');
+            const target =
+              nav?.querySelector(
+                `[data-comparison-page="${d.comparisonPage}"]:not(:disabled)`,
+              ) ?? nav?.querySelector('button:not(:disabled)');
+            target?.focus({ preventScroll: true });
+          }
+          announce(msg);
+        });
+        document.addEventListener('change', (event) => {
+          if (
+            event.target.id !== 'team-chart-metric' ||
+            !Object.hasOwn(graphMetrics, event.target.value)
+          )
+            return;
+          teamChartMetric = event.target.value;
+          render();
+          $('team-chart-metric')?.focus({ preventScroll: true });
+          announce('Equipe por ' + graphMetrics[teamChartMetric]);
+        });
         let revenueSeriesMode = 'grafico';
         let revenueDay = null;
         let revenueSelectionContext = '';
         function chart(rows) {
           const [start, end] = interval();
-          if (period === 'hoje') {
-            const groupNames = ['Equipe', 'Loja do site', 'Sem atribuição'];
-            const totals = groupNames.map(() => ({ cents: 0, n: 0 }));
-            for (const order of rows) {
-              const group =
-                totals[order.person === 4 ? 1 : order.person === 5 ? 2 : 0];
-              group.cents += order.cents;
-              group.n++;
-            }
-            const total = sum(rows);
-            return area(
-              'Quem compõe o vendido de hoje',
-              `<div class="stack" aria-hidden="true">${totals.map((group, i) => `<i style="width:${total ? (100 * group.cents) / total : 0}%;background:${colors[i]}"></i>`).join('')}</div><ul class="revenue-origins">${totals.map((group, i) => `<li><span><i class="key" style="background:${colors[i]}" aria-hidden="true"></i>${groupNames[i]}</span><strong>${money(group.cents)}</strong><small>${group.n} ${group.n === 1 ? 'pedido' : 'pedidos'}</small></li>`).join('')}</ul>`,
-            );
-          }
           const days = Array.from({ length: end - start + 1 }, (_, i) => ({
             day: start + i,
             n: 0,
@@ -2214,7 +2776,7 @@
             const ticks = peak > 0 ? [peak, Math.round(peak / 2), 0] : [];
             const draw =
               peak > 0
-                ? `<div class="revenue-plot" aria-hidden="true"><div class="revenue-axis">${ticks.map((value) => `<span>${money(value)}</span>`).join('')}</div><div class="revenue-bars">${days.map((d) => `<i class="${d.day === selectedDay.day ? 'is-picked' : ''}" style="height:${(100 * d.cents) / peak}%" title="${date(d.day)} · ${money(d.cents)}"></i>`).join('')}</div><div class="revenue-ticks"><span>${date(start)}</span>${midpoint.day !== start && midpoint.day !== end ? `<span>${date(midpoint.day)}</span>` : ''}${start !== end ? `<span>${date(end)}</span>` : ''}</div></div>`
+                ? `<div class="revenue-plot"><div class="revenue-axis" aria-hidden="true">${ticks.map((value) => `<span>${money(value)}</span>`).join('')}</div><div class="revenue-bars" role="radiogroup" aria-label="Selecionar dia no gráfico">${days.map((d) => `<button type="button" role="radio" aria-checked="${d.day === revenueDay}" tabindex="${d.day === revenueDay ? 0 : -1}" data-bar-day="${d.day}" aria-label="${date(d.day)} · ${money(d.cents)} · ${d.n} ${d.n === 1 ? 'pedido' : 'pedidos'}" title="${date(d.day)} · ${money(d.cents)}"><i aria-hidden="true" style="height:${(100 * d.cents) / peak}%"></i></button>`).join('')}</div><div class="revenue-ticks" aria-hidden="true"><span>${date(start)}</span>${midpoint.day !== start && midpoint.day !== end ? `<span>${date(midpoint.day)}</span>` : ''}${start !== end ? `<span>${date(end)}</span>` : ''}</div></div>`
                 : '<p class="revenue-empty">Nenhuma venda nos dias deste período.</p>';
             const picker = days
               .map(
@@ -2238,15 +2800,52 @@
           revenueSeriesMode = button.dataset.revenueMode;
           render();
         });
-        document.addEventListener('change', (event) => {
-          if (event.target.id !== 'revenue-day') return;
-          const day = Number(event.target.value);
+        function selectRevenueDay(day, fromBar) {
           const [start, end] = interval();
           if (!Number.isInteger(day) || day < start || day > end) return;
           revenueDay = day;
           render();
-          $('revenue-day')?.focus({ preventScroll: true });
-          announce('Dia selecionado · ' + date(day));
+          const control = fromBar
+            ? document.querySelector('[data-bar-day="' + day + '"]')
+            : $('revenue-day');
+          control?.focus({ preventScroll: true });
+          if (!fromBar) {
+            const detail = control?.closest('.revenue-day-detail');
+            announce(
+              [
+                date(day),
+                detail?.querySelector('strong')?.textContent,
+                detail?.querySelector('small')?.textContent,
+              ]
+                .filter(Boolean)
+                .join(' · '),
+            );
+          }
+        }
+        document.addEventListener('change', (event) => {
+          if (event.target.id === 'revenue-day')
+            selectRevenueDay(Number(event.target.value), false);
+        });
+        document.addEventListener('click', (event) => {
+          const bar = event.target.closest('[data-bar-day]');
+          if (bar) selectRevenueDay(Number(bar.dataset.barDay), true);
+        });
+        document.addEventListener('keydown', (event) => {
+          const bar = event.target.closest('[data-bar-day]');
+          if (!bar) return;
+          const [start, end] = interval();
+          const day = Number(bar.dataset.barDay);
+          const days = {
+            ArrowRight: day === end ? start : day + 1,
+            ArrowDown: day === end ? start : day + 1,
+            ArrowLeft: day === start ? end : day - 1,
+            ArrowUp: day === start ? end : day - 1,
+            Home: start,
+            End: end,
+          };
+          if (!Object.hasOwn(days, event.key)) return;
+          event.preventDefault();
+          selectRevenueDay(days[event.key], true);
         });
         // A data de entrada vem do mesmo atendimento usado em "Assumidas".
         // Cada ciclo possui um titular de tomada imutável. IDs nunca dependem do filtro.
@@ -2422,8 +3021,99 @@
         function detailCell(key, label, value, context = '') {
           return `<td data-metric="${key}"><span class="cell-label" aria-hidden="true">${label}</span><strong>${value}</strong>${context ? `<small>${context}</small>` : ''}</td>`;
         }
+        function sellerGraph(rows, people) {
+          const sellers = people
+            .filter((p) => p.isSeller)
+            .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+          const key = teamChartMetric;
+          const fixed = key === 'conversion' || key === 'timely';
+          const max = fixed ? 100 : Math.max(0, ...sellers.map((r) => r[key]));
+          const exact = (r) =>
+            key === 'sold'
+              ? money(r.sold)
+              : key === 'timely'
+                ? rateText(
+                    r.timely,
+                    r.timeliness.eligible ? 'Base insuficiente' : 'Sem base',
+                  )
+                : key === 'conversion'
+                  ? rateText(r.conversion)
+                  : integer(r[key]);
+          const evidence = (r) =>
+            key === 'sold'
+              ? r.orders +
+                (r.orders === 1 ? ' pedido' : ' pedidos') +
+                ' · Conversão: ' +
+                rateText(r.conversion) +
+                ' · No prazo: ' +
+                rateText(
+                  r.timely,
+                  r.timeliness.eligible ? 'Base insuficiente' : 'Sem base',
+                )
+              : key === 'orders'
+                ? money(r.sold) + ' vendidos'
+                : key === 'attended'
+                  ? r.service.assumed +
+                    ' assumidas · ' +
+                    r.service.closed +
+                    ' encerradas'
+                  : key === 'conversion'
+                    ? r.cohort.converted +
+                      ' de ' +
+                      r.cohort.finished.length +
+                      ' ciclos completos'
+                    : r.timeliness.onTime +
+                      ' de ' +
+                      r.timeliness.eligible +
+                      ' ciclos no prazo';
+          const scale = fixed
+            ? 'Escala de 0 a 100%'
+            : key === 'sold'
+              ? 'Escala de ' + money(0) + ' a ' + money(max)
+              : 'Escala de 0 a ' + integer(max);
+          const controls = `<div class="team-graph-controls"><label for="team-chart-metric">Indicador</label><select id="team-chart-metric">${Object.entries(
+            graphMetrics,
+          )
+            .map(
+              ([value, label]) =>
+                `<option value="${value}" ${key === value ? 'selected' : ''}>${label}</option>`,
+            )
+            .join('')}</select><small>${scale}</small></div>`;
+          const cards = sellers
+            .map((r) => {
+              const val = r[key],
+                len = val === null || max === 0 ? 0 : (100 * val) / max;
+              return `<li data-team-row="${r.p}"><button data-seller="${r.p}" aria-label="Abrir desempenho de ${r.name}" aria-describedby="team-value-${r.p} team-basis-${r.p}"><span class="team-chart-person">${r.name}<span class="team-chart-more" aria-hidden="true">›</span></span><span class="team-chart-bar-block"><span class="team-chart-track" aria-hidden="true">${val === null ? '' : `<i style="width:${len}%"></i>`}</span><small id="team-basis-${r.p}">${evidence(r)}</small></span><strong data-graph-value id="team-value-${r.p}">${exact(r)}</strong></button></li>`;
+            })
+            .join('');
+          return (
+            controls +
+            `<ul class="team-chart-list" aria-label="${graphMetrics[key]} por vendedor">${cards}</ul>` +
+            (sellers.length
+              ? ''
+              : '<p class="muted">Nenhum vendedor neste recorte.</p>')
+          );
+        }
+        function teamBreakdown(rows, people) {
+          const groups = [
+            ['Equipe', rows.filter((r) => r.person !== 4 && r.person !== 5)],
+            ['Loja do site', rows.filter((r) => r.person === 4)],
+            ['Sem atribuição', rows.filter((r) => r.person === 5)],
+          ];
+          const scoped = groups.filter(
+            (group, i) => i === 0 || people.some((r) => r.p === i + 3),
+          );
+          return `<div data-team-reconciliation class="team-breakdown"><div class="paired-head"><h4>Composição do vendido</h4><strong>Total · ${money(sum(rows))}</strong></div><div class="stack" aria-hidden="true">${scoped.map(([, orders], i) => `<i style="width:${sum(rows) ? (100 * sum(orders)) / sum(rows) : 0}%;background:${colors[i]}"></i>`).join('')}</div><div>${scoped.map(([name, orders], i) => `<span><small><i class="key" aria-hidden="true" style="background:${colors[i]}"></i>${name} · ${orders.length} ${orders.length === 1 ? 'pedido' : 'pedidos'}</small><b>${money(sum(orders))}</b></span>`).join('')}</div></div>`;
+        }
         function teamTable(rows) {
           const people = teamRows(rows);
+          const body =
+            teamDisplay === 'grafico'
+              ? sellerGraph(rows, people)
+              : teamDataTable(rows, people);
+          return `<section class="paper" data-team-panel aria-labelledby="team-chart-title"><div class="paired-head"><h3 id="team-chart-title">Desempenho da equipe</h3>${displayButtons('team', teamDisplay)}</div>${body}${teamBreakdown(rows, people)}</section>`;
+        }
+        function teamDataTable(rows, people) {
           const sorted = people
             .filter((r) => r.isSeller)
             .sort((a, b) => {
@@ -2505,10 +3195,7 @@
             detailCell('avg', 'Ticket', ticket(rows)) +
             detailCell('response', '1ª resposta', '—') +
             '</tr>';
-          return area(
-            'Desempenho da equipe',
-            `<p class="muted">Abra uma pessoa para conferir os ciclos considerados e os pedidos atribuídos.</p><div class="seller-sort"><label for="seller-order">Ordenar por</label><select id="seller-order">${sortOptions}</select>${btn(desc ? 'Decrescente ↓' : 'Crescente ↑', 'sort', sort, 'button')}</div><table class="seller-table" role="table"><caption class="sr">Desempenho por vendedor e composição das vendas</caption><thead><tr>${header}</tr></thead><tbody>${[...sorted, ...people.filter((r) => !r.isSeller)].map(teamRow).join('')}</tbody><tfoot>${total}</tfoot></table>`,
-          );
+          return `<div class="seller-sort"><label for="seller-order">Ordenar por</label><select id="seller-order">${sortOptions}</select>${btn(desc ? 'Decrescente ↓' : 'Crescente ↑', 'sort', sort, 'button')}</div><table class="seller-table" role="table"><caption class="sr">Desempenho por vendedor e composição das vendas</caption><thead><tr>${header}</tr></thead><tbody>${[...sorted, ...people.filter((r) => !r.isSeller)].map(teamRow).join('')}</tbody><tfoot>${total}</tfoot></table>`;
         }
         document.addEventListener('change', (event) => {
           if (event.target.id !== 'seller-order') return;
@@ -2536,7 +3223,7 @@
           return centralHasFact('EV-ENT') ? [] : ['P-1198'];
         }
         function centralNextDeliveries() {
-          return ['ENTREGA-PROXIMA'];
+          return ['ENTREGA-PROXIMA', 'P-1184', 'P-1192'];
         }
 
         const queueScopes = {
@@ -2660,7 +3347,7 @@
                   `<p>Última leitura válida às ${lastRead.at} de ${date(today)}. A Central continua recebendo eventos.</p>${btn('Atualizar leitura comercial', 'partial', 'retry')}`,
                 )
               : '';
-          const cards = `<div class="hero"><div><span>Vendido no período</span><b>${money(sum(rows))}</b>${btn('Conferir pedidos →', 'orders', 'all', '')}</div><div><span>Pedidos confirmados</span><b>${rows.length}</b></div><div><span>Ticket médio</span><b>${ticket(rows)}</b></div></div>`;
+          const cards = `<div class="hero"><div><span>Vendido no período</span><b>${money(sum(rows))}</b><button class="orders-action" data-orders="all" aria-label="Conferir pedidos de ${dates()}">Conferir pedidos</button></div><div><span>Pedidos confirmados</span><b>${rows.length}</b></div><div><span>Ticket médio</span><b>${ticket(rows)}</b></div></div>`;
           return (
             header +
             warning +
@@ -2669,7 +3356,7 @@
             comparison() +
             (scenario === 'conciliacao' ? exerciseOrders() : '') +
             teamTable(rows) +
-            chart(rows) +
+            (period === 'hoje' ? '' : chart(rows)) +
             checkpointView()
           );
         }
@@ -2864,6 +3551,35 @@
           );
         }
 
+        function orderQueueGroups() {
+          return {
+            PENDENTES: centralPending(),
+            ATRASADAS: centralLateDeliveries(),
+            PROXIMAS: centralNextDeliveries(),
+            FICHAS: centralHasFact('EV-IMP') ? [] : ['LOJA'],
+          };
+        }
+        function queueChart() {
+          const groups = orderQueueGroups();
+          const max = Math.max(
+            1,
+            ...Object.values(groups).map((items) => items.length),
+          );
+          const bars = Object.entries(groups)
+            .map(([id, items]) => {
+              const n = items.length;
+              const hint = {
+                PENDENTES: 'Aguardam confirmação',
+                ATRASADAS: 'Prazo de entrega vencido',
+                PROXIMAS: 'Próximos sete dias',
+                FICHAS: 'Primeira impressão pendente',
+              }[id];
+              const unit = n === 1 ? 'pedido' : 'pedidos';
+              return `<button type="button" class="order-queue" data-record="${id}" aria-label="${centralGroups[id]}, ${n} ${unit}. Abrir fila."><span class="order-queue-label"><strong>${centralGroups[id]}</strong><small>${hint}</small></span><span class="order-queue-track" aria-hidden="true"><i style="width:${(100 * n) / max}%"></i></span><span class="order-queue-count" data-queue-count>${n}</span><svg aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16"><path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>`;
+            })
+            .join('');
+          return `<section class="paper" data-order-queues aria-labelledby="order-queues-title"><h3 id="order-queues-title">Pedidos e entregas</h3><p class="muted">${queueFreshness()} · cada barra abre sua fila.</p><div class="order-queue-bars">${bars}</div><p class="muted">Escala comum de 0 a ${max} ${max === 1 ? 'pedido' : 'pedidos'}.</p></section>`;
+        }
         function centralItem(id, title, detail, aside = '') {
           return `<button class="entry" data-record="${id}"><span>${title}<small>${detail}</small></span>${aside ? '<span class="pill">' + aside + '</span>' : ''}</button>`;
         }
@@ -2930,35 +3646,7 @@
                 .join('') || centralEmpty('Sem atividade recente.'),
             ) +
             '</div>' +
-            area(
-              'Pedidos e entregas',
-              centralItem(
-                'PENDENTES',
-                'Pedidos a confirmar',
-                'Abrir a lista de pendentes',
-                String(centralPending().length),
-              ) +
-                centralItem(
-                  'ATRASADAS',
-                  'Entregas atrasadas',
-                  'Compromisso anterior a ' + date(today),
-                  String(centralLateDeliveries().length),
-                ) +
-                centralItem(
-                  'PROXIMAS',
-                  'Próximas entregas',
-                  'Próximos sete dias',
-                  String(centralNextDeliveries().length),
-                ) +
-                (centralHasFact('EV-IMP')
-                  ? ''
-                  : centralItem(
-                      'LOJA',
-                      'Pedido da loja aguardando primeira impressão',
-                      'Abrir a ficha da loja',
-                      '1',
-                    )),
-            ) +
+            queueChart() +
             area(
               'Agente de atendimento',
               centralItem(
@@ -3013,6 +3701,13 @@
                 : 'Entrega atrasada',
               'Entrega prometida para ' + date(today - 1) + '.',
             ];
+          if (id === 'P-1184' || id === 'P-1192')
+            return [
+              'Próxima entrega',
+              'Pedido de atendimento · entrega prometida para ' +
+                date(today + (id === 'P-1184' ? 3 : 5)) +
+                '.',
+            ];
           if (id === 'ENTREGA-PROXIMA')
             return [
               'Próxima entrega',
@@ -3052,9 +3747,7 @@
               )
             : btn('← Central ao vivo', 'view', 'central', 'textbtn');
           const groups = {
-            PENDENTES: centralPending(),
-            ATRASADAS: centralLateDeliveries(),
-            PROXIMAS: centralNextDeliveries(),
+            ...orderQueueGroups(),
             AGENTE: ['AG-011', 'AG-012'],
           };
           if (Object.hasOwn(groups, selected)) {
@@ -3211,7 +3904,7 @@
         const decisions = [
           'Abrir em Resultado comercial, com atalho para a urgência',
           'Aplicar Hoje, 7 dias e Mês a todo o resultado',
-          'Adotar a composição da tabela e o detalhe de atendimento',
+          'Comparar a equipe em gráfico e consultar os dados completos na tabela e no detalhe',
           'Entregar a Central ao vivo e sua ordem de prioridade',
           'Exibir vendido, pedidos e ticket dos dois intervalos lado a lado',
           'Abrir pendências na fila filtrada e confirmar por toast os comandos concluídos',
@@ -3223,7 +3916,7 @@
           return `<h2 tabindex="-1" id="doctitle">Plano de entrega e parecer</h2><p>A RFC 073 está em revisão. Use esta ficha para registrar quais pontos podem seguir e quais precisam de ajuste.</p>
  <section><h3>Roteiro de aprovação</h3><p>Experimente o comportamento proposto em cada cenário. Todos os dados e efeitos são locais a esta prévia.</p><div class="decgrid">${demos.map(([title, what, key]) => `<article><h3>${title}</h3><p>${what}</p>${btn('Testar ' + title.toLocaleLowerCase('pt-BR') + ' →', 'demo', key, 'textbtn')}</article>`).join('')}</div></section>
  <section><h3>O que entra em cada entrega</h3>${phases.map(([title, what, proof, refs]) => `<details><summary>${title}</summary><p>${what}</p><p><b>Aceite.</b> ${proof}</p><p class="meta">${refs}</p></details>`).join('')}</section>
- <section><h3>Regras para a implementação</h3><div class="decgrid"><article><b>Quais datas entram?</b><p>São Paulo. Mês começa no dia 1. Sete dias inclui hoje. Para comparar, usar até ontem e igual número de dias fechados da base. Hoje apresenta ontem como dia completo.</p></article><article><b>Quem pode ver?</b><p>O servidor aplica a permissão a totais, filas, eventos e destinos. A supervisão de outras linhas pessoais requer a conta designada pela ADR 095. O pedido tem autorização comercial própria.</p></article><article><b>Como tratar ausência?</b><p>Venda zero aparece como R$ 0 e ticket sem base como traço. Falha de consulta aparece com nova tentativa. A reconexão identifica o horário da leitura anterior.</p></article><article><b>O que depende de homologação?</b><p>Latência real, permissões no servidor, reconciliação após lacuna e comparação com o checkpoint dependem de integração e testes. Os eventos deste arquivo avançam pelo simulador.</p></article></div></section>
+ <section><h3>Regras para a implementação</h3><div class="decgrid"><article><b>Quais datas entram?</b><p>São Paulo. Mês começa no dia 1. Sete dias inclui hoje. Para comparar, usar até ontem e igual número de dias fechados da base. Hoje apresenta ontem como dia completo.</p></article><article><b>Quem pode ver?</b><p>O servidor aplica a permissão a totais, filas, eventos e destinos. A supervisão de outras linhas pessoais requer a conta designada pela ADR 095. O pedido tem autorização comercial própria.</p></article><article><b>Como tratar ausência?</b><p>Venda zero aparece como R$ 0 e ticket sem base como traço. Falha de consulta aparece com nova tentativa. A reconexão identifica o horário da leitura anterior.</p></article><article><b>O que depende de homologação?</b><p>Latência real, permissões no servidor, reconciliação após lacuna e leitura do resumo automático dependem de integração e testes. Os eventos deste arquivo avançam pelo simulador.</p></article></div></section>
  <section><h3>Parecer sobre a proposta</h3><p>As escolhas ficam nesta sessão. Baixe o texto para guardar ou compartilhar seu parecer.</p>${decisions.map((d, i) => `<label for="pick${i}">${d}</label><select id="pick${i}" data-choice="${i}">${['Em revisão', 'Aceitar', 'Pedir ajuste', 'Adiar'].map((c) => `<option ${choices[i] === c ? 'selected' : ''}>${c}</option>`).join('')}</select>`).join('')}<label for="comment">Ajustes e observações</label><textarea id="comment" rows="3"></textarea>${btn('Baixar parecer em texto', 'download', '1', 'button mainbtn')}</section>`;
         }
 
@@ -3537,8 +4230,8 @@
             'perfis',
           ],
           [
-            'Checkpoint congelado',
-            'Registrar o resumo de ontem, simular um cancelamento posterior e conferir o registro original ao lado da apuração atual.',
+            'Resumo automático de ontem',
+            'Consultar o registro do dia anterior, preparado automaticamente às 08h em São Paulo. No inspetor, experimente a prévia e a indisponibilidade da consulta.',
             'checkpoint',
           ],
         ];
@@ -3687,6 +4380,13 @@
             $('work').querySelector('.appnav').hidden =
               !commercialRoles.includes(role);
           }
+          if (
+            focused?.tagName === 'SELECT' &&
+            focused.id &&
+            !focused.isConnected
+          ) {
+            $(focused.id)?.focus({ preventScroll: true });
+          }
           if (identity && !focused.isConnected) {
             const [k, v] = identity;
             Array.from(document.querySelectorAll('button'))
@@ -3699,17 +4399,19 @@
           page = page || 'painel';
           stateURL();
           render();
-          (page === 'painel' ? $('viewtitle') : $('doctitle'))?.focus({
-            preventScroll: true,
-          });
+          (page === 'painel' ? $('viewtitle') : $('doctitle'))?.focus();
         }
         document.addEventListener('click', (e) => {
           const b = e.target.closest('button');
           if (!b) return;
           if (receipt.contains(b)) return;
+          if (b.dataset.previewJump) {
+            ($('queue-title') || $('viewtitle'))?.focus();
+            return;
+          }
           if (
             b.matches(
-              '[data-order-op], [data-central-action], [data-checkpoint], [data-download], [data-recover], [data-partial]',
+              '[data-order-op], [data-central-action], [data-download], [data-recover], [data-partial]',
             )
           ) {
             receiptTrigger = b;
@@ -3772,43 +4474,6 @@
             confirmAction(...outcome[d.orderOp]);
             return;
           }
-          if (
-            d.checkpoint &&
-            view === 'resultado' &&
-            commercialRoles.includes(role) &&
-            !['parcial', 'erro'].includes(scenario)
-          ) {
-            const rows = allDemoOrders().filter((o) => o.day === today - 1);
-            let title, consequence;
-            if (d.checkpoint === 'fixar' && !checkpoint) {
-              checkpoint = { rows: rows.map((o) => ({ ...o })) };
-              title = 'Fechamento de ' + date(today - 1) + ' registrado';
-              consequence =
-                rows.length +
-                ' ' +
-                (rows.length === 1 ? 'pedido' : 'pedidos') +
-                ' no valor de ' +
-                money(sum(rows)) +
-                '.';
-            } else if (
-              d.checkpoint === 'corrigir' &&
-              checkpoint &&
-              rows.length &&
-              !checkpointCorrection
-            ) {
-              checkpointCorrection = rows[0].id;
-              title = 'Cancelamento simulado';
-              consequence =
-                'O pedido ' +
-                checkpointCorrection +
-                ' saiu da apuração atual. O fechamento registrado foi preservado.';
-            } else return;
-            render();
-            $('checkpoint-title')?.focus({ preventScroll: true });
-            confirmAction(title, consequence);
-            return;
-          }
-
           if (d.partial) {
             scenario = 'normal';
             lastRead = null;
@@ -3938,10 +4603,30 @@
         });
         document.addEventListener('change', (e) => {
           const el = e.target;
-          if (el.id === 'device')
-            $('screen').classList.toggle('mobile', el.value === 'mobile');
-          if (el.id === 'theme')
-            $('screen').classList.toggle('night', el.value === 'Escuro');
+          if (el.dataset.device || el.dataset.theme) {
+            const mobile =
+              document.querySelector('[name="device"]:checked').dataset
+                .device === 'mobile';
+            const dark =
+              document.querySelector('[name="theme"]:checked').dataset.theme ===
+              'dark';
+            $('screen').classList.toggle('mobile', mobile);
+            $('screen').classList.toggle('night', dark);
+            receipt.classList.toggle('dark', dark);
+            $('preview-mode').textContent =
+              (mobile ? 'Celular até 390 px' : 'Largura da janela') +
+              (dark ? ' · tema escuro' : ' · tema claro');
+          }
+          if (el.id === 'closing-sample') {
+            if (
+              page === 'painel' &&
+              view === 'resultado' &&
+              commercialRoles.includes(role)
+            )
+              render();
+            announce('Amostra da consulta automática atualizada.');
+            return;
+          }
           if (el.id === 'role') {
             setSimulationRole(el.value);
             nav();

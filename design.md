@@ -967,10 +967,13 @@ Proposta em revisão na [RFC 073](docs/rfc/073-painel-comercial-do-administrador
 
 | Situação | Componente e comportamento |
 | --- | --- |
-| O gestor compara períodos | Mostrar datas junto aos cabeçalhos Atual e Anterior. Exibir vendido, pedidos e ticket e identificar a direção da diferença em palavras. Usar o mesmo tratamento visual para os dois períodos. Uma base igual a zero admite diferença em reais. |
+| O gestor compara períodos | Usar pares de barras Atual e Anterior, escala comum a partir de zero dentro de cada indicador, datas, valores e diferença por extenso. Manter disponível uma tabela da mesma série. Uma base igual a zero admite diferença em reais. |
 | O gestor investiga um dia | Oferecer Gráfico e Tabela como vistas da mesma série. Indicar a vista selecionada, permitir escolher o dia por teclado e abrir os pedidos com data e período preservados. |
+| O gestor compara vendedores | Um indicador por gráfico. Taxas usam escala de 0 a 100%, com base e amostra legíveis. No gráfico de vendido, conservar pedidos, conversão e resposta no prazo em cada linha. A tabela oferece a conferência de todas as medidas. |
+| Há duas opções de apresentação | Expor as opções em um grupo rotulado com seleção visível e operação por setas. Usar um seletor nativo rotulado para listas maiores de cenários, datas ou métricas. |
+| O gestor verifica pedidos e entregas | Usar barras com contagem exata na mesma escala. Cada categoria abre seu destino e continua identificável em zero. |
 | Há conversas esperando | Manter quantidade, motivo, maior espera útil e horário de leitura junto de um botão para a fila filtrada. Com a conexão interrompida, identificar a última leitura válida. Reservar a ênfase de atenção para a pendência. |
-| O gestor confere o dia anterior | Manter data comercial, estado do registro, apuração atual e diferença visíveis. A ação de registro guarda uma cópia. Uma correção posterior aparece na diferença e preserva o valor de referência. |
+| O gestor confere o dia anterior | Exibir a leitura autorizada da automação das 08h com a data de referência, a origem e o estado retornado. Distinguir prévia dinâmica, registro preparado e dado indisponível. A preparação pertence ao workflow técnico. |
 | Um comando foi concluído | Emitir uma confirmação breve com o objeto e a consequência. Por exemplo, “Conversa transferida para Caio. O crédito de R$ 500,00 do pedido P-A02 continua com Lia.” O visto acompanha uma mudança efetivamente aplicada. |
 | Uma leitura falhou | Manter a explicação na região afetada e oferecer nova tentativa. Se houver uma leitura válida, indicar sua hora e seu recorte. Reservar anúncios urgentes para interrupções que exigem atenção imediata. |
 | Um fato chega em segundo plano | Atualizar as contagens e o histórico da Central preservando o foco. Uma repetição do mesmo fato preserva os totais e dispensa uma nova confirmação. |

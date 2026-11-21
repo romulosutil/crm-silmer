@@ -52,6 +52,17 @@ async function revenue(page) {
   return cents(await page.locator('.hero b').first().innerText());
 }
 
+async function expectReflow(page) {
+  const fits = await page.evaluate(() => {
+    const stage = document.querySelector('#stage');
+    return (
+      document.documentElement.scrollWidth <= innerWidth + 1 &&
+      stage.scrollWidth <= stage.clientWidth + 1
+    );
+  });
+  assert.ok(fits, 'Conteúdo ultrapassou a largura disponível');
+}
+
 async function verifyOrderList(page, amount, count) {
   const entries = page.locator('#stage .entry');
   await expect(entries).toHaveCount(count);
@@ -62,6 +73,37 @@ async function verifyOrderList(page, amount, count) {
   assert.equal(total, amount);
   assert.equal(cents(await page.locator('#stage h3').innerText()), amount);
 }
+
+test('os controles de largura e tema alternam pelo teclado e conservam o recorte', async (t) => {
+  const page = await openPrototype(t);
+  const sold = await revenue(page);
+  const sizes = page.getByRole('group', { name: 'Largura da prévia' });
+  const themes = page.getByRole('group', { name: 'Tema da prévia' });
+  const preview = page.locator('#screen');
+  const windowSize = sizes.getByRole('radio', { name: 'Janela' });
+  const mobileSize = sizes.getByRole('radio', { name: 'Celular' });
+  await expect(windowSize).toBeChecked();
+  await windowSize.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(mobileSize).toBeChecked();
+  await expect(mobileSize).toBeFocused();
+  await expect(preview).toHaveClass(/\bmobile\b/u);
+  await expect(page.locator('#preview-mode')).toContainText(/celular/iu);
+  await themes.getByRole('radio', { name: 'Claro' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(themes.getByRole('radio', { name: 'Escuro' })).toBeFocused();
+  await expect(themes.getByRole('radio', { name: 'Escuro' })).toBeChecked();
+  await expect(preview).toHaveClass(/\bnight\b/u);
+  await expect(page.locator('#preview-mode')).toContainText(/escuro/iu);
+  await page.keyboard.press('ArrowLeft');
+  await expect(themes.getByRole('radio', { name: 'Claro' })).toBeChecked();
+  await expect(preview).not.toHaveClass(/\bnight\b/u);
+  await mobileSize.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(windowSize).toBeChecked();
+  await expect(preview).not.toHaveClass(/\bmobile\b/u);
+  assert.equal(await revenue(page), sold);
+});
 
 test('a lista de confirmados reconcilia com o resultado, o vendedor e o dia', async (t) => {
   const page = await openPrototype(t);
@@ -91,6 +133,15 @@ test('a lista de confirmados reconcilia com o resultado, o vendedor e o dia', as
   await expect(chart).toHaveAttribute('aria-pressed', 'true');
   await expect(series.locator('#revenue-day')).toBeVisible();
   await series.locator('#revenue-day').selectOption('5');
+  const bars = series.getByRole('radio');
+  const chosenBar = series.getByRole('radio', { checked: true });
+  await expect(bars).toHaveCount(18);
+  await chosenBar.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(series.locator('#revenue-day')).toHaveValue('6');
+  await expect(chosenBar).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await expect(series.locator('#revenue-day')).toHaveValue('5');
   await series.getByRole('button', { name: 'Ver pedidos de 05/11' }).click();
   await verifyOrderList(page, 30_000, 1);
   await page.goBack();
@@ -159,12 +210,44 @@ test('transferência, reabertura, reconfirmação e cancelamento preservam o cr�
 
 test('comparação usa dias comuns no mês curto e trata a virada e a base zero', async (t) => {
   const page = await openPrototype(t);
+  await page.selectOption('#scenario', 'conciliacao');
+  const paired = page.getByRole('region', { name: 'Comparação de vendas' });
+  assert.equal(
+    cents(await paired.locator('[data-comparison-metric="sold"]').innerText()),
+    60_000,
+  );
+  const openCurrent = paired.locator('[data-comparison-ledger="atual"]');
+  await openCurrent.focus();
+  await page.keyboard.press('Enter');
+  const ledger = paired.locator('[data-comparison-list="atual"]');
+  await expect(ledger.locator('li')).toHaveCount(3);
+  const shown = await ledger.locator('li').allInnerTexts();
+  assert.equal(
+    shown.reduce((sum, line) => sum + cents(line), 0),
+    60_000,
+  );
+  await ledger.locator('[data-comparison-close]').click();
+  await expect(openCurrent).toBeFocused();
+  await expect(openCurrent).toHaveAttribute('aria-expanded', 'false');
+  await paired.locator('[data-comparison-ledger="anterior"]').click();
+  await expect(
+    paired.locator('[data-comparison-list="anterior"]'),
+  ).toContainText(/nenhum pedido/iu);
+  assert.equal(await revenue(page), 110_000);
   await page.selectOption('#scenario', 'curto');
   await page.locator('[data-period="mes"]').click();
   const comparison = page.locator('.sales-context');
   await expect(
     page.getByRole('region', { name: 'Comparação de vendas' }),
   ).toBeVisible();
+  await expect(
+    comparison.locator('[data-comparison-mode="grafico"]'),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await comparison.locator('[data-comparison-mode="tabela"]').focus();
+  await page.keyboard.press('Enter');
+  await expect(
+    comparison.locator('[data-comparison-mode="tabela"]'),
+  ).toBeFocused();
   await expect(comparison.getByRole('table')).toBeVisible();
   await expect(comparison).toContainText(/01\/03.+28\/03/u);
   await expect(comparison).toContainText(/01\/02.+28\/02/u);
@@ -179,6 +262,7 @@ test('comparação usa dias comuns no mês curto e trata a virada e a base zero'
   await expect(comparison).not.toContainText('%');
   await page.selectOption('#scenario', 'basezero');
   assert.ok((await revenue(page)) > 0);
+  await comparison.locator('[data-comparison-mode="tabela"]').click();
   await expect(comparison.getByRole('table')).toBeVisible();
   const amounts = await comparison
     .locator('tbody tr')
@@ -251,37 +335,43 @@ test('uma resposta lenta de sete dias nunca substitui Mês após a troca de reco
   assert.equal(await revenue(page), monthly);
 });
 
-test('checkpoint conserva o snapshot de ontem após a correção da apuração', async (t) => {
+test('o resumo automático de ontem é independente do período e expõe a situação da apuração', async (t) => {
   const page = await openPrototype(t);
-  const checkpoint = page.getByRole('region', {
-    name: /Fechamento de ontem/iu,
+  const closing = page.getByRole('region', {
+    name: 'Resumo automático de ontem',
   });
-  const snapshot = checkpoint.locator('[data-checkpoint-summary="salvo"]');
-  const current = checkpoint.locator('[data-checkpoint-summary="atual"]');
-  const difference = checkpoint.locator(
-    '[data-checkpoint-summary="diferenca"]',
-  );
-  await expect(snapshot).toBeVisible();
-  await expect(current).toBeVisible();
-  await expect(difference).toBeVisible();
-  await expect(checkpoint).toHaveAttribute('data-checkpoint-state', 'previa');
-  await checkpoint.locator('[data-checkpoint="fixar"]').click();
-  await expect(checkpoint).toHaveAttribute(
-    'data-checkpoint-state',
+  const value = closing.locator('[data-checkpoint-summary="total"]');
+  const initial = await revenue(page);
+  await expect(closing).toHaveAttribute('data-checkpoint-state', 'registrado');
+  await expect(value).toBeVisible();
+  const yesterday = cents(await value.innerText());
+  await page.locator('[data-period="hoje"]').click();
+  assert.notEqual(initial, await revenue(page));
+  assert.equal(cents(await value.innerText()), yesterday);
+  await page.locator('.appnav [data-view="central"]').click();
+  await page.locator('[data-advance]').click();
+  await page.locator('[data-advance]').click();
+  await page.locator('.appnav [data-view="resultado"]').click();
+  assert.equal(cents(await value.innerText()), yesterday);
+  for (const state of [
+    'previa',
+    'aguardando',
+    'indisponivel',
+    'desativado',
     'registrado',
-  );
-  const before = cents(await snapshot.innerText());
-  assert.equal(cents(await current.innerText()), before);
-  assert.equal(cents(await difference.innerText()), 0);
-  await checkpoint.locator('[data-checkpoint="corrigir"]').click();
-  await expect(checkpoint).toHaveAttribute(
-    'data-checkpoint-state',
-    'divergente',
-  );
-  assert.equal(cents(await snapshot.innerText()), before);
-  const corrected = cents(await current.innerText());
-  assert.ok(corrected < before);
-  assert.equal(cents(await difference.innerText()), before - corrected);
+  ]) {
+    await page.selectOption('#closing-sample', state);
+    await expect(closing).toHaveAttribute('data-checkpoint-state', state);
+    await expect(
+      closing.getByRole('button', { name: /registrar/i }),
+    ).toHaveCount(0);
+    if (state === 'previa' || state === 'registrado') {
+      await expect(value).toBeVisible();
+      assert.equal(cents(await value.innerText()), yesterday);
+    } else {
+      await expect(closing).not.toContainText(/R\$\s*0,00/u);
+    }
+  }
 });
 
 test('a urgência abre somente a fila correspondente e conserva o escopo ao voltar do registro', async (t) => {
@@ -350,14 +440,24 @@ test('as filas de pedidos e entregas levam ao registro, e a primeira impressão 
   const page = await openPrototype(t);
   const central = page.locator('.appnav [data-view="central"]');
   await central.click();
-  await page.locator('[data-record="PROXIMAS"]').click();
+  const operations = page.getByRole('region', { name: 'Pedidos e entregas' });
+  const queue = (group) => operations.locator(`[data-record="${group}"]`);
+  for (const group of ['PENDENTES', 'ATRASADAS', 'PROXIMAS', 'FICHAS']) {
+    await expect(queue(group).locator('[data-queue-count]')).toBeVisible();
+  }
+  await queue('PROXIMAS').focus();
+  await page.keyboard.press('Enter');
   await page.locator('[data-record="ENTREGA-PROXIMA"]').click();
   await expect(page.locator('#stage')).toContainText(/entrega/iu);
   await central.click();
-  await page.locator('[data-record="ATRASADAS"]').click();
+  await queue('ATRASADAS').click();
   await page.locator('[data-record="P-1198"]').click();
   await page.locator('[data-central-action="entregar"]').click();
   await central.click();
+  await expect(queue('ATRASADAS').locator('[data-queue-count]')).toHaveText(
+    '0',
+  );
+  await queue('FICHAS').click();
   await page.locator('[data-record="LOJA"]').click();
   await page.locator('[data-central-action="imprimir"]').click();
   await central.click();
@@ -366,11 +466,20 @@ test('as filas de pedidos e entregas levam ao registro, e a primeira impressão 
   await expect(page.locator('#stage')).not.toContainText(
     /1 pedido.*aguarda.*impressão/iu,
   );
-  await page.locator('[data-record="PENDENTES"]').click();
+  await expect(queue('FICHAS').locator('[data-queue-count]')).toHaveText('0');
+  await queue('FICHAS').click();
+  await expect(page.locator('[data-record="LOJA"]')).toHaveCount(0);
+  await central.click();
+  await queue('PENDENTES').click();
   await page.locator('[data-record="P-1501"]').click();
   await page.locator('[data-central-action="confirmar"]').click();
   await central.click();
   await expect(page.locator('#stage')).toContainText(/Pedido confirmado/iu);
+  await expect(queue('PENDENTES').locator('[data-queue-count]')).toHaveText(
+    '0',
+  );
+  await queue('PENDENTES').click();
+  await expect(page.locator('[data-record="P-1501"]')).toHaveCount(0);
 });
 
 test('a fila envelhece sem mensagem e a reconexão recupera o evento uma vez', async (t) => {
@@ -457,6 +566,23 @@ test('parecer é exportável pelo teclado e conserva a revisão comercial inform
 test('cada vendedor mostra os quatro indicadores e permite conferir os ciclos convertidos', async (t) => {
   const page = await openPrototype(t);
   await page.locator('[data-period="mes"]').click();
+  const team = page.locator('[data-team-panel]');
+  const graph = team.locator('[data-team-mode="grafico"]'),
+    numbers = team.locator('[data-team-mode="tabela"]');
+  await expect(graph).toHaveAttribute('aria-pressed', 'true');
+  await expect(team.locator('#team-chart-metric')).toHaveValue('sold');
+  const plotted = {};
+  for (const key of ['conversion', 'timely', 'orders', 'sold']) {
+    await team.locator('#team-chart-metric').selectOption(key);
+    const row = team.locator('[data-team-row="0"]');
+    await expect(row).toBeVisible();
+    plotted[key] = await row.innerText();
+  }
+  await expect(team.locator('[data-team-reconciliation]')).toBeVisible();
+  await numbers.focus();
+  await page.keyboard.press('Enter');
+  await expect(numbers).toHaveAttribute('aria-pressed', 'true');
+  await expect(numbers).toBeFocused();
   const table = page.locator('table.seller-table');
   const lia = table.locator('tbody tr[data-person="0"]');
   const required = ['conversion', 'timely', 'orders', 'sold'];
@@ -465,6 +591,12 @@ test('cada vendedor mostra os quatro indicadores e permite conferir os ciclos co
     const cell = lia.locator(`[data-metric="${metric}"]`);
     await expect(cell).toBeVisible();
     cardValues[metric] = (await cell.locator('strong').innerText()).trim();
+    assert.ok(
+      plotted[metric]
+        .replaceAll('\u00a0', ' ')
+        .includes(cardValues[metric].replaceAll('\u00a0', ' ')),
+      metric,
+    );
   }
   await expect(lia.locator('[data-metric="conversion"]')).toContainText('%');
   await expect(lia.locator('[data-metric="timely"]')).toContainText('%');
@@ -519,6 +651,10 @@ for (const width of [320, 390, 1366]) {
   test(`resultado, quatro métricas e detalhe utilizáveis a ${width}px`, async (t) => {
     const page = await openPrototype(t, width);
     await page.locator('[data-period="mes"]').click();
+    await expect(page.locator('[data-team-row="0"]')).toBeVisible();
+    await expectReflow(page);
+    await page.locator('[data-team-mode="tabela"]').click();
+    await expectReflow(page);
     const seller = page.locator('tr[data-person="0"]');
     for (const key of ['conversion', 'timely', 'orders', 'sold']) {
       await expect(seller.locator(`[data-metric="${key}"]`)).toBeVisible();
@@ -532,14 +668,6 @@ for (const width of [320, 390, 1366]) {
     await seller.locator('[data-seller]').focus();
     await page.keyboard.press('Enter');
     await expect(page.locator('#viewtitle')).toBeFocused();
-    assert.ok(
-      await page.evaluate(
-        () =>
-          document.documentElement.scrollWidth <= innerWidth + 1 &&
-          document.querySelector('#stage').scrollWidth <=
-            document.querySelector('#stage').clientWidth + 1,
-      ),
-      'O detalhe ultrapassou a área disponível',
-    );
+    await expectReflow(page);
   });
 }

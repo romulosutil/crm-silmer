@@ -24,6 +24,12 @@ export async function mockDashboardRead(route, manager = true) {
       manager,
       Number(url.searchParams.get('days') ?? 7),
     );
+  if (url.pathname === '/api/v1/dashboard/metrics/cohorts')
+    body = {
+      period: url.searchParams.get('period'),
+      days: Number(url.searchParams.get('days') ?? 7),
+      rows: [],
+    };
   if (url.pathname === '/api/v1/dashboard/metrics/service')
     body = serviceMetrics(manager, Number(url.searchParams.get('days') ?? 7));
   if (url.pathname === '/api/v1/dashboard/metrics/losses')
@@ -457,6 +463,12 @@ export async function mockPainel(
       return json(
         performanceSummary(manager, Number(url.searchParams.get('days') ?? 7)),
       );
+    if (url.pathname === '/api/v1/dashboard/metrics/cohorts')
+      return json({
+        period: url.searchParams.get('period'),
+        days: Number(url.searchParams.get('days') ?? 7),
+        rows: [],
+      });
     if (url.pathname === '/api/v1/dashboard/metrics/service')
       return json(
         serviceMetrics(manager, Number(url.searchParams.get('days') ?? 7)),

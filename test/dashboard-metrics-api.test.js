@@ -53,7 +53,7 @@ function apiHarness(actor = SELLER, service) {
   };
 }
 
-test('MET: service metrics accept only days=7|30 and refuse forged scope keys', async (t) => {
+test('MET: service metrics accept civil periods or the seven/thirty-day shorthand and refuse forged scope keys', async (t) => {
   const { api, calls } = apiHarness();
   t.after(() => api.close());
   const ok = await api.inject({
@@ -65,7 +65,16 @@ test('MET: service metrics accept only days=7|30 and refuse forged scope keys', 
   assert.equal(calls.at(-1).days, 30);
   assert.equal(calls.at(-1).actor.id, SELLER.id);
   assert.equal((await api.inject({ url: SERVICE_URL })).json().days, 7);
+  for (const period of ['hoje', '7dias', 'mes']) {
+    assert.equal(
+      (await api.inject({ url: SERVICE_URL + '?period=' + period })).statusCode,
+      200,
+    );
+    assert.equal(calls.at(-1).period, period);
+  }
   for (const [url, code] of [
+    [`${SERVICE_URL}?period=mes&days=30`, 'INVALID_REQUEST'],
+    [`${SERVICE_URL}?period=qualquer`, 'INVALID_FILTER'],
     [`${SERVICE_URL}?days=8`, 'INVALID_FILTER'],
     [`${SERVICE_URL}?days=`, 'INVALID_FILTER'],
     [`${SERVICE_URL}?days=7&days=30`, 'INVALID_FILTER'],

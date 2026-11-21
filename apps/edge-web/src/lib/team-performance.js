@@ -203,3 +203,64 @@ export function lossTable(losses) {
     reasons: reasonBreakdown(totals?.byReason),
   };
 }
+
+/** An individual percentage needs both counts from the very same cohort.
+ * @param {number} numerator @param {number} denominator @param {number} minimum */
+export function cohortRate(numerator, denominator, minimum) {
+  const note = `${numerator} de ${denominator} ciclos`;
+  if (!denominator) return { text: 'Sem base', value: null, note };
+  if (denominator < minimum)
+    return { text: 'Base insuficiente', value: null, note };
+  const value = (numerator * 100) / denominator;
+  return {
+    value,
+    text: value.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%',
+    note,
+  };
+}
+
+/** @param {any} sales @param {any} service @param {any} cohorts @param {any} losses */
+export function sellerTable(sales, service, cohorts, losses) {
+  const base = salesTable(sales, { withSale: false });
+  const rows = joinPeople(
+    sales?.rows,
+    service?.rows,
+    cohorts?.rows,
+    losses?.rows,
+  ).map((person) => {
+    const [sale, times, cohort, loss] = person.sources;
+    const sold = sales ? (sale?.soldAmountCents ?? 0) : null;
+    const orders = sales ? (sale?.confirmedCount ?? 0) : null;
+    return {
+      id: person.userId,
+      name: person.name,
+      note: person.active ? '' : 'Inativo',
+      cohort,
+      loss,
+      cells: {
+        withSale: countCell(
+          sales ? (sale?.conversationsWithSaleCount ?? 0) : null,
+        ),
+        sold: moneyCell(sold),
+        orders: countCell(orders),
+        ticket: ticketCell(sold, orders),
+        attended: countCell(sales ? (sale?.attendedCount ?? 0) : null),
+        assumed: countCell(sales ? (sale?.assumedCount ?? 0) : null),
+        closed: countCell(sales ? (sale?.closedCount ?? 0) : null),
+        firstResponse: timeCell(times?.firstResponse),
+        claim: timeCell(times?.claim),
+        unanswered: countCell(
+          service ? (times?.unansweredEpisodes?.count ?? 0) : null,
+        ),
+        conversion: cohorts
+          ? cohortRate(cohort?.converted ?? 0, cohort?.completed ?? 0, 1)
+          : NONE(),
+        onTime: cohorts
+          ? cohortRate(cohort?.onTime ?? 0, cohort?.eligible ?? 0, 10)
+          : NONE(),
+        lost: countCell(losses ? (loss?.lostCount ?? 0) : null),
+      },
+    };
+  });
+  return { ...base, rows };
+}

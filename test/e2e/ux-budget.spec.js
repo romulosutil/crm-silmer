@@ -355,11 +355,11 @@ for (const screen of SCREENS) {
         await page.goto('/dashboard');
         if (manager) {
           await expect(
-            page.getByRole('region', { name: 'Equipe nos últimos 7 dias' }),
+            page.getByRole('region', { name: 'Vendedores' }),
           ).toBeVisible();
           await budget(
             page,
-            'Painel: Próximo passo',
+            'Painel: urgência da fila',
             { selector: '.next-step' },
             1,
           );
@@ -383,11 +383,28 @@ for (const screen of SCREENS) {
             4,
           );
         }
+        // ADR 096 adds one actionable datum per civil day. Keep the old
+        // budget for the other controls, and verify each chart datum separately.
+        let visibleDays = 0;
+        if (manager) {
+          const days = page.getByRole('group', {
+            name: 'Selecionar dia da venda',
+          });
+          await expect(days.getByRole('button')).toHaveCount(15);
+          await expect(days.locator('button[tabindex="0"]')).toHaveCount(1);
+          visibleDays = (
+            await listControls(page, {
+              firstScreen: true,
+              selector: MAIN,
+              within: '.daily-bars .day-bar',
+            })
+          ).length;
+        }
         await budget(
           page,
           'Painel: primeira tela',
           { firstScreen: true, selector: MAIN },
-          screen.budgets.painel[manager ? 'gestor' : 'vendedor'],
+          screen.budgets.painel[manager ? 'gestor' : 'vendedor'] + visibleDays,
         );
         await expectOnePrimaryPerRegion(page);
       });

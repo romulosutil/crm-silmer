@@ -978,6 +978,8 @@ Decisão da [ADR 096](docs/adr/096-painel-comercial-do-administrador.md), confor
 | Uma leitura falhou | Manter a explicação na região afetada e oferecer nova tentativa. Se houver uma leitura válida, indicar sua hora e seu recorte. Reservar anúncios urgentes para interrupções que exigem atenção imediata. |
 | Um fato chega em segundo plano | Atualizar as contagens e o histórico da Central preservando o foco. Uma repetição do mesmo fato preserva os totais e dispensa uma nova confirmação. |
 
+No orçamento de controles da primeira dobra, cada barra acionável da série acrescenta um controle por dia civil visível. Os demais controles mantêm o limite de PNL-01. A série inteira tem uma entrada na ordem de tabulação e as setas selecionam o dia. A tabela permite conferir os mesmos valores.
+
 O toast tem uma mensagem atômica em `role="status"` e o botão **Fechar aviso** fora da região anunciada. Surge sem tomar o foco, expira após oito segundos e aguarda enquanto o ponteiro ou o foco estão no aviso ou a aba está oculta. O fechamento por teclado devolve o foco ao comando quando disponível, ou ao título da seção em que a ação foi realizada. Cor e ícone complementam o texto. O estado confirmado permanece consultável na própria tela.
 
 #### `SalesKpi`

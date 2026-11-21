@@ -719,6 +719,18 @@
           gap: 5px;
         }
       }
+      .sales-context {
+        color: var(--muted);
+        font-size: 13px;
+        padding: 0 2px;
+      }
+      details.sales-context > summary {
+        color: var(--accent);
+        padding: 10px 0;
+      }
+      .sales-context table {
+        max-width: 40rem;
+      }
       @media print {
         .top,
         .tools,
@@ -1033,12 +1045,14 @@
           },
           {
             id: 'AT-039',
+            firstOwner: 1,
             state: 'Aguardando resposta',
             label: 'Conversa de Caio',
             age: 18,
           },
           {
             id: 'AT-046',
+            firstOwner: 2,
             state: 'Aguardando resposta',
             label: 'Conversa de Bia',
             age: 14,
@@ -1135,20 +1149,33 @@
         function filteredLink(f, label) {
           return btn(label, 'orders', f, 'textbtn');
         }
-        function comparison(rows) {
+        function comparison() {
           const [start] = interval();
           if (period === 'hoje')
-            return `Ontem, dia completo · ${money(sum(periodOrders(17, 17)))}`;
-          const a = period === 'mes' ? -30 : start - 6,
-            b = period === 'mes' ? -14 : start - 1;
-          const recent = periodOrders(start, 17),
-            prior = periodOrders(a, b),
-            diff = sum(recent) - sum(prior);
-          const delta =
-            prior.length && sum(prior)
-              ? ` · ${diff >= 0 ? '+' : ''}${((100 * diff) / sum(prior)).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`
-              : ' · Sem base percentual';
-          return `<b>Comparação por dias completos</b><br>${rangeLabel(start, 17)} · ${money(sum(recent))} · ${recent.length} pedidos · ticket ${ticket(recent)}<br>${rangeLabel(a, b)} · ${money(sum(prior))} · ${prior.length} pedidos · ticket ${ticket(prior)}<br>Diferença de ${money(diff)}${delta}`;
+            return `<small class="sales-context">Ontem, dia completo · ${money(sum(periodOrders(17, 17)))}</small>`;
+          const previousStart = period === 'mes' ? -30 : start - 6;
+          const previousEnd = period === 'mes' ? -14 : start - 1;
+          const current = periodOrders(start, 17);
+          const previous = periodOrders(previousStart, previousEnd);
+          const base = sum(previous);
+          const diff = sum(current) - base;
+          const pct =
+            base > 0
+              ? ' (' +
+                ((Math.abs(diff) * 100) / base).toLocaleString('pt-BR', {
+                  maximumFractionDigits: 1,
+                }) +
+                '%)'
+              : '';
+          const summary =
+            diff === 0
+              ? 'Mesmo valor vendido'
+              : money(Math.abs(diff)) +
+                (diff > 0 ? ' a mais' : ' a menos') +
+                pct;
+          const recentDates = rangeLabel(start, 17),
+            priorDates = rangeLabel(previousStart, previousEnd);
+          return `<details class="sales-context"><summary>${summary} · ${recentDates} vs. ${priorDates}</summary><p>${recentDates} comparado a ${priorDates}. Hoje entra no total acima.</p><table><caption class="sr">Vendas nos dois intervalos fechados</caption><thead><tr><th>Indicador</th><th>${recentDates}</th><th>${priorDates}</th></tr></thead><tbody><tr><th>Vendido</th><td>${money(sum(current))}</td><td>${money(base)}</td></tr><tr><th>Pedidos</th><td>${current.length}</td><td>${previous.length}</td></tr><tr><th>Ticket médio</th><td>${ticket(current)}</td><td>${ticket(previous)}</td></tr></tbody></table></details>`;
         }
         function chart(rows) {
           const [start, end] = interval();
@@ -1228,10 +1255,34 @@
             count = activeQueue().filter(
               (q) => q.state === 'Sem responsável',
             ).length;
-          return `<div class="row between datehead">${heading('Resultado comercial', dates() + ' · São Paulo')}${periodSwitch()}</div>${btn(count + ' ' + (count === 1 ? 'conversa espera' : 'conversas esperam') + ' vendedor · Abrir central →', 'view', 'central', 'alertlink')}${scenario === 'erro' ? area('Vendas indisponíveis', `<p>A leitura do período falhou.</p>${btn('Tentar novamente', 'recover', '1')}`) : `<div class="hero"><div><span>Vendido no período</span><b>${money(sum(rows))}</b>${btn('Conferir pedidos →', 'orders', 'all', '')}</div><div><span>Pedidos confirmados</span><b>${integer(rows.length)}</b></div><div><span>Ticket médio</span><b>${ticket(rows)}</b></div></div>${chart(rows)}${teamTable(rows)}${area('Como o resultado variou', `<p>${comparison(rows)}</p>`)}`}`;
+          return `<div class="row between datehead">${heading('Resultado comercial', dates() + ' · São Paulo')}${periodSwitch()}</div>${btn(count + ' ' + (count === 1 ? 'conversa espera' : 'conversas esperam') + ' vendedor · Abrir central →', 'view', 'central', 'alertlink')}${scenario === 'erro' ? area('Vendas indisponíveis', `<p>A leitura do período falhou.</p>${btn('Tentar novamente', 'recover', '1')}`) : `<div class="hero"><div><span>Vendido no período</span><b>${money(sum(rows))}</b>${btn('Conferir pedidos →', 'orders', 'all', '')}</div><div><span>Pedidos confirmados</span><b>${integer(rows.length)}</b></div><div><span>Ticket médio</span><b>${ticket(rows)}</b></div></div>${comparison()}${chart(rows)}${teamTable(rows)}`}`;
         }
         function metrics(pairs) {
           return `<div class="metrics">${pairs.map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>`;
+        }
+        // Os ciclos históricos da amostra já completaram a janela de 15 min.
+        // Na fila, AT-039 e AT-046 são primeiras respostas; AT-039 continua
+        // fora do prazo depois da resposta tardia no terceiro evento.
+        function responseIndicator(person, rows) {
+          const cutoff = 15;
+          const onTime = rows.filter((r) => r.first <= cutoff).length;
+          const lateInDemo = queue.filter(
+            (q) => q.firstOwner === person && q.age + visibleStep > cutoff,
+          ).length;
+          const eligible = rows.length + lateInDemo;
+          const openLate = activeQueue().filter(
+            (q) => q.firstOwner === person && q.age > cutoff,
+          ).length;
+          const value =
+            eligible < 10
+              ? 'Base insuficiente'
+              : ((100 * onTime) / eligible).toLocaleString('pt-BR', {
+                  maximumFractionDigits: 1,
+                }) + '%';
+          return area(
+            'Primeira resposta no prazo',
+            `<p><strong>${value}</strong> · ${onTime} de ${eligible} ciclos no prazo</p><p class="muted">${openLate} ainda em espera acima do prazo. Indicador proposto.</p><details><summary>Como é calculado</summary><p>Uma oportunidade por ciclo, atribuída a quem assumiu. Entram as janelas de 15 minutos de expediente que já terminaram no período. Conta no numerador a primeira resposta humana efetiva em até 15 minutos úteis. A espera vencida entra mesmo em aberto. O percentual aparece a partir de 10 ciclos.</p></details>`,
+          );
         }
         function seller() {
           const p = Number(selected),
@@ -1249,6 +1300,7 @@
                 ['Ticket médio', ticket(sales)],
               ]) + filteredLink('p' + p, 'Conferir pedidos de ' + team[p]),
             ) +
+            responseIndicator(p, activityRows) +
             area(
               'Atendimento no expediente',
               metrics([
@@ -1481,12 +1533,14 @@
           'Aplicar Hoje, 7 dias e Mês a todo o resultado',
           'Adotar a composição da tabela e o detalhe de atendimento',
           'Entregar a Central ao vivo e sua ordem de prioridade',
-          'Comparar apenas dias completos',
+          'Mostrar a comparação compacta junto ao vendido',
+          'Experimentar a taxa de primeira resposta no prazo por vendedor',
         ];
         let choices = decisions.map(() => 'Em revisão'),
           comment = '';
         function planDoc() {
           return `<h2 tabindex="-1" id="doctitle">Plano de entrega e parecer</h2><p>A RFC 073 está em revisão. Use esta ficha para registrar quais pontos podem seguir e quais precisam de ajuste.</p>
+ <section><h3>Cobertura da RFC 073</h3><div class="decgrid"><article><b>Dá para experimentar</b><p>Hoje, 7 dias e Mês, composição e série diária, lista conciliada por dia e pessoa, equipe e detalhe, fila, simulação de venda, queda e retomada. O novo indicador de resposta é uma proposta adicional.</p></article><article><b>Prévia parcial</b><p>A equipe tem quatro pessoas ativas. O detalhe usa o recorte herdado e ainda falta o atalho de 30 dias. A fila exemplifica entrega atrasada, loja e agente. Pedidos a confirmar, próximas entregas e a baixa do aviso na primeira impressão aguardam demonstração.</p></article><article><b>Cenários a validar</b><p>A amostra usa 18/11. Faltam virada de mês, mês curto, inativo com venda, reabertura, transferência, reconfirmação e cancelamento. Há simulação de falha inicial; a falha parcial com retenção da última leitura comercial precisa de prova.</p></article><article><b>Depende do CRM integrado</b><p>Permissões por linha e papel, cálculo oficial no servidor, listas reais, atualização de prazos em fila silenciosa, tempo de ponta a ponta e recuperação de lacunas do SSE. A aprovação visual cobre a composição e as interações demonstradas.</p></article></div></section>
  <section><h3>O que entra em cada entrega</h3>${phases.map(([title, what, proof, refs]) => `<details><summary>${title}</summary><p>${what}</p><p><b>Aceite.</b> ${proof}</p><p class="meta">${refs}</p></details>`).join('')}</section>
  <section><h3>Regras para a implementação</h3><div class="decgrid"><article><b>Quais datas entram?</b><p>São Paulo. Mês começa no dia 1. Sete dias inclui hoje. Para comparar, usar até ontem e igual número de dias fechados da base. Hoje apresenta ontem como dia completo.</p></article><article><b>Quem pode ver?</b><p>O servidor aplica a permissão a totais, filas, eventos e destinos. A supervisão de outras linhas pessoais requer a conta designada pela ADR 095. O pedido tem autorização comercial própria.</p></article><article><b>Como tratar ausência?</b><p>Venda zero aparece como R$ 0 e ticket sem base como traço. Falha de consulta aparece com nova tentativa. A reconexão identifica o horário da leitura anterior.</p></article><article><b>O que depende de homologação?</b><p>Latência real, permissões no servidor, reconciliação após lacuna e comparação com o checkpoint dependem de integração e testes. Os eventos deste arquivo avançam pelo simulador.</p></article></div></section>
  <section><h3>Parecer sobre a proposta</h3><p>As escolhas ficam nesta sessão. Baixe o texto para guardar ou compartilhar seu parecer.</p>${decisions.map((d, i) => `<label for="pick${i}">${d}</label><select id="pick${i}" data-choice="${i}">${['Em revisão', 'Aceitar', 'Pedir ajuste', 'Adiar'].map((c) => `<option ${choices[i] === c ? 'selected' : ''}>${c}</option>`).join('')}</select>`).join('')}<label for="comment">Ajustes e observações</label><textarea id="comment" rows="3"></textarea>${btn('Baixar parecer em texto', 'download', '1', 'button mainbtn')}</section>`;

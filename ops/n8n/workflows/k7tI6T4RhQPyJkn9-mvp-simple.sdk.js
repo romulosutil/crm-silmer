@@ -11,9 +11,9 @@ import {
 } from '@n8n/workflow-sdk';
 
 const WORKFLOW_KEY = 'k7tI6T4RhQPyJkn9';
-// VND-L06: mvp-simple-24 (>= 15, so the CRM requires the subject-v1 contract;
+// VND-L07: mvp-simple-25 (>= 15, so the CRM requires the subject-v1 contract;
 // modules/n8n-integration/src/service.js requiresSubjectContract).
-const WORKFLOW_VERSION = 'mvp-simple-24';
+const WORKFLOW_VERSION = 'mvp-simple-25';
 
 // The agent's model (ADR 021). The turn telemetry (AGENTE-OBS-01) reports it.
 const MODEL_ID = 'gpt-5.6-luna';
@@ -668,8 +668,11 @@ const PRIORITY_RULE = String.raw`const minimumQuestion = (text) => {
   if (/\bminimo de (detalhes|informacoes|dados)\b/.test(text)) return false;
   return /\bqual (?:e |eh )?(?:o )?minimo\b|\b(?:quantidade|pedido|lote) minim[oa]\b|\bminimo (?:de (?:producao|confeccao|pecas|unidades)|que (?:voces|vcs)|quantas? (?:pecas|unidades))\b|\ba partir de quantas? (?:pecas|unidades|camisas|camisetas)\b/.test(text);
 };
-const quantityOptions = (text) => {
+const quantityOptions = (text, knownProduct) => {
   if (!/\borc(?:amento\w*|ar)\b|\bprecos?\b|\bvalor(?:es)?\b|\bquanto\b/.test(text)) return null;
+  // A customer quoting a known item can omit the unit on both quantities.
+  const bare = knownProduct && /\borcamento (?:para|pra) ([1-9]\d{0,4}) (?:e|ou) ([1-9]\d{0,4})(?: por favor)?[.!?]*$/.exec(text);
+  if (bare && bare[1] !== bare[2]) return bare[1] + ' e ' + bare[2] + ' peças';
   const match = /\b(\d{1,5})\s*(pecas?|unidades?|camisas?|camisetas?)?\s+(?:e|ou)\s+(?:tambem\s+)?(?:(?:com|de)\s+)?(\d{1,5})\s*(pecas?|unidades?|camisas?|camisetas?)\b/.exec(text);
   if (!match || match[1] === match[3]) return null;
   if (match[2] && match[2].replace(/s$/, '') !== match[4].replace(/s$/, '')) return null;
@@ -758,6 +761,8 @@ const PRIORITY_PROMPT = `\n\nTRIAGEM PRIORITÁRIA (VND-L05/L06, prevalece sobre 
 - Orçamentos com 12 unidades e com 24 unidades são alternativas, sem soma ou quantidade final. Quantidades por produtos diferentes não são alternativas do mesmo produto; encaminhe sem misturar. Correção explícita de quantidade única continua válida.
 - Layout ou arte já feito/combinado com vocês ou com a equipe exige retomar com o vendedor, sem reiniciar a ficha e sem assumir aprovação. Arte feita pelo cliente em casa/editor e simples recorrência não provam combinação anterior com a Silmer.
 - Mensagens de vendedores no histórico são contexto de atendimento: não transforme preços, mínimos, prazos ou exceções de uma conversa em regras gerais ou promessas. Mantenha abertura e confirmação humanas, handoff definitivo e as reservas existentes.
+- Quando o cliente cobrar um orçamento ou retorno da equipe que continua pendente, reconheça a espera e destaque no resumo a pergunta que o vendedor precisa responder. Não reinicie a ficha nem prometa tempo de resposta. Um agradecimento, sinais de interrogação isolados ou o cliente esperando a própria equipe não bastam para inferir uma reclamação.
+- Se pedirem preço e tempo de produção juntos, reconheça os dois. Uma pergunta sobre mudar cor, tecido, nome ou estampa pelo mesmo valor é uma simulação. O vendedor reconfirma o orçamento e a ficha conserva a escolha anterior.
 - reasoning deve destacar a dúvida que bloqueia a decisão e os campos faltantes; percentual preenchido não confirma viabilidade comercial. Não prometa atendimento imediato, estoque, preço ou prazo.\n`;
 
 // How the context node names each point to the model.
@@ -2346,7 +2351,16 @@ const rawText = String(context.current_text ?? '').normalize('NFC');
 const deliveryAlternatives = /\\b(?:hoje\\s+(?:ou|e)\\s+amanha|amanha\\s+(?:ou|e)\\s+hoje)\\b/.test(currentText)
   && /\\b(?:preciso|precisamos|quero|entrega|retirada|retirar|pegar|receber)\\b/.test(currentText);
 const pendingDeliveryAlternatives = previous.needed_by === 'hoje ou amanhã (a confirmar)';
-const alternatives = quantityOptions(currentText);
+const alternatives = quantityOptions(currentText, previous.product_type);
+const waitingForQuote = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite)[,!. ]+)?(?:ainda (?:(?:estou |estamos )?(?:aguardando|esperando)|aguardo|aguardamos) (?:voces (?:me |nos )?(?:enviarem|mandarem) )?(?:o |um |meu |seu |nosso )?(?:orcamento|retorno de voces|retorno sobre o orcamento)|(?:ainda )?nao (?:recebi|recebemos) (?:o |meu |nosso )orcamento)[.!? ]*$/.test(currentText);
+const quoteVariant = /\\b(?:se (?:eu |a gente )?(?:mudar|trocar|alterar)|mudando|trocando|alterando)\\b/.test(currentText)
+  && /\\b(?:cor|cores|tecido|nome|estampa)\\b/.test(currentText)
+  && /\\b(?:mesmo (?:valor|preco)|(?:muda|altera) o (?:valor|preco)|(?:fica|sai|ficaria) mais (?:car[oa]|barat[oa]))\\b/.test(currentText);
+const asksProductionTime = /\\b(?:tempo (?:de|para|pra) (?:entrega|producao|produzir|ficar pront[oa])|prazo de (?:entrega|producao)|quantos dias (?:leva|demora)|(?:preco|valor|custo)(?: da unidade| unitario)? e (?:o |qual (?:o )?)?prazo|(?:qual (?:o )?)?prazo e (?:o )?(?:preco|valor))\\b/.test(currentText);
+if (quoteVariant) {
+  // A what-if quote supplies no replacement choices or target for an order.
+  for (const key of Object.keys(patch)) delete patch[key];
+}
 if (alternatives) {
   // Alternatives are not a final quantity and cannot overwrite an earlier choice.
   delete patch.quantity;
@@ -2571,6 +2585,9 @@ const priceAskedBefore = /(^|_)price_/.test(String(previous.briefing_status ?? '
 const priceRepeat = asksPrice && priceAskedBefore;
 const priceDeferral = asksPrice && !priceAskedBefore;
 const priceAsked = asksPrice || priceAskedBefore;
+if (asksPrice && asksProductionTime) {
+  patch.notes = [patch.notes ?? previous.notes, 'Cliente pediu valor e prazo; vendedor deve confirmar ambos.'].filter(Boolean).join(' | ');
+}
 // VND-L02 item 8: partnership, resale, invoice or shipping to the end customer go to a seller at once.
 const partnershipAsked = partnership(currentText);
 
@@ -2705,13 +2722,13 @@ const customerWithdrawal = /(?:^|[.!?]\\s*)(?:eu\\s+)?desisti(?:\\s*(?:[.!?]|$)|
 // without projecting an unscoped color, quantity, fabric or kit onto an order.
 const mixedProducts = multipleProducts({ ...previous, ...patch })
   || multipleProducts({ product_type: rawText }, true);
-const unsafeTarget = context.target_ambiguous === true || simultaneousOrders || mixedProducts || excludedProduct || customerWithdrawal;
+const unsafeTarget = context.target_ambiguous === true || simultaneousOrders || mixedProducts || excludedProduct || customerWithdrawal || quoteVariant;
 // VND-L02 items 4 and 1: an image turn and the first price question get a reply the workflow writes,
 // so the model's own wording (a price included) never reaches the customer there.
 const deterministicReply = imageTurn || priceDeferral;
 // Do not generalize a seller's exception into a catalog or minimum. The person decides.
 const artQuestion = /\\b(?:arte|logo|desenho)\\b/.test(currentText) && !/\\b(?:pecas?|camisas?|camisetas?|tecidos?|modelos?|minimo|referencia)\\b/.test(currentText);
-const commercialQuestion = unresolvedDeliveryAlternatives || Boolean(alternatives) || minimumQuestion(currentText)
+const commercialQuestion = quoteVariant || unresolvedDeliveryAlternatives || Boolean(alternatives) || minimumQuestion(currentText)
   || (!reference && !artQuestion && asksCapability(currentText));
 // VND-L05: an unambiguous desired delivery today/tomorrow is urgent even with missing points.
 const daysToDeadline = deadlineDays(briefing.needed_by, context.message_at ?? clockAt);
@@ -2722,6 +2739,7 @@ const trigger = customerWithdrawal ? 'customer_withdrawal' : excludedProduct ? '
   : personTrigger ?? (externalContext ? 'external_context' : null)
   ?? (foreignLanguage ? 'foreign_language' : null) ?? modelEscalation
   ?? (deadlineUrgent && !dateConfirmation ? 'deadline_urgency' : null)
+  ?? (waitingForQuote ? 'complaint' : null)
   ?? (commercialQuestion ? 'commercial_question' : null)
   ?? (attemptsTrigger ? 'two_attempts' : null)
   ?? (ignoredTrigger ? 'ignored_twice' : null)
@@ -2749,7 +2767,7 @@ const notices = {
   customer_withdrawal: 'Entendi. Vou avisar nossa equipe que você não quer continuar com este pedido.',
   // VND-L03: no "Ótima pergunta!", which the prompt forbids (ADR 051 item 8).
   price: 'Os valores são passados pelos nossos vendedores, que montam o orçamento certinho para você. Um deles vai continuar o seu atendimento aqui mesmo.',
-  commercial_question: 'Vou encaminhar suas dúvidas para um dos nossos vendedores confirmar as possibilidades e continuar o atendimento aqui mesmo.',
+  commercial_question: quoteVariant ? 'Vou pedir ao vendedor que confira se essa alteração muda o valor da sua cotação.' : 'Vou encaminhar suas dúvidas para um dos nossos vendedores confirmar as possibilidades e continuar o atendimento aqui mesmo.',
   human_requested: 'Claro! Um dos nossos vendedores vai continuar o seu atendimento aqui mesmo.',
   seller_requested: 'Claro! Vou avisar a nossa equipe que você quer falar com ' + requestedSeller + ', e o seu atendimento continua aqui mesmo.',
   unknown_person_repeated: 'Entendi! Um dos nossos vendedores vai continuar o seu atendimento aqui mesmo.',
@@ -2892,7 +2910,7 @@ if (!handoffRequired && deterministicReply && nextQuestion) {
     imageTurn ? IMAGE_ACK : '',
     !priceDeferral && confirmsLater ? CAPABILITY_ACK : '',
     // Item 1: the first price question asks the next point so the seller can quote.
-    priceDeferral ? PRICE_DEFERRAL + lowerFirst(nextQuestion) : nextQuestion
+    priceDeferral ? (asksProductionTime ? 'O vendedor confirma o valor e o prazo que você pediu. ' + nextQuestion : PRICE_DEFERRAL + lowerFirst(nextQuestion)) : nextQuestion
   ].filter(Boolean).join(' ');
 } else if (!handoffRequired && deterministicReply && unsafeReply) {
   // No next question to ask: the model's wording with a price never goes out.
@@ -2943,6 +2961,9 @@ if (commercialQuestion && topics.length === 0) topics.push(rawText.slice(0, 240)
 if (trigger === 'partnership') hints.push('Possível parceria/revenda');
 const summary = [
   'Motivo: ' + (labels[trigger] ?? 'sem transferência') + '.',
+  waitingForQuote ? 'Cliente cobra retorno: ' + rawText.slice(0, 200) + '. Retomar a pendência sem reiniciar a ficha.' : '',
+  quoteVariant ? 'Reconfirmar o valor antes de alterar o pedido. Simulação do cliente: ' + rawText.slice(0, 200) : '',
+  asksPrice && asksProductionTime ? 'Responder valor e prazo solicitados juntos.' : '',
   topics.length ? 'Perguntas do cliente: ' + topics.map((topic) => '• ' + topic).join(' ') : '',
   mixedProducts ? 'Produtos sem alvo individual: ' + [previous.product_type, previous.product_model, rawText].filter(Boolean).join(' | ').slice(0, 260) + '; vendedor deve separar os itens antes de definir seus campos.' : '',
   priorTeamArtwork(currentText) ? 'Retomar layout/arte já tratado com a equipe; não iniciar outra coleta nem presumir aprovação.' : '',
@@ -2964,7 +2985,7 @@ return { json: {
   ...context,
   // 28/10/2026, item 9: a transfer outside the opening hours says when a seller answers.
   reply_text: String(handoffRequired
-    ? withAfterHours(noticeForChannel(context.channel, notices[trigger]), context.message_at)
+    ? withAfterHours(noticeForChannel(context.channel, waitingForQuote && trigger === 'complaint' ? 'Entendi que você está aguardando. Vou encaminhar essa pendência ao vendedor para ele retomar por aqui.' : notices[trigger]), context.message_at)
     : replyText).slice(0, 4096),
   briefing_patch: unsafeTarget || (!humanOrderConfirmation && !legacyContext && !context.target_subject_id && !openOrder) ? null : patch,
   handoff_ready: fichaReady,

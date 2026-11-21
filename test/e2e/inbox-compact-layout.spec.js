@@ -306,7 +306,7 @@ for (const [appearance, width, height] of /** @type {const} */ ([
   }, testInfo) => {
     await page.setViewportSize({ width, height });
     await page.addInitScript(
-      (theme) => localStorage.setItem('silmer-theme', theme),
+      (theme) => globalThis.localStorage.setItem('silmer-theme', theme),
       appearance,
     );
     const writes =
@@ -404,7 +404,9 @@ for (const [appearance, width, height] of /** @type {const} */ ([
     await expect(reply).toBeInViewport({ ratio: 1 });
     await expect(reply).toBeFocused();
     expect(
-      await page.evaluate(() => document.documentElement.scrollWidth),
+      await page.evaluate(
+        () => globalThis.document.documentElement.scrollWidth,
+      ),
     ).toBeLessThanOrEqual(width);
     if (await row.isVisible()) {
       expect(

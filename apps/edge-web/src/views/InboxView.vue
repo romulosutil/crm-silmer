@@ -11,6 +11,7 @@ import {
 import { useRoute, useRouter } from 'vue-router';
 import { brand } from '../brand/index.js';
 import AppIcon from '../components/AppIcon.vue';
+import ContactMonogram from '../components/ContactMonogram.vue';
 import AppHint from '../components/AppHint.vue';
 import FilterChip from '../components/FilterChip.vue';
 import FilterSheet from '../components/FilterSheet.vue';
@@ -1659,17 +1660,6 @@ function messageRoleLabel(message) {
   return messageFrom(message) === 'agente' ? 'IA' : '';
 }
 
-/** @param {{origin?: unknown, authorKind?: unknown, direction?: unknown}} message */
-function messageInitials(message) {
-  return String(messageAuthorLabel(message))
-    .trim()
-    .split(/\s+/u)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join('')
-    .toLocaleUpperCase('pt-BR');
-}
-
 /**
  * INBOX-RD-03: the messages that open a group show the avatar and the name
  * (see message-groups.js for when a group breaks).
@@ -1677,6 +1667,25 @@ function messageInitials(message) {
 const messageGroupStarts = computed(() =>
   groupStarts(detail.value?.messages ?? []),
 );
+
+// Follow the same local calendar as the per-message timestamps.
+const threadDays = computed(() => {
+  const headings = new Map();
+  let previous = '';
+  for (const message of detail.value?.messages ?? []) {
+    const date = new Date(message.occurredAt ?? '');
+    if (Number.isNaN(date.getTime())) continue;
+    const day = date.toDateString();
+    if (day !== previous) {
+      headings.set(
+        message.id,
+        day === now.value.toDateString() ? 'Hoje' : LIST_DATE.format(date),
+      );
+      previous = day;
+    }
+  }
+  return headings;
+});
 
 /**
  * What a screen reader hears before each message, grouped or not: author
@@ -3173,63 +3182,65 @@ onBeforeUnmount(() => {
     :data-view="workspaceView"
     :data-expanded="conversationExpanded || undefined"
   >
-    <h1 ref="heading" class="inbox-title" tabindex="-1">Caixa de Entrada</h1>
-    <div class="inbox-toolbar">
-      <!-- RFC 052 (INBOX-VEZ-02): whose turn it is, one tab per conversation.
+    <div class="inbox-viewbar">
+      <h1 ref="heading" class="inbox-title" tabindex="-1">Caixa de Entrada</h1>
+      <div class="inbox-toolbar">
+        <!-- RFC 052 (INBOX-VEZ-02): whose turn it is, one tab per conversation.
            Selection stays neutral (RFC 022); the count names the tab. -->
-      <InboxTabs
-        v-if="showBuckets"
-        :bucket="bucket"
-        :counts="counts"
-        @select="selectBucket"
-      />
-
-      <!-- D6: on a phone the button leaves the toolbar and sits on the search
-           row (the slot below); the same element, moved by the Teleport. -->
-      <Teleport to="#inbox-filters-slot" defer :disabled="!isPhone">
-        <button
-          ref="filtersButton"
-          type="button"
-          class="soft inbox-filters-button"
-          aria-haspopup="dialog"
-          aria-label="Filtros"
-          title="Filtrar conversas"
-          :aria-expanded="filtersOpen"
-          :data-active="activeFilters.length ? 'true' : undefined"
-          @click="openFilters"
-        >
-          Filtros
-          <span v-if="activeFilters.length" class="inbox-tab-count"
-            >{{ activeFilters.length
-            }}<span class="sr-only">
-              {{ activeFilters.length === 1 ? 'ativo' : 'ativos' }}</span
-            ></span
-          >
-        </button>
-      </Teleport>
-
-      <div
-        v-if="activeFilters.length"
-        class="inbox-active-filter"
-        role="group"
-        aria-labelledby="inbox-active-filter-label"
-      >
-        <span id="inbox-active-filter-label">Filtro:</span>
-        <FilterChip
-          v-for="filter in activeFilters"
-          :key="filter.key"
-          :label="filter.label"
-          :remove-label="`Remover filtro ${filter.label}`"
-          @remove="removeFilter(filter.key)"
+        <InboxTabs
+          v-if="showBuckets"
+          :bucket="bucket"
+          :counts="counts"
+          @select="selectBucket"
         />
-        <button
-          v-if="activeFilters.length > 1"
-          type="button"
-          class="quiet"
-          @click="clearFilters"
+
+        <!-- D6: on a phone the button leaves the toolbar and sits on the search
+           row (the slot below); the same element, moved by the Teleport. -->
+        <Teleport to="#inbox-filters-slot" defer :disabled="!isPhone">
+          <button
+            ref="filtersButton"
+            type="button"
+            class="inbox-filters-button"
+            aria-haspopup="dialog"
+            aria-label="Filtros"
+            title="Filtrar conversas"
+            :aria-expanded="filtersOpen"
+            :data-active="activeFilters.length ? 'true' : undefined"
+            @click="openFilters"
+          >
+            <AppIcon name="filters" />Filtros
+            <span v-if="activeFilters.length" class="inbox-tab-count"
+              >{{ activeFilters.length
+              }}<span class="sr-only">
+                {{ activeFilters.length === 1 ? 'ativo' : 'ativos' }}</span
+              ></span
+            >
+          </button>
+        </Teleport>
+
+        <div
+          v-if="activeFilters.length"
+          class="inbox-active-filter"
+          role="group"
+          aria-labelledby="inbox-active-filter-label"
         >
-          Limpar filtros
-        </button>
+          <span id="inbox-active-filter-label">Filtro:</span>
+          <FilterChip
+            v-for="filter in activeFilters"
+            :key="filter.key"
+            :label="filter.label"
+            :remove-label="`Remover filtro ${filter.label}`"
+            @remove="removeFilter(filter.key)"
+          />
+          <button
+            v-if="activeFilters.length > 1"
+            type="button"
+            class="quiet"
+            @click="clearFilters"
+          >
+            Limpar filtros
+          </button>
+        </div>
       </div>
     </div>
     <Teleport to="#inbox-view-tools" defer>
@@ -3378,25 +3389,27 @@ onBeforeUnmount(() => {
                 ref="searchInput"
                 v-model="query"
                 type="search"
-                placeholder="Buscar contato, telefone ou mensagem"
+                placeholder="Buscar conversa"
                 aria-describedby="inbox-search-help"
               />
               <button
                 v-if="query"
                 type="button"
-                class="quiet"
+                class="quiet inbox-clear-search"
                 aria-label="Limpar busca"
+                title="Limpar busca"
                 @click="clearSearch"
               >
-                Limpar
+                <AppIcon name="close" />
               </button>
             </div>
             <span id="inbox-filters-slot" class="inbox-filters-slot"></span>
           </div>
 
           <AppHint id="inbox-search-help" class="inbox-search-hint"
-            >Busca apenas nas conversas carregadas, por contato, telefone ou
-            última mensagem.</AppHint
+            >Busca nas conversas carregadas.<span class="sr-only">
+              Por contato, telefone ou última mensagem.</span
+            ></AppHint
           >
         </div>
 
@@ -3414,8 +3427,10 @@ onBeforeUnmount(() => {
                 ? 'Lista indisponível'
                 : visibleConversationLabel
           }}
-          <span v-if="!loading && showBuckets && !listUnsupported">
-            · {{ activeBucket.order }}</span
+          <span
+            v-if="!loading && showBuckets && !listUnsupported"
+            class="inbox-list-order"
+            >{{ activeBucket.order }}</span
           >
         </p>
         <!-- INBOX-RD-02: marks out of sight. Not a live region: the shell
@@ -3514,6 +3529,10 @@ onBeforeUnmount(() => {
             <RouterLink class="conv-back" to="/inbox" title="Conversas">
               <AppIcon name="back" /><span class="sr-only">Conversas</span>
             </RouterLink>
+            <ContactMonogram
+              class="conv-monogram"
+              :name="active.contact.label"
+            />
             <div class="conv-title">
               <div class="conv-title-row">
                 <h2
@@ -3670,7 +3689,7 @@ onBeforeUnmount(() => {
                 @click="toggleContext()"
               >
                 <AppIcon name="panel" />
-                <span class="sr-only">Detalhes</span>
+                <span class="conv-details-label">Detalhes</span>
               </button>
             </div>
           </header>
@@ -3782,13 +3801,23 @@ onBeforeUnmount(() => {
               <!-- INBOX-RD-03: the author once per group; each message still
                    says who and when to a screen reader. -->
               <div
+                v-if="threadDays.has(message.id)"
+                class="thread-day"
+                aria-hidden="true"
+              >
+                <time :datetime="message.occurredAt">{{
+                  threadDays.get(message.id)
+                }}</time>
+              </div>
+              <div
                 v-if="messageGroupStarts.has(message.id)"
                 class="msg-head"
                 aria-hidden="true"
               >
-                <span class="message-avatar">{{
-                  messageInitials(message)
-                }}</span>
+                <ContactMonogram
+                  class="message-avatar"
+                  :name="messageAuthorLabel(message)"
+                />
                 <strong class="msg-author">{{
                   messageAuthorLabel(message)
                 }}</strong>
@@ -4211,6 +4240,7 @@ onBeforeUnmount(() => {
           Carregando conversa…
         </div>
         <div v-else class="empty-list inbox-empty" aria-live="polite">
+          <AppIcon name="inbox" />
           <h2 id="inbox-empty-title">Selecione uma conversa</h2>
           <p>O histórico, a resposta e as ações aparecerão aqui.</p>
         </div>

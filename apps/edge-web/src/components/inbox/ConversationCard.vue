@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import AppIcon from '../AppIcon.vue';
+import ContactMonogram from '../ContactMonogram.vue';
 import { CHANNEL_LABELS, messageText } from '../../lib/format.js';
 import { badgeIcon, previewAuthor } from '../../lib/inbox-turn.js';
 
@@ -51,6 +52,7 @@ const unread = computed(() =>
     @click="emit('open', conversation.id)"
   >
     <span v-if="unread" class="sr-only">Mensagem nova. </span>
+    <ContactMonogram class="conv-avatar" :name="conversation.contact.label" />
     <span class="conv-top">
       <span class="conv-name" :title="conversation.contact.label">{{
         conversation.contact.label

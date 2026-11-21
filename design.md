@@ -327,6 +327,10 @@ botão, campo, selo ou painel (§15).
 - **Não usar:** diálogo sobre diálogo (§15), caixa com borda para cada grupo,
   botão de texto para fechar no cabeçalho, duas primárias no rodapé.
 
+#### Identidade compacta do contato
+
+`ContactMonogram` acompanha um nome já visível na fila, no cabeçalho e nos grupos de mensagens. Usa até duas iniciais e apresenta o ícone de contato quando o nome contém apenas um número. O nome completo fica disponível no texto e o monograma fica fora da leitura assistiva.
+
 #### Grupo de mensagens
 
 - **Propósito:** ler o histórico sem repetir quem falou em cada mensagem.
@@ -1313,6 +1317,16 @@ dela continua no modelo anterior.
 - Um segundo modelo na mesma tela migrada.
 
 ## 21. Caixa de Entrada refinada — INBOX-RD (11/11/2026)
+
+### Fila e leitura da conversa · INBOX-UX-08 (20/11/2026)
+
+O vendedor decide qual conversa abrir pela identidade, pelo tempo de espera e pela última mensagem. Na fila, a primeira linha reúne nome e tempo, a prévia ocupa até duas linhas e os estados vêm abaixo. As iniciais cedem espaço ao nome quando a coluna fica estreita. A indicação de espera vencida usa texto e cor semântica. A busca explicita que alcança as conversas carregadas.
+
+No histórico, o cabeçalho identifica o contato e dá acesso aos detalhes. Um separador indica a mudança de dia. Mensagens recebidas usam `--inbox-received-surface`, e mensagens do vendedor usam `--inbox-sent-surface` sobre `--inbox-history-surface`. Esses tokens seguem os temas claro e escuro. Autor, alinhamento e horário permitem acompanhar quem falou. O resumo mostra a próxima resposta comercial junto da conversa e reserva a cor de atenção aos avisos.
+
+A navegação lateral segue o shell compartilhado com Pedidos. No celular, a lista dá lugar à conversa ao abrir um contato. Voltar recupera a fila. O campo de resposta permanece no rodapé e o histórico tem rolagem própria.
+
+Referências de composição para o painel de fila e a área de conversa. [Closr, Filllo](https://dribbble.com/shots/27322893-CRM-Unified-Inbox-UI-Email-Management-for-Sales-Teams-Closr) e [CRM Dashboard, Pickolab Studio](https://dribbble.com/shots/27081580-CRM-Dashboard-Inbox-Page).
 
 Decisão do PO em 11/11/2026, a partir do protótipo
 `output/prototipos/caixa-de-entrada/` (local, não versionado). Registro:

@@ -144,6 +144,7 @@ onBeforeUnmount(() => controller?.abort());
         :aria-controls="bodyId"
         @click="expanded = !expanded"
       >
+        <AppIcon name="transfer" class="handoff-summary-icon" />
         <span :class="{ 'handoff-pending-reply': pendingReply }">{{
           title
         }}</span>
@@ -230,7 +231,7 @@ onBeforeUnmount(() => controller?.abort());
   border: 0;
   border-block-end: 1px solid var(--color-border-subtle);
   border-radius: 0;
-  background: var(--color-surface-raised);
+  background: var(--color-surface);
 }
 .handoff-summary-title {
   flex: none;
@@ -239,7 +240,15 @@ onBeforeUnmount(() => controller?.abort());
   min-block-size: var(--target-min);
   padding: var(--space-1) var(--space-4);
   font-weight: 500;
-  color: var(--color-link);
+  color: var(--color-text);
+}
+.handoff-summary-title .handoff-summary-icon {
+  flex: none;
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+  margin: 0;
+  color: var(--color-text-muted);
+  transform: none;
 }
 .handoff-summary-title button span {
   min-inline-size: 0;
@@ -267,9 +276,8 @@ onBeforeUnmount(() => controller?.abort());
 }
 .handoff-summary-warning {
   color: var(--status-warning-text);
-  background: var(--status-warning-surface);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
+  padding-inline-start: var(--space-2);
+  border-inline-start: 2px solid var(--status-warning-text);
 }
 .handoff-summary-body {
   flex: 0 1 auto;

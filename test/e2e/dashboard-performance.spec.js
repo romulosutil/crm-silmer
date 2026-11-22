@@ -134,7 +134,7 @@ test('a failed read on the team page stays in its region with retry and a dash',
   ).toBeFocused();
 });
 
-test('período, barras, tabela e memória da pessoa conciliam pelo caminho Vue', async ({
+test('período, barras e memória da pessoa conciliam pelo caminho Vue', async ({
   page,
 }) => {
   await mockPainel(page);
@@ -201,16 +201,15 @@ test('período, barras, tabela e memória da pessoa conciliam pelo caminho Vue',
       .locator('.dashboard-meter > span')
       .evaluate((el) => el.style.inlineSize),
   ).toBe('25%');
-  await team.getByRole('button', { name: 'Tabela', exact: true }).click();
-  await expect(
-    team.getByRole('row', { name: /Atendente Sintética/u }),
-  ).toContainText('8 de 10 ciclos');
+  await expect(team.getByRole('button', { name: 'Tabela' })).toHaveCount(0);
+  await expect(team.getByRole('table')).toHaveCount(0);
   await bar.focus();
   await page.keyboard.press('Enter');
   await expect(
     page.getByRole('heading', { name: 'Desempenho do vendedor' }),
   ).toBeFocused();
   const detail = page.getByRole('region', { name: 'Atendente Sintética' });
+  await expect(detail).toContainText('8 de 10 ciclos');
   await detail.getByText('Como foi calculada a conversão').click();
   await expect(detail).toContainText('2 em observação');
   await expect(detail.getByRole('link', { name: '12-CRM' })).toHaveAttribute(

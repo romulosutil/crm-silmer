@@ -14,6 +14,7 @@ import {
   useRoute,
   useRouter,
 } from 'vue-router';
+import AppIcon from './AppIcon.vue';
 import DashboardCommercialResult from './DashboardCommercialResult.vue';
 import DashboardStoreNotice from './DashboardStoreNotice.vue';
 import DashboardTeamSummary from './DashboardTeamSummary.vue';
@@ -100,6 +101,22 @@ const queueTime = computed(() => {
         timeZone: 'America/Sao_Paulo',
       }).format(stamp)
     : '';
+});
+const oldestWaitLabel = computed(() => {
+  if (!urgency.value) return '';
+  const minutes =
+    queue.data.value?.oldestMinutesByFilter?.[urgency.value.filter];
+  return minutes != null ? minutesLabel(minutes) : '';
+});
+const urgencyState = computed(() => {
+  if (queue.error.value && !urgency.value) return 'error';
+  if (!urgency.value) return 'loading';
+  return urgency.value.filter === 'todas' ? 'calm' : 'urgent';
+});
+const urgencyIcon = computed(() => {
+  if (urgencyState.value === 'calm') return 'check';
+  if (urgencyState.value === 'loading') return 'clock';
+  return 'alert';
 });
 let eventTimer = 0;
 let ageTimer = 0;
@@ -209,66 +226,82 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="panel" class="page dashboard-page commercial-dashboard">
-    <header class="page-heading">
-      <h1 ref="heading" tabindex="-1">Dashboard</h1>
-    </header>
-    <fieldset class="dashboard-options">
-      <legend>Período do resultado comercial</legend>
-      <label v-for="option in PERIODS" :key="option.key"
-        ><input
-          type="radio"
-          name="dashboard-period"
-          :value="option.key"
-          :checked="period === option.key"
-          @change="choosePeriod(option.key)"
-        />{{ option.label }}</label
-      >
-    </fieldset>
-    <section class="next-step" aria-labelledby="dashboard-urgency">
-      <div class="next-step-body">
-        <h2
-          id="dashboard-urgency"
-          ref="urgencyHeading"
-          class="next-step-label"
-          tabindex="-1"
-        >
-          Urgência da fila
-        </h2>
-        <p v-if="urgency" class="next-step-text">{{ urgency.label }}</p>
-        <span v-if="queueTime"
-          >{{
-            ['reconectando', 'indisponível'].includes(connection)
-              ? 'Sem conexão ao vivo · última leitura às'
-              : 'Leitura às'
-          }}
-          {{ queueTime }} (São Paulo)</span
-        >
-        <span
-          v-if="
-            urgency &&
-            queue.data.value?.oldestMinutesByFilter?.[urgency.filter] != null
-          "
-        >
-          · Maior espera:
-          {{
-            minutesLabel(queue.data.value.oldestMinutesByFilter[urgency.filter])
-          }}
-          de expediente</span
-        >
-        <p v-if="queue.error.value">{{ queue.error.value }}</p>
-        <p v-else-if="!urgency">Consultando fila…</p>
+    <header class="page-heading dashboard-manager-head">
+      <div>
+        <h1 ref="heading" tabindex="-1">Dashboard</h1>
+        <p>Resultado comercial e situação da fila.</p>
       </div>
-      <button
-        v-if="queue.error.value"
-        type="button"
-        class="next-step-link"
-        @click="retryUrgency"
-      >
-        Tentar novamente
-      </button>
-      <RouterLink v-if="urgency" class="next-step-link" :to="queueLink"
-        >Abrir fila</RouterLink
-      >
+      <fieldset class="dashboard-options">
+        <legend class="sr-only">Período do resultado comercial</legend>
+        <label v-for="option in PERIODS" :key="option.key"
+          ><input
+            type="radio"
+            name="dashboard-period"
+            :value="option.key"
+            :checked="period === option.key"
+            @change="choosePeriod(option.key)"
+          /><span>{{ option.label }}</span></label
+        >
+      </fieldset>
+    </header>
+    <section
+      class="next-step"
+      aria-labelledby="dashboard-urgency"
+      :data-state="urgencyState"
+    >
+      <div class="next-step-main">
+        <span class="next-step-icon" aria-hidden="true">
+          <AppIcon :name="urgencyIcon" />
+        </span>
+        <div class="next-step-body">
+          <h2
+            id="dashboard-urgency"
+            ref="urgencyHeading"
+            class="next-step-label"
+            tabindex="-1"
+          >
+            Urgência da fila
+          </h2>
+          <p v-if="urgency" class="next-step-text">{{ urgency.label }}</p>
+          <p v-else-if="queue.error.value" class="next-step-text">
+            {{ queue.error.value }}
+          </p>
+          <p v-else class="next-step-text">Consultando fila…</p>
+          <p v-if="queueTime || oldestWaitLabel" class="next-step-meta">
+            <span v-if="queueTime" class="next-step-meta-item">
+              <AppIcon name="clock" />
+              {{
+                ['reconectando', 'indisponível'].includes(connection)
+                  ? 'Sem conexão ao vivo · última leitura às'
+                  : 'Leitura às'
+              }}
+              {{ queueTime }} (São Paulo)
+            </span>
+            <span
+              v-if="oldestWaitLabel"
+              class="next-step-meta-item next-step-meta-wait"
+            >
+              Maior espera: {{ oldestWaitLabel }} de expediente
+            </span>
+          </p>
+          <p v-if="urgency && queue.error.value" class="next-step-error">
+            {{ queue.error.value }}
+          </p>
+        </div>
+      </div>
+      <div class="next-step-actions">
+        <button
+          v-if="queue.error.value"
+          type="button"
+          class="next-step-link"
+          @click="retryUrgency"
+        >
+          Tentar novamente
+        </button>
+        <RouterLink v-if="urgency" class="next-step-link" :to="queueLink"
+          >Abrir fila<AppIcon name="arrow-right"
+        /></RouterLink>
+      </div>
     </section>
     <DashboardCommercialResult :period="period" :revision="revision" />
     <DashboardStoreNotice :notice="notice" />
@@ -280,35 +313,57 @@ onBeforeUnmount(() => {
     </div>
     <DashboardTeamSummary :period="period" :revision="revision" />
     <DashboardYesterday />
-    <RouterLink class="metric-more" to="/dashboard/agente"
-      >Ver {{ performanceTitle().toLocaleLowerCase('pt-BR') }}</RouterLink
-    >
+    <div class="dashboard-agent-footer">
+      <RouterLink class="dashboard-agent-link" to="/dashboard/agente">
+        <span class="dashboard-agent-icon" aria-hidden="true">
+          <AppIcon name="bot" />
+        </span>
+        <span class="dashboard-agent-copy">
+          Ver {{ performanceTitle().toLocaleLowerCase('pt-BR') }}
+        </span>
+        <AppIcon name="chevron" class="dashboard-agent-go" />
+      </RouterLink>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.dashboard-options {
-  display: flex;
+.dashboard-manager-head {
+  align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-1);
-  border: 0;
-  padding: 0;
-  margin: 0 0 var(--space-3);
 }
-.dashboard-options legend {
-  margin-block-end: var(--space-2);
-  color: var(--color-text-muted);
-  font-weight: var(--weight-medium);
+.dashboard-options {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.1875rem;
+  margin: 0;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
 }
 .dashboard-options label {
   position: relative;
   display: inline-flex;
   align-items: center;
-  min-height: var(--target-min);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  justify-content: center;
+  min-block-size: calc(var(--control-height) - 0.375rem);
   padding-inline: var(--space-3);
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: 1.2;
+  white-space: nowrap;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--easing-standard),
+    color var(--duration-fast) var(--easing-standard);
+}
+.dashboard-options label:hover {
+  color: var(--color-text);
 }
 .dashboard-options input {
   position: absolute;
@@ -320,12 +375,32 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 .dashboard-options label:has(:checked) {
-  background: var(--color-emphasis-surface);
-  color: var(--color-emphasis-text);
+  background: var(--color-surface);
+  color: var(--color-text);
   font-weight: var(--weight-semibold);
+  box-shadow: var(--shadow-raised);
 }
 .dashboard-options label:has(:focus-visible) {
-  outline: 2px solid var(--color-focus);
+  outline: var(--focus-ring-width) solid var(--color-focus);
   outline-offset: 2px;
+}
+@media (max-width: 768px) {
+  .dashboard-options {
+    inline-size: 100%;
+  }
+  .dashboard-options label {
+    flex: 1 1 0;
+    min-block-size: var(--target-min);
+  }
+}
+@media (pointer: coarse) {
+  .dashboard-options label {
+    min-block-size: var(--target-min);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-options label {
+    transition: none;
+  }
 }
 </style>

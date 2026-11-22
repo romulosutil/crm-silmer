@@ -36,16 +36,26 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 0.85rem;
-  margin-block-end: 1rem;
-  padding: 0.75rem 1rem;
+  gap: var(--space-2) var(--space-3);
+  margin-block-end: var(--space-4);
+  padding: var(--space-3) var(--space-4);
   color: var(--status-warning-text);
   font-size: var(--text-sm);
   text-decoration: none;
   background: var(--status-warning-surface);
-  border: 1px solid var(--status-warning-text);
-  border-inline-start-width: 0.25rem;
-  border-radius: var(--radius-md);
+  border: 1px solid
+    color-mix(in srgb, var(--status-warning-text) 32%, transparent);
+  border-inline-start: 0.25rem solid var(--status-warning-text);
+  border-radius: var(--radius-lg);
+  transition: background-color var(--duration-fast) var(--easing-standard);
+}
+
+.store-notice:hover {
+  background: color-mix(
+    in srgb,
+    var(--status-warning-text) 8%,
+    var(--status-warning-surface)
+  );
 }
 
 .store-notice:hover .store-notice-action {

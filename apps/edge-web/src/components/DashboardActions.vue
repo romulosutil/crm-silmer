@@ -548,9 +548,18 @@ onBeforeUnmount(() => {
                   }}
                 </p>
               </div>
-              <span v-if="order" class="dashboard-action-status">{{
-                order.status === 'confirmado' ? 'Confirmado' : 'Pendente'
-              }}</span>
+              <span
+                v-if="order"
+                class="badge dashboard-action-status"
+                :data-tone="
+                  order.status === 'confirmado' ? 'success' : 'warning'
+                "
+                ><AppIcon
+                  :name="order.status === 'confirmado' ? 'check' : 'alert'"
+                />{{
+                  order.status === 'confirmado' ? 'Confirmado' : 'Pendente'
+                }}</span
+              >
             </div>
             <div
               v-if="commandError"

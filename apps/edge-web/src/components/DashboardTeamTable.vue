@@ -183,9 +183,15 @@ const allRows = computed(() => [
               ><span class="dashboard-person-name" :title="entry.row.name">{{
                 entry.row.name
               }}</span></slot
-            ><span v-if="entry.row.note" class="dashboard-cell-note">{{
-              entry.row.note
-            }}</span>
+            ><span
+              v-if="entry.row.note"
+              :class="
+                entry.kind === 'person'
+                  ? 'badge dashboard-row-badge'
+                  : 'dashboard-cell-note'
+              "
+              >{{ entry.row.note }}</span
+            >
           </th>
           <td
             v-for="column in columns"

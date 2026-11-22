@@ -140,7 +140,7 @@ test('the queue and detail fit phone, tablet and notebook without horizontal scr
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test('PNL-05: série, controles e tabela cabem a 320, 390 e 1366 px no tema escuro', async ({
+test('PNL-05: série e controles cabem a 320, 390 e 1366 px no tema escuro', async ({
   page,
 }) => {
   await mockPainel(page);
@@ -162,8 +162,8 @@ test('PNL-05: série, controles e tabela cabem a 320, 390 e 1366 px no tema escu
     ).toBeLessThanOrEqual(width);
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   }
-  await daily.getByRole('button', { name: 'Tabela', exact: true }).click();
-  await expect(daily.getByRole('table')).toBeVisible();
+  await expect(daily.getByRole('button', { name: 'Tabela' })).toHaveCount(0);
+  await expect(daily.getByRole('table')).toHaveCount(0);
 });
 
 test('PERF-05/MET-04: the team page reconciles sales and switches views by keyboard', async ({
@@ -306,15 +306,13 @@ test('a série e os dois intervalos abrem listas que explicam os valores exibido
     'href',
     '/pedidos?status=confirmado&de=2026-10-03&ate=2026-10-08',
   );
-  await comparison
-    .getByRole('button', { name: 'Tabela', exact: true })
-    .press('Enter');
-  const sold = comparison.getByRole('row', { name: /^Vendido/u });
-  await expect(sold.getByRole('cell').first()).toHaveText('R$ 500,00');
-  await expect(sold.getByRole('cell').nth(1)).toHaveText('R$ 0,00');
+  await expect(comparison.getByRole('button', { name: 'Tabela' })).toHaveCount(
+    0,
+  );
+  await expect(comparison.getByRole('table')).toHaveCount(0);
+  await expect(comparison).toContainText('R$ 500,00');
+  await expect(comparison).toContainText('R$ 0,00');
   await page.getByRole('radio', { name: 'Hoje', exact: true }).check();
   await expect(comparison).toContainText('Hoje, parcial');
-  await expect(
-    comparison.getByRole('columnheader', { name: 'Diferença' }),
-  ).toHaveCount(0);
+  await expect(comparison).not.toContainText('Diferença');
 });

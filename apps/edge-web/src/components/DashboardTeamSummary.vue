@@ -1,7 +1,8 @@
 <script setup>
 import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
-import DashboardTeamTable from './DashboardTeamTable.vue';
+import AppIcon from './AppIcon.vue';
+import ContactMonogram from './ContactMonogram.vue';
 import { useLatestRead } from '../lib/dashboard-read.js';
 import { PERIODS, shortDay } from '../lib/dashboard-format.js';
 import { reasonBreakdown } from '../lib/dashboard-metrics.js';
@@ -15,7 +16,6 @@ const props = defineProps({
 const liveEvent = inject('liveEvent', ref(null));
 const heading = ref(null);
 const metric = ref('sold');
-const mode = ref('grafico');
 const metrics = [
   { key: 'sold', label: 'Vendido' },
   { key: 'orders', label: 'Pedidos' },
@@ -23,13 +23,10 @@ const metrics = [
   { key: 'conversion', label: 'Conversão' },
   { key: 'onTime', label: 'Resposta no prazo' },
 ];
-const columns = [
+const detailFields = [
   ...metrics,
   { key: 'ticket', label: 'Ticket médio' },
   { key: 'firstResponse', label: '1ª resposta' },
-].map((column) => ({ ...column, sortable: true }));
-const detailFields = [
-  ...columns,
   { key: 'assumed', label: 'Assumiu' },
   { key: 'closed', label: 'Encerrou' },
   { key: 'claim', label: 'Tempo para assumir' },
@@ -177,12 +174,13 @@ onBeforeUnmount(() => clearTimeout(timer));
           ><template v-if="selected?.note"> · {{ selected.note }}</template>
         </p>
       </div>
-      <RouterLink
-        v-if="!sellerId"
-        class="dashboard-panel-link"
-        :to="{ path: '/dashboard/equipe', query: { periodo: period } }"
-        >Ver desempenho da equipe</RouterLink
-      >
+      <div v-if="!sellerId" class="team-head-actions">
+        <RouterLink
+          class="button-link quiet-link team-full-link"
+          :to="{ path: '/dashboard/equipe', query: { periodo: period } }"
+          >Ver desempenho da equipe<AppIcon name="chevron"
+        /></RouterLink>
+      </div>
     </div>
     <template v-for="region in activeReads" :key="region.path"
       ><div v-if="region.read.error.value" class="audit-note" role="alert">
@@ -195,20 +193,26 @@ onBeforeUnmount(() => clearTimeout(timer));
     <p v-if="loading && !ready" role="status">Consultando a equipe…</p>
     <template v-if="sellerId && selected">
       <dl class="seller-detail">
-        <div v-for="field in detailFields" :key="field.key">
+        <div
+          v-for="field in detailFields"
+          :key="field.key"
+          class="seller-detail-tile"
+        >
           <dt>{{ field.label }}</dt>
           <dd>
-            {{ selected.cells[field.key]?.text }}
-            <small>{{ selected.cells[field.key]?.note }}</small>
+            <strong>{{ selected.cells[field.key]?.text }}</strong>
+            <small v-if="selected.cells[field.key]?.note">{{
+              selected.cells[field.key]?.note
+            }}</small>
           </dd>
         </div>
       </dl>
       <RouterLink
         v-if="sources[0]"
-        class="dashboard-panel-link"
+        class="button-link seller-orders-link"
         :to="ordersLink(sellerId)"
-        >Conferir pedidos de {{ selected.name }}</RouterLink
-      >
+        >Conferir pedidos de {{ selected.name }}<AppIcon name="chevron"
+      /></RouterLink>
       <details v-if="sources[2]">
         <summary>Como foi calculada a conversão</summary>
         <p>
@@ -256,7 +260,7 @@ onBeforeUnmount(() => clearTimeout(timer));
           </li>
         </ul>
       </details>
-      <div v-if="sources[3]">
+      <div v-if="sources[3]" class="seller-losses">
         <h3>Perdas por motivo</h3>
         <ul v-if="selected.loss?.lostCount">
           <li
@@ -274,47 +278,41 @@ onBeforeUnmount(() => clearTimeout(timer));
     </p>
     <template v-if="!sellerId && ready">
       <div
-        class="segmented-options"
+        class="chip-row seller-options"
         role="group"
-        aria-label="Apresentação dos vendedores"
+        aria-label="Indicador por vendedor"
       >
         <button
-          v-for="option in [
-            { key: 'grafico', label: 'Gráfico' },
-            { key: 'tabela', label: 'Tabela' },
-          ]"
-          :key="option.key"
+          v-for="m in metrics"
+          :key="m.key"
           type="button"
-          :aria-pressed="mode === option.key"
-          @click="mode = option.key"
+          class="chip"
+          :aria-pressed="metric === m.key"
+          @click="metric = m.key"
         >
-          {{ option.label }}
+          {{ m.label }}
         </button>
       </div>
-      <template v-if="mode === 'grafico'">
-        <div
-          class="segmented-options seller-options"
-          role="group"
-          aria-label="Indicador por vendedor"
-        >
-          <button
-            v-for="m in metrics"
-            :key="m.key"
-            type="button"
-            :aria-pressed="metric === m.key"
-            @click="metric = m.key"
-          >
-            {{ m.label }}
-          </button>
-        </div>
-        <ul class="seller-bars">
-          <li v-for="row in ordered" :key="row.id">
-            <RouterLink :to="memberLink(row.id)">
-              <span
-                ><strong>{{ row.name }}</strong>
-                <small>{{ row.note }}</small></span
-              >
-              <span>{{ metricLabel }} · {{ row.cells[metric].text }}</span>
+      <ul class="seller-bars">
+        <li v-for="row in ordered" :key="row.id">
+          <RouterLink class="seller-row" :to="memberLink(row.id)">
+            <ContactMonogram class="seller-avatar" :name="row.name" />
+            <span class="seller-row-body">
+              <span class="seller-row-top">
+                <span class="seller-identity">
+                  <strong class="seller-name">{{ row.name }}</strong>
+                  <span v-if="row.note" class="badge seller-status-badge">{{
+                    row.note
+                  }}</span>
+                </span>
+                <span class="seller-value-col">
+                  <span class="seller-metric-label">{{ metricLabel }}</span>
+                  <strong class="seller-metric-value">{{
+                    row.cells[metric].text
+                  }}</strong>
+                  <AppIcon name="chevron" class="seller-go" />
+                </span>
+              </span>
               <span class="dashboard-meter" aria-hidden="true"
                 ><span
                   :style="{
@@ -325,88 +323,253 @@ onBeforeUnmount(() => clearTimeout(timer));
                   }"
                 ></span
               ></span>
-              <small v-if="metric === 'sold'"
+              <small v-if="metric === 'sold'" class="seller-row-sub"
                 >{{ row.cells.orders.text }} pedidos · Conversão
                 {{ row.cells.conversion.text }} · Resposta no prazo
                 {{ row.cells.onTime.text }}</small
               >
-            </RouterLink>
-          </li>
-        </ul>
-        <p v-if="!ordered.length">Nenhuma pessoa com atividade visível.</p>
-        <p v-if="table.totalRow" class="dashboard-performance-note">
-          <template v-for="row in table.extraRows" :key="row.id"
-            >{{ row.name }} {{ row.cells.sold.text }} · </template
-          >Total {{ table.totalRow.cells.sold.text }}
-        </p>
-      </template>
-      <DashboardTeamTable
-        v-else
-        id-prefix="dashboard-vendedores"
-        caption="Indicadores de vendedores no período"
-        :columns="columns"
-        :rows="table.rows"
-        :extra-rows="table.extraRows"
-        :total-row="table.totalRow"
-        sorted-by="sold"
-        sortable
-      >
-        <template #person="{ row, kind }"
-          ><RouterLink v-if="kind === 'person'" :to="memberLink(row.id)">{{
-            row.name
-          }}</RouterLink
-          ><span v-else>{{ row.name }}</span></template
+            </span>
+          </RouterLink>
+        </li>
+      </ul>
+      <p v-if="!ordered.length" class="dashboard-performance-note">
+        Nenhuma pessoa com atividade visível.
+      </p>
+      <div v-if="table.totalRow" class="team-reconciliation">
+        <span
+          v-for="row in table.extraRows"
+          :key="row.id"
+          class="team-reconciliation-item"
         >
-      </DashboardTeamTable>
+          <span class="team-reconciliation-label">{{ row.name }}</span>
+          <strong class="team-reconciliation-value">{{
+            row.cells.sold.text
+          }}</strong>
+        </span>
+        <span class="team-reconciliation-item team-reconciliation-total">
+          <span class="team-reconciliation-label">Total</span>
+          <strong class="team-reconciliation-value">{{
+            table.totalRow.cells.sold.text
+          }}</strong>
+        </span>
+      </div>
     </template>
   </section>
 </template>
 <style scoped>
-.seller-options {
+.team-head-actions {
+  display: flex;
   flex-wrap: wrap;
-  margin-block: var(--space-3);
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.team-full-link {
+  min-block-size: var(--target-min);
+  padding-inline: var(--space-2);
+  color: var(--color-link);
+  font-weight: var(--weight-semibold);
+}
+.seller-options {
+  gap: var(--space-2);
+  margin-block: var(--space-1) var(--space-2);
 }
 .seller-bars {
   display: grid;
   gap: var(--space-2);
   list-style: none;
+  margin: 0;
   padding: 0;
 }
-.seller-bars a {
+.seller-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-1) var(--space-3);
-  padding: var(--space-3);
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   color: var(--color-text);
+  background: var(--color-surface-muted);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
   text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--easing-standard),
+    border-color var(--duration-fast) var(--easing-standard);
 }
-.seller-bars a:hover,
-.seller-bars a:focus-visible {
-  background: var(--color-surface-muted);
+.seller-row:hover {
+  background: var(--color-surface-raised);
+  border-color: var(--color-border);
 }
-.seller-bars .dashboard-meter,
-.seller-bars small:last-child {
-  grid-column: 1 / -1;
+.seller-row:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: 2px;
 }
-.seller-bars .dashboard-meter {
-  inline-size: 100%;
-  max-inline-size: none;
+.seller-avatar {
+  display: grid;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  margin-block-start: 0.125rem;
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  background: var(--color-surface-active);
+  border-radius: var(--radius-pill);
+}
+.seller-row-body {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+.seller-row-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+.seller-identity {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+.seller-name {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.seller-status-badge {
+  line-height: 1.3;
+}
+.seller-value-col {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.seller-metric-label {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+.seller-metric-value {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+.seller-go {
+  inline-size: 1rem;
+  block-size: 1rem;
+  color: var(--color-text-muted);
+  flex: none;
+}
+.seller-row:hover .seller-go {
+  color: var(--color-link);
+}
+.seller-row .dashboard-meter {
+  margin-block-end: 0;
+}
+.seller-row .dashboard-meter > span {
+  background: var(--color-chart-bar-selected);
+}
+.seller-row-sub {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.team-reconciliation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-5);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--color-border-subtle);
+  font-size: var(--text-xs);
+}
+.team-reconciliation-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+.team-reconciliation-label {
+  color: var(--color-text-muted);
+}
+.team-reconciliation-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-medium);
+}
+.team-reconciliation-total {
+  margin-inline-start: auto;
+  font-size: var(--text-sm);
+}
+.team-reconciliation-total .team-reconciliation-value {
+  font-weight: var(--weight-semibold);
 }
 .seller-detail {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(10.5rem, 100%), 1fr));
   gap: var(--space-3);
-}
-.seller-detail dd {
   margin: 0;
 }
-.seller-detail small {
+.seller-detail-tile {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+}
+.seller-detail-tile dt {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+.seller-detail-tile dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.seller-detail-tile dd strong {
+  font-size: var(--text-base);
+}
+.seller-detail-tile small {
   display: block;
+  margin-block-start: 2px;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+.seller-orders-link {
+  justify-self: start;
+}
+.seller-losses h3 {
+  margin: 0 0 var(--space-2);
 }
 details {
-  margin-block: var(--space-4);
+  margin-block: var(--space-2);
   overflow-wrap: anywhere;
+}
+@media (max-width: 768px) {
+  .seller-options .chip {
+    min-block-size: var(--target-min);
+  }
+  .team-head-actions {
+    inline-size: 100%;
+    justify-content: space-between;
+  }
+}
+@media (max-width: 480px) {
+  .seller-row {
+    padding: var(--space-3);
+  }
+  .seller-avatar {
+    display: none;
+  }
+  .team-reconciliation-total {
+    margin-inline-start: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seller-row {
+    transition: none;
+  }
 }
 </style>

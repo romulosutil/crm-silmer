@@ -223,13 +223,13 @@
     );
     /* Bar charts: past values in a quiet secondary tint, the current one in
        the brand color (PNL-05). */
-    --color-chart-bar: color-mix(
-      in srgb,
-      var(--brand-secondary-light) 70%,
-      #ffffff
-    );
+    --color-chart-bar: color-mix(in srgb, var(--brand-secondary) 68%, #ffffff);
     --color-chart-bar-current: var(--brand-primary);
+    --color-chart-bar-selected: var(--color-link);
+    --color-chart-bar-previous: var(--color-border-strong);
     --color-chart-baseline: var(--color-border);
+    --color-chart-grid: var(--color-border-subtle);
+    --color-chart-track: var(--color-surface-raised);
   }
 
   html[data-theme='dark'] {
@@ -326,6 +326,10 @@
       var(--brand-ink)
     );
     --color-chart-bar-current: var(--brand-primary);
+    --color-chart-bar-selected: var(--color-link);
+    --color-chart-bar-previous: var(--color-border-strong);
     --color-chart-baseline: var(--color-border);
+    --color-chart-grid: var(--color-border-subtle);
+    --color-chart-track: var(--color-surface-raised);
   }
 }

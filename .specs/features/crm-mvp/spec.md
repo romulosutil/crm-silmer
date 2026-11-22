@@ -608,13 +608,13 @@ migração: o Painel usa os resumos que já lê. Tarefas T130 e T131 em
    responder, atendimentos a assumir, pedidos pendentes e entregas atrasadas.
    O gestor abre em Resultado comercial e vê a urgência da fila atual. A
    prioridade é sem responsável, resposta humana atrasada e demais respostas
-   em espera. O atalho abre a fila correspondente na Central. Com uma leitura
+   em espera. O atalho abre a fila correspondente na Inbox. Com uma leitura
    válida e vazia, a interface identifica a fila vazia. Em falha de leitura,
    a própria região informa a indisponibilidade e oferece nova tentativa.
 2. **PNL-02:** Hoje, 7 dias e Mês governam vendido, pedidos, ticket, equipe,
    série e destinos de conferência do Resultado comercial. O servidor resolve as
    datas em São Paulo. A URL conserva o recorte ao voltar, e uma resposta de um
-   período anterior não substitui o selecionado. A Central lê as filas atuais.
+   período anterior não substitui o selecionado. A urgência da fila lê o instante atual.
 3. **PNL-03:** WHEN a leitura da fila falha THEN a seção da fila (Atendimento
    do gestor, Minha fila do vendedor) SHALL continuar visível, com "—" no
    lugar de cada número e "Tentar novamente"; a seção SHALL NOT sumir e
@@ -630,10 +630,9 @@ migração: o Painel usa os resumos que já lê. Tarefas T130 e T131 em
    teclado e conferência dos pedidos do dia. Gráfico e tabela de comparação
    usam intervalos completos equivalentes e bases explícitas conforme a ADR 096.
 6. **PNL-06:** O gestor abre em Resultado comercial, com atalho para a urgência
-   de maior prioridade de PNL-01 e acesso à Central ao vivo. Cada fila expõe
-   contagem, espera útil, filtro, hora e destino autorizados, inclusive vazios.
-   O histórico usa fatos verificáveis e cursor estável. Uma lacuna exige nova
-   leitura; a espera avança mesmo sem eventos. O gestor pode consultar o resumo
+   de maior prioridade de PNL-01, que abre a fila na Inbox (ADR 097: sem
+   Central ao vivo). A urgência expõe contagem, maior espera útil e hora da
+   leitura, inclusive vazia; a espera avança mesmo sem eventos. O gestor pode consultar o resumo
    automático de ontem por CHK-08. Minhas providências continua na jornada pessoal.
 
 **Teste independente:** como vendedor com uma conversa a responder, ver o

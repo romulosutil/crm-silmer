@@ -629,7 +629,7 @@ observa ou assume o atendimento. Instagram é CANAL-2, posterior ao piloto.
 
 ## Contratos ativos
 
-A [ADR 096](docs/adr/096-painel-comercial-do-administrador.md) define o Resultado comercial por período civil e a Central ao vivo por instante de leitura. SQL autorizado apura vendas, coortes e filas. A consulta do checkpoint é somente leitura.
+A [ADR 096](docs/adr/096-painel-comercial-do-administrador.md) define o Resultado comercial por período civil e a urgência da fila por instante de leitura; a [ADR 097](docs/adr/097-dashboard-sem-central-ao-vivo.md) retira a Central ao vivo do Dashboard. SQL autorizado apura vendas, coortes e filas. A consulta do checkpoint é somente leitura.
 
 - Integração n8n MVP: três endpoints de inbound, attachment e events,
   Basic Auth com `AUTOMATION_EXECUTOR`, briefing legado na Conversa e outbox

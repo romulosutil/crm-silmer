@@ -841,7 +841,9 @@ test('exposes the CRM screens as authenticated Vue routes', async ({
     'href',
     '/pedidos?status=confirmado&de=2026-10-01&ate=2026-10-15',
   );
-  await page.getByRole('radio', { name: 'Central ao vivo' }).check();
+  await expect(
+    page.getByRole('radio', { name: 'Central ao vivo' }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole('link', { name: 'Ver desempenho do agente' }),
   ).toHaveAttribute('href', '/dashboard/agente');

@@ -12,17 +12,19 @@ As revisões estão nos PRs [442 (decisão)](https://github.com/romulosutil/crm-
 [445 (vendedores)](https://github.com/romulosutil/crm-silmer/pull/445).
 
 A [ADR 096](../adr/096-painel-comercial-do-administrador.md) governa o Resultado
-comercial e a Central ao vivo. Para conferir o vendido, selecione o período e
+comercial; a [ADR 097](../adr/097-dashboard-sem-central-ao-vivo.md) retirou a
+Central ao vivo do Dashboard. Para conferir o vendido, selecione o período e
 abra **Conferir pedidos**. A lista recebe as datas civis de São Paulo.
 No detalhe de um vendedor, a conferência inclui o crédito capturado na
 confirmação. A conversão agrupa ciclos com janela completa de 30 dias. A
 primeira resposta usa 15 minutos úteis e mostra a taxa a partir de dez ciclos.
 
-**Abrir fila** leva ao filtro atual. A Central mostra o horário de leitura e
-recupera o retrato e o histórico após reconexão. Para homologar a atualização,
-abra duas sessões autorizadas em homologação, faça uma tomada ou primeira
-impressão com registro sintético e meça do comando confirmado até a mudança de
-contagem e fato na outra sessão. Registre a latência e o resultado para a meta
+**Abrir fila** leva à Inbox: sem responsável abre `?fila=sem-responsavel`; as
+demais urgências abrem `?situacao=atender`. A urgência mostra o horário de
+leitura e se recompõe após reconexão. Para homologar a atualização, abra duas
+sessões autorizadas em homologação, faça uma tomada com registro sintético e
+meça do comando confirmado até a mudança da contagem de urgência na outra
+sessão. Registre a latência e o resultado para a meta
 de cinco segundos. Repita a leitura com administrador comum e designado para
 conferir o escopo das linhas pessoais da ADR 095.
 

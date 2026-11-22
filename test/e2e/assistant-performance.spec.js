@@ -117,12 +117,8 @@ test('the manager opens the agent performance from its card, by keyboard', async
 }) => {
   const { requests } = await setup(page);
   await page.goto('/dashboard');
-  await page.getByRole('radio', { name: 'Central ao vivo' }).check();
   const link = page.getByRole('link', { name: 'Ver desempenho do agente' });
   await expect(link).toBeVisible();
-  await expect(
-    page.getByRole('region', { name: 'Fila de atenção' }),
-  ).toContainText('Com o agente');
   await link.focus();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL('/dashboard/agente');

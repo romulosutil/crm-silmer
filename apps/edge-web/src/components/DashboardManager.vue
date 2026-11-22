@@ -15,7 +15,6 @@ import {
   useRouter,
 } from 'vue-router';
 import DashboardCommercialResult from './DashboardCommercialResult.vue';
-import DashboardLiveCenter from './DashboardLiveCenter.vue';
 import DashboardStoreNotice from './DashboardStoreNotice.vue';
 import DashboardTeamSummary from './DashboardTeamSummary.vue';
 import DashboardYesterday from './DashboardYesterday.vue';
@@ -32,11 +31,6 @@ const period = computed(
   () =>
     PERIODS.find((option) => option.key === route.query.periodo)?.key ?? 'mes',
 );
-const central = computed(() => route.query.visao === 'central');
-const views = [
-  { key: 'resultado', label: 'Resultado comercial' },
-  { key: 'central', label: 'Central ao vivo' },
-];
 const liveEvent = inject('liveEvent', ref(null));
 const connection = inject('liveConnection', ref('conectando'));
 const menuCount = inject('storeNewCount', ref(0));
@@ -53,8 +47,6 @@ const notice = computed(() =>
 );
 const heading = ref(null);
 const urgencyHeading = ref(null);
-
-const liveHeading = ref(null);
 const queue = useLatestRead({
   unavailable: 'Não foi possível consultar a fila.',
   stale:
@@ -92,6 +84,13 @@ const urgency = computed(() => {
     };
   return { filter: 'todas', label: 'Fila sem esperas' };
 });
+// The Inbox owns the queue: unclaimed conversations open the owner scope,
+// everything else opens Responder for everyone (inboxStateFromRoute, D1).
+const queueLink = computed(() =>
+  urgency.value?.filter === 'sem-responsavel'
+    ? { path: '/inbox', query: { fila: 'sem-responsavel' } }
+    : { path: '/inbox', query: { situacao: 'atender' } },
+);
 const queueTime = computed(() => {
   const stamp = Date.parse(queue.data.value?.generatedAt ?? '');
   return Number.isFinite(stamp)
@@ -106,24 +105,9 @@ let eventTimer = 0;
 let ageTimer = 0;
 
 async function readStoreNotice() {
-  if (
-    !central.value &&
-    (await store.load('/api/v1/orders/summary?period=hoje'))
-  ) {
+  if (await store.load('/api/v1/orders/summary?period=hoje')) {
     menuCount.value = store.data.value?.storeNewCount ?? 0;
   }
-}
-
-/** @param {string} key */
-function chooseView(key) {
-  /** @type {import('vue-router').LocationQueryRaw} */
-  const query = { ...route.query, visao: key };
-  if (key !== 'central') {
-    delete query.fila;
-    delete query.pagina;
-    delete query.antes;
-  }
-  void router.replace({ query });
 }
 
 /** @param {string} value */
@@ -132,7 +116,7 @@ function choosePeriod(value) {
 }
 
 function readUrgency() {
-  if (!central.value && document.visibilityState === 'visible')
+  if (document.visibilityState === 'visible')
     return queue.load('/api/v1/dashboard/live?region=queue');
   return Promise.resolve(false);
 }
@@ -144,33 +128,17 @@ async function retryUrgency() {
   }
 }
 
-async function openQueue() {
-  if (!urgency.value) return;
-  await router.push({
-    query: { ...route.query, visao: 'central', fila: urgency.value.filter },
-  });
-  await nextTick();
-  liveHeading.value?.focus();
-}
-
 function resume() {
-  if (document.visibilityState !== 'visible' || central.value) return;
+  if (document.visibilityState !== 'visible') return;
   revision.value += 1;
   void readStoreNotice();
   void readUrgency();
 }
 
-watch(
-  central,
-  () => {
-    void readUrgency();
-    void readStoreNotice();
-  },
-  { immediate: true },
-);
+void readUrgency();
+void readStoreNotice();
 watch(liveEvent, (event) => {
   if (
-    central.value ||
     !event ||
     (!event.reset &&
       ![
@@ -195,7 +163,6 @@ function stopRestoringFocus() {
   globalThis.clearTimeout(focusTimer);
 }
 onBeforeRouteLeave(() => {
-  if (central.value) return;
   const active = document.activeElement;
   if (active instanceof HTMLAnchorElement && panel.value?.contains(active))
     history.replaceState(
@@ -246,103 +213,76 @@ onBeforeUnmount(() => {
       <h1 ref="heading" tabindex="-1">Dashboard</h1>
     </header>
     <fieldset class="dashboard-options">
-      <legend class="sr-only">Visão do painel</legend>
-      <label v-for="view in views" :key="view.key"
+      <legend>Período do resultado comercial</legend>
+      <label v-for="option in PERIODS" :key="option.key"
         ><input
           type="radio"
-          name="dashboard-view"
-          :value="view.key"
-          :checked="view.key === (central ? 'central' : 'resultado')"
-          @change="chooseView(view.key)"
-        />{{ view.label }}</label
+          name="dashboard-period"
+          :value="option.key"
+          :checked="period === option.key"
+          @change="choosePeriod(option.key)"
+        />{{ option.label }}</label
       >
     </fieldset>
-    <template v-if="central">
-      <h2 ref="liveHeading" class="sr-only" tabindex="-1">
-        Fila da Central ao vivo
-      </h2>
-      <DashboardLiveCenter />
-      <RouterLink class="metric-more" to="/dashboard/agente"
-        >Ver {{ performanceTitle().toLocaleLowerCase('pt-BR') }}</RouterLink
-      >
-    </template>
-    <template v-else>
-      <fieldset class="dashboard-options">
-        <legend>Período do resultado comercial</legend>
-        <label v-for="option in PERIODS" :key="option.key"
-          ><input
-            type="radio"
-            name="dashboard-period"
-            :value="option.key"
-            :checked="period === option.key"
-            @change="choosePeriod(option.key)"
-          />{{ option.label }}</label
+    <section class="next-step" aria-labelledby="dashboard-urgency">
+      <div class="next-step-body">
+        <h2
+          id="dashboard-urgency"
+          ref="urgencyHeading"
+          class="next-step-label"
+          tabindex="-1"
         >
-      </fieldset>
-      <section class="next-step" aria-labelledby="dashboard-urgency">
-        <div class="next-step-body">
-          <h2
-            id="dashboard-urgency"
-            ref="urgencyHeading"
-            class="next-step-label"
-            tabindex="-1"
-          >
-            Urgência da fila
-          </h2>
-          <p v-if="urgency" class="next-step-text">{{ urgency.label }}</p>
-          <span v-if="queueTime"
-            >{{
-              ['reconectando', 'indisponível'].includes(connection)
-                ? 'Sem conexão ao vivo · última leitura às'
-                : 'Leitura às'
-            }}
-            {{ queueTime }} (São Paulo)</span
-          >
-          <span
-            v-if="
-              urgency &&
-              queue.data.value?.oldestMinutesByFilter?.[urgency.filter] != null
-            "
-          >
-            · Maior espera:
-            {{
-              minutesLabel(
-                queue.data.value.oldestMinutesByFilter[urgency.filter],
-              )
-            }}
-            de expediente</span
-          >
-          <p v-if="queue.error.value">{{ queue.error.value }}</p>
-          <p v-else-if="!urgency">Consultando fila…</p>
-        </div>
-        <button
-          v-if="queue.error.value"
-          type="button"
-          class="next-step-link"
-          @click="retryUrgency"
+          Urgência da fila
+        </h2>
+        <p v-if="urgency" class="next-step-text">{{ urgency.label }}</p>
+        <span v-if="queueTime"
+          >{{
+            ['reconectando', 'indisponível'].includes(connection)
+              ? 'Sem conexão ao vivo · última leitura às'
+              : 'Leitura às'
+          }}
+          {{ queueTime }} (São Paulo)</span
         >
-          Tentar novamente
-        </button>
-        <button
-          v-if="urgency"
-          type="button"
-          class="next-step-link"
-          @click="openQueue"
+        <span
+          v-if="
+            urgency &&
+            queue.data.value?.oldestMinutesByFilter?.[urgency.filter] != null
+          "
         >
-          Abrir fila
-        </button>
-      </section>
-      <DashboardCommercialResult :period="period" :revision="revision" />
-      <DashboardStoreNotice :notice="notice" />
-      <div v-if="store.error.value" class="audit-note">
-        <p>{{ store.error.value }}</p>
-        <button type="button" @click="readStoreNotice">
-          Atualizar aviso da loja
-        </button>
+          · Maior espera:
+          {{
+            minutesLabel(queue.data.value.oldestMinutesByFilter[urgency.filter])
+          }}
+          de expediente</span
+        >
+        <p v-if="queue.error.value">{{ queue.error.value }}</p>
+        <p v-else-if="!urgency">Consultando fila…</p>
       </div>
-      <DashboardTeamSummary :period="period" :revision="revision" />
-      <DashboardYesterday />
-    </template>
+      <button
+        v-if="queue.error.value"
+        type="button"
+        class="next-step-link"
+        @click="retryUrgency"
+      >
+        Tentar novamente
+      </button>
+      <RouterLink v-if="urgency" class="next-step-link" :to="queueLink"
+        >Abrir fila</RouterLink
+      >
+    </section>
+    <DashboardCommercialResult :period="period" :revision="revision" />
+    <DashboardStoreNotice :notice="notice" />
+    <div v-if="store.error.value" class="audit-note">
+      <p>{{ store.error.value }}</p>
+      <button type="button" @click="readStoreNotice">
+        Atualizar aviso da loja
+      </button>
+    </div>
+    <DashboardTeamSummary :period="period" :revision="revision" />
+    <DashboardYesterday />
+    <RouterLink class="metric-more" to="/dashboard/agente"
+      >Ver {{ performanceTitle().toLocaleLowerCase('pt-BR') }}</RouterLink
+    >
   </div>
 </template>
 

@@ -1,24 +1,57 @@
 import { expect, test } from '@playwright/test';
 import { actionItems, mockPainel } from './support/painel-mock.js';
 
-test('o atalho abre a fila da urgência com o mesmo recorte ao voltar', async ({
+test('o atalho abre a fila da urgência na Caixa de Entrada e volta ao mesmo recorte', async ({
   page,
 }) => {
   await mockPainel(page);
   await page.goto('/dashboard?periodo=7dias');
+  await expect(
+    page.getByRole('radio', { name: 'Central ao vivo' }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('group', { name: 'Visão do painel' }),
+  ).toHaveCount(0);
   const urgency = page.getByRole('region', { name: 'Urgência da fila' });
   await expect(urgency).toContainText('1 conversa espera vendedor');
   await expect(urgency).toContainText('42 min');
-  await urgency.getByRole('button', { name: 'Abrir fila' }).press('Enter');
-  await expect(page).toHaveURL(/visao=central&fila=sem-responsavel/u);
-  await expect(
-    page.getByRole('heading', { name: 'Fila da Central ao vivo' }),
-  ).toBeFocused();
+  const open = urgency.getByRole('link', { name: 'Abrir fila' });
+  await expect(open).toHaveAttribute('href', '/inbox?fila=sem-responsavel');
+  await open.focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL('/inbox?fila=sem-responsavel');
   await page.goBack();
   await expect(
     page.getByRole('radio', { name: '7 dias', exact: true }),
   ).toBeChecked();
   await expect(urgency).toBeVisible();
+  await expect(urgency.getByRole('link', { name: 'Abrir fila' })).toBeFocused();
+});
+
+test('sem conversas esperando vendedor, o atalho abre Responder para todos', async ({
+  page,
+}) => {
+  await mockPainel(page);
+  await page.route('**/api/v1/dashboard/live?**', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        generatedAt: '2026-10-15T15:00:00.000Z',
+        unclaimed: 0,
+        late: 2,
+        waiting: 3,
+        oldestMinutesByFilter: { atrasada: 30 },
+      }),
+    }),
+  );
+  await page.goto('/dashboard');
+  const urgency = page.getByRole('region', { name: 'Urgência da fila' });
+  await expect(urgency).toContainText(
+    '2 conversas esperam resposta há mais de 15 minutos úteis',
+  );
+  await expect(
+    urgency.getByRole('link', { name: 'Abrir fila' }),
+  ).toHaveAttribute('href', '/inbox?situacao=atender');
 });
 
 test('o período altera resultado, equipe e destinos mantendo a urgência atual', async ({

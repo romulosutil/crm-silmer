@@ -2,6 +2,7 @@
 
 ## Decisão de 21/11/2026
 
+- [097 — Dashboard sem a Central ao vivo](097-dashboard-sem-central-ao-vivo.md). O Dashboard do gestor fica só com a visão principal; Abrir fila leva à Inbox.
 - [096 — Painel comercial do administrador](096-painel-comercial-do-administrador.md). Aprovação dos períodos, das coortes por pessoa, da Central ao vivo e do resumo de ontem.
 
 ## Decisão de 20/11/2026

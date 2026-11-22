@@ -90,8 +90,6 @@ function commercialRead(url) {
       totals: groupTotals(commercialGroups.slice(1, 2)),
     };
   if (url.pathname === '/api/v1/dashboard/live') {
-    if (url.searchParams.get('region') === 'facts')
-      return { generatedAt: QUEUE.generatedAt, facts: [], nextCursor: null };
     return {
       generatedAt: QUEUE.generatedAt,
       filter: url.searchParams.get('filter') ?? 'todas',

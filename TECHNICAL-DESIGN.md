@@ -1002,7 +1002,7 @@ Qualquer escrita humana depois é `409 ORDER_LOCKED`. Imprime `ficha-loja-v1`
 na mesma rota, com `?download=1` para anexo; teste (`is_test`) fica fora das
 métricas.
 
-A [ADR 096](docs/adr/096-painel-comercial-do-administrador.md) define o Resultado comercial por período civil e a Central ao vivo por instante de leitura. SQL autorizado apura vendas, coortes e filas. A consulta do checkpoint é somente leitura.
+A [ADR 096](docs/adr/096-painel-comercial-do-administrador.md) define o Resultado comercial por período civil e a urgência da fila por instante de leitura; a [ADR 097](docs/adr/097-dashboard-sem-central-ao-vivo.md) retira a Central ao vivo do Dashboard. SQL autorizado apura vendas, coortes e filas. A consulta do checkpoint é somente leitura.
 
 Dashboard/listas usam read models autorizados. Vendido/vendas contam
 confirmados e não representam recebimentos. SSE usa IDs e metadados mínimos.

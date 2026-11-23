@@ -600,14 +600,14 @@ test.describe('INBOX-RD-05: compositor', () => {
         );
     expect(await labels(media)).toEqual(['Anexar arquivo', 'Gravar áudio']);
     expect(await labels(order)).toEqual([
-      'Cobranças e pagamentos',
+      'Cobranças e recebimentos',
       'Cotar frete',
     ]);
     // Focus order is the visual order: media, order, then the primary.
     const names = [
       'Anexar arquivo',
       'Gravar áudio',
-      'Cobranças e pagamentos',
+      'Cobranças e recebimentos',
       'Cotar frete',
       'Enviar resposta',
     ];
@@ -777,7 +777,7 @@ test.describe('INBOX-RD-05: compositor', () => {
     const narrow = await labelWidths('36rem');
     for (const width of narrow) expect(width).toBeLessThanOrEqual(1);
     for (const name of [
-      'Cobranças e pagamentos',
+      'Cobranças e recebimentos',
       'Cotar frete',
       'Enviar resposta',
     ]) {
@@ -894,7 +894,7 @@ test.describe('INBOX-RD-05: compositor', () => {
       // The rest is unavailable while recording, with the native attribute.
       for (const name of [
         'Gravar áudio',
-        'Cobranças e pagamentos',
+        'Cobranças e recebimentos',
         'Cotar frete',
         'Enviar resposta',
       ])

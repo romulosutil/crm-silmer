@@ -6121,17 +6121,22 @@ test('PED-RD-07: o rail do pedido confirmado resume as cobranças com Meter', as
 
   const summary = page.locator('.op-rail .op-billing-summary');
   await expect(summary).toBeVisible();
+  // RFC 074: the same name as the section and the Inbox.
   await expect(
-    summary.getByRole('heading', { name: 'Cobranças' }),
+    summary.getByRole('heading', {
+      name: 'Cobranças e recebimentos',
+      exact: true,
+    }),
   ).toBeVisible();
-  await expect(summary).toContainText('Recebido R$ 750,00 de R$ 2.250,00');
+  await expect(summary).toContainText(
+    /Recebido R\$\s750,00 de R\$\s2\.250,00/u,
+  );
   await expect(summary).toContainText('Pago parcialmente');
-  const meter = summary.getByRole('meter', { name: 'Recebido do pedido' });
-  await expect(meter).toHaveAttribute('aria-valuenow', '75000');
-  await expect(meter).toHaveAttribute('aria-valuemax', '225000');
-  await expect(meter).toHaveAttribute(
-    'aria-valuetext',
-    /^Recebido R\$\s750,00 de R\$\s2\.250,00, 33%$/u,
+  // The text carries the values; the bar beside it is decorative.
+  await expect(summary.getByRole('meter')).toHaveCount(0);
+  await expect(summary.locator('.bl-meter')).toHaveAttribute(
+    'aria-hidden',
+    'true',
   );
   // One primary per region: the link is quiet.
   await expect(summary.getByRole('button')).toHaveText(['Ver cobranças']);

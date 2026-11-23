@@ -949,7 +949,7 @@ for (const viewport of [
     ).toBeFocused();
     await page.keyboard.press('Tab');
     const billing = page.getByRole('button', {
-      name: 'Cobranças e pagamentos',
+      name: 'Cobranças e recebimentos',
       exact: true,
     });
     await expect(billing).toBeFocused();

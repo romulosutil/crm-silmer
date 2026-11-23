@@ -2287,3 +2287,90 @@
     min-block-size: var(--target-min);
   }
 }
+
+/* RFC 074 (LPC-09): "Cobranças e recebimentos" from the composer — one
+   journey dialog (36rem) with the order, a compact Situação and the next
+   step; its actions live in the footer, "Ver tudo no pedido" first. */
+dialog.journey-dialog.inbox-billing-dialog {
+  --journey-inline-size: 36rem;
+}
+.inbox-billing-dialog .bl-due-value {
+  font-size: var(--text-lg);
+}
+.inbox-billing-order {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.inbox-billing-order strong {
+  font-weight: var(--weight-semibold);
+}
+.inbox-billing-orders {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+}
+.inbox-billing-orders legend {
+  padding-inline: var(--space-1);
+  font-weight: var(--weight-medium);
+}
+.inbox-billing-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--target-min);
+  overflow-wrap: anywhere;
+}
+.inbox-billing-option input {
+  flex: none;
+}
+.inbox-billing-dialog .bl-situation.bl-compact {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+}
+.inbox-billing-dialog .bl-situation.bl-compact h3 {
+  font-size: var(--text-sm);
+}
+.inbox-billing-error {
+  align-items: flex-start;
+}
+.inbox-billing-error button {
+  margin-block-start: var(--space-2);
+  min-block-size: var(--target-min);
+}
+.inbox-billing-dialog .journey-foot button {
+  min-block-size: var(--target-min);
+}
+.inbox-billing-dialog .journey-foot .inbox-billing-foot-start {
+  margin-inline-end: auto;
+}
+.inbox-billing-locked {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+.inbox-billing-locked .op-icon {
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+}
+.inbox-billing-locked strong {
+  color: var(--color-text);
+}
+@media (width < 48rem) {
+  .inbox-billing-dialog .bl-due-value {
+    font-size: var(--text-base);
+  }
+  .inbox-billing-dialog .journey-foot .inbox-billing-foot-start {
+    align-self: center;
+    margin-inline-end: 0;
+  }
+}

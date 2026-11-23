@@ -120,6 +120,89 @@ export function dateTimeBR(value) {
     : DATE_TIME.format(date);
 }
 
+// RFC 074: charges and receipts read in the store's clock, never the device's.
+const ZONE = 'America/Sao_Paulo';
+const PARTS = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: ZONE,
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
+/**
+ * @param {unknown} value an ISO instant, a Date or epoch milliseconds
+ * @returns {{day: string, month: string, year: string, hour: string, minute: string}|null}
+ */
+function zonedParts(value) {
+  if (
+    !(value instanceof Date) &&
+    typeof value !== 'string' &&
+    typeof value !== 'number'
+  )
+    return null;
+  if (value === '') return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  /** @type {Record<string, string>} */
+  const out = {};
+  for (const part of PARTS.formatToParts(date)) out[part.type] = part.value;
+  return {
+    day: out.day,
+    month: out.month,
+    year: out.year,
+    hour: out.hour,
+    minute: out.minute,
+  };
+}
+
+/** "14:05" in the store's clock, or '' when the instant is unknown. @param {unknown} value */
+export function timeBR(value) {
+  const p = zonedParts(value);
+  return p ? `${p.hour}:${p.minute}` : '';
+}
+
+/** "23/11" in the store's clock. @param {unknown} value */
+export function dayMonthBR(value) {
+  const p = zonedParts(value);
+  return p ? `${p.day}/${p.month}` : '';
+}
+
+/** "23/11, 14:05" in the store's clock. @param {unknown} value */
+export function dayMonthTimeBR(value) {
+  const p = zonedParts(value);
+  return p ? `${p.day}/${p.month}, ${p.hour}:${p.minute}` : '';
+}
+
+/** "23/11/2026, 14:05" in the store's clock. @param {unknown} value */
+export function dateTimeCommaBR(value) {
+  const p = zonedParts(value);
+  return p ? `${p.day}/${p.month}/${p.year}, ${p.hour}:${p.minute}` : '';
+}
+
+/**
+ * "23/11/2026". A calendar day (`2026-11-23`) is printed as is, without a
+ * time zone shift; an instant is read in the store's clock.
+ *
+ * @param {unknown} value
+ */
+export function dateBR(value) {
+  if (typeof value === 'string') {
+    const day = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(value);
+    if (day) return `${day[3]}/${day[2]}/${day[1]}`;
+  }
+  const p = zonedParts(value);
+  return p ? `${p.day}/${p.month}/${p.year}` : '';
+}
+
+/** Today's calendar day in the store's clock, as `2026-11-23`. @param {Date} [now] */
+export function todayISO(now = new Date()) {
+  const p = zonedParts(now);
+  return p ? `${p.year}-${p.month}-${p.day}` : '';
+}
+
 /** @param {Record<string, any>|null|undefined} message */
 export function messageText(message) {
   return message?.preview ?? 'Sem mensagem';

@@ -1,44 +1,30 @@
 <script setup>
 import { computed, inject } from 'vue';
 import { billingMoney } from '../../lib/order-billing.js';
+import { deriveBillingView } from '../../lib/order-billing-view.js';
+import BillingBadge from './billing/BillingBadge.vue';
+import BillingMeter from './billing/BillingMeter.vue';
 
 /*
- * PED-RD-07 item 2 (ADR 086, design.md §22): the rail only summarises the
- * charges of a confirmed order — what was received of the total, a Meter and
- * "Ver cobranças", which takes the seller to the chapter. The interior of the
- * charges (plan, links, refunds) stays in OrderBillingSection. The numbers are
- * the ones that chapter already read and emitted as `orderBillingState`; this
- * block makes no request of its own.
+ * PED-RD-07 item 2 (ADR 086) and RFC 074: the rail repeats the chapter's name,
+ * badge and two-segment meter — what was received of the total and what open
+ * links reserve — and "Ver cobranças" takes the seller to the chapter. The
+ * numbers are the ones the chapter read and emitted as `orderBillingState`;
+ * this block makes no request of its own.
  */
 const emit = defineEmits(['show']);
 
-const state = inject('orderBillingState', null);
+const state = /** @type {any} */ (inject('orderBillingState', null));
 const data = computed(() => state?.value?.data ?? null);
-const total = computed(() => Number(data.value?.totalAmountCents));
-const received = computed(() => {
-  const value = Number(data.value?.receivedAmountCents ?? 0);
-  return Number.isFinite(value) && value > 0 ? value : 0;
-});
+const view = computed(() => deriveBillingView(data.value ?? {}));
 // The same conditions that draw the chapter, plus the flag: a disabled
 // billing has no summary to give.
 const shown = computed(
   () =>
     state?.value?.available === true &&
     data.value?.enabled !== false &&
-    Number.isSafeInteger(total.value) &&
-    total.value > 0,
+    view.value.figures.total > 0,
 );
-const percent = computed(() =>
-  Math.min(100, Math.round((received.value / total.value) * 100)),
-);
-const summary = computed(
-  () => `${billingMoney(received.value)} de ${billingMoney(total.value)}`,
-);
-// Words beside the Meter, never colour alone (§14).
-const status = computed(() => {
-  if (received.value >= total.value) return 'Quitado';
-  return received.value > 0 ? 'Pago parcialmente' : 'A receber';
-});
 </script>
 
 <template>
@@ -49,28 +35,25 @@ const status = computed(() => {
     aria-labelledby="order-billing-summary-title"
   >
     <div class="op-sheet-head">
-      <h2 id="order-billing-summary-title">Cobranças</h2>
-      <p class="op-sheet-state op-num">{{ status }}</p>
+      <h2 id="order-billing-summary-title">Cobranças e recebimentos</h2>
     </div>
     <div class="op-sheet-body op-billing-summary-body">
+      <div><BillingBadge :badge="view.badge" /></div>
       <p class="op-billing-summary-line op-num">
-        Recebido <strong>{{ summary }}</strong>
+        Recebido <strong>{{ billingMoney(view.figures.received) }}</strong> de
+        <strong>{{ billingMoney(view.figures.total) }}</strong>
       </p>
-      <span
-        class="op-meter"
-        role="meter"
-        aria-label="Recebido do pedido"
-        aria-valuemin="0"
-        :aria-valuemax="total"
-        :aria-valuenow="Math.min(received, total)"
-        :aria-valuetext="`Recebido ${summary}, ${percent}%`"
+      <BillingMeter :figures="view.figures" />
+      <p
+        v-if="view.figures.reserved > 0"
+        class="op-billing-summary-line op-billing-summary-sub op-num"
       >
-        <span :style="{ inlineSize: `${percent}%` }"></span>
-      </span>
-      <p class="op-hint op-num">{{ percent }}% recebido</p>
+        <span class="bl-swatch" aria-hidden="true"></span>Em links abertos
+        <strong>{{ billingMoney(view.figures.reserved) }}</strong>
+      </p>
       <button
         type="button"
-        class="quiet op-billing-summary-go"
+        class="link-button bl-link-target op-billing-summary-go"
         @click="emit('show')"
       >
         Ver cobranças

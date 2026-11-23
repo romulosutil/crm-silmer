@@ -184,9 +184,9 @@ test('DTL: mixed receipts render once in the horizontal timeline with shared bil
         i === 0 || (b.x > boxes[i - 1].x && Math.abs(b.y - boxes[0].y) < 2),
     ),
   ).toBe(true);
-  // The existing compact billing workspace also reads its summary/history.
-  // Dates reuse the outer billing snapshot and add no third summary request.
-  expect(mock.reads).toBe(2);
+  // RFC 074: the billing section reads the view once; the dates and the rail
+  // reuse that snapshot and add no second summary request.
+  expect(mock.reads).toBe(1);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 

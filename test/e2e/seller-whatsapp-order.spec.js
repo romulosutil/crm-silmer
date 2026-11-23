@@ -460,53 +460,67 @@ for (const width of [390, 1366]) {
     await page.route('**/api/v1/orders/order-client', (route) =>
       route.fulfill({ json: { order } }),
     );
-    await page.route('**/api/v1/orders/order-client/billing', (route) =>
-      route.fulfill({
-        json: {
-          billing: {
-            version: 1,
-            orderVersion: order.version,
-            canManage: true,
-            enabled: true,
-            managed: false,
-            totalAmountCents: 10000,
-            receivedAmountCents: 0,
-            balanceAmountCents: 10000,
-            charges: [],
-            timelineEvents: [],
-          },
-        },
-      }),
-    );
-    await page.route(
-      '**/api/v1/orders/order-client/billing/charges',
-      (route) => {
-        billingWrites.push(route.request().postDataJSON());
-        return route.fulfill({
-          json: {
-            billing: {
-              version: 2,
-              orderVersion: order.version,
-              percent: 100,
-              canManage: true,
-              enabled: true,
-              managed: true,
-              totalAmountCents: 10000,
-              receivedAmountCents: 0,
-              balanceAmountCents: 10000,
-              charges: [
-                {
-                  id: 'charge-synthetic',
-                  status: 'queued',
-                  amountCents: 10000,
-                },
-              ],
-              timelineEvents: [],
-            },
-          },
-        });
+    // RFC 074: the seller's billing view with CRM payment links.
+    const billing = {
+      version: 1,
+      orderVersion: order.version,
+      canManage: true,
+      canOperate: true,
+      ownerName: 'Bia Souza',
+      enabled: true,
+      chatSendEnabled: false,
+      managed: false,
+      condition: { percent: null },
+      totalAmountCents: 10000,
+      receivedAmountCents: 0,
+      balanceAmountCents: 10000,
+      figures: {
+        totalCents: 10000,
+        receivedCents: 0,
+        remainingCents: 10000,
+        heldCents: 0,
+        reservedCents: 0,
+        freeCents: 10000,
       },
+      situation: 'none',
+      review: null,
+      settledAt: null,
+      links: [],
+      charges: [],
+      payments: [],
+      externalReceipts: [],
+      timelineEvents: [],
+    };
+    await page.route('**/api/v1/orders/order-client/billing', (route) =>
+      route.fulfill({ json: { billing } }),
     );
+    await page.route('**/api/v1/orders/order-client/billing/links', (route) => {
+      billingWrites.push(route.request().postDataJSON());
+      const link = {
+        id: 'link-synthetic',
+        kind: 'full',
+        amountCents: 10000,
+        state: 'open',
+        origin: 'generated',
+        url: `http://127.0.0.1:${process.env.E2E_PORT ?? 4173}/pagar/7Q4K2M00000000000000000000`,
+        chargeId: null,
+        createdAt: '2026-11-23T17:05:00.000Z',
+        createdBy: 'Bia Souza',
+        history: [],
+      };
+      Object.assign(billing, {
+        version: 2,
+        managed: true,
+        condition: { percent: 100 },
+        situation: 'waiting',
+        links: [link],
+        figures: { ...billing.figures, reservedCents: 10000, freeCents: 0 },
+      });
+      return route.fulfill({
+        status: 201,
+        json: { billing, linkId: link.id },
+      });
+    });
     await page.goto('/meus-clientes/contact-r-ana');
     const list = page.getByRole('region', {
       name: 'Meus pedidos deste cliente',
@@ -521,22 +535,29 @@ for (const width of [390, 1366]) {
       /pedidos\/order-client\?cliente=contact-r-ana/u,
     );
     await page.getByRole('button', { name: 'Ver cobranças' }).click();
-    await expect(page.getByRole('region', { name: 'Cobranças' })).toBeVisible();
-    await expect(page.getByText('A receber').first()).toBeVisible();
-    await page.getByRole('button', { name: 'Revisar cobrança' }).click();
-    const billingDialog = page.getByRole('dialog', {
-      name: 'Gerar link de pagamento',
+    const section = page.getByRole('region', {
+      name: 'Cobranças e recebimentos',
+      exact: true,
     });
-    await expect(billingDialog).toBeVisible();
-    await billingDialog
-      .getByRole('button', { name: 'Gerar link de pagamento' })
+    await expect(section).toBeVisible();
+    await expect(section.getByText('Sem cobrança').first()).toBeVisible();
+    // No conversation is linked: the next step generates the CRM link.
+    await section
+      .getByRole('radio', { name: /100% · Pagamento integral/u })
+      .check();
+    await section
+      .getByRole('button', { name: /^Gerar link de R\$\s100,00$/u })
       .click();
     await expect.poll(() => billingWrites.length).toBe(1);
-    expect(billingWrites[0]).toMatchObject({
+    expect(billingWrites[0]).toEqual({
       expectedVersion: order.version,
       expectedBillingVersion: 1,
+      amountCents: 10000,
       percent: 100,
     });
+    await expect(section.locator('#order-billing-next-status')).toContainText(
+      'Link do pagamento integral gerado. Ele ainda não foi enviado ao cliente.',
+    );
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     await page.getByRole('link', { name: '← Meus clientes' }).click();
     await expect(page).toHaveURL(/meus-clientes\/contact-r-ana/u);

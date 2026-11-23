@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { createCipheriv, randomBytes, randomUUID } from 'node:crypto';
 import { contactPhoneHash } from '@crm-silmer/contacts';
 import test from 'node:test';
 import { Pool } from 'pg';
@@ -119,8 +119,9 @@ if (!url) {
         correlationId: randomUUID(),
         ...fields,
       });
-    async function armed() {
-      const current = await prepared();
+    /** @param {any} [fields] */
+    async function armed(fields = {}) {
+      const current = await prepared(fields);
       const pending = await challenge(current);
       await repository.reserveChallenge(pending);
       await repository.finishChallenge({ ...pending, delivered: true });
@@ -128,6 +129,45 @@ if (!url) {
         current: await repository.get({ actorId: A }),
         dispatch: await reserve(current.operation, { action: 'reconcile' }),
       };
+    }
+    async function seedLegacyNationalLine() {
+      const number = NUMBER.slice(2);
+      const iv = randomBytes(12);
+      const cipher = createCipheriv('aes-256-gcm', KEY, iv);
+      cipher.setAAD(Buffer.from(`seller-whatsapp-number:${slot.lineId}`));
+      const ciphertext = Buffer.concat([
+        cipher.update(JSON.stringify({ number })),
+        cipher.final(),
+      ]);
+      const envelope = {
+        algorithm: 'AES-256-GCM',
+        version: 1,
+        keyVersion: 1,
+        iv: iv.toString('base64url'),
+        tag: cipher.getAuthTag().toString('base64url'),
+        ciphertext: ciphertext.toString('base64url'),
+      };
+      await withTransaction(pool, async (client) => {
+        await client.query(
+          `INSERT INTO crm.seller_whatsapp_lines
+             (id,seller_id,account_id,instance_name,number_digest,number_envelope,state,generation,version,created_at,updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6,'disconnected',1,1,$7,$7)`,
+          [
+            slot.lineId,
+            A,
+            randomUUID(),
+            slot.instance,
+            digest(number),
+            envelope,
+            now,
+          ],
+        );
+        await client.query(
+          `INSERT INTO crm.whatsapp_number_reservations(number_digest,kind,line_id,created_at)
+           VALUES ($1,'personal',$2,$3)`,
+          [digest(number), slot.lineId, now],
+        );
+      });
     }
     async function reset() {
       await pool.query('TRUNCATE crm.seller_whatsapp_lines CASCADE');
@@ -430,6 +470,109 @@ if (!url) {
               )
             ).rows[0].n,
             1,
+          );
+        },
+      );
+
+      await t.test(
+        'Brazilian local input is reserved and sent with country code',
+        async () => {
+          await reset();
+          const idempotencyKey = randomUUID();
+          const current = await armed({
+            expectedNumber: NUMBER.slice(2),
+            idempotencyKey,
+          });
+          assert.equal(current.dispatch.expectedNumber, NUMBER);
+          assert.equal(
+            (await submit({ expectedNumber: `+${NUMBER}`, idempotencyKey }))
+              .operation.id,
+            current.dispatch.operationId,
+          );
+          await assert.rejects(
+            submit({ expectedNumber: `+${NUMBER.slice(2)}`, idempotencyKey }),
+            rejects('IDEMPOTENCY_KEY_REUSED'),
+          );
+          await result(current.dispatch, {
+            providerState: 'open',
+            confirmedNumber: `+${NUMBER}`,
+            bindingVerified: true,
+          });
+          assert.equal(
+            (await repository.get({ actorId: A })).line.state,
+            'connected',
+          );
+          await assert.rejects(
+            submit({ actorId: B, expectedNumber: `+${NUMBER}` }),
+            rejects('WHATSAPP_LINE_CONFLICT'),
+          );
+          await assert.rejects(
+            submit({ actorId: B, expectedNumber: GENERAL.slice(2) }),
+            rejects('WHATSAPP_LINE_CONFLICT'),
+          );
+        },
+      );
+
+      await t.test(
+        'legacy Brazilian line reconnects with country code proof and keeps exclusivity',
+        async () => {
+          await reset();
+          await seedLegacyNationalLine();
+          await assert.rejects(
+            submit({ actorId: B, expectedNumber: `+${NUMBER}` }),
+            rejects('WHATSAPP_LINE_CONFLICT'),
+          );
+          const current = await armed({
+            expectedNumber: undefined,
+            expectedVersion: 1,
+          });
+          const ingress = {
+            source: current.dispatch.source,
+            instance: current.dispatch.instanceName,
+            token: current.dispatch.generationToken,
+            sender: `${NUMBER}@s.whatsapp.net`,
+          };
+          await repository.verifyIngress(ingress);
+          await result(current.dispatch, {
+            providerState: 'open',
+            confirmedNumber: `+${NUMBER}`,
+            bindingVerified: true,
+          });
+          const line = (await repository.get({ actorId: A })).line;
+          assert.equal(line.state, 'connected');
+          assert.equal(line.id, slot.lineId);
+          await repository.verifyIngress(ingress);
+          await assert.rejects(
+            repository.verifyIngress({
+              ...ingress,
+              sender: `${NUMBER.slice(2)}@s.whatsapp.net`,
+            }),
+            rejects('FORBIDDEN'),
+          );
+        },
+      );
+
+      await t.test(
+        'a legacy line cannot confirm the number reserved for the general line',
+        async () => {
+          await reset();
+          await seedLegacyNationalLine();
+          const current = await armed({
+            expectedNumber: undefined,
+            expectedVersion: 1,
+          });
+          await pool.query(
+            "INSERT INTO crm.whatsapp_number_reservations(number_digest,kind,created_at) VALUES ($1,'general',$2)",
+            [digest(NUMBER), now],
+          );
+          await result(current.dispatch, {
+            providerState: 'open',
+            confirmedNumber: `+${NUMBER}`,
+            bindingVerified: true,
+          });
+          assert.equal(
+            (await repository.get({ actorId: A })).line.state,
+            'blocked',
           );
         },
       );

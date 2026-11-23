@@ -145,6 +145,23 @@ dos eventos de conexão/mensagens e a atualização após queda espontânea são
 reserva/despacho comercial são E08. A prova de controle isolada não autoriza
 habilitar ingresso ou envio de produto.
 
+### Linha brasileira cadastrada sem `+55`
+
+No primeiro cadastro, o CRM inclui `55` quando o número brasileiro é informado
+com DDD no formato nacional. Use `+` e o código do país para informar um número
+internacional explicitamente. A reserva considera registros brasileiros de
+versões anteriores que guardaram somente DDD e número.
+
+Para recuperar uma linha que ficou bloqueada por essa diferença de formato,
+o titular usa **Desconectar** e **Reconectar WhatsApp** em **Conta → Meu
+WhatsApp** e confirma o pareamento no aparelho. O CRM aceita o mesmo número
+confirmado com `+55` se ele estiver livre de outra reserva, incluindo a geral.
+A validação do webhook e da sessão continua obrigatória. A recuperação usa
+o ID e a titularidade da linha existentes e abre uma nova geração.
+
+Rastreabilidade [WAP-04, WAP-06 e WAP-11](../../.specs/features/seller-whatsapp/spec.md)
+e [WAP-T01-02 / WAP-T05-06](../../.specs/features/seller-whatsapp/tasks.md).
+
 ## Verificação sintética e rollback
 
 Executar testes de banco com `TEST_DATABASE_URL` dedicado a `crm_silmer_test`;

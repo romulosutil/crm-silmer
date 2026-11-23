@@ -56,7 +56,10 @@ e autorização de transação permanecem no gate operacional independente.
 - BFIN-05: WHEN acordo muda ou chega pagamento tardio de link já enviado,
   THE CRM SHALL conservar recebimentos de ambas as fontes, exigir revisão
   quando houver excesso/acordo antigo e nunca apresentar saldo negativo ou
-  prometer cancelamento do link no provedor.
+  prometer cancelamento do link no provedor. Emendado pela
+  [ADR 098](../../../docs/adr/098-link-de-pagamento-do-crm-e-cobrancas-que-somam.md):
+  o CRM continua sem cancelar pagamentos criados na InfinitePay, mas o link do
+  CRM pode ser cancelado antes do clique em Pagar.
 - BFIN-06: WHEN o humano pede conferência, THE API SHALL persistir uma consulta
   com identificadores cifrados e retornar 202/queued; somente n8n/provedor
   podem confirmar pagamento. Ausência de identificadores não significa não
@@ -75,6 +78,10 @@ e autorização de transação permanecem no gate operacional independente.
 - BFUI-01: WHEN a conversa elegível é aberta, THE Inbox SHALL oferecer ação de
   cobrança junto às ações atuais; o diálogo compartilhado exige pedido e
   destino explícitos e revisão do valor, sem disparar efeito ao abrir.
+  Emendado pela
+  [ADR 098](../../../docs/adr/098-link-de-pagamento-do-crm-e-cobrancas-que-somam.md):
+  um só diálogo pré-seleciona o pedido ligado à conversa; com mais de um
+  pedido confirmado, a escolha explícita continua obrigatória.
 - BFUI-02: WHEN o humano confirma issue/send_existing/balance/correct/retry,
   THE UI SHALL usar o contrato real e versões/idempotência, refletir estados
   de intenção separados de pagamento e impedir retry cego em unknown.

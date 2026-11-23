@@ -403,8 +403,25 @@ botão, campo, selo ou painel (§15).
   texto carrega o estado.
 - **Usar:** na lista, no cabeçalho da conversa e no painel Atendimento
   (INBOX-RD-04).
-- **Não usar:** só cor, só ícone, ou como botão. O mapa de tom e ícone dos
-  estados de cobrança espera o PR 348 (§21, pendências).
+- **Não usar:** só cor, só ícone, ou como botão.
+- **Estados de cobrança (ADR 098, 23/11/2026):** o mesmo rótulo, tom e ícone
+  no pedido, no resumo lateral e na Caixa de Entrada.
+
+  | Rótulo                                                           | Tom        | Ícone     |
+  | ---------------------------------------------------------------- | ---------- | --------- |
+  | Resultado a conferir, Precisa de conferência                     | atenção    | `alert`   |
+  | Em pagamento, Gerando link, Aguardando o cliente                 | informação | `clock`   |
+  | Quitado, Recebido, Recebido por fora                             | sucesso    | `check`   |
+  | Pago parcialmente, Sem cobrança, Cancelado, Estornado, Devolvido | neutro     | sem ícone |
+
+  O selo da seção mostra o estado mais urgente: Resultado a conferir >
+  Precisa de conferência > Em pagamento > Aguardando o cliente > Quitado ou
+  Pago parcialmente > Sem cobrança; Quitado e Pago parcialmente se excluem.
+  "Gerando link" é só uma etapa do progresso do envio (Gerando link →
+  Enviando → Enviado → Entregue), não um estado do link. Na cobrança, `clock`
+  marca espera pelo cliente ou pelo provedor; os outros selos de informação
+  seguem com `info`. Os diálogos de cobrança usam a casca única
+  `JourneyDialog`, sem diálogo por cima de outro.
 
 #### Aviso de mensagem nova
 
@@ -1446,8 +1463,11 @@ Da seção "Decisões pendentes" do protótipo, sem decisão nesta data:
   `InlineConfirm` (emenda PCX-13/PCX-15); retorno de ação com ícone no modelo
   do `SaveStatus` fora do pedido.
 - Selo "Frete vinculado" no lugar do botão desabilitado (MEVQ-06/08).
-- Tom e ícone dos estados de cobrança e a casca na cobrança, depois do
-  PR 348; emenda de BFUI-01 (etapas numa casca só, Esc voltando uma etapa).
+- Esc voltando uma etapa na casca da cobrança, em vez de fechar o diálogo
+  (emenda de BFUI-01). O tom e o ícone dos estados de cobrança e a casca única
+  `JourneyDialog` deixaram de ser pendência: foram decididos em 23/11/2026 na
+  [ADR 098](docs/adr/098-link-de-pagamento-do-crm-e-cobrancas-que-somam.md) e
+  estão em "Selo de status com ícone" (§8).
 - Rótulo visível "Responder" no campo de resposta: o protótipo o mantém só
   para leitor de tela, com o placeholder visível, o que a §15 proíbe; falta
   decidir entre rótulo visível e exceção registrada.

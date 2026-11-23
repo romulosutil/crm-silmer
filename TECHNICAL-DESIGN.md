@@ -1,5 +1,119 @@
 # TDD — CRM Silmer MVP
 
+## Link de pagamento do CRM — LPC (23/11/2026)
+
+[ADR 098](docs/adr/098-link-de-pagamento-do-crm-e-cobrancas-que-somam.md),
+[LPC-01–09](.specs/features/order-billing/spec.md) e
+[contrato](docs/api/order-billing-links.md), que é a fonte do detalhe
+implementado. Valores em centavos inteiros.
+
+**Tabelas.** A migração expand
+`modules/database/migrations/0085_order_billing_links.expand.sql` cria
+`crm.order_billing_links`: pedido, valor (≥ 100), nome (`signal`, `balance`,
+`full`, `installment`), estado, origem (`sent`, `generated`), motivo de
+cancelamento, acordo vigente na criação, datas, autoria e versão. O token tem
+26 caracteres base32 Crockford (130 bits). A busca usa `token_hash` (SHA-256,
+único); `token_envelope` guarda o token cifrado, no mesmo envelope do checkout,
+só para **Copiar link**. Um gatilho deixa a identidade imutável e o estado só
+anda para frente; `paid` e `cancelled` são finais.
+`crm.order_billing_link_events` guarda o histórico, sem PII.
+`order_billing_charges.link_id` liga cada tentativa ao link. O índice
+`order_billing_one_active_charge` vale só para cobranças sem `link_id`, e
+`order_billing_one_active_link_charge` garante no máximo uma tentativa não
+resolvida por link. `order_billing_plans.review_reason` guarda o motivo da
+conferência e `order_billing_send_intents.link_id` liga o envio ao link.
+
+**Cobranças antigas.** Humanos não criam mais cobranças sem link:
+`POST …/charges` e as ações antigas de emissão em `send-intents` respondem 409
+`BILLING_USE_PAYMENT_LINK`. As cobranças antigas em andamento seguem
+funcionando: callback, consulta, conciliação, devolução e `close_unpaid`.
+
+**Estados e incerteza.** `open` → `checkout_requested` → `checkout_open` →
+`paid`; `cancelled` só a partir de `open`, com motivo `seller`,
+`order_changed`, `order_cancelled`, `external_receipt` ou `reconcile`. O link
+não vence. Sob bloqueio (leitura pública devida, clique, leitura e comandos do
+vendedor), de forma preguiçosa:
+
+- tentativa `waiting` com `valid_until ≤ agora` → `closed`, link volta a
+  `open` (`checkout_expired`);
+- tentativa `queued` vencida ou com o job do outbox morto antes de o n8n a
+  reservar → `closed`, link volta a `open` (`checkout_expired` ou
+  `checkout_failed`). É seguro: a reserva recusa tentativa fechada;
+- tentativa `creating` (reservada) sem resposta há mais de 120 s, ou com o job
+  morto → tentativa e link `unknown` (`checkout_unknown`).
+
+Um link `unknown` sai pelo callback de criação, pelo pagamento ou por
+`confirm-result`; o vencimento preguiçoso nunca o reabre sozinho. Quando um
+pagamento marca o link `paid`, na mesma transação as outras tentativas dele
+nunca reservadas fecham e as já na InfinitePay vão para `review`, com o plano
+em conferência (`outside_agreement`). Cancelar o pedido cancela os links
+`open` com `order_cancelled`, evento e auditoria. Uma transição preguiçosa
+numa leitura sobe a versão da cobrança: um diálogo do vendedor aberto antes
+recebe `VERSION_CONFLICT` e relê.
+
+**Ordem dos bloqueios.** Advisory do pedido → usuários → conversas → … →
+pedido → plano → links → cobranças → intenções. A rota pública segue a mesma
+ordem, sem ator. Clique e cancelamento disputam o bloqueio da linha do link;
+quem chega depois vê o estado novo.
+
+**Clique.** `POST /api/v1/payment-links/:token/checkout` é idempotente por
+link. Em `open`, cria a tentativa (`order_nsu = charge_id`) e o outbox
+`billing.checkout.create` pelo caminho de hoje, CRM → worker → n8n →
+InfinitePay → n8n → API, sem mudança no n8n nem no worker. Com tentativa
+existente, devolve a mesma. A página consulta o GET até receber `checkoutUrl`
+e redireciona. `unknown` responde `failed` e não cria outra tentativa.
+
+**Confirmar resultado.**
+`POST /api/v1/orders/:orderId/billing/links/:linkId/confirm-result` só vale
+para link `unknown` e recebe `{ invoiceSlug?, transactionNsu? }`, os dois ou
+nenhum. Com os identificadores, enfileira o `payment_check` existente: pago
+segue o fluxo de pagamento de hoje; não pago depois do `valid_until` da
+tentativa fecha a tentativa e devolve o link a `open`; antes disso, o link
+continua `unknown` com `verifying.nextAt`. Sem identificadores, só libera o
+link depois da validade da tentativa; antes, 409 `BILLING_LINK_STILL_VALID`.
+
+**Reserva.** Sob o bloqueio do pedido, a soma dos links em `open`,
+`checkout_requested`, `checkout_open` e `unknown` não passa de total −
+recebido. Criação de link e recebimento por fora validam na mesma transação.
+O recebimento por fora aceita `cancelLinkIds` para cancelar links `open` no
+mesmo efeito, superando a frase da ADR 077 sobre links enviados. Se o valor
+além do livre está num link em pagamento ou `unknown`, responde
+`BILLING_LINK_IN_PAYMENT` ou `BILLING_LINK_UNKNOWN`; se um link de
+`cancelLinkIds` deixou de estar `open`, `BILLING_LINK_NOT_OPEN`. Mudança de
+valor do pedido cancela os links `open` com `order_changed`. A conciliação
+(`decision`) ganha `cancel_open_links`. `close_unpaid` fecha cobranças antigas
+vencidas e tentativas de link sem pagamento retidas em `review`; o link volta
+a `open` ou é cancelado com `order_changed`. `apply_current` responde 409
+`BILLING_LINK_EXCEEDS_FREE` quando recebido + links que reservam passam do
+total.
+
+**Rota pública.** Sem sessão, cookie nem CSRF. A URL é
+`{APP_BASE_URL}/pagar/{token}`; sem `APP_BASE_URL` (`https://` absoluta),
+gerar ou enviar link falha com 503. `GET /api/v1/payment-links/:token` devolve
+só número do pedido, nome e valor, com `ready`, `in_progress`, `paid`,
+`failed` ou `unavailable`. `unavailable` é 200 `{ "state": "unavailable" }`,
+idêntico para token inexistente, malformado ou cancelado e para pedido
+cancelado. O POST exige `Origin` igual à origem de `APP_BASE_URL` ou a uma de
+`APP_ORIGIN` (senão 403). Limites: por token, GET 60/min e POST 10/min; por
+IP, GET 120/min e POST 20/min. A página consulta a cada 2,5 s, a cada 5 s
+depois de 20 s, até 60 s, e respeita `Retry-After`. O GET lê sem bloqueio e
+só toma os bloqueios quando uma transição preguiçosa ou o primeiro
+`page_opened` está devido. `Cache-Control: no-store`, `Referrer-Policy: no-referrer`,
+`X-Robots-Tag: noindex, nofollow`, e nenhum token nem PII em log. O POST só
+cria tentativa com `ORDER_BILLING_ENABLED=true`. Só com
+`ORDER_BILLING_RECEIVE_ENABLED=true`, o GET funciona e o POST num link `open`
+responde `failed` sem criar nada. Com as duas falsas, as rotas não existem
+(404). No `docker/nginx.conf`, `/pagar/` serve o `index.html` da edge e
+`/api/v1/payment-links/` vai à API, ambos sem access log nem error log; os
+cabeçalhos `no-store` e `noindex` saem por `map` no nível do servidor, sem
+perder os cabeçalhos de segurança herdados.
+
+**Leitura do vendedor.** `GET /orders/:orderId/billing` ganha, dentro de
+`billing`, `canOperate`, `figures` (recebido, guardado, reservado, livre),
+`situation` por urgência, `review` com o motivo e `links`. Sem capacidade de
+operar, `url`, `chargeId`, `checkoutUrl`, `payMethod`, `invoiceCode` e
+comprovante vêm nulos. Sem novo serviço, fila ou infraestrutura.
+
 ## WAP-E01 — ingresso e geração (16/11/2026)
 
 [RFC 069](docs/rfc/069-ingresso-efemero-e-geracao-autenticada-do-whatsapp.md) /
@@ -187,6 +301,8 @@ projeta estados reais, sem retry de efeito incerto. O transporte humano
 revalida comandos `billing_send:true` pelo preflight autenticado antes do HTTP
 externo. B04 integra rotas, serviço e flags na API/worker sem interromper
 recebimento. Nenhuma flag habilitada nem workflow remoto publicado. Frontend adiado.
+Desde a LPC (23/11/2026), a mensagem leva a URL do link do CRM, e a correção
+de link do CRM é cancelar antes do clique e criar outro no livre.
 
 ## Triagem prioritária do Vendedor — VND-L05 (06/11/2026)
 
@@ -522,7 +638,10 @@ do pedido/plano e idempotência. Outbox `billing.checkout.create`, fila
 cifrados, principal separado de taxas, sinal sem `paid_on`, revisão comercial
 e conciliação/devolução auditadas. Triggers protegem a verdade da quitação
 inclusive contra comandos legados. Flags separam emissão e recebimento no
-rollback; [runbook](docs/runbooks/order-billing.md).
+rollback; [runbook](docs/runbooks/order-billing.md). A LPC (23/11/2026) move
+a criação no provedor para o clique no link do CRM e limita a cobrança ativa
+única por pedido às cobranças sem link; humanos não criam mais cobranças sem
+link (409 `BILLING_USE_PAYMENT_LINK`).
 
 ## Melhor Envio — T139 (02/11/2026)
 

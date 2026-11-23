@@ -1,11 +1,16 @@
 # RFC 074 — Link de pagamento do CRM e cobranças que somam
 
-Proposta de 23/11/2026, aguardando a decisão do proprietário. Nada aqui está
-implementado. A decisão vira um ADR novo que supersede a regra de uma cobrança
-ativa por pedido do [ADR 058](../adr/058-cobrancas-do-pedido-com-infinitepay.md)
-e ajusta os [ADR 076](../adr/076-intencoes-de-cobranca-e-envio-transacional.md)
-e [ADR 077](../adr/077-recebimentos-externos-e-conciliacao-de-cobrancas.md)
-onde eles dependem dessa regra.
+Proposta de 23/11/2026. Aprovada pelo proprietário em 23/11/2026 na
+[ADR 098](../adr/098-link-de-pagamento-do-crm-e-cobrancas-que-somam.md);
+implementada no [PR 457](https://github.com/romulosutil/crm-silmer/pull/457).
+Os pontos para a decisão foram fixados no
+[contrato](../api/order-billing-links.md#decisões-fixadas-pontos-da-rfc). A ADR
+supersede a regra de uma cobrança ativa por pedido do
+[ADR 058](../adr/058-cobrancas-do-pedido-com-infinitepay.md) e ajusta os
+[ADR 076](../adr/076-intencoes-de-cobranca-e-envio-transacional.md) e
+[ADR 077](../adr/077-recebimentos-externos-e-conciliacao-de-cobrancas.md)
+onde eles dependiam dessa regra. O texto abaixo é a proposta original,
+mantida como histórico.
 
 Abra o [protótipo navegável](../prototypes/cobrancas-recebimentos.html) no
 navegador. A barra do topo troca o cenário (12), a largura, o papel e o tema.

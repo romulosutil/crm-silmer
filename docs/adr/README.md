@@ -1,5 +1,9 @@
 # Architecture Decision Records
 
+## Decisão de 23/11/2026
+
+- [098 — Link de pagamento do CRM e cobranças que somam](098-link-de-pagamento-do-crm-e-cobrancas-que-somam.md). O cliente recebe um link do CRM, cancelável até clicar em Pagar; vários links reservam e somam até a quitação. Supersede a regra de uma cobrança ativa por pedido da ADR 058. [RFC 074](../rfc/074-link-de-pagamento-do-crm-e-cobrancas-que-somam.md)
+
 ## Decisão de 21/11/2026
 
 - [097 — Dashboard sem a Central ao vivo](097-dashboard-sem-central-ao-vivo.md). O Dashboard do gestor fica só com a visão principal; Abrir fila leva à Inbox.

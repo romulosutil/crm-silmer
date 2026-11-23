@@ -131,14 +131,24 @@ test('COB-04: CSRF, strict command shapes and idempotency key are checked before
     assert.equal(response.statusCode, status);
   }
   assert.equal(calls.length, 0);
-  const response = await api.inject({
+  // LPC-01: new provider checkouts are created only by a CRM link click.
+  const retired = await api.inject({
     method: 'POST',
     url: `${PREFIX}/charges`,
     headers: HUMAN,
     payload: PLAN,
   });
+  assert.equal(retired.statusCode, 409);
+  assert.equal(retired.json().code, 'BILLING_USE_PAYMENT_LINK');
+  assert.equal(calls.length, 0);
+  const response = await api.inject({
+    method: 'POST',
+    url: `${PREFIX}/plan`,
+    headers: HUMAN,
+    payload: PLAN,
+  });
   assert.equal(response.statusCode, 200);
-  assert.equal(calls[0].method, 'issue');
+  assert.equal(calls[0].method, 'configure');
   assert.equal(calls[0].input.idempotencyKey, HUMAN['idempotency-key']);
   assert.equal(calls[0].input.correlationId, CORRELATION);
 });
@@ -231,7 +241,7 @@ test('COB-01/16: technical capabilities never grant human commercial commands', 
 test('OLIST-19/46: a locally cancelled order is refused with its own 409 code, not masked as 503', async (t) => {
   const { api, billing } = fixture();
   t.after(() => api.close());
-  billing.issue = async () => {
+  billing.configure = async () => {
     throw Object.assign(new Error('internal detail'), {
       code: 'ORDER_CANCELLED',
       statusCode: 409,
@@ -239,7 +249,7 @@ test('OLIST-19/46: a locally cancelled order is refused with its own 409 code, n
   };
   const response = await api.inject({
     method: 'POST',
-    url: `${PREFIX}/charges`,
+    url: `${PREFIX}/plan`,
     headers: HUMAN,
     payload: PLAN,
   });

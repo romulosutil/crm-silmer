@@ -64,6 +64,7 @@ export const SHARD_2_PARALLEL = [
   'test/order-billing-send-postgres-live.test.js',
   'test/order-billing-completion-postgres-live.test.js',
   'test/order-billing-upgrade-postgres-live.test.js',
+  'test/order-billing-links-postgres-live.test.js',
   'test/inbound-media-postgres-live.test.js',
   'test/n8n-integration-postgres-live.test.js',
   'test/painel-summary-postgres-live.test.js',

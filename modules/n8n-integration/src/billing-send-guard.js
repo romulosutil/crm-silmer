@@ -97,6 +97,11 @@ export async function lockBillingSend(client, selector) {
     'SELECT order_id FROM crm.order_billing_plans WHERE order_id=ANY($1::text[]) ORDER BY order_id FOR UPDATE',
     [orders],
   );
+  // LPC: CRM payment links sit between plans and charges in the lock order.
+  await client.query(
+    'SELECT id FROM crm.order_billing_links WHERE order_id=ANY($1::text[]) ORDER BY id FOR UPDATE',
+    [orders],
+  );
   await client.query(
     'SELECT id FROM crm.order_billing_charges WHERE order_id=ANY($1::text[]) ORDER BY id FOR UPDATE',
     [orders],
@@ -124,13 +129,16 @@ export async function billingSendBlockReason(client, intent, options) {
     o.status AS order_status,o.cancelled_at AS order_cancelled_at,o.confirmed_at AS current_confirmed_at,o.final_amount_cents AS current_total,o.payment_condition AS current_condition,
     CASE WHEN o.conversation_id IS NULL THEN o.manual_owner_id ELSE primary_c.assigned_user_id END AS current_order_owner,
     o.conversation_id AS primary_id,p.review_required,
-    ch.status AS charge_status,ch.valid_until,
+    ch.status AS charge_status,ch.valid_until,l.state AS link_state,
     COALESCE((SELECT sum(greatest(0,bp.applied_amount_cents-bp.refunded_amount_cents)) FROM crm.order_billing_receipt_ledger bp WHERE bp.order_id=i.order_id AND bp.application_valid),0) AS covered
     FROM crm.order_billing_send_intents i JOIN crm.users u ON u.id=i.actor_id
     LEFT JOIN crm.user_functions f ON f.user_id=u.id JOIN crm.conversations c ON c.id=i.conversation_id
     JOIN crm.contact_identities ci ON ci.id=c.contact_identity_id JOIN crm.orders o ON o.id=i.order_id
     LEFT JOIN crm.conversations primary_c ON primary_c.id=o.conversation_id
-    JOIN crm.order_billing_plans p ON p.order_id=o.id JOIN crm.order_billing_charges ch ON ch.id=i.charge_id WHERE i.id=$1`,
+    JOIN crm.order_billing_plans p ON p.order_id=o.id
+    LEFT JOIN crm.order_billing_charges ch ON ch.id=i.charge_id
+    LEFT JOIN crm.order_billing_links l ON l.id=i.link_id
+    WHERE i.id=$1 AND (ch.id IS NOT NULL OR l.id IS NOT NULL)`,
       [intent.id],
     )
   ).rows[0];
@@ -188,14 +196,17 @@ export async function billingSendBlockReason(client, intent, options) {
     row.charge_status === 'review'
   )
     return 'AGREEMENT_CHANGED';
+  // LPC: a CRM link has no provider expiry; it ends only by payment or cancel.
+  if (row.link_state === 'cancelled') return 'LINK_CANCELLED';
   if (
     row.charge_status === 'paid' ||
+    row.link_state === 'paid' ||
     BigInt(row.covered) + BigInt(row.amount_cents) > BigInt(row.current_total)
   )
     return 'PAYMENT_CONFIRMED';
   if (
-    new Date(row.valid_until) <= options.now ||
-    row.charge_status === 'closed'
+    !row.link_state &&
+    (new Date(row.valid_until) <= options.now || row.charge_status === 'closed')
   )
     return 'CHARGE_EXPIRED';
   if (

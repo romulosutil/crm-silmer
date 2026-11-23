@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import rateLimit from '@fastify/rate-limit';
 import { authorizeRequest } from './n8n-routes.js';
 
@@ -57,6 +58,13 @@ const PUBLIC_CODES = new Set([
   'BILLING_RECEIPT_REVERSED',
   'BILLING_PAYMENT_NOT_RECORDED',
   'BILLING_CHECK_DISABLED',
+  'BILLING_LINK_NOT_OPEN',
+  'BILLING_LINK_AMOUNT_INVALID',
+  'BILLING_LINK_EXCEEDS_FREE',
+  'BILLING_RECEIPT_EXCEEDS_FREE',
+  'BILLING_LINK_IN_PAYMENT',
+  'BILLING_LINK_UNKNOWN',
+  'BILLING_USE_PAYMENT_LINK',
 ]);
 
 /** @param {string} code @param {number} [statusCode] */
@@ -77,17 +85,61 @@ function identifier(value) {
   return value;
 }
 
-/** @param {unknown} value @param {string[]} keys */
-function body(value, keys) {
+/** @param {unknown} value @param {readonly string[]} keys @param {readonly string[]} [optional] */
+function body(value, keys, optional = []) {
   if (
     !value ||
     typeof value !== 'object' ||
     Array.isArray(value) ||
-    Object.keys(value).some((key) => !keys.includes(key)) ||
+    Object.keys(value).some(
+      (key) => !keys.includes(key) && !optional.includes(key),
+    ) ||
     keys.some((key) => !Object.hasOwn(value, key))
   )
     throw invalid();
   return /** @type {Record<string, any>} */ (value);
+}
+
+// LPC-02: the public page reads only these fields; nothing else leaves.
+const PUBLIC_LINK_FIELDS = [
+  'state',
+  'orderNumber',
+  'kind',
+  'amountCents',
+  'checkoutUrl',
+  'paidAt',
+];
+/** @param {any} value */
+function publicLinkBody(value) {
+  return Object.fromEntries(
+    PUBLIC_LINK_FIELDS.filter(
+      (key) => value?.[key] !== undefined && value?.[key] !== null,
+    ).map((key) => [key, value[key]]),
+  );
+}
+
+/** Fixed window per token digest; the token itself is never kept.
+ * @param {number} max @param {number} windowMs */
+export function paymentLinkTokenLimiter(max, windowMs) {
+  /** @type {Map<string,{count:number,resetAt:number}>} */
+  const windows = new Map();
+  /** @param {unknown} token */
+  return (token) => {
+    const now = Date.now();
+    if (windows.size > 10000)
+      for (const [entryKey, entry] of windows)
+        if (entry.resetAt <= now) windows.delete(entryKey);
+    const digest = createHash('sha256')
+      .update(String(token ?? '').toUpperCase())
+      .digest('base64url');
+    const entry = windows.get(digest);
+    if (!entry || entry.resetAt <= now) {
+      windows.set(digest, { count: 1, resetAt: now + windowMs });
+      return true;
+    }
+    entry.count += 1;
+    return entry.count <= max;
+  };
 }
 
 /** @param {any} reply @param {unknown} error */
@@ -110,10 +162,19 @@ function problem(reply, error) {
           Number(candidate?.statusCode) < 600
         ? Number(candidate.statusCode)
         : 400;
+  // LPC-03/04: who won a cancel/click race; state and instant only.
+  const details =
+    ['BILLING_LINK_NOT_OPEN', 'BILLING_CONFLICT'].includes(code) &&
+    candidate?.details
+      ? {
+          state: candidate.details.state ?? null,
+          clickedAt: candidate.details.clickedAt ?? null,
+        }
+      : {};
   return reply
     .code(status)
     .type('application/problem+json')
-    .send({ type: 'about:blank', title: code, status, code });
+    .send({ type: 'about:blank', title: code, status, code, ...details });
 }
 
 /** @param {any} reply @param {()=>Promise<unknown>} operation */
@@ -184,33 +245,57 @@ export function registerOrderBillingRoutes(api, billing, contextFor) {
         });
       }),
     );
-    for (const [suffix, method, extra] of /** @type {const} */ ([
-      ['/plan', 'configure', ['percent']],
-      ['/charges', 'issue', ['percent']],
-      ['/charges/:chargeId/refund', 'refund', ['amountCents']],
-      ['/reconcile', 'reconcile', ['decision', 'confirmedProviderReview']],
+    /** @type {Array<[string,string,string[],string[]]>} */
+    const commands = [
+      ['/plan', 'configure', ['percent'], []],
+      ['/charges', 'issue', ['percent'], []],
+      ['/charges/:chargeId/refund', 'refund', ['amountCents'], []],
+      ['/reconcile', 'reconcile', ['decision', 'confirmedProviderReview'], []],
       [
         '/external-receipts',
         'recordExternal',
         ['amountCents', 'receivedOn', 'method', 'note'],
+        ['cancelLinkIds'],
       ],
-      ['/external-receipts/:receiptId/reverse', 'reverseExternal', ['reason']],
+      [
+        '/external-receipts/:receiptId/reverse',
+        'reverseExternal',
+        ['reason'],
+        [],
+      ],
       [
         '/charges/:chargeId/check-payment',
         'checkPayment',
         ['invoiceSlug', 'transactionNsu'],
+        [],
       ],
-    ])) {
+      // LPC: CRM payment links (RFC 074 / ADR 098).
+      ['/links', 'createLink', ['amountCents'], ['percent']],
+      ['/links/:linkId/cancel', 'cancelLink', [], []],
+      [
+        '/links/:linkId/confirm-result',
+        'confirmLinkResult',
+        [],
+        ['invoiceSlug', 'transactionNsu'],
+      ],
+    ];
+    for (const [suffix, method, extra, optional] of commands) {
       scope.post(`${prefix}${suffix}`, options, (request, reply) =>
         respond(reply, async () => {
           const { actor } = await human(request, billing, true);
-          const command = body(request.body, [
-            'expectedVersion',
-            'expectedBillingVersion',
-            ...extra,
-          ]);
+          const command = body(
+            request.body,
+            ['expectedVersion', 'expectedBillingVersion', ...extra],
+            optional,
+          );
           const params = /** @type {any} */ (request.params);
+          const idempotencyKey = identifier(request.headers['idempotency-key']);
+          // LPC-01 (ADR 098): a provider checkout is created only by the
+          // client's click on a CRM link; no human route creates one.
+          if (method === 'issue')
+            throw invalid('BILLING_USE_PAYMENT_LINK', 409);
           if (method === 'checkPayment') reply.code(202);
+          if (method === 'createLink') reply.code(201);
           return billing[method]({
             ...command,
             actor,
@@ -221,7 +306,8 @@ export function registerOrderBillingRoutes(api, billing, contextFor) {
             ...(params.receiptId
               ? { receiptId: identifier(params.receiptId) }
               : {}),
-            idempotencyKey: identifier(request.headers['idempotency-key']),
+            ...(params.linkId ? { linkId: identifier(params.linkId) } : {}),
+            idempotencyKey,
             correlationId: contextFor(request).correlationId,
           });
         }),
@@ -291,5 +377,87 @@ export function registerOrderBillingRoutes(api, billing, contextFor) {
         scope.get(`${technicalPrefix}/${operation}`, options, handler);
       else scope.post(`${technicalPrefix}/${operation}`, options, handler);
     }
+  });
+  if (typeof billing.publicLink === 'function') registerPublic(api, billing);
+}
+
+/** LPC-01/02: the client's page `/pagar/{token}`. No session, cookie or CSRF:
+ * the token is the only capability. Uniform `unavailable`, no PII, no-store,
+ * noindex, no-referrer, per-IP and per-token limits, Origin on the click.
+ * The token stays out of logs: the API logger never records URLs or params.
+ * @param {import('fastify').FastifyInstance} api @param {any} billing */
+function registerPublic(api, billing) {
+  api.register(async (scope) => {
+    await scope.register(rateLimit, {
+      global: false,
+      errorResponseBuilder: () => invalid('RATE_LIMITED', 429),
+    });
+    // The page polls every 2.5 s with backoff: reads and clicks are limited
+    // apart, per token digest and per IP (CGNAT-tolerant reads).
+    const readsPerToken = paymentLinkTokenLimiter(60, 60000);
+    const clicksPerToken = paymentLinkTokenLimiter(10, 60000);
+    const origins = new Set(billing.publicOrigins ?? []);
+    scope.addHook('onRequest', async (_request, reply) => {
+      reply.header('cache-control', 'no-store');
+      reply.header('referrer-policy', 'no-referrer');
+      reply.header('x-robots-tag', 'noindex, nofollow');
+      reply.header('x-content-type-options', 'nosniff');
+    });
+    scope.setErrorHandler((error, _request, reply) => {
+      const status = Number(/** @type {any} */ (error).statusCode);
+      return problem(
+        reply,
+        status === 413
+          ? invalid('REQUEST_TOO_LARGE', 413)
+          : status === 415
+            ? invalid('UNSUPPORTED_MEDIA_TYPE', 415)
+            : error,
+      );
+    });
+    const path = '/api/v1/payment-links/:token';
+    scope.get(
+      path,
+      {
+        bodyLimit: 1024,
+        config: { rateLimit: { max: 120, timeWindow: '1 minute' } },
+      },
+      async (request, reply) => {
+        try {
+          if (Object.keys(request.query ?? {}).length) throw invalid();
+          const { token } = /** @type {any} */ (request.params);
+          if (!readsPerToken(token)) throw invalid('RATE_LIMITED', 429);
+          return reply.send(
+            publicLinkBody(await billing.publicLink({ token })),
+          );
+        } catch (error) {
+          return problem(reply, error);
+        }
+      },
+    );
+    scope.post(
+      `${path}/checkout`,
+      {
+        bodyLimit: 1024,
+        config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+      },
+      async (request, reply) => {
+        try {
+          const origin = request.headers.origin;
+          if (typeof origin !== 'string' || !origins.has(origin))
+            throw invalid('FORBIDDEN', 403);
+          if (Object.keys(request.query ?? {}).length) throw invalid();
+          if (request.body !== undefined && request.body !== null)
+            body(request.body, []);
+          const { token } = /** @type {any} */ (request.params);
+          if (!clicksPerToken(token)) throw invalid('RATE_LIMITED', 429);
+          const result = await billing.publicCheckout({ token });
+          return reply
+            .code(result.statusCode)
+            .send(publicLinkBody(result.body));
+        } catch (error) {
+          return problem(reply, error);
+        }
+      },
+    );
   });
 }

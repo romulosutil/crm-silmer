@@ -44,6 +44,11 @@ function phone(value) {
     fail('INVALID_REQUEST', 400);
   return value.replace(/^\+/u, '');
 }
+/** @param {string} digits */
+function brazilianNationalNumber(digits) {
+  const national = digits.replace(/^55(?=\d{10,11}$)/u, '');
+  return /^[1-9]\d(?:9\d{8}|[2-5]\d{7})$/u.test(national) ? national : null;
+}
 /** @param {any} value */
 const sha = (value) => createHash('sha256').update(value).digest('hex');
 /** @param {any} value @param {string} context @param {Buffer} key */
@@ -148,6 +153,53 @@ export class PostgresSellerWhatsAppRepository {
     return contactPhoneHash(phone(value), this.#lookup);
   }
 
+  /** @param {any} line */
+  #registeredNumber(line) {
+    return decrypt(
+      line.number_envelope,
+      `seller-whatsapp-number:${line.id}`,
+      this.#key,
+    );
+  }
+
+  /** @param {any} client @param {any} line @param {string} number */
+  async #matchesNumber(client, line, number) {
+    const digest = this.#digest(number);
+    if (
+      digest === this.#options.generalNumberDigest ||
+      line.number_digest === this.#options.generalNumberDigest
+    )
+      return false;
+    const exact = digest === line.number_digest;
+    const national = brazilianNationalNumber(number);
+    if (exact && number !== national) return true;
+    if (
+      !exact &&
+      (!national ||
+        number === national ||
+        this.#digest(national) !== line.number_digest ||
+        this.#registeredNumber(line).international === true)
+    )
+      return false;
+    // Once a legacy line is verified, keep that exact provider identity.
+    if (line.confirmed_number_envelope) {
+      const confirmed = decrypt(
+        line.confirmed_number_envelope,
+        `seller-whatsapp-confirmed:${line.id}`,
+        this.#key,
+      ).number;
+      if (confirmed !== number) return false;
+    }
+    if (exact) return true;
+    // A legacy number without a country code can match provider proof for
+    // the same Brazilian number, provided it does not take another line.
+    const reserved = await client.query(
+      'SELECT 1 FROM crm.whatsapp_number_reservations WHERE number_digest=$1',
+      [digest],
+    );
+    return !reserved.rows.length;
+  }
+
   /** @param {(client:any)=>Promise<any>} work */
   async #transaction(work) {
     try {
@@ -212,11 +264,7 @@ export class PostgresSellerWhatsAppRepository {
         challenge: null,
         available: this.#options.enabled === true,
       };
-    const number = decrypt(
-      line.number_envelope,
-      `seller-whatsapp-number:${line.id}`,
-      this.#key,
-    ).number;
+    const { number } = this.#registeredNumber(line);
     const current =
       operation ??
       (
@@ -355,14 +403,19 @@ export class PostgresSellerWhatsAppRepository {
       input.action === 'connect' && input.expectedNumber !== undefined
         ? phone(input.expectedNumber)
         : null;
-    const fingerprint = sha(
-      JSON.stringify({
-        action: input.action,
-        numberDigest: expectedNumber ? this.#digest(expectedNumber) : null,
-        expectedVersion: input.expectedVersion,
-        expectedGeneration: input.expectedGeneration ?? null,
-      }),
-    );
+    const number =
+      expectedNumber &&
+      !input.expectedNumber.startsWith('+') &&
+      brazilianNationalNumber(expectedNumber) === expectedNumber
+        ? `55${expectedNumber}`
+        : expectedNumber;
+    const fields = {
+      action: input.action,
+      numberDigest: number ? this.#digest(number) : null,
+      expectedVersion: input.expectedVersion,
+      expectedGeneration: input.expectedGeneration ?? null,
+    };
+    const fingerprint = sha(JSON.stringify(fields));
     return this.#transaction(async (client) => {
       await this.#owner(client, input.actorId);
       let line = await this.#line(client, input.actorId);
@@ -387,7 +440,20 @@ export class PostgresSellerWhatsAppRepository {
         )
       ).rows[0];
       if (replay) {
-        if (replay.fingerprint !== fingerprint) fail('IDEMPOTENCY_KEY_REUSED');
+        if (replay.fingerprint !== fingerprint) {
+          const legacyDigest =
+            expectedNumber && expectedNumber !== number
+              ? this.#digest(expectedNumber)
+              : null;
+          if (
+            !legacyDigest ||
+            line?.number_digest !== legacyDigest ||
+            this.#registeredNumber(line).international === true ||
+            replay.fingerprint !==
+              sha(JSON.stringify({ ...fields, numberDigest: legacyDigest }))
+          )
+            fail('IDEMPOTENCY_KEY_REUSED');
+        }
         return this.#present(client, line, replay);
       }
       if (Number(line?.version ?? 0) !== input.expectedVersion)
@@ -399,8 +465,12 @@ export class PostgresSellerWhatsAppRepository {
         fail('WHATSAPP_GENERATION_STALE');
       if (line) {
         if (
-          expectedNumber &&
-          line.number_digest !== this.#digest(expectedNumber)
+          number &&
+          !(await this.#matchesNumber(client, line, number)) &&
+          !(
+            expectedNumber !== number &&
+            (await this.#matchesNumber(client, line, expectedNumber))
+          )
         )
           fail('WHATSAPP_LINE_CONFLICT');
         let unresolved = (
@@ -499,15 +569,29 @@ export class PostgresSellerWhatsAppRepository {
       );
       const at = this.#clock();
       if (!line) {
+        if (!number) fail('INVALID_REQUEST', 400);
         const slot = this.#options.provisionedLines?.get(input.actorId);
         const lineId = slot?.lineId ?? randomUUID();
-        const digest = this.#digest(expectedNumber);
+        const digest = this.#digest(number);
+        const national = brazilianNationalNumber(number);
+        const aliases =
+          national && number !== national
+            ? [digest, this.#digest(national)]
+            : [digest];
         const reserved = (
           await client.query(
-            'SELECT kind FROM crm.whatsapp_number_reservations WHERE number_digest=$1',
-            [digest],
+            `SELECT r.kind,r.number_digest,l.id,l.number_envelope
+             FROM crm.whatsapp_number_reservations r
+             LEFT JOIN crm.seller_whatsapp_lines l ON l.id=r.line_id
+             WHERE r.number_digest=ANY($1::text[])`,
+            [aliases],
           )
-        ).rows[0];
+        ).rows.some(
+          (/** @type {any} */ row) =>
+            row.number_digest === digest ||
+            row.kind === 'general' ||
+            this.#registeredNumber(row).international !== true,
+        );
         if (reserved) fail('WHATSAPP_LINE_CONFLICT');
         line = (
           await client.query(
@@ -521,7 +605,7 @@ export class PostgresSellerWhatsAppRepository {
               digest,
               JSON.stringify(
                 encrypt(
-                  { number: expectedNumber },
+                  { number, international: true },
                   `seller-whatsapp-number:${lineId}`,
                   this.#key,
                 ),
@@ -683,11 +767,7 @@ export class PostgresSellerWhatsAppRepository {
       action,
       reference: op.reference,
       instanceName: line.instance_name,
-      expectedNumber: decrypt(
-        line.number_envelope,
-        `seller-whatsapp-number:${line.id}`,
-        this.#key,
-      ).number,
+      expectedNumber: this.#registeredNumber(line).number,
       source: binding
         ? {
             bindingId: binding.id,
@@ -1058,12 +1138,12 @@ export class PostgresSellerWhatsAppRepository {
           ).rows[0];
           if (
             !confirmed ||
-            this.#digest(confirmed) !== line.number_digest ||
             input.webhookVerified !== true ||
             input.bindingVerified !== true ||
             !currentBinding ||
             !attemptedChallenge ||
-            op.action === 'disconnect'
+            op.action === 'disconnect' ||
+            !(await this.#matchesNumber(client, line, confirmed))
           )
             state = 'blocked';
           else state = 'connected';
@@ -1512,8 +1592,6 @@ export class PostgresSellerWhatsAppRepository {
           : Number(line.generation) !== source.generation) ||
         binding.instance_name !== input.instance ||
         line.instance_name !== input.instance ||
-        (input.sender !== undefined &&
-          this.#digest(input.sender.split('@')[0]) !== line.number_digest) ||
         !timingSafeEqual(
           Buffer.from(binding.token_hash, 'hex'),
           Buffer.from(tokenHash, 'hex'),
@@ -1525,7 +1603,13 @@ export class PostgresSellerWhatsAppRepository {
             'validating',
             'connected',
             'unknown',
-          ].includes(line.state))
+          ].includes(line.state)) ||
+        (input.sender !== undefined &&
+          !(await this.#matchesNumber(
+            client,
+            line,
+            input.sender.split('@')[0],
+          )))
       )
         fail('FORBIDDEN', 403);
       return {

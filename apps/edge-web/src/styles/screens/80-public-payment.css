@@ -1,0 +1,144 @@
+/*
+ * RFC 074 (LPC-02/LPC-09): página pública de pagamento `/pagar/:token`.
+ * Fora do CRM: sem shell, só o cartão do pagamento. Protótipo:
+ * cobrancas-recebimentos.html, cenário 12 (.cp-*). Só tokens semânticos.
+ */
+.cp {
+  display: grid;
+  align-content: start;
+  gap: var(--space-5);
+  inline-size: 100%;
+  max-inline-size: 28rem;
+  min-block-size: 100vh;
+  margin-inline: auto;
+  padding: var(--space-8) var(--space-4);
+  box-sizing: border-box;
+}
+
+.cp-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.cp-head h1 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  overflow-wrap: anywhere;
+}
+
+.cp-head h1:focus {
+  outline: none;
+}
+
+.cp-head h1:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.cp-monogram {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  background: var(--color-accent-solid);
+  border-radius: var(--radius-sm);
+}
+
+.cp-monogram .brand-mark {
+  block-size: 1rem;
+  inline-size: auto;
+  fill: var(--color-on-accent);
+}
+
+.cp-loading {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.cp-card {
+  position: relative;
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.cp-figure {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.cp-figure p,
+.cp-msg,
+.cp-live,
+.cp-foot {
+  margin: 0;
+}
+
+.cp-kind {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.cp-amount {
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.cp-state {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.cp-badge {
+  gap: var(--space-1);
+}
+
+.cp-badge .app-icon {
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+  flex: none;
+  stroke-width: 2;
+}
+
+.cp-msg strong {
+  font-weight: var(--weight-semibold);
+}
+
+.cp-button {
+  inline-size: 100%;
+  min-block-size: var(--target-min);
+  font-size: var(--text-base);
+}
+
+.cp-button[aria-disabled='true'] {
+  cursor: progress;
+}
+
+.cp-live {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+/* Empty, the status line leaves the flow but stays in the accessibility tree,
+   so the next note is announced. */
+.cp-live:empty {
+  position: absolute;
+}
+
+.cp-foot {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  text-align: center;
+}

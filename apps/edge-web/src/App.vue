@@ -606,7 +606,17 @@ watch(
   },
 );
 
-void restoreSession();
+// RFC 074 (LPC-02): a public page (the customer's payment link) renders
+// alone. Resolved from the address before the router is ready, so it never
+// asks for a session, never redirects to the login and never shows the shell.
+const publicPage = computed(
+  () =>
+    route.meta.public === true ||
+    (route.matched.length === 0 &&
+      router.resolve(globalThis.location?.pathname ?? '/').meta.public ===
+        true),
+);
+if (!publicPage.value) void restoreSession();
 onBeforeUnmount(() => {
   globalThis.document?.removeEventListener(
     'visibilitychange',
@@ -784,9 +794,12 @@ function onCursor(cursor) {
 </script>
 
 <template>
-  <a class="skip-link" href="#main-content">Pular para o conteúdo</a>
+  <a v-if="!publicPage" class="skip-link" href="#main-content"
+    >Pular para o conteúdo</a
+  >
 
-  <div v-if="phase !== 'authenticated'" class="public-shell">
+  <RouterView v-if="publicPage" />
+  <div v-else-if="phase !== 'authenticated'" class="public-shell">
     <header class="site-header">
       <a class="brand" href="/" :aria-label="`${brand.productName}, início`">
         <BrandMark class="brand-logo" />

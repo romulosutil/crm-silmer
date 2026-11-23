@@ -12,6 +12,7 @@ import MelhorEnvioView from './views/MelhorEnvioView.vue';
 import OlistView from './views/OlistView.vue';
 import OrdersView from './views/OrdersView.vue';
 import OrderView from './views/OrderView.vue';
+import PublicPaymentView from './views/PublicPaymentView.vue';
 import TeamPerformanceView from './views/TeamPerformanceView.vue';
 import UsersView from './views/UsersView.vue';
 
@@ -115,6 +116,14 @@ export const router = createRouter({
       meta: { requiresHealthErrors: true, title: 'Saúde e erros' },
     },
     { path: '/conta', component: AccountView, meta: { title: 'Conta' } },
+    {
+      // RFC 074 (LPC-02): the customer's payment page. `public` tells the
+      // shell to render it alone: no session request, no login redirect.
+      path: '/pagar/:token',
+      component: PublicPaymentView,
+      props: (route) => ({ token: String(route.params.token ?? '') }),
+      meta: { public: true, title: 'Pagamento' },
+    },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],
 });

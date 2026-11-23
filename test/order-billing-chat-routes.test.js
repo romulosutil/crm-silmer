@@ -42,6 +42,9 @@ const COMMANDS = [
     expectedIntentVersion: 4,
   },
 ];
+// LPC-01: what humans may still send; legacy issue/balance/correct are retired.
+const ACCEPTED = { ...BASE, action: 'send_link', linkId: 'link-example' };
+const LEGACY = new Set(['issue', 'balance', 'correct']);
 const INTENT = {
   id: 'intent-example',
   version: 1,
@@ -119,16 +122,28 @@ function fixture(enabled = true) {
   return { api, service, calls };
 }
 
-test('BAPI-01/02: five explicit actions accept the reviewed command and return a pending intent, not a sent message', async (t) => {
+test('BAPI-01/02 LPC-01: link and existing-charge actions return a pending intent; actions that would create a provider checkout are retired', async (t) => {
   const { api, calls } = fixture();
   t.after(() => api.close());
-  for (const payload of COMMANDS) {
+  for (const payload of [
+    ...COMMANDS,
+    ACCEPTED,
+    { ...BASE, action: 'issue_link', amountCents: 24000 },
+    { ...BASE, action: 'issue_link', amountCents: 24000, percent: 50 },
+  ]) {
+    const before = calls.length;
     const response = await api.inject({
       method: 'POST',
       url: `${PREFIX}/send-intents`,
       headers: HEADERS,
       payload,
     });
+    if (LEGACY.has(payload.action)) {
+      assert.equal(response.statusCode, 409, payload.action);
+      assert.equal(response.json().code, 'BILLING_USE_PAYMENT_LINK');
+      assert.equal(calls.length, before);
+      continue;
+    }
     assert.equal(response.statusCode, 202);
     assert.deepEqual(response.json(), INTENT);
     assert.deepEqual(calls.at(-1), {
@@ -209,7 +224,7 @@ test('BAPI-03: session, CSRF/origin, automation rejection and idempotency header
       method: 'POST',
       url: `${PREFIX}/send-intents`,
       headers,
-      payload: COMMANDS[0],
+      payload: ACCEPTED,
     });
     assert.equal(response.statusCode, 403);
   }
@@ -218,7 +233,7 @@ test('BAPI-03: session, CSRF/origin, automation rejection and idempotency header
       method: 'POST',
       url: `${PREFIX}/send-intents`,
       headers: { ...HEADERS, 'idempotency-key': key },
-      payload: COMMANDS[0],
+      payload: ACCEPTED,
     });
     assert.equal(response.statusCode, 400);
   }
@@ -232,7 +247,7 @@ test('BAPI-04/05: disabled writes fail closed while private intent/history reads
     method: 'POST',
     url: `${PREFIX}/send-intents`,
     headers: HEADERS,
-    payload: COMMANDS[0],
+    payload: ACCEPTED,
   });
   assert.equal(denied.statusCode, 503);
   assert.equal(denied.json().code, 'BILLING_DISABLED');
@@ -278,7 +293,7 @@ test('BAPI-04: omitted enable option does not admit writes', async (t) => {
     method: 'POST',
     url: `${PREFIX}/send-intents`,
     headers: HEADERS,
-    payload: COMMANDS[0],
+    payload: ACCEPTED,
   });
   assert.equal(response.statusCode, 503);
   assert.equal(response.json().code, 'BILLING_DISABLED');
@@ -303,7 +318,7 @@ test('BAPI-03: real capability policy denies Financeiro and preserves the admini
     method: 'POST',
     url: `${PREFIX}/send-intents`,
     headers: HEADERS,
-    payload: COMMANDS[0],
+    payload: ACCEPTED,
   });
   assert.equal(denied.statusCode, 403);
   assert.equal(calls.length, 0);
@@ -317,7 +332,7 @@ test('BAPI-03: real capability policy denies Financeiro and preserves the admini
     method: 'POST',
     url: `${PREFIX}/send-intents`,
     headers: HEADERS,
-    payload: COMMANDS[0],
+    payload: ACCEPTED,
   });
   assert.equal(accepted.statusCode, 202);
   assert.deepEqual(calls[0].actor, actor);
@@ -371,7 +386,7 @@ test('BAPI-05: history pagination is bounded and selectors are not silently acce
         method: 'POST',
         url: `${PREFIX}/send-intents?other=x`,
         headers: HEADERS,
-        payload: COMMANDS[0],
+        payload: ACCEPTED,
       })
     ).statusCode,
     400,
@@ -396,7 +411,7 @@ test('BAPI-05: intent and history projections omit private provider fields and f
     {
       method: /** @type {const} */ ('POST'),
       url: `${PREFIX}/send-intents`,
-      payload: COMMANDS[0],
+      payload: ACCEPTED,
     },
     {
       method: /** @type {const} */ ('GET'),
@@ -426,7 +441,7 @@ test('BAPI-05: intent and history projections omit private provider fields and f
       method: 'POST',
       url: `${PREFIX}/send-intents`,
       headers: HEADERS,
-      payload: COMMANDS[0],
+      payload: ACCEPTED,
     });
     const expectedCode = status === 500 ? 'SERVICE_UNAVAILABLE' : code;
     assert.equal(response.statusCode, status === 500 ? 503 : status);

@@ -55,13 +55,27 @@ export const billingIntentActions = Object.freeze({
     confirmedProviderReview: { const: true },
   },
   retry: { intentId: identifier, expectedIntentVersion: version },
+  // LPC: the message carries the CRM link; nothing exists at the provider.
+  send_link: { linkId: identifier },
+  issue_link: {
+    amountCents: cents,
+    percent: { type: 'integer', minimum: 0, maximum: 100 },
+  },
 });
+
+/** @type {Record<string,string[]>} LPC: percent only fixes a missing condition. */
+const OPTIONAL_FIELDS = { issue_link: ['percent'] };
 
 export const billingSendCommandSchema = {
   oneOf: Object.entries(billingIntentActions).map(([action, fields]) => ({
     type: 'object',
     additionalProperties: false,
-    required: [...Object.keys(common), ...Object.keys(fields)],
+    required: [
+      ...Object.keys(common),
+      ...Object.keys(fields).filter(
+        (name) => !(OPTIONAL_FIELDS[action] ?? []).includes(name),
+      ),
+    ],
     properties: { ...common, action: { const: action }, ...fields },
   })),
 };
@@ -85,7 +99,8 @@ export const billingIntentSchema = {
     id: identifier,
     version,
     action: { enum: Object.keys(billingIntentActions) },
-    chargeId: identifier,
+    chargeId: { type: ['string', 'null'], maxLength: 255 },
+    linkId: { type: ['string', 'null'], maxLength: 255 },
     conversationId: identifier,
     state: { enum: [...billingIntentStates] },
     blockedReason: {
@@ -99,6 +114,7 @@ export const billingIntentSchema = {
         'PAYMENT_CONFIRMED',
         'INBOUND_CHANGED',
         'SENDING_DISABLED',
+        'LINK_CANCELLED',
       ],
     },
     messageId: { type: ['string', 'null'], maxLength: 255 },
@@ -216,13 +232,14 @@ export function readBillingSendCommand(input) {
   );
   if (
     !variant ||
-    Object.keys(input).length !== variant.required.length ||
+    Object.keys(input).some((key) => !Object.hasOwn(variant.properties, key)) ||
     variant.required.some((key) => !Object.hasOwn(input, key))
   )
     throw billingChatError();
   for (const [key, raw] of Object.entries(variant.properties)) {
     const rule = /** @type {any} */ (raw);
     const value = input[key];
+    if (!variant.required.includes(key) && !Object.hasOwn(input, key)) continue;
     if (Object.hasOwn(rule, 'const') && value !== rule.const)
       throw billingChatError();
     if (rule.type === 'string') billingChatIdentifier(value);

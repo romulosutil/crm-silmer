@@ -31,7 +31,19 @@ const CODES = new Set([
   'REQUEST_TOO_LARGE',
   'UNSUPPORTED_MEDIA_TYPE',
   'RATE_LIMITED',
+  'ORDER_CANCELLED',
+  'BILLING_STORE_ORDER',
+  'BILLING_ORDER_NOT_CONFIRMED',
+  'BILLING_LEGACY_PAYMENT',
+  'BILLING_CONDITION_LOCKED',
+  'BILLING_LINK_NOT_OPEN',
+  'BILLING_LINK_AMOUNT_INVALID',
+  'BILLING_LINK_EXCEEDS_FREE',
+  'BILLING_USE_PAYMENT_LINK',
 ]);
+// LPC-01 (ADR 098): these actions would create a provider checkout at send
+// time. Retired for humans; send_existing and retry reuse an existing charge.
+const RETIRED_ACTIONS = new Set(['issue', 'balance', 'correct']);
 
 /** COB-CHAT-B01: injectable boundary; no production service wired until B04.
  * @param {import('fastify').FastifyInstance} api
@@ -108,7 +120,7 @@ export function registerOrderBillingChatRoutes(
         if (!enabled) throw billingChatError('BILLING_DISABLED', 503);
         if (Object.keys(request.query ?? {}).length) throw billingChatError();
         const command = readBillingSendCommand(request.body);
-        const result = await service.submit({
+        const input = {
           ...command,
           actor,
           orderId: billingChatIdentifier(
@@ -118,7 +130,10 @@ export function registerOrderBillingChatRoutes(
             request.headers['idempotency-key'],
           ),
           correlationId: contextFor(request).correlationId,
-        });
+        };
+        if (RETIRED_ACTIONS.has(command.action))
+          throw billingChatError('BILLING_USE_PAYMENT_LINK', 409);
+        const result = await service.submit(input);
         return reply.code(202).send(result);
       },
     );

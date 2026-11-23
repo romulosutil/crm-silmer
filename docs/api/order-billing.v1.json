@@ -156,7 +156,7 @@
       ],
       "post": {
         "operationId": "issueOrderBillingCharge",
-        "summary": "Reservar cobrança de sinal, integral ou saldo",
+        "summary": "Retirada: criar cobrança na InfinitePay na hora (LPC-01)",
         "security": [
           {
             "sessionCookie": [],
@@ -165,8 +165,24 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "Resultado persistido; criação de link é assíncrona quando aplicável"
+          "409": {
+            "description": "BILLING_USE_PAYMENT_LINK: cobrança nova só pelo clique num link do CRM (LPC-01, ADR 098); nada é criado",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "code"],
+                  "properties": {
+                    "status": {
+                      "const": 409
+                    },
+                    "code": {
+                      "const": "BILLING_USE_PAYMENT_LINK"
+                    }
+                  }
+                }
+              }
+            }
           },
           "default": {
             "description": "Erro com código seguro, sem payload externo",
@@ -188,7 +204,7 @@
             }
           }
         },
-        "description": "Sessão humana. Responsável atual ou administrador para mutações; versões e propriedade são revalidadas sob lock, inclusive no replay.",
+        "description": "Retirada pela ADR 098. Depois de sessão, CSRF, corpo e Idempotency-Key válidos, responde sempre 409 BILLING_USE_PAYMENT_LINK sem efeito. Use POST /orders/{orderId}/billing/links.",
         "requestBody": {
           "required": true,
           "content": {
@@ -220,7 +236,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/orders/{orderId}/billing/charges/{chargeId}/refund": {
@@ -383,7 +400,12 @@
                     "minimum": 0
                   },
                   "decision": {
-                    "enum": ["apply_current", "close_unpaid"]
+                    "enum": [
+                      "apply_current",
+                      "close_unpaid",
+                      "cancel_open_links"
+                    ],
+                    "description": "close_unpaid fecha cobranças antigas vencidas e tentativas de link sem pagamento em review; cancel_open_links cancela os links open e aplica; apply_current recusa (409 BILLING_LINK_EXCEEDS_FREE) se recebido + links reservando passar do total."
                   },
                   "confirmedProviderReview": {
                     "const": true
@@ -918,6 +940,16 @@
                   "note": {
                     "type": "string",
                     "maxLength": 500
+                  },
+                  "cancelLinkIds": {
+                    "type": "array",
+                    "maxItems": 50,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "description": "Links `open` cancelados na mesma transação para liberar o valor (RFC 074, decisão 12)."
                   }
                 }
               }
@@ -1051,6 +1083,9 @@
           }
         ],
         "responses": {
+          "202": {
+            "description": "Consulta persistida; não comprova pagamento"
+          },
           "default": {
             "description": "Erro com código seguro, sem payload externo",
             "content": {
@@ -1069,9 +1104,6 @@
                 }
               }
             }
-          },
-          "202": {
-            "description": "Consulta persistida; não comprova pagamento"
           }
         },
         "description": "Sessão humana. Responsável atual ou administrador para mutações; versões e propriedade são revalidadas sob lock, inclusive no replay.",
@@ -1299,6 +1331,477 @@
                 "properties": {
                   "status": {
                     "enum": ["paid", "not_paid"]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{orderId}/billing/links": {
+      "parameters": [
+        {
+          "name": "orderId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        }
+      ],
+      "post": {
+        "operationId": "createOrderBillingLink",
+        "summary": "Gerar link de pagamento do CRM (Só gerar o link)",
+        "description": "Sessão humana. Responsável atual ou administrador; versões, propriedade e estado do link são revalidados sob o bloqueio do pedido. Nada é criado na InfinitePay; o valor fica reservado (LPC-06).",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": [],
+            "idempotencyKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "expectedVersion",
+                  "expectedBillingVersion",
+                  "amountCents"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "expectedBillingVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "amountCents": {
+                    "type": "integer",
+                    "minimum": 100
+                  },
+                  "percent": {
+                    "enum": [0, 50, 100]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Link criado; corpo `{billing, linkId}`"
+          },
+          "default": {
+            "description": "Erro com código seguro, sem payload externo",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "code"],
+                  "properties": {
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{orderId}/billing/links/{linkId}/cancel": {
+      "parameters": [
+        {
+          "name": "orderId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        {
+          "name": "linkId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "operationId": "cancelOrderBillingLink",
+        "summary": "Cancelar link do CRM antes do clique",
+        "description": "Sessão humana. Responsável atual ou administrador; versões, propriedade e estado do link são revalidados sob o bloqueio do pedido. Só cancela `open`; senão 409 BILLING_LINK_NOT_OPEN com {state, clickedAt}.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": [],
+            "idempotencyKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["expectedVersion", "expectedBillingVersion"],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "expectedBillingVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Visão atualizada"
+          },
+          "default": {
+            "description": "Erro com código seguro, sem payload externo",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "code"],
+                  "properties": {
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{orderId}/billing/links/{linkId}/confirm-result": {
+      "parameters": [
+        {
+          "name": "orderId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        {
+          "name": "linkId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "operationId": "confirmOrderBillingLinkResult",
+        "summary": "Confirmar resultado na InfinitePay (link `unknown`)",
+        "description": "Sessão humana. Responsável atual ou administrador; versões, propriedade e estado do link são revalidados sob o bloqueio do pedido. Com invoiceSlug e transactionNsu enfileira a consulta n8n existente; sem eles só fecha a tentativa cuja validade já passou (senão 409 BILLING_LINK_STILL_VALID).",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": [],
+            "idempotencyKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["expectedVersion", "expectedBillingVersion"],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "expectedBillingVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "invoiceSlug": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{1,128}$"
+                  },
+                  "transactionNsu": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{1,128}$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Visão atualizada; `check` quando enfileirada"
+          },
+          "default": {
+            "description": "Erro com código seguro, sem payload externo",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "code"],
+                  "properties": {
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payment-links/{token}": {
+      "parameters": [
+        {
+          "name": "token",
+          "in": "path",
+          "required": true,
+          "description": "Token do link do CRM (26 caracteres base32 Crockford). Nunca registrado em log.",
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        }
+      ],
+      "get": {
+        "operationId": "readPaymentLink",
+        "summary": "Página pública do link do CRM",
+        "description": "Sem sessão. Resposta uniforme `unavailable` para token inexistente, malformado ou cancelado. no-store, noindex, no-referrer, limite por IP (120/min) e por token (60/min); sem bloqueio nem escrita quando nada está devido.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Estado público, sem PII",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["state"],
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "ready",
+                        "in_progress",
+                        "paid",
+                        "failed",
+                        "unavailable"
+                      ]
+                    },
+                    "orderNumber": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "enum": ["signal", "balance", "full", "installment"]
+                    },
+                    "amountCents": {
+                      "type": "integer",
+                      "minimum": 100
+                    },
+                    "checkoutUrl": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "paidAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Erro com código seguro, sem payload externo",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "code"],
+                  "properties": {
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payment-links/{token}/checkout": {
+      "parameters": [
+        {
+          "name": "token",
+          "in": "path",
+          "required": true,
+          "description": "Token do link do CRM (26 caracteres base32 Crockford). Nunca registrado em log.",
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        }
+      ],
+      "post": {
+        "operationId": "checkoutPaymentLink",
+        "summary": "Clique em Pagar: cria a tentativa na InfinitePay",
+        "description": "Sem sessão nem CSRF; exige Origin do CRM. Idempotente por link e sob o mesmo bloqueio do cancelamento. Só cria tentativa com ORDER_BILLING_ENABLED. Limite por IP 20/min e por token 10/min.",
+        "security": [],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tentativa existente, falha ou indisponível",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["state"],
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "ready",
+                        "in_progress",
+                        "paid",
+                        "failed",
+                        "unavailable"
+                      ]
+                    },
+                    "orderNumber": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "enum": ["signal", "balance", "full", "installment"]
+                    },
+                    "amountCents": {
+                      "type": "integer",
+                      "minimum": 100
+                    },
+                    "checkoutUrl": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "paidAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Nova tentativa enfileirada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["state"],
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "ready",
+                        "in_progress",
+                        "paid",
+                        "failed",
+                        "unavailable"
+                      ]
+                    },
+                    "orderNumber": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "enum": ["signal", "balance", "full", "installment"]
+                    },
+                    "amountCents": {
+                      "type": "integer",
+                      "minimum": 100
+                    },
+                    "checkoutUrl": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "paidAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Erro com código seguro, sem payload externo",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "code"],
+                  "properties": {
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    }
                   }
                 }
               }

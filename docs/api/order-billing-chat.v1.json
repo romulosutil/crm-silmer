@@ -54,6 +54,25 @@
               }
             }
           },
+          "409": {
+            "description": "BILLING_USE_PAYMENT_LINK: cobrança nova só pelo clique num link do CRM (LPC-01, ADR 098); nada é criado",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "code"],
+                  "properties": {
+                    "status": {
+                      "const": 409
+                    },
+                    "code": {
+                      "const": "BILLING_USE_PAYMENT_LINK"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "default": {
             "description": "Falha segura; ver códigos em order-billing-chat.md",
             "content": {
@@ -79,7 +98,8 @@
               }
             }
           }
-        }
+        },
+        "description": "LPC-01 (ADR 098): send_link e issue_link enviam o link do CRM; send_existing e retry reenviam uma cobrança antiga já criada. issue, balance e correct criariam cobrança na InfinitePay no envio e respondem 409 BILLING_USE_PAYMENT_LINK sem efeito."
       }
     },
     "/orders/{orderId}/billing/send-intents/{intentId}": {
@@ -479,6 +499,98 @@
                 "maximum": 9007199254740991
               }
             }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "action",
+              "conversationId",
+              "expectedVersion",
+              "expectedBillingVersion",
+              "expectedConversationVersion",
+              "linkId"
+            ],
+            "properties": {
+              "action": {
+                "const": "send_link"
+              },
+              "conversationId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255,
+                "pattern": "^[!-~]+$"
+              },
+              "expectedVersion": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "expectedBillingVersion": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "expectedConversationVersion": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "linkId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255,
+                "pattern": "^[!-~]+$"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "action",
+              "conversationId",
+              "expectedVersion",
+              "expectedBillingVersion",
+              "expectedConversationVersion",
+              "amountCents"
+            ],
+            "properties": {
+              "action": {
+                "const": "issue_link"
+              },
+              "conversationId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255,
+                "pattern": "^[!-~]+$"
+              },
+              "expectedVersion": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "expectedBillingVersion": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "expectedConversationVersion": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "amountCents": {
+                "type": "integer",
+                "minimum": 100,
+                "maximum": 9007199254740991
+              },
+              "percent": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              }
+            }
           }
         ]
       },
@@ -510,13 +622,23 @@
             "maximum": 9007199254740991
           },
           "action": {
-            "enum": ["issue", "send_existing", "balance", "correct", "retry"]
+            "enum": [
+              "issue",
+              "send_existing",
+              "balance",
+              "correct",
+              "retry",
+              "send_link",
+              "issue_link"
+            ]
           },
           "chargeId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255,
-            "pattern": "^[!-~]+$"
+            "type": ["string", "null"],
+            "maxLength": 255
+          },
+          "linkId": {
+            "type": ["string", "null"],
+            "maxLength": 255
           },
           "conversationId": {
             "type": "string",
@@ -546,7 +668,8 @@
               "CHARGE_EXPIRED",
               "PAYMENT_CONFIRMED",
               "INBOUND_CHANGED",
-              "SENDING_DISABLED"
+              "SENDING_DISABLED",
+              "LINK_CANCELLED"
             ]
           },
           "messageId": {

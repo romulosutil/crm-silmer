@@ -18,6 +18,19 @@ import {
   encryptOrderPrivateJson,
   orderReadable,
 } from '@crm-silmer/orders';
+import {
+  CHARGE_ACTIVE,
+  LINK_RESERVING,
+  agreementMatches,
+  linkAttempts,
+  linkKindLabel,
+  linkStore,
+  linkTransition,
+  linkTokenHash,
+  linkUrl,
+  paymentLinkBase,
+  readLinkToken,
+} from './order-billing-links.js';
 
 /** @param {unknown} value */
 function uuid(value) {
@@ -33,6 +46,13 @@ function uuid(value) {
 /** @param {any} value */
 function iso(value) {
   return value ? new Date(value).toISOString() : null;
+}
+/** LPC-03/04: the conflict tells who won the race, never private data.
+ * @param {any} link */
+function linkNotOpen(link) {
+  return Object.assign(new BillingError(409, 'BILLING_LINK_NOT_OPEN'), {
+    details: { state: link.state, clickedAt: iso(link.clicked_at) },
+  });
 }
 /** @param {any} row @param {any} snapshot */
 function matches(row, snapshot) {
@@ -137,6 +157,25 @@ export function createOrderBillingRuntime(database, options) {
   );
   const clock = options.clock ?? (() => new Date());
   const idFactory = options.idFactory ?? randomUUID;
+  const links = linkStore({ clock, idFactory });
+  const linkBase = paymentLinkBase(environment);
+  // The page /pagar/{token} is served from the CRM itself (APP_BASE_URL).
+  const publicOrigins = Object.freeze([
+    ...new Set(
+      [
+        linkBase ? new URL(linkBase).origin : null,
+        ...String(environment.APP_ORIGIN ?? '')
+          .split(',')
+          .map((value) => {
+            try {
+              return value.trim() ? new URL(value.trim()).origin : null;
+            } catch {
+              return null;
+            }
+          }),
+      ].filter(Boolean),
+    ),
+  ]);
   /** @param {any} client @param {any} input */
   const audit = (client, input) => new PostgresAuditTrail(client).append(input);
   /** @param {any} client @param {string} orderId */
@@ -184,8 +223,9 @@ export function createOrderBillingRuntime(database, options) {
         0,
       );
   }
-  /** @param {any} order @param {any} plan @param {any[]} charges @param {number} paid */
-  function blocked(order, plan, charges, paid) {
+  /** Legacy single-charge issue (ADR 058); open CRM links also block it.
+   * @param {any} order @param {any} plan @param {any[]} charges @param {number} paid @param {any[]} [linkRows] */
+  function blocked(order, plan, charges, paid, linkRows = []) {
     // ADR 068: a cancelled order is terminal and never gets a new charge.
     if (order.cancelled_at) return 'ORDER_CANCELLED';
     if (order.origin === 'loja') return 'BILLING_STORE_ORDER';
@@ -202,11 +242,226 @@ export function createOrderBillingRuntime(database, options) {
     if (
       charges.some((c) =>
         ['queued', 'creating', 'waiting', 'unknown'].includes(c.status),
-      )
+      ) ||
+      linkRows.some((l) => LINK_RESERVING.includes(l.state))
     )
       return 'BILLING_ACTIVE_CHARGE';
     if (paid >= Number(order.final_amount_cents)) return 'BILLING_ALREADY_PAID';
     return null;
+  }
+  /** @param {any} client @param {string} orderId @returns {Promise<any[]>} */
+  async function linkRowsFor(client, orderId) {
+    return (
+      await client.query(
+        `SELECT l.*,cu.name AS created_by_name,xu.name AS cancelled_by_name FROM crm.order_billing_links l
+         JOIN crm.users cu ON cu.id=l.created_by LEFT JOIN crm.users xu ON xu.id=l.cancelled_by
+         WHERE l.order_id=$1 ORDER BY l.created_sequence`,
+        [orderId],
+      )
+    ).rows;
+  }
+  /** RFC 074 point 9; rows reviewed before 0085 derive the reason.
+   * @param {any} order @param {any} plan @param {any[]} charges @param {any[]} payments @param {number} refundCount */
+  function reviewReason(order, plan, charges, payments, refundCount) {
+    if (!plan?.review_required) return null;
+    if (plan.review_reason) return plan.review_reason;
+    if (!agreementMatches(order, plan)) return 'order_changed';
+    if (refundCount > 0) return 'refund';
+    const late = payments.some(
+      (p) =>
+        !p.application_valid &&
+        charges.find((c) => c.id === p.charge_id)?.status === 'closed',
+    );
+    return late ? 'late_payment' : 'outside_agreement';
+  }
+  /** @param {any} client @param {any} order @param {any} plan @param {boolean} canManage @param {{charges:any[],payments:any[],checks:any[],refundCount:number,invoices:Map<string,string>}} data */
+  async function linkView(client, order, plan, canManage, data) {
+    const rows = await linkRowsFor(client, order.id);
+    const figure = await links.figures(client, order, rows);
+    const events = rows.length
+      ? (
+          await client.query(
+            `SELECT e.link_id,e.kind,e.reason,e.occurred_at AS at,u.name AS actor_name FROM crm.order_billing_link_events e
+             JOIN crm.order_billing_links l ON l.id=e.link_id LEFT JOIN crm.users u ON u.id=e.actor_id
+             WHERE l.order_id=$1
+             UNION ALL
+             SELECT i.link_id,e.state,NULL,e.occurred_at,u.name FROM crm.order_billing_send_events e
+             JOIN crm.order_billing_send_intents i ON i.id=e.intent_id LEFT JOIN crm.users u ON u.id=i.actor_id
+             WHERE i.order_id=$1 AND i.link_id IS NOT NULL AND e.state IN ('sent','delivered')
+             ORDER BY at,kind`,
+            [order.id],
+          )
+        ).rows
+      : [];
+    const presented = rows.map((link) => {
+      const own = data.charges.filter((c) => c.link_id === link.id);
+      const latest = own.at(-1) ?? null;
+      const active = own.filter((c) => CHARGE_ACTIVE.includes(c.status)).at(-1);
+      const paidRows = data.payments.filter((p) =>
+        own.some((c) => c.id === p.charge_id),
+      );
+      const check = latest
+        ? data.checks.find((k) => k.charge_id === latest.id)
+        : null;
+      const history = events.filter(
+        (/** @type {any} */ e) => e.link_id === link.id,
+      );
+      const first = (/** @type {string} */ kind) =>
+        iso(history.find((/** @type {any} */ e) => e.kind === kind)?.at);
+      const checkout =
+        canManage && (active ?? latest)?.checkout_envelope
+          ? decryptOrderPrivateJson(
+              (active ?? latest).checkout_envelope,
+              `billing-checkout:${(active ?? latest).id}`,
+              envelopeKey,
+            ).url
+          : null;
+      return {
+        id: link.id,
+        kind: link.kind,
+        amountCents: Number(link.amount_cents),
+        state: link.state,
+        origin: link.origin,
+        url:
+          canManage && link.state !== 'cancelled' && linkBase
+            ? linkUrl(linkBase, link, envelopeKey)
+            : null,
+        chargeId: canManage ? (latest?.id ?? null) : null,
+        checkoutUrl: ['checkout_open', 'unknown'].includes(link.state)
+          ? checkout
+          : null,
+        createdAt: iso(link.created_at),
+        createdBy: link.created_by_name ?? null,
+        sentAt: first('sent'),
+        deliveredAt: first('delivered'),
+        pageOpenedAt: iso(link.page_opened_at),
+        clickedAt: iso(link.clicked_at),
+        providerValidUntil:
+          active &&
+          ['checkout_requested', 'checkout_open', 'unknown'].includes(
+            link.state,
+          )
+            ? iso(active.valid_until)
+            : null,
+        paidAt: iso(link.paid_at),
+        payMethod: canManage ? (paidRows[0]?.method ?? null) : null,
+        invoiceCode: canManage
+          ? (data.invoices.get(paidRows[0]?.id) ?? null)
+          : null,
+        refundedCents: paidRows.reduce(
+          (sum, p) => sum + Number(p.refunded_amount_cents),
+          0,
+        ),
+        cancelledAt: iso(link.cancelled_at),
+        cancelledBy: link.cancelled_by_name ?? null,
+        cancelReason: link.cancel_reason ?? null,
+        verifying: check
+          ? {
+              checkId: canManage ? check.id : null,
+              state:
+                check.status === 'queued' &&
+                ['dead_letter', 'outcome_unknown'].includes(check.job_status)
+                  ? 'failed'
+                  : check.status,
+              requestedAt: iso(check.requested_at),
+              checkedAt: iso(check.checked_at),
+              nextAt: iso(check.next_check_at),
+            }
+          : null,
+        inReview:
+          own.some((c) => c.status === 'review') ||
+          paidRows.some((p) => !p.application_valid),
+        history: history.map((/** @type {any} */ e) => ({
+          kind: e.kind,
+          at: iso(e.at),
+          actor: e.actor_name ?? null,
+          reason: e.reason ?? null,
+        })),
+      };
+    });
+    const legacyActive = data.charges.filter(
+      (c) => !c.link_id && CHARGE_ACTIVE.includes(c.status),
+    );
+    const states = new Set(rows.map((l) => l.state));
+    const total = figure.totalCents;
+    const situation =
+      states.has('unknown') || legacyActive.some((c) => c.status === 'unknown')
+        ? 'unknown'
+        : plan?.review_required
+          ? 'review'
+          : states.has('checkout_requested') ||
+              states.has('checkout_open') ||
+              legacyActive.length
+            ? 'paying'
+            : states.has('open')
+              ? 'waiting'
+              : total > 0 && figure.receivedCents >= total
+                ? 'settled'
+                : figure.receivedCents > 0
+                  ? 'partial'
+                  : 'none';
+    const reason = reviewReason(
+      order,
+      plan,
+      data.charges,
+      data.payments,
+      data.refundCount,
+    );
+    const valid = data.payments.filter(
+      (p) =>
+        p.application_valid &&
+        Number(p.applied_amount_cents) > Number(p.refunded_amount_cents),
+    );
+    const owner = order.billing_owner_id
+      ? (
+          await client.query('SELECT name FROM crm.users WHERE id=$1', [
+            order.billing_owner_id,
+          ])
+        ).rows[0]
+      : null;
+    return {
+      canOperate: canManage,
+      ownerName: owner?.name ?? null,
+      condition: { percent: plan?.percent ?? null },
+      figures: {
+        totalCents: figure.totalCents,
+        receivedCents: figure.receivedCents,
+        remainingCents: figure.remainingCents,
+        heldCents: figure.heldCents,
+        reservedCents: figure.reservedCents,
+        freeCents: figure.freeCents,
+      },
+      situation,
+      settledAt:
+        situation === 'settled' && valid.length
+          ? iso(
+              valid
+                .map((p) => new Date(p.verified_at).getTime())
+                .reduce((a, b) => Math.max(a, b)),
+            )
+          : null,
+      review: reason
+        ? {
+            reason,
+            previousTotalCents:
+              reason === 'order_changed' &&
+              Number(plan.final_amount_cents) !==
+                Number(order.final_amount_cents)
+                ? Number(plan.final_amount_cents)
+                : null,
+            heldCents: figure.heldCents,
+            refundedCents:
+              reason === 'refund'
+                ? data.payments.reduce(
+                    (/** @type {number} */ sum, /** @type {any} */ p) =>
+                      sum + Number(p.refunded_amount_cents),
+                    0,
+                  )
+                : null,
+          }
+        : null,
+      links: presented,
+    };
   }
   /** @param {any} client @param {any} order @param {any} actor */
   async function view(client, order, actor) {
@@ -265,8 +520,41 @@ export function createOrderBillingRuntime(database, options) {
         [order.id],
       )
     ).rows;
+    const refundCount = Number(
+      (
+        await client.query(
+          `SELECT count(*) AS n FROM crm.order_billing_refunds r JOIN crm.order_billing_payments p ON p.id=r.payment_id
+           JOIN crm.order_billing_charges c ON c.id=p.charge_id WHERE c.order_id=$1`,
+          [order.id],
+        )
+      ).rows[0].n,
+    );
+    // Owner-only receipt reference: the InfinitePay invoice slug of a payment.
+    const invoices = new Map(
+      canManage
+        ? (
+            await client.query(
+              `SELECT p.id,p.invoice_slug FROM crm.order_billing_payments p
+               JOIN crm.order_billing_charges c ON c.id=p.charge_id WHERE c.order_id=$1`,
+              [order.id],
+            )
+          ).rows.map(
+            (/** @type {any} */ r) =>
+              /** @type {[string,string]} */ ([r.id, r.invoice_slug]),
+          )
+        : [],
+    );
+    const lpc = await linkView(client, order, plan, canManage, {
+      charges,
+      payments,
+      checks,
+      refundCount,
+      invoices,
+    });
+    const linkRows = lpc.links.map((l) => ({ state: l.state }));
     return {
       billing: {
+        ...lpc,
         enabled,
         chatSendEnabled:
           enabled &&
@@ -293,7 +581,7 @@ export function createOrderBillingRuntime(database, options) {
           ? 'FORBIDDEN'
           : !enabled
             ? 'BILLING_DISABLED'
-            : blocked(order, plan, charges, paid),
+            : blocked(order, plan, charges, paid, linkRows),
         reviewRequired: Boolean(plan?.review_required),
         timelineEvents: canManage
           ? orderTimelineEvents({
@@ -340,7 +628,7 @@ export function createOrderBillingRuntime(database, options) {
         })),
         payments: payments.map((p) => ({
           id: p.id,
-          chargeId: p.charge_id,
+          chargeId: canManage ? p.charge_id : null,
           source: p.source,
           amountCents: Number(p.principal_amount_cents),
           appliedAmountCents: Number(p.applied_amount_cents),
@@ -357,6 +645,7 @@ export function createOrderBillingRuntime(database, options) {
             p.application_valid &&
             Number(p.applied_amount_cents) > Number(p.refunded_amount_cents),
           transactionNsu: canManage ? p.transaction_nsu : null,
+          invoiceCode: canManage ? (invoices.get(p.id) ?? null) : null,
           receiptUrl:
             canManage && p.receipt_envelope
               ? decryptOrderPrivateJson(
@@ -367,8 +656,8 @@ export function createOrderBillingRuntime(database, options) {
               : null,
         })),
         paymentChecks: checks.map((/** @type {any} */ c) => ({
-          id: c.id,
-          chargeId: c.charge_id,
+          id: canManage ? c.id : null,
+          chargeId: canManage ? c.charge_id : null,
           state:
             c.status === 'queued' &&
             ['dead_letter', 'outcome_unknown'].includes(c.job_status)
@@ -405,7 +694,8 @@ export function createOrderBillingRuntime(database, options) {
                 clock().getTime() - new Date(c.reserved_at).getTime() >
                   120000));
           return {
-            id: c.id,
+            id: canManage ? c.id : null,
+            linkId: c.link_id ?? null,
             kind: c.kind,
             amountCents: Number(c.amount_cents),
             status: uncertain ? 'unknown' : c.status,
@@ -470,8 +760,9 @@ export function createOrderBillingRuntime(database, options) {
       )
     ).rows[0];
   }
-  /** @param {any} input @param {string} action @param {(client:any,order:any,plan:any,actor:any)=>Promise<any>} work @param {boolean} [emitting] */
-  async function humanCommand(input, action, work, emitting = true) {
+  /** @param {any} input @param {string} action @param {(client:any,order:any,plan:any,actor:any)=>Promise<any>} work @param {boolean} [emitting]
+   * @param {(client:any,order:any,plan:any)=>Promise<void>} [precheck] runs before the version check (a lost race reports its own conflict) */
+  async function humanCommand(input, action, work, emitting = true, precheck) {
     if (!(emitting ? enabled : receiving))
       throw new BillingError(503, 'BILLING_DISABLED');
     if (
@@ -520,6 +811,7 @@ export function createOrderBillingRuntime(database, options) {
           // replay so a receipt issued before the cancellation still replays.
           if (order.cancelled_at)
             throw new BillingError(409, 'ORDER_CANCELLED');
+          if (precheck) await precheck(client, order, plan);
           if (
             Number(order.version) !== input.expectedVersion ||
             Number(plan?.version ?? 0) !== input.expectedBillingVersion
@@ -551,13 +843,22 @@ export function createOrderBillingRuntime(database, options) {
     if (!existing) throw new BillingError(404, 'BILLING_CHARGE_NOT_FOUND');
     const order = await lockOrder(client, existing.order_id);
     const plan = await planFor(client, order.id);
+    // link_id is immutable; the link precedes its charges in the lock order.
+    const link =
+      (
+        await client.query(
+          `SELECT l.* FROM crm.order_billing_links l JOIN crm.order_billing_charges c ON c.link_id=l.id
+         WHERE c.id=$1 FOR UPDATE OF l`,
+          [chargeId],
+        )
+      ).rows[0] ?? null;
     const charge = (
       await client.query(
         'SELECT * FROM crm.order_billing_charges WHERE id=$1 FOR UPDATE',
         [chargeId],
       )
     ).rows[0];
-    return { order, plan, charge };
+    return { order, plan, charge, link };
   }
   /** @param {any} client @param {any} context @param {string} action @param {string} correlationId */
   async function automaticAudit(client, context, action, correlationId) {
@@ -581,7 +882,163 @@ export function createOrderBillingRuntime(database, options) {
       throw error;
     }
   }
+  /** Provider consultation by the n8n check workflow; never trusts a declaration.
+   * @param {any} client @param {any} order @param {string} chargeId @param {{invoiceSlug:string,transactionNsu:string}} candidate @param {string} actorId */
+  async function enqueueCheck(client, order, chargeId, candidate, actorId) {
+    const hash = createHash('sha256')
+      .update(JSON.stringify(candidate))
+      .digest('hex');
+    const previous = (
+      await client.query(
+        `SELECT k.*,j.status AS job_status FROM crm.order_billing_payment_checks k
+          LEFT JOIN crm.outbox_jobs j ON j.id='billing-check:'||k.id::text||':'||k.attempts
+          WHERE k.charge_id=$1 AND k.candidate_hash=$2 ORDER BY k.requested_at DESC,k.id DESC LIMIT 1`,
+        [chargeId, hash],
+      )
+    ).rows[0];
+    if (
+      previous &&
+      (previous.status === 'paid' ||
+        (previous.status === 'queued' &&
+          ['pending', 'retry', 'processing'].includes(previous.job_status)))
+    )
+      return { checkId: previous.id, state: previous.status };
+    await client.query(
+      'UPDATE crm.order_billing_payment_checks SET next_check_at=NULL WHERE charge_id=$1 AND candidate_hash=$2',
+      [chargeId, hash],
+    );
+    const id = uuid(idFactory());
+    await client.query(
+      `INSERT INTO crm.order_billing_payment_checks(id,charge_id,candidate_envelope,candidate_hash,requested_by,requested_at)
+          VALUES($1,$2,$3::jsonb,$4,$5,$6)`,
+      [
+        id,
+        chargeId,
+        JSON.stringify(
+          encryptOrderPrivateJson(
+            candidate,
+            `billing-check:${id}`,
+            envelopeKey,
+          ),
+        ),
+        hash,
+        actorId,
+        clock(),
+      ],
+    );
+    await client.query(
+      `INSERT INTO crm.outbox_jobs(id,job_type,idempotency_key,status,priority,available_at,created_at,queue,attempt_count,max_attempts,updated_at,effect_policy)
+          VALUES($1,'billing.payment.check',$2,'pending',100,$3,$3,'billing',0,3,$3,'queryable')`,
+      [`billing-check:${id}:1`, `${id}:1`, clock()],
+    );
+    await client.query(
+      'UPDATE crm.order_billing_plans SET version=version+1,updated_at=$2 WHERE order_id=$1',
+      [order.id, clock()],
+    );
+    return { checkId: id, state: 'queued' };
+  }
+  /** Decision 11: `unknown` returns to `open` only after the attempt's validity
+   * passed and the provider answered not paid (or, past validity, on the
+   * owner's confirmation). A late payment still goes to review (LPC-08).
+   * @param {any} client @param {{order:any,charge:any,link:any}} context @param {string} correlationId */
+  async function releaseUncertain(client, context, correlationId) {
+    const { order, charge, link } = context;
+    if (
+      !link ||
+      link.state !== 'unknown' ||
+      !CHARGE_ACTIVE.includes(charge.status) ||
+      new Date(charge.valid_until) > clock()
+    )
+      return false;
+    await client.query(
+      "UPDATE crm.order_billing_charges SET status='closed',updated_at=$2 WHERE id=$1",
+      [charge.id, clock()],
+    );
+    await links.reopen(
+      client,
+      order,
+      link,
+      'checkout_expired',
+      charge.id,
+      correlationId,
+    );
+    await client.query(
+      'UPDATE crm.order_billing_plans SET version=version+1,updated_at=$2 WHERE order_id=$1',
+      [order.id, clock()],
+    );
+    return true;
+  }
+  /** Public page lock path: no actor, same order as the human writers.
+   * @param {any} client @param {string} token */
+  async function publicContext(client, token) {
+    const found = (
+      await client.query(
+        'SELECT id,order_id FROM crm.order_billing_links WHERE token_hash=$1',
+        [linkTokenHash(token)],
+      )
+    ).rows[0];
+    if (!found) return null;
+    if (options.billingChat?.lockOrder)
+      await options.billingChat.lockOrder(client, found.order_id);
+    else
+      await client.query(
+        "SELECT pg_advisory_xact_lock(hashtextextended('billing-send-order:'||$1,0))",
+        [found.order_id],
+      );
+    const order = await lockOrder(client, found.order_id);
+    const plan = await planFor(client, order.id);
+    const correlationId = `billing-link:${found.id}`;
+    const rows = await links.refresh(client, order, plan, correlationId);
+    const link = rows.find((l) => l.id === found.id);
+    if (!link || link.state === 'cancelled' || order.cancelled_at) return null;
+    return { order, plan, link, correlationId };
+  }
+  /** @param {any} client @param {any} link */
+  async function attemptOf(client, link) {
+    return (
+      (
+        await client.query(
+          `SELECT * FROM crm.order_billing_charges WHERE link_id=$1 AND status IN ('queued','creating','waiting','unknown')
+           ORDER BY created_sequence DESC LIMIT 1`,
+          [link.id],
+        )
+      ).rows[0] ?? null
+    );
+  }
+  /** LPC-02: order number, kind and amount only.
+   * @param {any} client @param {{order:any,link:any}} context */
+  async function publicState(client, context) {
+    const { order, link } = context;
+    const base = {
+      orderNumber: order.number,
+      kind: link.kind,
+      amountCents: Number(link.amount_cents),
+    };
+    if (link.state === 'open') return { state: 'ready', ...base };
+    if (link.state === 'paid')
+      return { state: 'paid', ...base, paidAt: iso(link.paid_at) };
+    if (link.state === 'unknown') return { state: 'failed', ...base };
+    const attempt = await attemptOf(client, link);
+    const checkoutUrl =
+      link.state === 'checkout_open' && attempt?.checkout_envelope
+        ? decryptOrderPrivateJson(
+            attempt.checkout_envelope,
+            `billing-checkout:${attempt.id}`,
+            envelopeKey,
+          ).url
+        : null;
+    return checkoutUrl
+      ? { state: 'in_progress', ...base, checkoutUrl }
+      : { state: 'in_progress', ...base };
+  }
+  /** @param {string} linkId @param {any[]} rows */
+  function ownLink(linkId, rows) {
+    const link = rows.find((l) => l.id === linkId);
+    if (!link) throw new BillingError(404, 'BILLING_NOT_FOUND');
+    return link;
+  }
   return Object.freeze({
+    publicOrigins,
     authorizeRead: (/** @type {any} */ input) =>
       options.access.authorizeRead(input),
     authorizeWrite: (/** @type {any} */ input) =>
@@ -591,11 +1048,19 @@ export function createOrderBillingRuntime(database, options) {
       if (!receiving) throw new BillingError(503, 'BILLING_DISABLED');
       return database.transaction(async (/** @type {any} */ client) => {
         const actor = await actorFor(client, input.actor, false);
-        return view(
+        const order = await lockOrder(
           client,
-          await lockOrder(client, billingIdentifier(input.orderId), actor.id),
-          actor,
+          billingIdentifier(input.orderId),
+          actor.id,
         );
+        // LPC: lazy expiry under the order/plan/link locks.
+        await links.refresh(
+          client,
+          order,
+          await planFor(client, order.id),
+          input.correlationId ?? `billing-read:${order.id}`,
+        );
+        return view(client, order, actor);
       });
     },
     /** A human records money already received outside the gateway, never a gateway claim.
@@ -624,6 +1089,15 @@ export function createOrderBillingRuntime(database, options) {
           }).format(clock())
       )
         throw new BillingError(400, 'BILLING_INVALID_EXTERNAL_RECEIPT');
+      const cancelLinkIds =
+        input.cancelLinkIds === undefined ? [] : input.cancelLinkIds;
+      if (
+        !Array.isArray(cancelLinkIds) ||
+        cancelLinkIds.length > 50 ||
+        new Set(cancelLinkIds).size !== cancelLinkIds.length
+      )
+        throw new BillingError(400, 'INVALID_REQUEST');
+      const cancelIds = cancelLinkIds.map((id) => uuid(id).toLowerCase());
       return humanCommand(
         input,
         'external_receipt',
@@ -639,6 +1113,45 @@ export function createOrderBillingRuntime(database, options) {
           const paid = received(await paymentsFor(client, order.id));
           if (input.amountCents > Number(order.final_amount_cents) - paid)
             throw new BillingError(422, 'BILLING_INVALID_AMOUNT');
+          // LPC-06 / decision 12: only the free amount, or money released by
+          // cancelling listed links that nobody clicked, in this transaction.
+          const linkRows = await links.refresh(
+            client,
+            order,
+            plan,
+            input.correlationId,
+          );
+          const listed = cancelIds.map((id) => {
+            const link = linkRows.find((l) => l.id === id);
+            if (!link) throw new BillingError(404, 'BILLING_NOT_FOUND');
+            if (link.state !== 'open') throw linkNotOpen(link);
+            return link;
+          });
+          const figure = await links.figures(client, order, linkRows);
+          const released = listed.reduce(
+            (sum, l) => sum + Number(l.amount_cents),
+            0,
+          );
+          if (input.amountCents > figure.freeCents + released) {
+            const shortfall = input.amountCents - figure.freeCents - released;
+            const sum = (/** @type {string[]} */ states) =>
+              linkRows
+                .filter((l) => states.includes(l.state) && !listed.includes(l))
+                .reduce((total, l) => total + Number(l.amount_cents), 0);
+            if (sum(['open']) >= shortfall)
+              throw new BillingError(409, 'BILLING_RECEIPT_EXCEEDS_FREE');
+            if (sum(['checkout_requested', 'checkout_open']) > 0)
+              throw new BillingError(409, 'BILLING_LINK_IN_PAYMENT');
+            if (sum(['unknown']) > 0)
+              throw new BillingError(409, 'BILLING_LINK_UNKNOWN');
+            throw new BillingError(409, 'BILLING_RECEIPT_EXCEEDS_FREE');
+          }
+          for (const link of listed)
+            await links.cancel(client, link, {
+              reason: 'external_receipt',
+              actorId: actor.id,
+              correlationId: input.correlationId,
+            });
           if (!plan) await savePlan(client, order, null, 0, actor);
           const id = uuid(idFactory());
           await client.query(
@@ -757,60 +1270,13 @@ export function createOrderBillingRuntime(database, options) {
             )
           ).rows[0];
           if (!charge) throw new BillingError(404, 'BILLING_CHARGE_NOT_FOUND');
-          const candidate = { invoiceSlug, transactionNsu };
-          const hash = createHash('sha256')
-            .update(JSON.stringify(candidate))
-            .digest('hex');
-          const previous = (
-            await client.query(
-              `SELECT k.*,j.status AS job_status FROM crm.order_billing_payment_checks k
-          LEFT JOIN crm.outbox_jobs j ON j.id='billing-check:'||k.id::text||':'||k.attempts
-          WHERE k.charge_id=$1 AND k.candidate_hash=$2 ORDER BY k.requested_at DESC,k.id DESC LIMIT 1`,
-              [chargeId, hash],
-            )
-          ).rows[0];
-          if (
-            previous &&
-            (previous.status === 'paid' ||
-              (previous.status === 'queued' &&
-                ['pending', 'retry', 'processing'].includes(
-                  previous.job_status,
-                )))
-          )
-            return { checkId: previous.id, state: previous.status };
-          await client.query(
-            'UPDATE crm.order_billing_payment_checks SET next_check_at=NULL WHERE charge_id=$1 AND candidate_hash=$2',
-            [chargeId, hash],
+          return enqueueCheck(
+            client,
+            order,
+            chargeId,
+            { invoiceSlug, transactionNsu },
+            input.actor.id,
           );
-          const id = uuid(idFactory());
-          await client.query(
-            `INSERT INTO crm.order_billing_payment_checks(id,charge_id,candidate_envelope,candidate_hash,requested_by,requested_at)
-          VALUES($1,$2,$3::jsonb,$4,$5,$6)`,
-            [
-              id,
-              chargeId,
-              JSON.stringify(
-                encryptOrderPrivateJson(
-                  candidate,
-                  `billing-check:${id}`,
-                  envelopeKey,
-                ),
-              ),
-              hash,
-              input.actor.id,
-              clock(),
-            ],
-          );
-          await client.query(
-            `INSERT INTO crm.outbox_jobs(id,job_type,idempotency_key,status,priority,available_at,created_at,queue,attempt_count,max_attempts,updated_at,effect_policy)
-          VALUES($1,'billing.payment.check',$2,'pending',100,$3,$3,'billing',0,3,$3,'queryable')`,
-            [`billing-check:${id}:1`, `${id}:1`, clock()],
-          );
-          await client.query(
-            'UPDATE crm.order_billing_plans SET version=version+1,updated_at=$2 WHERE order_id=$1',
-            [order.id, clock()],
-          );
-          return { checkId: id, state: 'queued' };
         },
         false,
       );
@@ -854,7 +1320,8 @@ export function createOrderBillingRuntime(database, options) {
           )
         ).rows[0];
         if (!check) throw new BillingError(404, 'BILLING_NOT_FOUND');
-        const { charge } = await chargeContext(client, check.charge_id);
+        const context = await chargeContext(client, check.charge_id);
+        const { charge } = context;
         // Match callback event metadata to the current scheduled attempt after
         // the shared financial locks; the scheduler never takes those locks.
         check = (
@@ -899,6 +1366,14 @@ export function createOrderBillingRuntime(database, options) {
           `UPDATE crm.order_billing_payment_checks SET status=$2,checked_at=$3,next_check_at=CASE WHEN $2='not_paid' AND attempts<6 THEN $3::timestamptz+interval '10 minutes' ELSE NULL END WHERE id=$1`,
           [check.id, status, clock()],
         );
+        // Decision 11: an uncertain attempt is released only by a provider
+        // answer of not paid after its validity, never by expiry alone.
+        if (status === 'not_paid')
+          await releaseUncertain(
+            client,
+            context,
+            input.correlationId ?? check.id,
+          );
         return { recorded: true, checkId: check.id, status };
       });
     },
@@ -910,7 +1385,13 @@ export function createOrderBillingRuntime(database, options) {
         async (client, order, plan, actor) => {
           const charges = await chargesFor(client, order.id);
           const paid = received(await paymentsFor(client, order.id));
-          const reason = blocked(order, plan, charges, paid);
+          const reason = blocked(
+            order,
+            plan,
+            charges,
+            paid,
+            await links.refresh(client, order, plan, input.correlationId),
+          );
           if (reason) throw new BillingError(409, reason);
           if (
             charges.length &&
@@ -932,7 +1413,13 @@ export function createOrderBillingRuntime(database, options) {
         async (client, order, plan, actor) => {
           const charges = await chargesFor(client, order.id);
           const paid = received(await paymentsFor(client, order.id));
-          const reason = blocked(order, plan, charges, paid);
+          const reason = blocked(
+            order,
+            plan,
+            charges,
+            paid,
+            await links.refresh(client, order, plan, input.correlationId),
+          );
           if (reason) throw new BillingError(409, reason);
           const percent =
             paid > 0 && plan && input.percent === plan.percent
@@ -1019,7 +1506,8 @@ export function createOrderBillingRuntime(database, options) {
           charge.status !== 'queued' ||
           new Date(charge.valid_until) <= clock() ||
           plan.review_required ||
-          !matches(order, charge)
+          !matches(order, charge) ||
+          (context.link && context.link.state !== 'checkout_requested')
         )
           return { allowed: false, chargeId: charge.id };
         await client.query(
@@ -1035,7 +1523,7 @@ export function createOrderBillingRuntime(database, options) {
           allowed: true,
           chargeId: charge.id,
           amountCents: Number(charge.amount_cents),
-          description: `Pedido ${order.number} - ${charge.kind === 'signal' ? 'sinal' : charge.kind === 'balance' ? 'saldo' : 'pagamento integral'}`,
+          description: `Pedido ${order.number} - ${linkKindLabel(charge.kind)}`,
           validUntil: iso(charge.valid_until),
         };
       });
@@ -1083,6 +1571,26 @@ export function createOrderBillingRuntime(database, options) {
           [order.id, clock()],
         );
         await automaticAudit(client, context, 'created', input.correlationId);
+        const { link } = context;
+        if (
+          link &&
+          ['checkout_requested', 'unknown'].includes(link.state) &&
+          ['creating', 'unknown', 'queued'].includes(charge.status)
+        ) {
+          await links.setLink(client, link, { state: 'checkout_open' });
+          await links.linkEvent(client, {
+            linkId: link.id,
+            kind: 'checkout_opened',
+            chargeId: charge.id,
+          });
+          await links.linkAudit(
+            client,
+            link,
+            'checkout_opened',
+            null,
+            input.correlationId,
+          );
+        }
         await options.billingChat?.checkoutCreated(
           client,
           charge.id,
@@ -1169,13 +1677,28 @@ export function createOrderBillingRuntime(database, options) {
         }
         const existing = await paymentsFor(client, order.id);
         const alreadyPaid = existing.some((p) => p.charge_id === charge.id);
-        const applicable =
-          !alreadyPaid &&
-          !plan.review_required &&
-          charge.status !== 'closed' &&
-          charge.status !== 'review' &&
-          matches(order, charge) &&
+        const { link } = context;
+        const fits =
           received(existing) + amount <= Number(order.final_amount_cents);
+        // LPC-08: a link attempt applies while its link is live and the money
+        // fits what is still owed; anything else waits for a human review.
+        const applicable = link
+          ? !alreadyPaid &&
+            !plan.review_required &&
+            CHARGE_ACTIVE.includes(charge.status) &&
+            !['cancelled', 'paid'].includes(link.state) &&
+            order.status === 'confirmado' &&
+            !order.cancelled_at &&
+            fits
+          : !alreadyPaid &&
+            !plan.review_required &&
+            charge.status !== 'closed' &&
+            charge.status !== 'review' &&
+            matches(order, charge) &&
+            fits;
+        const late =
+          charge.status === 'closed' ||
+          (link && ['cancelled', 'paid'].includes(link.state));
         await client.query(
           "INSERT INTO crm.infinitepay_transactions(transaction_nsu,owner_kind,owner_id,created_at) VALUES ($1,'billing',$2,$3)",
           [nsu, charge.id, clock()],
@@ -1211,9 +1734,59 @@ export function createOrderBillingRuntime(database, options) {
           [charge.id, applicable ? 'paid' : 'review', clock()],
         );
         await client.query(
-          'UPDATE crm.order_billing_plans SET review_required=review_required OR $2,version=version+1,updated_at=$3 WHERE order_id=$1',
-          [order.id, !applicable, clock()],
+          `UPDATE crm.order_billing_plans SET review_required=review_required OR $2,
+             review_reason=CASE WHEN NOT $2 THEN review_reason WHEN review_required THEN coalesce(review_reason,$4) ELSE $4 END,
+             version=version+1,updated_at=$3 WHERE order_id=$1`,
+          [
+            order.id,
+            !applicable,
+            clock(),
+            late ? 'late_payment' : 'outside_agreement',
+          ],
         );
+        if (link) {
+          // Money received through this link: it stops reserving even when a
+          // human still has to decide whether it applies (LPC-08).
+          if (!['cancelled', 'paid'].includes(link.state))
+            await links.setLink(client, link, {
+              state: 'paid',
+              paid_at: clock(),
+            });
+          // Other attempts of the same link: one never reserved is closed
+          // (fence); one live at the provider goes to review, so a second
+          // payment is visible in conferência and nothing waits forever.
+          const others = (
+            await client.query(
+              `UPDATE crm.order_billing_charges SET status=CASE WHEN status='queued' AND execution_id IS NULL THEN 'closed' ELSE 'review' END,updated_at=$3
+               WHERE link_id=$1 AND id<>$2 AND status IN ('queued','creating','waiting','unknown') RETURNING status`,
+              [link.id, charge.id, clock()],
+            )
+          ).rows;
+          if (others.some((/** @type {any} */ c) => c.status === 'review'))
+            await client.query(
+              `UPDATE crm.order_billing_plans SET review_required=true,
+                 review_reason=coalesce(review_reason,'outside_agreement'),updated_at=$2 WHERE order_id=$1`,
+              [order.id, clock()],
+            );
+          await links.linkEvent(client, {
+            linkId: link.id,
+            kind: 'paid',
+            chargeId: charge.id,
+          });
+          if (!applicable)
+            await links.linkEvent(client, {
+              linkId: link.id,
+              kind: 'review',
+              chargeId: charge.id,
+            });
+          await links.linkAudit(
+            client,
+            link,
+            applicable ? 'paid' : 'review',
+            null,
+            input.correlationId,
+          );
+        }
         // A cancelled order is immutable (migration 0070): the receipt stays
         // as unapplied evidence for human review, the order row is untouched.
         if (!order.cancelled_at) await refreshSettlement(client, order.id);
@@ -1287,9 +1860,24 @@ export function createOrderBillingRuntime(database, options) {
             [chargeId, clock()],
           );
           await client.query(
-            'UPDATE crm.order_billing_plans SET review_required=true,version=version+1,updated_at=$2 WHERE order_id=$1',
+            `UPDATE crm.order_billing_plans SET review_required=true,
+               review_reason=CASE WHEN review_required THEN coalesce(review_reason,'refund') ELSE 'refund' END,
+               version=version+1,updated_at=$2 WHERE order_id=$1`,
             [order.id, clock()],
           );
+          const linkId = (
+            await client.query(
+              'SELECT link_id FROM crm.order_billing_charges WHERE id=$1',
+              [chargeId],
+            )
+          ).rows[0]?.link_id;
+          if (linkId)
+            await links.linkEvent(client, {
+              linkId,
+              kind: 'refund',
+              chargeId,
+              actorId: actor.id,
+            });
           const saved = await refreshSettlement(client, order.id);
           saved.billing_owner_id = order.billing_owner_id;
           return view(client, saved, actor);
@@ -1301,18 +1889,29 @@ export function createOrderBillingRuntime(database, options) {
     async reconcile(input) {
       if (
         input.confirmedProviderReview !== true ||
-        !['apply_current', 'close_unpaid'].includes(input.decision)
+        !['apply_current', 'close_unpaid', 'cancel_open_links'].includes(
+          input.decision,
+        )
       )
         throw new BillingError(400, 'BILLING_REVIEW_CONFIRMATION_REQUIRED');
+      const applying = input.decision !== 'close_unpaid';
       return humanCommand(
         input,
         'reconcile',
         async (client, order, plan, actor) => {
           if (!plan) throw new BillingError(409, 'BILLING_NOT_MANAGED');
+          const linkRows = await links.refresh(
+            client,
+            order,
+            plan,
+            input.correlationId,
+          );
           const charges = await chargesFor(client, order.id);
           const payments = await paymentsFor(client, order.id);
+          // Legacy charges (no link) keep ADR 077: close only after validity.
           const unpaid = charges.filter(
             (c) =>
+              !c.link_id &&
               !payments.some((p) => p.charge_id === c.id) &&
               c.status !== 'closed',
           );
@@ -1323,7 +1922,25 @@ export function createOrderBillingRuntime(database, options) {
               "UPDATE crm.order_billing_charges SET status='closed',updated_at=$2 WHERE id=$1",
               [c.id, clock()],
             );
-          if (input.decision === 'apply_current') {
+          // A clicked link attempt held in review without payment is closed;
+          // the final refresh reopens its link, or cancels it when it was
+          // made under an agreement that no longer holds. A late payment of
+          // it still goes to conferência (LPC-08).
+          if (input.decision === 'close_unpaid')
+            await client.query(
+              `UPDATE crm.order_billing_charges c SET status='closed',updated_at=$2
+               WHERE order_id=$1 AND link_id IS NOT NULL AND status='review'
+                 AND NOT EXISTS(SELECT 1 FROM crm.order_billing_payments p WHERE p.charge_id=c.id)`,
+              [order.id, clock()],
+            );
+          if (input.decision === 'cancel_open_links')
+            for (const link of linkRows.filter((l) => l.state === 'open'))
+              await links.cancel(client, link, {
+                reason: 'reconcile',
+                actorId: actor.id,
+                correlationId: input.correlationId,
+              });
+          if (applying) {
             if (order.status !== 'confirmado')
               throw new BillingError(409, 'BILLING_ORDER_NOT_CONFIRMED');
             const net = payments.reduce(
@@ -1337,6 +1954,23 @@ export function createOrderBillingRuntime(database, options) {
             );
             if (net > Number(order.final_amount_cents))
               throw new BillingError(409, 'BILLING_OVERPAID');
+            // LPC-06 / decision 8: links in payment may stay, but every
+            // reserving link must still fit with the money received.
+            const reserving = linkRows
+              .filter((l) => LINK_RESERVING.includes(l.state))
+              .reduce((sum, l) => sum + Number(l.amount_cents), 0);
+            if (net + reserving > Number(order.final_amount_cents))
+              throw new BillingError(409, 'BILLING_LINK_EXCEEDS_FREE');
+            const reviewed = [
+              ...new Set(
+                payments
+                  .filter((p) => !p.application_valid && p.charge_id)
+                  .map(
+                    (p) => charges.find((c) => c.id === p.charge_id)?.link_id,
+                  )
+                  .filter(Boolean),
+              ),
+            ];
             await client.query(
               `UPDATE crm.order_billing_payments p SET application_valid=true,applied_amount_cents=principal_amount_cents FROM crm.order_billing_charges c WHERE c.id=p.charge_id AND c.order_id=$1`,
               [order.id],
@@ -1349,13 +1983,31 @@ export function createOrderBillingRuntime(database, options) {
               "UPDATE crm.order_billing_charges c SET status='paid',updated_at=$2 WHERE order_id=$1 AND EXISTS(SELECT 1 FROM crm.order_billing_payments p WHERE p.charge_id=c.id)",
               [order.id, clock()],
             );
+            // Unpaid link attempts held in review return to what they were;
+            // one that never reached the provider is closed (fence intact).
+            await client.query(
+              `UPDATE crm.order_billing_charges c SET status=CASE
+                 WHEN l.state IN ('paid','cancelled') THEN 'closed'
+                 WHEN c.checkout_envelope IS NOT NULL AND c.valid_until>$2 THEN 'waiting'
+                 WHEN c.checkout_envelope IS NULL AND c.execution_id IS NOT NULL AND c.valid_until>$2 THEN 'unknown'
+                 ELSE 'closed' END,updated_at=$2
+               FROM crm.order_billing_links l WHERE l.id=c.link_id AND c.order_id=$1 AND c.status='review'
+                 AND NOT EXISTS(SELECT 1 FROM crm.order_billing_payments p WHERE p.charge_id=c.id)`,
+              [order.id, clock()],
+            );
+            for (const linkId of reviewed)
+              await links.linkEvent(client, {
+                linkId,
+                kind: 'applied',
+                actorId: actor.id,
+              });
           }
           if (
-            input.decision === 'apply_current' ||
+            applying ||
             (order.status === 'confirmado' && payments.length === 0)
           ) {
             await client.query(
-              'UPDATE crm.order_billing_plans SET review_required=false,confirmed_at=$2,final_amount_cents=$3,payment_condition=$4,version=version+1,updated_at=$5 WHERE order_id=$1',
+              'UPDATE crm.order_billing_plans SET review_required=false,review_reason=NULL,confirmed_at=$2,final_amount_cents=$3,payment_condition=$4,version=version+1,updated_at=$5 WHERE order_id=$1',
               [
                 order.id,
                 order.confirmed_at,
@@ -1369,16 +2021,278 @@ export function createOrderBillingRuntime(database, options) {
               (p) => !p.application_valid,
             );
             await client.query(
-              'UPDATE crm.order_billing_plans SET review_required=$2,version=version+1,updated_at=$3 WHERE order_id=$1',
+              'UPDATE crm.order_billing_plans SET review_required=$2,review_reason=CASE WHEN $2 THEN review_reason END,version=version+1,updated_at=$3 WHERE order_id=$1',
               [order.id, outstandingReview, clock()],
             );
           }
           const saved = await refreshSettlement(client, order.id);
           saved.billing_owner_id = order.billing_owner_id;
+          // Attempts closed above give their links back (or cancel them when
+          // the agreement they were made under changed).
+          await links.refresh(
+            client,
+            saved,
+            await planFor(client, order.id),
+            input.correlationId,
+          );
           return view(client, saved, actor);
         },
         false,
       );
+    },
+    /** LPC "Só gerar o link": the owner creates a CRM link; nothing at the provider.
+     * @param {any} input */
+    async createLink(input) {
+      if (!linkBase)
+        throw new Error('APP_BASE_URL is required for CRM payment links');
+      return humanCommand(
+        input,
+        'link_create',
+        async (client, order, plan, actor) => {
+          const { link } = await links.create(client, {
+            order,
+            plan,
+            actor,
+            amountCents: input.amountCents,
+            percent: input.percent,
+            origin: 'generated',
+            envelopeKey,
+            correlationId: input.correlationId,
+          });
+          return { ...(await view(client, order, actor)), linkId: link.id };
+        },
+      );
+    },
+    /** LPC-03/04: only `open` links; the click and the cancel share the locks.
+     * @param {any} input */
+    async cancelLink(input) {
+      const linkId = uuid(input.linkId).toLowerCase();
+      return humanCommand(
+        input,
+        'link_cancel',
+        async (client, order, plan, actor) => {
+          const rows = await links.refresh(
+            client,
+            order,
+            plan,
+            input.correlationId,
+          );
+          const link = ownLink(linkId, rows);
+          if (link.state !== 'open') throw linkNotOpen(link);
+          await links.cancel(client, link, {
+            reason: 'seller',
+            actorId: actor.id,
+            correlationId: input.correlationId,
+          });
+          await client.query(
+            'UPDATE crm.order_billing_plans SET version=version+1,updated_at=$2 WHERE order_id=$1',
+            [order.id, clock()],
+          );
+          await options.billingChat?.externalPaymentRecorded?.(
+            client,
+            order.id,
+          );
+          return view(client, order, actor);
+        },
+        false,
+        async (client, order, plan) => {
+          const rows = await links.refresh(
+            client,
+            order,
+            plan,
+            input.correlationId,
+          );
+          const link = ownLink(linkId, rows);
+          if (link.state !== 'open') throw linkNotOpen(link);
+        },
+      );
+    },
+    /** Decision 11 "Confirmar resultado na InfinitePay" for an `unknown` link:
+     * with the provider identifiers it queues the n8n payment check; without
+     * them it only closes an attempt whose validity already passed.
+     * @param {any} input */
+    async confirmLinkResult(input) {
+      const linkId = uuid(input.linkId).toLowerCase();
+      const withCandidate =
+        input.invoiceSlug !== undefined || input.transactionNsu !== undefined;
+      const candidate = withCandidate
+        ? {
+            invoiceSlug: billingIdentifier(input.invoiceSlug),
+            transactionNsu: billingIdentifier(input.transactionNsu),
+          }
+        : null;
+      if (
+        candidate &&
+        (!/^[a-z0-9_-]{1,128}$/iu.test(candidate.invoiceSlug) ||
+          !/^[a-z0-9_-]{1,128}$/iu.test(candidate.transactionNsu))
+      )
+        throw new BillingError(400, 'INVALID_REQUEST');
+      if (candidate && !paymentCheckEnabled)
+        throw new BillingError(503, 'BILLING_CHECK_DISABLED');
+      return humanCommand(
+        input,
+        'link_confirm',
+        async (client, order, plan, actor) => {
+          const rows = await links.refresh(
+            client,
+            order,
+            plan,
+            input.correlationId,
+          );
+          const link = ownLink(linkId, rows);
+          if (link.state !== 'unknown')
+            throw Object.assign(new BillingError(409, 'BILLING_CONFLICT'), {
+              details: { state: link.state, clickedAt: iso(link.clicked_at) },
+            });
+          const charge = await attemptOf(client, link);
+          if (!charge) throw new BillingError(409, 'BILLING_CONFLICT');
+          let check = null;
+          if (candidate)
+            check = await enqueueCheck(
+              client,
+              order,
+              charge.id,
+              candidate,
+              actor.id,
+            );
+          else if (
+            !(await releaseUncertain(
+              client,
+              { order, charge, link },
+              input.correlationId,
+            ))
+          )
+            throw new BillingError(409, 'BILLING_LINK_STILL_VALID');
+          return { ...(await view(client, order, actor)), check };
+        },
+        false,
+      );
+    },
+    /** LPC-02: uniform answer; records the first page opening (no plan bump).
+     * @param {{token:unknown}} input */
+    async publicLink(input) {
+      const token = readLinkToken(input.token);
+      if (!token) return { state: 'unavailable' };
+      // Decision F: a page poll reads without locks or writes; only a due
+      // lazy transition or the first opening takes the canonical locks.
+      const quick = await database.transaction(
+        async (/** @type {any} */ client) => {
+          const row = (
+            await client.query(
+              `SELECT l.*,o.number AS order_number,o.cancelled_at AS order_cancelled_at
+               FROM crm.order_billing_links l JOIN crm.orders o ON o.id=l.order_id WHERE l.token_hash=$1`,
+              [linkTokenHash(token)],
+            )
+          ).rows[0];
+          if (!row || row.state === 'cancelled' || row.order_cancelled_at)
+            return { state: 'unavailable' };
+          if (
+            !row.page_opened_at ||
+            linkTransition(row, await linkAttempts(client, row.id), clock())
+          )
+            return null;
+          return publicState(client, {
+            order: { number: row.order_number },
+            link: row,
+          });
+        },
+      );
+      if (quick) return quick;
+      return database.transaction(async (/** @type {any} */ client) => {
+        const context = await publicContext(client, token);
+        if (!context) return { state: 'unavailable' };
+        const { link } = context;
+        if (!link.page_opened_at) {
+          await links.setLink(client, link, { page_opened_at: clock() });
+          await links.linkEvent(client, {
+            linkId: link.id,
+            kind: 'page_opened',
+          });
+          await links.linkAudit(
+            client,
+            link,
+            'page_opened',
+            null,
+            context.correlationId,
+          );
+        }
+        return publicState(client, context);
+      });
+    },
+    /** LPC-01/04/05: the only place a link attempt is created.
+     * @param {{token:unknown}} input */
+    async publicCheckout(input) {
+      const token = readLinkToken(input.token);
+      if (!token) return { statusCode: 200, body: { state: 'unavailable' } };
+      return database.transaction(async (/** @type {any} */ client) => {
+        const context = await publicContext(client, token);
+        if (!context)
+          return { statusCode: 200, body: { state: 'unavailable' } };
+        const { order, plan, link } = context;
+        if (link.state !== 'open')
+          return { statusCode: 200, body: await publicState(client, context) };
+        const base = {
+          orderNumber: order.number,
+          kind: link.kind,
+          amountCents: Number(link.amount_cents),
+        };
+        const paid = received(await paymentsFor(client, order.id));
+        // Decision 10: without ORDER_BILLING_ENABLED nothing is created.
+        if (
+          !enabled ||
+          !plan ||
+          plan.review_required ||
+          !agreementMatches(order, link) ||
+          paid + Number(link.amount_cents) > Number(order.final_amount_cents)
+        )
+          return { statusCode: 200, body: { state: 'failed', ...base } };
+        const now = clock();
+        const id = uuid(idFactory());
+        await client.query(
+          `INSERT INTO crm.order_billing_charges(id,order_id,link_id,kind,amount_cents,confirmed_at,order_amount_cents,payment_condition,valid_until,created_by,created_at,updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$11)`,
+          [
+            id,
+            order.id,
+            link.id,
+            link.kind,
+            link.amount_cents,
+            order.confirmed_at,
+            order.final_amount_cents,
+            order.payment_condition,
+            new Date(now.getTime() + 86400000),
+            link.created_by,
+            now,
+          ],
+        );
+        await client.query(
+          `INSERT INTO crm.outbox_jobs(id,job_type,idempotency_key,channel_event_id,status,priority,available_at,created_at,queue,attempt_count,max_attempts,updated_at,effect_policy)
+           VALUES ($1,'billing.checkout.create',$2,NULL,'pending',100,$3,$3,'billing',0,8,$3,'manual')`,
+          [`billing:${id}`, id, now],
+        );
+        await links.setLink(client, link, {
+          state: 'checkout_requested',
+          clicked_at: now,
+        });
+        await links.linkEvent(client, {
+          linkId: link.id,
+          kind: 'clicked',
+          chargeId: id,
+          at: now,
+        });
+        await links.linkAudit(
+          client,
+          link,
+          'clicked',
+          null,
+          context.correlationId,
+        );
+        await client.query(
+          'UPDATE crm.order_billing_plans SET version=version+1,updated_at=$2 WHERE order_id=$1',
+          [order.id, now],
+        );
+        return { statusCode: 202, body: { state: 'in_progress', ...base } };
+      });
     },
   });
 }

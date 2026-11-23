@@ -30,6 +30,13 @@ import {
   billingChatIdentifier as identifier,
   readBillingSendCommand,
 } from './order-billing-chat-contract.js';
+import {
+  LINK_RESERVING,
+  linkKindLabel,
+  linkStore,
+  linkUrl,
+  paymentLinkBase,
+} from './order-billing-links.js';
 
 /** @param {any} value */
 function uuid(value) {
@@ -57,7 +64,8 @@ function present(row) {
     id: row.id,
     version: Number(row.version),
     action: row.action,
-    chargeId: row.charge_id,
+    chargeId: row.charge_id ?? null,
+    linkId: row.link_id ?? null,
     conversationId: row.conversation_id,
     state: row.state,
     blockedReason: row.blocked_reason,
@@ -94,6 +102,8 @@ export function createOrderBillingChatRuntime(database, options) {
     throw new Error('Billing envelope keys must decode to 32 bytes');
   const clock = options.clock ?? (() => new Date());
   const idFactory = options.idFactory ?? randomUUID;
+  const links = linkStore({ clock, idFactory });
+  const linkBase = paymentLinkBase(env);
 
   /** Caller holds the shared billing locks before entering message/outbox writes.
    * @param {any} client @param {any} intent @param {string} correlationId */
@@ -113,13 +123,25 @@ export function createOrderBillingChatRuntime(database, options) {
         )
       ).rows[0];
     }
-    const charge = (
-      await client.query(
-        'SELECT * FROM crm.order_billing_charges WHERE id=$1',
-        [intent.charge_id],
-      )
-    ).rows[0];
-    if (charge.status !== 'waiting' || !charge.checkout_envelope) return intent;
+    // LPC-01: a CRM link exists at once; a legacy charge waits for its checkout.
+    const link = intent.link_id
+      ? (
+          await client.query(
+            'SELECT * FROM crm.order_billing_links WHERE id=$1',
+            [intent.link_id],
+          )
+        ).rows[0]
+      : null;
+    const charge = link
+      ? null
+      : (
+          await client.query(
+            'SELECT * FROM crm.order_billing_charges WHERE id=$1',
+            [intent.charge_id],
+          )
+        ).rows[0];
+    if (charge && (charge.status !== 'waiting' || !charge.checkout_envelope))
+      return intent;
     const target = await sellerWhatsAppTarget(client, intent.conversation_id);
     if (target || intent.whatsapp_target) {
       const valid =
@@ -136,13 +158,15 @@ export function createOrderBillingChatRuntime(database, options) {
         ).rows[0];
       }
     }
-    const url = billingUrl(
-      decryptOrderPrivateJson(
-        charge.checkout_envelope,
-        `billing-checkout:${charge.id}`,
-        envelopeKey,
-      ).url,
-    );
+    const url = link
+      ? linkUrl(linkBase, link, envelopeKey)
+      : billingUrl(
+          decryptOrderPrivateJson(
+            charge.checkout_envelope,
+            `billing-checkout:${charge.id}`,
+            envelopeKey,
+          ).url,
+        );
     const messageKey = Buffer.from(
       env.INBOX_MESSAGE_ENVELOPE_KEY ?? '',
       'base64',
@@ -170,12 +194,7 @@ export function createOrderBillingChatRuntime(database, options) {
         intent.order_id,
       ])
     ).rows[0];
-    const kind =
-      charge.kind === 'signal'
-        ? 'sinal'
-        : charge.kind === 'balance'
-          ? 'saldo'
-          : 'pagamento integral';
+    const kind = linkKindLabel((link ?? charge).kind);
     const text = `Pedido ${order.number} — ${kind} de ${amount}. Link para pagamento: ${url}`;
     await client.query(
       `INSERT INTO crm.messages
@@ -377,8 +396,23 @@ export function createOrderBillingChatRuntime(database, options) {
     ).rows[0];
     return { actor, order, plan, target, owner };
   }
-  /** @param {any} client @param {string} orderId */
-  async function financials(client, orderId) {
+  /** Links precede charges in the lock order; a writer also applies the
+   * lazy expiry so the free amount is current (LPC-06).
+   * @param {any} client @param {string} orderId @param {{order:any,plan:any,correlationId:string}|null} [writer] */
+  async function financials(client, orderId, writer = null) {
+    const linkRows = writer
+      ? await links.refresh(
+          client,
+          writer.order,
+          writer.plan,
+          writer.correlationId,
+        )
+      : (
+          await client.query(
+            'SELECT * FROM crm.order_billing_links WHERE order_id=$1 ORDER BY id FOR UPDATE',
+            [orderId],
+          )
+        ).rows;
     const charges = (
       await client.query(
         'SELECT * FROM crm.order_billing_charges WHERE order_id=$1 ORDER BY created_sequence FOR UPDATE',
@@ -401,7 +435,7 @@ export function createOrderBillingChatRuntime(database, options) {
             : 0n),
         0n,
       );
-    return { charges, payments, paid: cents(net) };
+    return { charges, payments, paid: cents(net), links: linkRows };
   }
   /** @param {any} order @param {any} charge */
   function matches(order, charge) {
@@ -467,6 +501,18 @@ export function createOrderBillingChatRuntime(database, options) {
     /** @type {any} */ let prior = null;
     /** @type {any} */ let corrected = null;
     if (command.action === 'retry') {
+      const previous = (
+        await client.query(
+          'SELECT link_id FROM crm.order_billing_send_intents WHERE id=$1 AND order_id=$2',
+          [uuid(command.intentId), c.order.id],
+        )
+      ).rows[0];
+      if (previous?.link_id)
+        return reserveLink(client, c, command, f, correlationId);
+    }
+    if (['send_link', 'issue_link'].includes(command.action))
+      return reserveLink(client, c, command, f, correlationId);
+    if (command.action === 'retry') {
       prior = (
         await client.query(
           'SELECT * FROM crm.order_billing_send_intents WHERE id=$1 AND order_id=$2 FOR UPDATE',
@@ -527,7 +573,8 @@ export function createOrderBillingChatRuntime(database, options) {
       if (
         f.charges.some((/** @type {any} */ r) =>
           ['queued', 'creating', 'waiting', 'unknown'].includes(r.status),
-        )
+        ) ||
+        f.links.some((/** @type {any} */ l) => LINK_RESERVING.includes(l.state))
       )
         throw error('BILLING_ACTIVE_CHARGE', 409);
       let amount,
@@ -645,6 +692,99 @@ export function createOrderBillingChatRuntime(database, options) {
         ? await compose(client, intent, correlationId)
         : intent,
     );
+  }
+  /** LPC: send a CRM link (new or existing) through the conversation.
+   * @param {any} client @param {any} c @param {any} command @param {any} f @param {string} correlationId */
+  async function reserveLink(client, c, command, f, correlationId) {
+    if (!linkBase)
+      throw new Error('APP_BASE_URL is required for CRM payment links');
+    /** @type {any} */ let link;
+    /** @type {any} */ let prior = null;
+    if (command.action === 'issue_link') {
+      const created = await links.create(client, {
+        order: c.order,
+        plan: c.plan,
+        actor: c.actor,
+        amountCents: command.amountCents,
+        percent: command.percent,
+        origin: 'sent',
+        envelopeKey,
+        correlationId,
+      });
+      link = created.link;
+      c.plan = created.plan;
+    } else {
+      if (command.action === 'retry') {
+        prior = (
+          await client.query(
+            'SELECT * FROM crm.order_billing_send_intents WHERE id=$1 AND order_id=$2 FOR UPDATE',
+            [uuid(command.intentId), c.order.id],
+          )
+        ).rows[0];
+        if (Number(prior.version) !== command.expectedIntentVersion)
+          throw error('VERSION_CONFLICT', 409);
+        if (
+          prior.conversation_id !== c.target.id ||
+          prior.state !== 'failed' ||
+          prior.failure_stage !== 'before_send' ||
+          (
+            await client.query(
+              'SELECT 1 FROM crm.order_billing_send_intents WHERE retry_of_intent_id=$1',
+              [prior.id],
+            )
+          ).rows.length
+        )
+          throw error('BILLING_RETRY_UNSAFE', 409);
+      }
+      const linkId = prior?.link_id ?? uuid(command.linkId);
+      link = f.links.find((/** @type {any} */ l) => l.id === linkId);
+      if (!link) throw error('BILLING_NOT_FOUND', 404);
+      if (
+        prior
+          ? ['cancelled', 'paid'].includes(link.state)
+          : link.state !== 'open'
+      )
+        throw error('BILLING_LINK_NOT_OPEN', 409);
+      c.plan = await savePlan(client, c, c.plan.percent);
+    }
+    const whatsappTarget = snapshotWhatsAppTarget(
+      await sellerWhatsAppTarget(client, c.target.id),
+      { commercial: true },
+    );
+    const intent = (
+      await client.query(
+        `INSERT INTO crm.order_billing_send_intents(id,order_id,link_id,conversation_id,actor_id,action,retry_of_intent_id,amount_cents,order_version,billing_version,conversation_version,owner_id,order_owner_id,cycle_number,automation_epoch,inbound_revision,confirmed_at,order_amount_cents,payment_condition,created_at,updated_at,whatsapp_target)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$20,$21) RETURNING *`,
+        [
+          uuid(idFactory()),
+          c.order.id,
+          link.id,
+          c.target.id,
+          c.actor.id,
+          command.action,
+          prior?.id ?? null,
+          link.amount_cents,
+          c.order.version,
+          c.plan.version,
+          c.target.version,
+          c.target.assigned_user_id,
+          c.owner,
+          c.target.cycle_number,
+          c.target.automation_epoch,
+          c.target.inbound_revision,
+          link.confirmed_at,
+          link.order_amount_cents,
+          link.payment_condition,
+          clock(),
+          whatsappTarget,
+        ],
+      )
+    ).rows[0];
+    await client.query(
+      'INSERT INTO crm.order_billing_send_events(id,intent_id,state,occurred_at) VALUES($1,$2,$3,$4)',
+      [uuid(idFactory()), intent.id, intent.state, clock()],
+    );
+    return present(await compose(client, intent, correlationId));
   }
   /** @param {string} orderId @param {string} token */
   function parseCursor(orderId, token) {
@@ -782,7 +922,11 @@ export function createOrderBillingChatRuntime(database, options) {
               correlationId,
             },
             async () => {
-              const f = await financials(client, orderId);
+              const f = await financials(client, orderId, {
+                order: c.order,
+                plan: c.plan,
+                correlationId,
+              });
               eligible(c, command, f);
               const result = await reserve(
                 client,

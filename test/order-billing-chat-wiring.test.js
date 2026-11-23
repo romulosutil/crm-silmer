@@ -22,7 +22,8 @@ const HEADERS = {
   'idempotency-key': 'synthetic-send',
 };
 const COMMAND = {
-  action: 'balance',
+  action: 'send_existing',
+  chargeId: 'charge-synthetic',
   conversationId: 'conversation-synthetic',
   expectedVersion: 1,
   expectedBillingVersion: 2,

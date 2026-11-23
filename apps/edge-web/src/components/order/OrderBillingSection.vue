@@ -25,16 +25,18 @@ const unavailable = ref(false);
 const error = ref('');
 const feedback = ref('');
 const liveMessage = ref('');
-const choosing = ref(true);
-const plan = ref('partial');
-const percent = ref('30');
+const editingCondition = ref(true);
+const choosing = computed(
+  () => editingCondition.value || billing.value?.needsNewCondition === true,
+);
+const plan = ref(100);
 const fieldError = ref('');
 const busy = ref(false);
 const modal = ref('');
 const dialog = ref(null);
 const sectionRoot = ref(null);
 const workspace = ref(null);
-const percentInput = ref(null);
+const planOptions = ref(null);
 const selectedCharge = ref(null);
 const refundAmount = ref('');
 const providerReviewed = ref(false);
@@ -125,17 +127,10 @@ const statusLabel = computed(() => {
   if (paid.value) return 'Quitado';
   return received.value > 0 ? 'Pago parcialmente' : 'A receber';
 });
-const selectedPercent = computed(() =>
-  plan.value === 'none'
-    ? 0
-    : plan.value === 'full'
-      ? 100
-      : Number(percent.value),
-);
 const nextAmount = computed(() => {
-  if (charges.value.length || (!choosing.value && billing.value?.percent === 0))
-    return balance.value;
-  return Math.round((total.value * selectedPercent.value) / 100);
+  if (received.value > 0) return balance.value;
+  const percent = choosing.value ? plan.value : billing.value?.percent || 100;
+  return Math.round(total.value * (percent / 100));
 });
 const canIssue = computed(
   () =>
@@ -210,12 +205,9 @@ function applyBilling(value) {
       'A cobrança mudou ou venceu. Confira o estado atual antes de compartilhar.';
   }
   if (!initialized) {
-    const valuePercent = value?.percent;
     plan.value =
-      valuePercent === 0 ? 'none' : valuePercent === 100 ? 'full' : 'partial';
-    if (valuePercent > 0 && valuePercent < 100)
-      percent.value = String(valuePercent);
-    choosing.value = !value?.managed;
+      value?.percent === 0 || value?.percent === 50 ? value.percent : 100;
+    editingCondition.value = !value?.managed;
     initialized = true;
   }
   if (Number(value?.orderVersion) > Number(props.order.version))
@@ -278,28 +270,20 @@ function scheduleLater() {
 }
 function validatePercent() {
   if (
-    !Number.isInteger(selectedPercent.value) ||
-    selectedPercent.value < 0 ||
-    selectedPercent.value > 100
+    choosing.value &&
+    plan.value === 50 &&
+    (nextAmount.value < 100 || total.value - nextAmount.value < 100)
   )
-    return 'Informe um percentual inteiro de 1% a 99%.';
-  if (
-    plan.value === 'partial' &&
-    (selectedPercent.value < 1 || selectedPercent.value > 99)
-  )
-    return 'Informe um percentual inteiro de 1% a 99%.';
-  if (selectedPercent.value > 0 && selectedPercent.value < 100) {
-    const signal = Math.round((total.value * selectedPercent.value) / 100);
-    if (signal < 100 || total.value - signal < 100)
-      return 'O sinal e o saldo precisam ser de pelo menos R$ 1,00. Ajuste a entrada ou escolha 100%.';
-  }
+    return 'O sinal e o saldo precisam ser de pelo menos R$ 1,00. Escolha pagamento integral.';
   return '';
 }
 function editCondition() {
   if (otherEditing.value || busy.value || charges.value.length) return;
-  choosing.value = true;
+  editingCondition.value = true;
   editing?.start?.('billing');
-  void nextTick(() => percentInput.value?.focus());
+  void nextTick(() =>
+    planOptions.value?.querySelector('input:checked')?.focus(),
+  );
 }
 function markEditing() {
   if (!otherEditing.value) editing?.start?.('billing');
@@ -307,9 +291,8 @@ function markEditing() {
 }
 function cancelCondition() {
   const value = billing.value?.percent;
-  plan.value = value === 0 ? 'none' : value === 100 ? 'full' : 'partial';
-  percent.value = String(value > 0 && value < 100 ? value : 30);
-  choosing.value = !billing.value?.managed;
+  plan.value = value === 0 || value === 50 ? value : 100;
+  editingCondition.value = !billing.value?.managed;
   fieldError.value = '';
   editing?.stop?.();
 }
@@ -396,7 +379,7 @@ async function write(path, body) {
   uncertain.value = false;
   if (response.data?.billing) applyBilling(response.data.billing);
   else await load(true);
-  choosing.value = false;
+  editingCondition.value = false;
   editing?.stop?.();
   emit('changed');
   return response;
@@ -440,10 +423,10 @@ async function prepare(event) {
   fieldError.value = validatePercent();
   if (fieldError.value) {
     await nextTick();
-    percentInput.value?.focus();
+    planOptions.value?.querySelector('input:checked')?.focus();
     return;
   }
-  if (selectedPercent.value === 0 && choosing.value) {
+  if (plan.value === 0 && choosing.value) {
     busy.value = true;
     try {
       await write('plan', { ...versions(), percent: 0 });
@@ -473,8 +456,8 @@ async function submitDialog() {
   let body = {
     ...versions(),
     percent: choosing.value
-      ? selectedPercent.value
-      : (billing.value?.percent ?? selectedPercent.value),
+      ? plan.value
+      : (billing.value?.percent ?? plan.value),
   };
   if (uncertain.value && commandRecord) {
     path = commandRecord.path;
@@ -739,14 +722,14 @@ onBeforeUnmount(() => {
           novalidate
           @submit.prevent="prepare"
         >
-          <fieldset :disabled="busy || Boolean(otherEditing)">
+          <fieldset ref="planOptions" :disabled="busy || Boolean(otherEditing)">
             <legend>Entrada combinada com o cliente</legend>
             <div class="billing-choices">
               <label
                 v-for="choice in [
-                  { value: 'none', title: '0%', label: 'Sem entrada' },
-                  { value: 'partial', title: 'X%', label: 'Entrada parcial' },
-                  { value: 'full', title: '100%', label: 'Pagamento integral' },
+                  { value: 0, label: 'Sem entrada' },
+                  { value: 50, label: 'Entrada parcial' },
+                  { value: 100, label: 'Pagamento integral' },
                 ]"
                 :key="choice.value"
               >
@@ -755,34 +738,18 @@ onBeforeUnmount(() => {
                   type="radio"
                   name="billing-plan"
                   :value="choice.value"
+                  :aria-describedby="
+                    fieldError && choice.value === 50
+                      ? 'billing-percent-error'
+                      : undefined
+                  "
                   @change="markEditing"
                 />
                 <span
-                  ><strong>{{ choice.title }}</strong
+                  ><strong>{{ choice.value }}%</strong
                   ><small>{{ choice.label }}</small></span
                 >
               </label>
-            </div>
-            <div v-if="plan === 'partial'" class="op-field billing-percent">
-              <label for="billing-percent">Percentual de entrada</label>
-              <div>
-                <input
-                  id="billing-percent"
-                  ref="percentInput"
-                  v-model="percent"
-                  type="number"
-                  min="1"
-                  max="99"
-                  step="1"
-                  inputmode="numeric"
-                  :aria-invalid="Boolean(fieldError) || undefined"
-                  aria-describedby="billing-percent-hint billing-percent-error"
-                  @input="markEditing"
-                /><span>%</span>
-              </div>
-              <p id="billing-percent-hint" class="op-hint">
-                De 1% a 99%. O restante será cobrado depois.
-              </p>
             </div>
           </fieldset>
           <p
@@ -797,25 +764,21 @@ onBeforeUnmount(() => {
             <div>
               <dt>
                 {{
-                  plan === 'none'
+                  plan === 0
                     ? 'Entrada agora'
-                    : plan === 'partial'
+                    : plan === 50
                       ? 'Cobrar sinal agora'
                       : 'Cobrar agora'
                 }}
               </dt>
-              <dd>{{ billingMoney(plan === 'none' ? 0 : nextAmount) }}</dd>
+              <dd>{{ billingMoney(nextAmount) }}</dd>
             </div>
             <div>
               <dt>
-                {{
-                  plan === 'none'
-                    ? 'Cobrar depois'
-                    : 'Saldo após este pagamento'
-                }}
+                {{ plan === 0 ? 'Cobrar depois' : 'Saldo após este pagamento' }}
               </dt>
               <dd>
-                {{ billingMoney(plan === 'none' ? total : total - nextAmount) }}
+                {{ billingMoney(total - nextAmount) }}
               </dd>
             </div>
           </dl>
@@ -844,7 +807,7 @@ onBeforeUnmount(() => {
               {{
                 busy
                   ? 'Salvando…'
-                  : plan === 'none'
+                  : plan === 0
                     ? 'Salvar sem entrada'
                     : 'Revisar cobrança'
               }}
@@ -1342,17 +1305,6 @@ onBeforeUnmount(() => {
 .billing-choices small {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
-}
-.billing-percent {
-  margin-block-start: var(--space-4);
-}
-.billing-percent > div {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-.billing-percent input {
-  width: 5rem;
 }
 .billing-preview {
   display: grid;

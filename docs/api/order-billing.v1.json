@@ -131,7 +131,8 @@
                   "percent": {
                     "type": "integer",
                     "minimum": 0,
-                    "maximum": 100
+                    "maximum": 100,
+                    "description": "0, 50 or 100 for new plans. Historical percentages can be replayed idempotently."
                   }
                 }
               }
@@ -212,7 +213,8 @@
                   "percent": {
                     "type": "integer",
                     "minimum": 0,
-                    "maximum": 100
+                    "maximum": 100,
+                    "description": "0, 50 or 100 for new charges. An existing historical percentage can be reused to collect the remaining balance after a confirmed receipt or to replay a command."
                   }
                 }
               }

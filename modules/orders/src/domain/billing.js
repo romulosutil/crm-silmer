@@ -10,9 +10,21 @@ export class BillingError extends Error {
 
 /** @param {unknown} value */
 export function billingPercent(value) {
-  if (!Number.isInteger(value) || Number(value) < 0 || Number(value) > 100)
+  if (value !== 0 && value !== 50 && value !== 100)
     throw new BillingError(400, 'BILLING_INVALID_PERCENT');
-  return Number(value);
+  return value;
+}
+
+/** @param {number|undefined} percent @param {{status:string}[]} charges @param {number} paid */
+export function billingCanReplaceLegacyPercent(percent, charges, paid) {
+  return (
+    percent !== undefined &&
+    percent !== 0 &&
+    percent !== 50 &&
+    percent !== 100 &&
+    paid === 0 &&
+    charges.every((charge) => charge.status === 'closed')
+  );
 }
 
 /** @param {number} total @param {number} percent */

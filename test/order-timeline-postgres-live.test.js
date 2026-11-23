@@ -103,7 +103,7 @@ if (!url) {
     };
   }
   /** @param {string} id @param {number} [percent] */
-  async function issue(id, percent = 30) {
+  async function issue(id, percent = 50) {
     const { billing } = await runtime.issue(await command(id, { percent }));
     const charge = billing.charges.at(-1),
       executionId = randomUUID();
@@ -148,7 +148,7 @@ if (!url) {
       charge = await issue(id);
     now = new Date('2026-11-06T01:30:00Z');
     await runtime.payment(payment(charge));
-    const state = await external(id, 7000);
+    const state = await external(id, 5000);
     const otherId = await seed(pool);
     await external(otherId, 1000);
     const result = await runtime.get({ actor: SELLER, orderId: id });
@@ -168,7 +168,7 @@ if (!url) {
     assert.equal(events[1].occurredAt, '2026-11-06T01:30:00.000Z');
     assert.deepEqual(
       events.map((/** @type {any} */ e) => e.amountCents),
-      [7000, 3000],
+      [5000, 5000],
     );
     assert.equal(state.billing.receivedAmountCents, 10000);
     assert.equal(result.billing.balanceAmountCents, 0);
@@ -193,7 +193,7 @@ if (!url) {
     await runtime.payment(input);
     await runtime.payment(input);
     const receiptCommand = await command(id, {
-      amountCents: 7000,
+      amountCents: 5000,
       receivedOn: '2026-11-04',
       method: 'cash',
       note: '',
@@ -274,7 +274,7 @@ if (!url) {
     );
     assert.equal(late.status, 'review');
     assert.equal(late.appliedAmountCents, 0);
-    assert.equal(late.amountCents, 3000);
+    assert.equal(late.amountCents, 5000);
     assert.equal(billing.receivedAmountCents, 10000);
   });
 

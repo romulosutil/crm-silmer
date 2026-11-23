@@ -487,7 +487,7 @@ for (const width of [390, 1366]) {
             billing: {
               version: 2,
               orderVersion: order.version,
-              percent: 30,
+              percent: 100,
               canManage: true,
               enabled: true,
               managed: true,
@@ -495,7 +495,11 @@ for (const width of [390, 1366]) {
               receivedAmountCents: 0,
               balanceAmountCents: 10000,
               charges: [
-                { id: 'charge-synthetic', status: 'queued', amountCents: 3000 },
+                {
+                  id: 'charge-synthetic',
+                  status: 'queued',
+                  amountCents: 10000,
+                },
               ],
               timelineEvents: [],
             },
@@ -531,7 +535,7 @@ for (const width of [390, 1366]) {
     expect(billingWrites[0]).toMatchObject({
       expectedVersion: order.version,
       expectedBillingVersion: 1,
-      percent: 30,
+      percent: 100,
     });
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     await page.getByRole('link', { name: '← Meus clientes' }).click();

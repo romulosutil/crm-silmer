@@ -24,7 +24,7 @@ const BASE = {
   expectedConversationVersion: 3,
 };
 const COMMANDS = [
-  { ...BASE, action: 'issue', percent: 30 },
+  { ...BASE, action: 'issue', percent: 50 },
   { ...BASE, action: 'send_existing', chargeId: 'charge-existing' },
   { ...BASE, action: 'balance' },
   {

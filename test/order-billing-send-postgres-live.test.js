@@ -134,7 +134,7 @@ if (!url) {
       expectedConversationVersion: Number(row.conversation_version),
       expectedBillingVersion: Number(row.billing_version ?? 0),
       action: 'issue',
-      percent: 30,
+      percent: 50,
       correlationId: randomUUID(),
       idempotencyKey: randomUUID(),
       ...fields,
@@ -672,7 +672,7 @@ if (!url) {
     const request = await input(orderId, { action: 'balance' });
     delete request.percent;
     const balance = await chat.submit(request);
-    assert.equal(balance.amountCents, 84000);
+    assert.equal(balance.amountCents, 60000);
     const queued = await ready(balance);
     assert.equal(queued.state, 'queued');
     assert.notEqual(queued.message_id, (await intentRow(intent.id)).message_id);
@@ -859,7 +859,7 @@ if (!url) {
         orderId,
         expectedVersion: original.billing.orderVersion,
         expectedBillingVersion: original.billing.version,
-        percent: 30,
+        percent: 50,
         idempotencyKey: randomUUID(),
         correlationId: randomUUID(),
       });
@@ -944,8 +944,8 @@ if (!url) {
           chargeId: charge.id,
           transactionNsu: randomUUID(),
           invoiceSlug: randomUUID(),
-          amountCents: 36000,
-          paidAmountCents: 36000,
+          amountCents: 60000,
+          paidAmountCents: 60000,
           method: 'pix',
           installments: 1,
           receiptUrl: null,

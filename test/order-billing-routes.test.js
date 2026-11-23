@@ -22,7 +22,7 @@ const AUTOMATION = {
   'x-silmer-workflow-version': 'order-billing-1',
   'x-silmer-execution-id': 'execution-synthetic-1',
 };
-const PLAN = { expectedVersion: 1, expectedBillingVersion: 0, percent: 30 };
+const PLAN = { expectedVersion: 1, expectedBillingVersion: 0, percent: 50 };
 
 function fixture() {
   const api = Fastify();

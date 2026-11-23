@@ -35,7 +35,17 @@ const common = {
 };
 
 export const billingIntentActions = Object.freeze({
-  issue: { percent: { type: 'integer', minimum: 1, maximum: 100 } },
+  // The original input shape remains readable for idempotent replays.
+  // The service enforces the current percentage policy before new effects.
+  issue: {
+    percent: {
+      type: 'integer',
+      minimum: 1,
+      maximum: 100,
+      description:
+        '50 or 100 for new charges. Other historical percentages are accepted only for idempotent replay.',
+    },
+  },
   send_existing: { chargeId: identifier },
   balance: {},
   correct: {

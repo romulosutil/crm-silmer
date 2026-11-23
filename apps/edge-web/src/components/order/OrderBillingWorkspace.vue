@@ -42,7 +42,7 @@ const noticeElement = ref(null);
 const mode = ref('');
 const stage = ref('choose');
 const action = ref('issue');
-const percent = ref('30');
+const percent = ref('100');
 const amount = ref('');
 const chargeId = ref('');
 const intentId = ref('');
@@ -342,9 +342,7 @@ async function show(nextMode, event, item = null) {
           : existing.value.length
             ? 'send_existing'
             : 'issue';
-    percent.value = String(
-      billing.value?.percent > 0 ? billing.value.percent : 100,
-    );
+    percent.value = billing.value?.percent === 50 ? '50' : '100';
     chargeId.value =
       item?.id ?? existing.value[0]?.id ?? corrected.value[0]?.id ?? '';
   }
@@ -405,13 +403,6 @@ function review() {
     else if (action.value === 'balance' && received.value <= 0)
       dialogError.value =
         'A cobrança do saldo exige recebimento parcial confirmado.';
-    else if (
-      action.value === 'issue' &&
-      (!Number.isInteger(Number(percent.value)) ||
-        Number(percent.value) < 1 ||
-        Number(percent.value) > 100)
-    )
-      dialogError.value = 'Informe um percentual inteiro de 1% a 100%.';
     else if (
       ['send_existing', 'correct'].includes(action.value) &&
       !selectedCharge.value
@@ -1013,16 +1004,12 @@ onBeforeUnmount(() => {
                 </option>
               </select>
               <template v-if="action === 'issue'"
-                ><label :for="`${uid}-percent`">Percentual de entrada</label
-                ><input
-                  :id="`${uid}-percent`"
-                  v-model="percent"
-                  type="number"
-                  min="1"
-                  max="100"
-                  step="1"
-                  required
-              /></template>
+                ><label :for="`${uid}-percent`">Percentual de entrada</label>
+                <select :id="`${uid}-percent`" v-model="percent">
+                  <option value="50">50% · Entrada parcial</option>
+                  <option value="100">100% · Pagamento integral</option>
+                </select>
+              </template>
               <template
                 v-if="action === 'send_existing' || action === 'correct'"
                 ><label :for="`${uid}-charge`">Cobrança</label

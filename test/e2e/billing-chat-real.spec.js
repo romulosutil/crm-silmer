@@ -293,9 +293,9 @@ async function sendSignal(page, workspace) {
     name: 'Gerar e enviar cobrança',
     exact: true,
   });
-  await review.getByLabel('Percentual de entrada').fill('30');
+  await review.getByLabel('Percentual de entrada').selectOption('50');
   await review.getByRole('button', { name: 'Revisar', exact: true }).click();
-  await expect(review).toContainText('R$ 300,00');
+  await expect(review).toContainText('R$ 500,00');
   await expect(review).toContainText('Cliente sintético 1');
   await review
     .getByRole('button', { name: 'Confirmar envio da cobrança', exact: true })
@@ -316,7 +316,7 @@ test('BFUI-01/02: chat reviews an explicit order and destination, queues one sig
     expectedVersion: state.order.version,
     expectedBillingVersion: 0,
     expectedConversationVersion: 4,
-    percent: 30,
+    percent: 50,
   });
   await expect(dialog).toContainText('Solicitação registrada: Na fila');
   await expect(
@@ -350,7 +350,7 @@ test('BFUI-01/02: direct conversation order remains selectable without a subject
   expect(state.calls[0].body).toMatchObject({
     action: 'issue',
     conversationId: 'shipping-conversation-1',
-    percent: 30,
+    percent: 50,
     expectedConversationVersion: 4,
   });
   await dialog
@@ -386,13 +386,13 @@ test('BFUI-02/03: partial receipt switches to server-calculated balance and pres
   const state = await setup(page);
   const { dialog } = await openChat(page);
   await sendSignal(page, dialog);
-  state.receive(30000);
+  state.receive(50000);
   state.billing.payments[0].method = 'credit_card';
   state.billing.payments[0].installments = 3;
   await dialog
     .getByRole('button', { name: 'Atualizar pagamentos', exact: true })
     .click();
-  await expect(dialog).toContainText('R$ 700,00');
+  await expect(dialog).toContainText('R$ 500,00');
   await expect(
     dialog.getByRole('region', { name: 'Pagamentos registrados' }),
   ).toContainText('Cartão em 3x');
@@ -407,7 +407,7 @@ test('BFUI-02/03: partial receipt switches to server-calculated balance and pres
     'balance',
   );
   await review.getByRole('button', { name: 'Revisar', exact: true }).click();
-  await expect(review).toContainText('R$ 700,00');
+  await expect(review).toContainText('R$ 500,00');
   await review
     .getByRole('button', { name: 'Confirmar envio da cobrança', exact: true })
     .click();
@@ -484,7 +484,7 @@ test('BFUI-05: lost POST response recovers the same immutable body/key and never
     name: 'Gerar e enviar cobrança',
     exact: true,
   });
-  await review.getByLabel('Percentual de entrada').fill('30');
+  await review.getByLabel('Percentual de entrada').selectOption('50');
   await review.getByRole('button', { name: 'Revisar', exact: true }).click();
   await review
     .getByRole('button', { name: 'Confirmar envio da cobrança', exact: true })
@@ -564,7 +564,7 @@ test('BFUI-06: chat dialogs support keyboard, 320/390/1440 widths and both theme
         name: 'Gerar e enviar cobrança',
         exact: true,
       });
-      await review.getByLabel('Percentual de entrada').fill('30');
+      await review.getByLabel('Percentual de entrada').selectOption('50');
       await review
         .getByRole('button', { name: 'Revisar', exact: true })
         .click();
@@ -880,7 +880,7 @@ test('BFUI-05: version conflict refreshes order and conversation and requires a 
     name: 'Gerar e enviar cobrança',
     exact: true,
   });
-  await review.getByLabel('Percentual de entrada').fill('30');
+  await review.getByLabel('Percentual de entrada').selectOption('50');
   await review.getByRole('button', { name: 'Revisar', exact: true }).click();
   await review
     .getByRole('button', { name: 'Confirmar envio da cobrança', exact: true })

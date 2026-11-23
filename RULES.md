@@ -184,7 +184,7 @@ habilita conta, altera produção ou apaga histórico Financeiro.
 ## Cobranças InfinitePay — extensão aprovada (05/11/2026)
 
 A [ADR 058](docs/adr/058-cobrancas-do-pedido-com-infinitepay.md) autoriza
-cobranças de pedidos confirmados fora da loja, com entrada 0%, X% ou 100%,
+cobranças de pedidos confirmados fora da loja, com entrada 0%, 50% ou 100%,
 Pix e cartão inclusive parcelado. Emenda a exclusão de recebimentos/saldo da
 regra 16 somente para pedidos geridos pela integração. Sinal não preenche
 “Pago em”; pagamento não confirma pedido. Condições e envio do link são

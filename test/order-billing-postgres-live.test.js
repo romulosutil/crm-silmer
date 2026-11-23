@@ -218,17 +218,17 @@ if (!connectionString) {
     );
     assert.equal(zero.billing.charges.length, 0);
     assert.equal(zero.billing.receivedAmountCents, 0);
-    const c = await charge(runtime, orderId, 30);
-    assert.equal(c.amountCents, 3000);
+    const c = await charge(runtime, orderId, 50);
+    assert.equal(c.amountCents, 5001);
     await reserve(runtime, c);
     await payment(runtime, c, {
       method: 'credit_card',
       installments: 3,
-      paidAmountCents: 3300,
+      paidAmountCents: 5500,
     });
     const partial = (await runtime.get({ actor: SELLER, orderId })).billing;
-    assert.equal(partial.receivedAmountCents, 3000);
-    assert.equal(partial.balanceAmountCents, 7001);
+    assert.equal(partial.receivedAmountCents, 5001);
+    assert.equal(partial.balanceAmountCents, 5000);
     assert.equal(
       (
         await pool.query('SELECT paid_on FROM crm.orders WHERE id=$1', [
@@ -237,8 +237,8 @@ if (!connectionString) {
       ).rows[0].paid_on,
       null,
     );
-    const balance = await charge(runtime, orderId, 30);
-    assert.equal(balance.amountCents, 7001);
+    const balance = await charge(runtime, orderId, 50);
+    assert.equal(balance.amountCents, 5000);
     await reserve(runtime, balance);
     await payment(runtime, balance);
     const settled = (await runtime.get({ actor: SELLER, orderId })).billing;
@@ -503,6 +503,71 @@ if (!connectionString) {
     assert.equal(result.reviewRequired, false);
     assert.equal(result.receivedAmountCents, 10000);
     assert.equal(result.balanceAmountCents, 2000);
+  });
+  test('COB-T50: a reopened legacy signal can be replaced with the full amount only after expiry and review', async () => {
+    const orderId = await seed(pool, { amount: 5000 });
+    await assert.rejects(
+      runtime.issue(await command(runtime, orderId, { percent: 30 })),
+      { code: 'BILLING_INVALID_PERCENT' },
+    );
+    const original = await charge(runtime, orderId, 50);
+    await pool.query(
+      'UPDATE crm.order_billing_plans SET percent=30 WHERE order_id=$1',
+      [orderId],
+    );
+    await pool.query(
+      'UPDATE crm.order_billing_charges SET amount_cents=1500 WHERE id=$1',
+      [original.id],
+    );
+    const executionId = await reserve(runtime, original);
+    await runtime.created({
+      chargeId: original.id,
+      executionId,
+      checkoutUrl: 'https://checkout.infinitepay.io/legacy-signal',
+      correlationId: randomUUID(),
+    });
+    await pool.query(
+      "UPDATE crm.orders SET status='pendente', version=version+1 WHERE id=$1",
+      [orderId],
+    );
+    const close = async () =>
+      runtime.reconcile(
+        await command(runtime, orderId, {
+          decision: 'close_unpaid',
+          confirmedProviderReview: true,
+        }),
+      );
+    await assert.rejects(close(), { code: 'BILLING_LINK_STILL_VALID' });
+    const previous = current;
+    current = new Date(current.getTime() + 86401000);
+    try {
+      await pool.query(
+        "UPDATE crm.orders SET status='confirmado', confirmed_at=$2, version=version+1 WHERE id=$1",
+        [orderId, current],
+      );
+      await assert.rejects(runtime.issue(await command(runtime, orderId)), {
+        code: 'BILLING_REVIEW_REQUIRED',
+      });
+      const reviewed = await close();
+      assert.equal(reviewed.billing.needsNewCondition, true);
+      assert.equal(reviewed.billing.charges[0].status, 'closed');
+      const result = await runtime.issue(await command(runtime, orderId));
+      assert.equal(result.billing.needsNewCondition, false);
+      assert.equal(result.billing.charges.length, 2);
+      assert.equal(result.billing.charges[0].amountCents, 1500);
+      assert.equal(result.billing.charges[1].kind, 'full');
+      assert.equal(result.billing.charges[1].amountCents, 5000);
+      const replacement = result.billing.charges[1];
+      await reserve(runtime, replacement);
+      await payment(runtime, replacement);
+      assert.equal(
+        (await runtime.get({ actor: SELLER, orderId })).billing
+          .balanceAmountCents,
+        0,
+      );
+    } finally {
+      current = previous;
+    }
   });
   test('COB-14/15: unknown emissions stay blocked; after expiry operator may close, late payment is preserved in review', async () => {
     const orderId = await seed(pool);

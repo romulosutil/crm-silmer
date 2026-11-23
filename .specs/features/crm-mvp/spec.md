@@ -124,7 +124,7 @@ F1 restrito depende da prova API e tela. Demais regras de produto preservadas.
 
 Após aprovação do protótipo, [ADR 058](../../../docs/adr/058-cobrancas-do-pedido-com-infinitepay.md)
 e [COB-01–16](../order-billing/spec.md) autorizam geração de cobranças e
-recebimentos de pedidos confirmados fora da loja, com 0%, X% e 100%, Pix e
+recebimentos de pedidos confirmados fora da loja, com 0%, 50% e 100%, Pix e
 cartão parcelado. Essa fronteira emenda FIN-01–03 quanto a recebimento/saldo
 somente de pedidos geridos pela integração; não reativa PAY-01–05 antigos.
 Sinal não quita, pagamento não confirma pedido e o check financeiro segue em

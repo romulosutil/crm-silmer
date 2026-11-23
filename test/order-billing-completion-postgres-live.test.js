@@ -116,7 +116,7 @@ if (!url) {
     );
   }
   /** @param {string} id @param {number} [percent] */
-  async function issue(id, percent = 30) {
+  async function issue(id, percent = 50) {
     const result = await runtime.issue(await command(id, { percent }));
     const charge = result.billing.charges.at(-1);
     const executionId = randomUUID();
@@ -170,7 +170,7 @@ if (!url) {
       chat.submit(
         await command(id, {
           action: 'issue',
-          percent: 30,
+          percent: 50,
           conversationId: conversation.id,
           expectedConversationVersion: Number(conversation.version),
         }),
@@ -246,7 +246,7 @@ if (!url) {
     const id = await seed(pool),
       charge = await issue(id);
     await pay(charge);
-    const result = await external(id);
+    const result = await external(id, { amountCents: 5000 });
     assert.equal(result.billing.receivedAmountCents, 10000);
     assert.equal(result.billing.balanceAmountCents, 0);
     assert.equal(result.billing.payments.length, 2);
@@ -542,7 +542,7 @@ if (!url) {
         conversationId: conversation,
         expectedConversationVersion: Number(versions.version),
         action: 'issue',
-        percent: 30,
+        percent: 50,
       }),
     );
     const executionId = randomUUID();
@@ -713,7 +713,7 @@ if (!url) {
     assert.equal(
       (await receiving.get({ actor: SELLER, orderId: id })).billing
         .receivedAmountCents,
-      3000,
+      5000,
     );
   });
   test('BFIN-03/05: racing external and gateway receipts preserve money without applying more than the order total', async () => {

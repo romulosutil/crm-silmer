@@ -23,6 +23,131 @@ Preparação técnica de produção em08/11/2026:
 API/worker permanecem com emissão/envio desligados. A preparação não conclui
 COB-OPS-01 nem autoriza teste financeiro real.
 
+## Link de pagamento do CRM, 23/11/2026
+
+[ADR 098](../adr/098-link-de-pagamento-do-crm-e-cobrancas-que-somam.md),
+[LPC-01–09](../../.specs/features/order-billing/spec.md) e
+[contrato](../api/order-billing-links.md). O cliente recebe
+`{origem pública do CRM}/pagar/{token}`. O pagamento na InfinitePay só nasce
+quando ele clica em **Pagar**. Cada clique cria uma tentativa pelo mesmo
+caminho de hoje (outbox `billing.checkout.create`, worker, n8n); o n8n e o
+worker não mudam.
+
+### Publicação
+
+- Aplicar a migração expand `0085_order_billing_links.expand.sql` antes da
+  imagem nova, junto com as anteriores da versão. Conferir checksum e
+  readiness.
+- Conferir `APP_BASE_URL` na API: URL `https://` absoluta da origem pública do
+  CRM. Sem ela, gerar ou enviar link falha com 503. O clique público exige
+  `Origin` igual à origem de `APP_BASE_URL` ou a uma de `APP_ORIGIN`; se a
+  página for servida por outro domínio, inclua-o em `APP_ORIGIN`, senão o
+  clique recebe 403.
+- Publicar a edge com o `docker/nginx.conf` novo: `/pagar/` serve a página e
+  `/api/v1/payment-links/` vai à API, ambos sem access log nem error log, para
+  o token não ficar em log. Conferir em produção que a página responde com
+  `X-Robots-Tag: noindex, nofollow`, `Referrer-Policy: no-referrer` e
+  `Cache-Control: no-store`, mantendo os demais cabeçalhos de segurança.
+- Limites da rota pública: por token, GET 60/min e POST 10/min; por IP, GET
+  120/min e POST 20/min. A página consulta a cada 2,5 s, a cada 5 s depois de
+  20 s, até 60 s, e respeita `Retry-After`. Um cliente que recarrega muito
+  recebe 429 e deve esperar um minuto.
+- Cobranças antigas, sem link, não são mais criadas por humanos: as rotas
+  antigas respondem 409 `BILLING_USE_PAYMENT_LINK`. As que já estão em
+  andamento seguem com callback, consulta, conciliação e devolução.
+- Sem flag nova. O clique só cria tentativa na InfinitePay com
+  `ORDER_BILLING_ENABLED=true`. Só com `ORDER_BILLING_RECEIVE_ENABLED=true`, a
+  página abre e o clique num link aberto mostra a falha, sem criar nada. Com as
+  duas falsas, as rotas públicas não existem (404). Com alguma ligada, token
+  inexistente, malformado ou cancelado recebe a mesma página "indisponível".
+
+### Estados de cada link
+
+| Na tela              | O que significa                                          | O que fazer                                                      |
+| -------------------- | -------------------------------------------------------- | ---------------------------------------------------------------- |
+| Aguardando o cliente | Enviado ou gerado, sem clique em Pagar                   | Copiar link ou Cancelar link. O valor está reservado.            |
+| Em pagamento         | O cliente clicou e a InfinitePay criou o pagamento       | Aguardar ou **Verificar pagamento na InfinitePay**. Não cancela. |
+| Resultado a conferir | Houve o clique, mas a resposta da InfinitePay não chegou | **Confirmar resultado na InfinitePay**. Não criar outro link.    |
+| Recebido             | A InfinitePay confirmou                                  | Ver comprovante; devolução feita no provedor vira registro.      |
+| Cancelado            | Cancelado antes do clique                                | Nada. Fica no histórico, fora da soma, com o motivo.             |
+
+**Resultado a conferir.** O CRM pediu o pagamento e não sabe se a InfinitePay o
+criou. O link fica travado e continua reservando o valor, para não cobrar duas
+vezes. Ele aparece quando o n8n reservou a tentativa e não respondeu em 120 s,
+ou quando o comando se perdeu depois da reserva. Se o comando morreu antes de
+o n8n reservar a tentativa, o link volta sozinho a Aguardando o cliente
+(evento "falha ao abrir"), porque o provedor nunca a cria.
+
+Para resolver, procure o pedido no painel da InfinitePay e use **Confirmar
+resultado na InfinitePay** na linha:
+
+- Achou o pagamento: informe o código da fatura e o NSU. O CRM enfileira uma
+  consulta (`payment_check`). Pago: o link vira Recebido. Não pago e com a
+  validade da tentativa vencida: a tentativa é encerrada e o link volta a
+  Aguardando o cliente. Não pago antes da validade: continua em Resultado a
+  conferir; repita depois da validade.
+- Não achou nada: confirme sem identificadores depois da validade da
+  tentativa (24 h). Antes disso, o CRM recusa com "ainda válido".
+
+O link incerto nunca reabre sozinho pelo vencimento. Enquanto isso, não envie outro link para
+o mesmo valor e não registre pagamento por fora sobre ele: o registro é
+recusado. A página do cliente mostra "Não conseguimos abrir o pagamento
+agora", e um novo toque não cria outra tentativa.
+
+**O cliente diz que o link está cancelado.** A página dá a mesma resposta para
+link cancelado, inexistente ou digitado errado. Abra as movimentações do
+pedido: o link cancelado mostra quem cancelou e o motivo (vendedor, mudança de
+valor do pedido, pagamento por fora ou conciliação). Se ainda falta receber,
+use **Enviar outro link**. Se o cliente usou um link antigo, use **Copiar
+link** na linha aberta. Nunca peça ao cliente o link nem o token por escrito
+para investigar; o token não vai para log.
+
+**Pagamento vencido e novo clique.** O pagamento na InfinitePay vale 24 h. Se
+vencer sem ser pago, o link volta a Aguardando o cliente e o próximo clique
+cria um pagamento novo. Não existe mais "Link vencido", "Gerar novo link" nem
+"Encerrar link vencido". Se a tentativa vencida for paga depois, o pagamento é
+registrado e vai para Precisa de conferência; não quita outro acordo sozinho.
+Se o cliente fechou a aba depois de clicar, a página mostra "Continuar na
+InfinitePay", com o mesmo pagamento.
+
+**Cancelar perdeu para o clique.** O servidor decide quem chegou primeiro. Se o
+cancelamento for recusado com "o cliente clicou em Pagar", acompanhe o
+pagamento. Se o cliente pagar um valor que não cabe mais, vai para conferência.
+
+**Mudança de valor do pedido.** Os links ainda não clicados são cancelados
+sozinhos, com o motivo "mudança de valor". Confira a Situação e envie um link
+novo com o livre para cobrar. Links já clicados seguem para conferência quando
+necessário. Em Precisa de conferência, **Resolver conferência** pode aplicar os
+pagamentos mesmo com link Em pagamento, ou cancelar os links abertos.
+
+**Pedido cancelado.** Os links Aguardando o cliente são cancelados sozinhos,
+com o motivo "pedido cancelado"; a página mostra "indisponível". Tentativas já
+clicadas seguem a regra de pedido cancelado: o pagamento fica como evidência,
+sem ser aplicado.
+
+**Pagamento em dobro.** Quando um pagamento quita o link, outra tentativa dele
+que já exista na InfinitePay vai para conferência. Confira no painel se o
+cliente pagou duas vezes; devolução feita no provedor vira registro.
+
+**Conflito de versão.** Um vencimento aplicado numa leitura (pela página do
+cliente ou por outra aba) sobe a versão da cobrança. Um diálogo do vendedor
+aberto antes recebe conflito de versão: feche, releia o pedido e repita a
+ação. É esperado e não perde dados.
+
+**Pagamento por fora.** Vale até o livre para cobrar. Se o valor depende de
+links Aguardando o cliente, a mesma confirmação cancela esses links e registra
+o recebimento. Se o valor além do livre está num link Em pagamento ou
+Resultado a conferir, o registro é recusado: verifique ou confirme o link
+antes. Se o cliente clicou num link escolhido para cancelar enquanto o diálogo
+estava aberto, o registro é recusado sem efeito; atualize e revise.
+
+**Parar novos pagamentos (rollback).** Desligue `ORDER_BILLING_ENABLED` na API
+e no worker e mantenha `ORDER_BILLING_RECEIVE_ENABLED=true`. Nenhum clique cria
+pagamento novo; a página continua abrindo e o clique mostra a falha. Se quiser
+encerrar de vez os links já enviados, cancele os Aguardando o cliente.
+Pagamentos já criados na InfinitePay continuam pagáveis até vencer, e os
+callbacks continuam chegando.
+
 ## Continuação de 08/11/2026
 
 Recebimentos externos, conferência de pagamento e interface real no redesign
@@ -85,6 +210,9 @@ implementação da interface e não habilita envio real.
 Links em revisão, de pedido reaberto, vencidos ou com leitura desatualizada
 não são oferecidos para compartilhamento normal. O acesso ao link anterior
 fica explicitamente na conferência; isso não cancela o link no gateway.
+Para links do CRM (23/11/2026), valem a condição como sugestão do primeiro
+link, os vários links que somam e o cancelamento antes do clique descritos
+na seção do link de pagamento acima.
 
 A conta da loja é reaproveitada, mas o workflow e os IDs das cobranças do CRM
 são próprios. Não apontar essa rotina para `store-orders` nem reutilizar a
@@ -212,8 +340,9 @@ resolver a duplicidade antes de prosseguir, sem descartar recebimentos.
    versão aprovada; o push de branch por si só não comprova publicação.
 2. Aplicar as migrações da versão, incluindo expand `0055_order_billing`,
    `0073_order_billing_send_intents`, `0074_billing_send_transport` e
-   `0075_billing_external_receipts_and_checks`, no ambiente
-   alvo **antes de habilitar flags**; conferir checksum e readiness. Não editar migrações
+   `0075_billing_external_receipts_and_checks` e
+   `0085_order_billing_links.expand.sql`,
+   no ambiente alvo **antes de habilitar flags**; conferir checksum e readiness. Não editar migrações
    anteriores nem copiar um banco sintético para o remoto.
 3. Publicar API/worker/edge da mesma entrega, inicialmente sem emissão.
 4. Importar o workflow dedicado, preencher configuração não secreta,
@@ -241,7 +370,12 @@ continua com saldo; acima do devido exige revisão/devolução.
 `close_unpaid` exige validade vencida, ausência de pagamento e conferência
 explícita no painel. Não cancela o link no gateway nem ignora callback tardio:
 um recebimento posterior fica em revisão. Não usar encerramento da conversa
-ou troca de vendedor como descarte de cobrança.
+ou troca de vendedor como descarte de cobrança. Desde a ADR 098,
+`close_unpaid` fecha as cobranças antigas, sem link, e as tentativas de link
+sem pagamento retidas em conferência; o link volta a Aguardando o cliente, ou
+é cancelado se o acordo mudou. Links do CRM não clicados saem por
+cancelamento. **Aplicar os pagamentos** é recusado quando o recebido mais
+todos os links que reservam passam do total: cancele links abertos antes.
 
 Para refazer uma cobrança de plano anterior à entrada fixa de 50%, confirme
 o pedido, confira a ausência de pagamento na InfinitePay e encerre o link

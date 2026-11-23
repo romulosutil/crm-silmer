@@ -1,5 +1,56 @@
 # Regras do CRM Silmer
 
+## Link de pagamento do CRM e cobranças que somam — decisão de 23/11/2026
+
+[ADR 098](docs/adr/098-link-de-pagamento-do-crm-e-cobrancas-que-somam.md),
+[LPC-01–09](.specs/features/order-billing/spec.md). Vale para as cobranças de
+pedidos geridos, sem mudar a loja.
+
+- O cliente recebe o link do CRM (`/pagar/{token}`). Nenhum pagamento é criado
+  na InfinitePay antes do clique em Pagar. O link do CRM não vence: termina só
+  por pagamento ou cancelamento. Pagamento do provedor vencido sem pagar
+  devolve o link a Aguardando o cliente; o próximo clique cria outra tentativa.
+- Cancelar só antes do clique, pelo responsável ou por um administrador.
+  Clique e cancelamento disputam o bloqueio da linha do link; o servidor decide
+  e o perdedor recebe o estado atual. Financeiro, agente, outro vendedor e
+  usuário desativado não operam cobranças. Outro vendedor com acesso ao pedido
+  vê números, selo e movimentações, mas nenhum link nem comprovante.
+- Vários links podem estar abertos. Aguardando o cliente, Em pagamento e
+  Resultado a conferir reservam o valor. A soma dos links abertos nunca passa
+  do que falta receber; criação de link e recebimento por fora validam isso
+  sob o bloqueio do pedido, na mesma transação. Cada link vale de R$ 1,00 até o
+  livre. A condição 0% · 50% · 100% fica no pedido e só sugere o primeiro link.
+- Humanos não criam mais cobranças sem link: as rotas antigas de emissão
+  recusam com `BILLING_USE_PAYMENT_LINK`. As antigas em andamento seguem
+  funcionando, e só elas ficam limitadas a uma ativa por pedido.
+- Resultado incerto (tentativa reservada sem resposta em 120 s) trava e
+  reserva o link até a confirmação humana. Com código da fatura e NSU, ela
+  roda o `payment_check`: pago vira Recebido; não pago depois da validade da
+  tentativa reabre o link; antes disso, continua travado. Sem os
+  identificadores, só libera depois da validade. O vencimento preguiçoso nunca
+  reabre sozinho um link incerto; comando morto antes da reserva no n8n
+  reabre o link, porque o provedor nunca cria essa tentativa. Cliques repetidos e reentrega nunca criam um segundo pagamento
+  válido.
+- Mudança de valor do pedido e cancelamento do pedido cancelam sozinhos os
+  links não clicados, com evento e auditoria. Quando um pagamento quita um link,
+  as outras tentativas dele já na InfinitePay vão para conferência; as nunca
+  reservadas pelo n8n são encerradas. Pagamento confirmado de link cancelado, vencido ou acima do acordo
+  vai para conferência e não quita outro acordo em silêncio.
+- Recebimento por fora vale até o livre. Pode cancelar links não clicados na
+  mesma confirmação; não libera valor de link Em pagamento ou Resultado a
+  conferir.
+- A página pública mostra só pedido, tipo e valor. Token inexistente,
+  malformado ou cancelado recebe a mesma resposta. `noindex`, `no-referrer`,
+  `no-store`, limite de taxa por IP e por token, e nenhum token ou PII em log.
+  O token é procurado pelo hash; a cópia cifrada só serve ao **Copiar link**.
+- O clique só cria tentativa no provedor com `ORDER_BILLING_ENABLED=true`. Só
+  com `ORDER_BILLING_RECEIVE_ENABLED=true`, a página lê e o clique responde
+  `failed` sem criar nada; com as duas desligadas, 404 uniforme. Rollback de
+  novos pagamentos é desligar `ORDER_BILLING_ENABLED`.
+- Continuam valendo: `payment_check`, deduplicação de NSU entre cobranças e
+  loja, devolução e estorno apenas como registro, sinal que não preenche “Pago
+  em” e pagamento que não confirma o pedido.
+
 ## Supervisão do WhatsApp pessoal — decisão de 20/11/2026
 
 Cada vendedor ou administrador comercial ativo opera sua própria linha. Só a
@@ -77,6 +128,8 @@ saldo e quitação; reversão corrige o registro sem devolver dinheiro. Acordo
 alterado/excesso exige revisão e histórico preservado. Conferência verifica
 o provedor pelo n8n, sem confiar em declaração de pagamento ou criar link.
 Frontend está autorizado no redesign atual; produção continua desativada.
+Desde a ADR 098, o recebimento externo vale até o livre e pode cancelar links
+do CRM ainda não clicados na mesma confirmação.
 
 ## Backend de envio integrado, 06/11/2026
 
@@ -84,7 +137,9 @@ A [ADR 076](docs/adr/076-intencoes-de-cobranca-e-envio-transacional.md)
 autoriza backend de intenção humana durável com filas existentes. Correção
 pode definir outro valor de cobrança limitado ao saldo após vencimento,
 encerramento sem pagamento e conferência da anterior, sem mudar o total
-comercial ou apagar links/recebimentos. Reserva final e callbacks conservam
+comercial ou apagar links/recebimentos. Para links do CRM, a ADR 098 troca essa
+pré-condição: o link errado é cancelado antes do clique e um link novo cabe no
+livre. Reserva final e callbacks conservam
 as guardas de autorização/idempotência. Frontend adiado até o redesign;
 contrato HTTP isolado não comprova integração ou autoriza ativação remota.
 
@@ -193,7 +248,9 @@ APIs de datas não contornam quitação. O check financeiro segue preservado em
 dados e API, sem operação pela interface ([ADR 074](docs/adr/074-retirada-da-pagina-financeiro.md));
 loja e PAY-01–05 legados são preservados. Contrato
 [COB-01–16](.specs/features/order-billing/spec.md), entrega COB-DEL-01 e
-[runbook](docs/runbooks/order-billing.md).
+[runbook](docs/runbooks/order-billing.md). A ADR 098 supersede a regra de uma
+cobrança não resolvida por pedido, o sinal e o saldo como únicas partes e o
+link da InfinitePay emitido no envio; ver a seção de 23/11/2026.
 
 ## Exceção vigente — ponte Evolution/Baileys (29/10/2026)
 

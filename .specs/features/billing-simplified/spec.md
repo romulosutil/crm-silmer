@@ -41,7 +41,10 @@ Open questions: none for this implementation.
   timeout/conflito SHALL conservar recuperação e impedir repetição cega.
 - BCS-05: WHEN um link vence, supera saldo, tem resultado incerto ou revisão,
   THE UI SHALL expor o estado e as ações seguras, sem oferecer cópia/envio de
-  link inválido ou inventar confirmação/cancelamento do provedor.
+  link inválido ou inventar confirmação/cancelamento do provedor. Emendado
+  pela [ADR 098](../../../docs/adr/098-link-de-pagamento-do-crm-e-cobrancas-que-somam.md):
+  quem vence é a tentativa na InfinitePay, não o link do CRM; um novo clique
+  no mesmo link cria outra tentativa.
 - BCS-06: WHEN leitura falha, acesso muda ou a resposta pertence a outro
   pedido, THE UI SHALL preservar erro/atualização explícitos e impedir ações
   privadas com snapshot obsoleto; consulta SHALL manter ACL e flags existentes.

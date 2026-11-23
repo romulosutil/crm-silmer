@@ -279,3 +279,136 @@ COB-02, COB-05 e COB-10. Oferecer 50% de entrada e 100% integral na ficha e no
 chat. Preservar 0% sem entrada, saldos legados, replays e histórico. Permitir uma
 nova condição em plano legado sem crédito após o encerramento das cobranças
 anteriores, mantendo a conferência na InfinitePay e a validade do link.
+
+## LPC — Link de pagamento do CRM e cobranças que somam
+
+[LPC-01–09](spec.md#link-de-pagamento-do-crm-lpc-0109), RFC 074 /
+[ADR 098](../../../docs/adr/098-link-de-pagamento-do-crm-e-cobrancas-que-somam.md),
+[contrato](../../../docs/api/order-billing-links.md). Aprovado pelo
+proprietário em 23/11/2026. Entrega única no
+[PR 457](https://github.com/romulosutil/crm-silmer/pull/457), com o n8n e o
+worker sem mudança. Ativação e pagamento real seguem em COB-OPS-01.
+
+Evidências no PR 457, em 23/11/2026: suítes de cobrança no PostgreSQL 17
+sintético com 92 aprovados e 0 falhas, 20 em
+`test/order-billing-links-postgres-live.test.js`, incluindo LPC-04 e LPC-06
+com concorrência real; página pública com 13 E2E e 10 unitários; seção do
+pedido com 16 E2E e 22 unitários; Caixa de Entrada com 12 E2E em
+`billing-chat-real`, e 361 aprovados somados aos E2E de pedidos, linha do
+tempo do pedido e Inbox.
+
+### Gate Check Commands
+
+- Database: `node --test --test-concurrency=1 test/order-billing-links-postgres-live.test.js` com PostgreSQL sintético dedicado, mais `test/order-billing-postgres-live.test.js` e `test/order-billing-completion-postgres-live.test.js` para regressão.
+- E2E: `npm run test:e2e -- test/e2e/order-billing.spec.js test/e2e/public-payment.spec.js`.
+- Full: `npm run validate` e `git diff --check`.
+
+### LPC-T01: Entidade do link e migração 0085 (LPC-01, LPC-05)
+
+Depends on: none
+Where: modules/database/migrations/0085_order_billing_links.expand.sql, apps/api/src/order-billing-links.js, apps/api/src/order-billing-runtime.js
+Tests: token só por hash e envelope cifrado, estados e transições válidas, uma tentativa ativa por link, índice de uma cobrança ativa só para cobranças sem link, eventos sem PII.
+Gate: Database
+Done when: `crm.order_billing_links` e `crm.order_billing_link_events` existem por migração expand; `order_billing_charges.link_id` liga cada clique a uma tentativa; cobranças antigas continuam iguais.
+Status: Complete
+
+Evidência no PR 457: PostgreSQL 17 sintético: suítes de cobrança com 92 aprovados e 0 falhas, 20 em `test/order-billing-links-postgres-live.test.js`.
+
+### LPC-T02: API pública e página /pagar (LPC-01, LPC-02, LPC-05)
+
+Depends on: LPC-T01
+Where: apps/api/src/order-billing-routes.js (`/api/v1/payment-links/:token`), apps/edge-web/src/views/PublicPaymentView.vue, apps/edge-web/src/lib/public-payment.js e docker/nginx.conf
+Tests: resposta uniforme para token inexistente, malformado e cancelado; limite de taxa por IP e por token; `noindex`, `no-referrer`, `no-store` e checagem de origem; clique idempotente que reaproveita o outbox `billing.checkout.create`; `unknown` responde `failed` sem nova tentativa; vencimento preguiçoso volta o link a `open`; 404 com as flags desligadas.
+Gate: Database e E2E
+Done when: o cliente abre o link, vê pedido, tipo e valor, e só o clique cria o pagamento na InfinitePay; nenhum token nem PII em log.
+Status: Complete
+
+Evidência no PR 457: Página pública com 13 E2E e 10 unitários. PostgreSQL 17 sintético: suítes de cobrança com 92 aprovados e 0 falhas, 20 em `test/order-billing-links-postgres-live.test.js`.
+
+### LPC-T03: Cancelar × clicar sob o mesmo bloqueio (LPC-03, LPC-04)
+
+Depends on: LPC-T02
+Where: apps/api/src/order-billing-runtime.js
+Tests: teste concorrente no PostgreSQL com exatamente um vencedor; conflito `BILLING_LINK_NOT_OPEN` com estado e hora do clique; recusa para outro vendedor, Financeiro, agente e usuário desativado.
+Gate: Database
+Done when: cancelamento e clique disputam o bloqueio da linha do link e produzem um só resultado, auditado.
+Status: Complete
+
+Evidência no PR 457: LPC-04 com concorrência real em `test/order-billing-links-postgres-live.test.js`. PostgreSQL 17 sintético: suítes de cobrança com 92 aprovados e 0 falhas, 20 em `test/order-billing-links-postgres-live.test.js`.
+
+### LPC-T04: Reserva e vários links (LPC-06, LPC-07)
+
+Depends on: LPC-T01
+Where: apps/api/src/order-billing-runtime.js
+Tests: criações concorrentes não passam do que falta receber; valor de R$ 1,00 até o livre; nome da linha derivado do valor; quitação pela soma dos recebimentos; links cancelados fora da soma.
+Gate: Database
+Done when: `figures` expõe recebido, reservado e livre, e o invariante da reserva vale sob o bloqueio do pedido.
+Status: Complete
+
+Evidência no PR 457: LPC-06 com concorrência real em `test/order-billing-links-postgres-live.test.js`. PostgreSQL 17 sintético: suítes de cobrança com 92 aprovados e 0 falhas, 20 em `test/order-billing-links-postgres-live.test.js`.
+
+### LPC-T05: Recebimento por fora com cancelamento de link (LPC-06, LPC-07)
+
+Depends on: LPC-T04
+Where: apps/api/src/order-billing-runtime.js
+Tests: valor acima do livre recusado com `BILLING_RECEIPT_EXCEEDS_FREE`; `cancelLinkIds` cancela e registra na mesma transação; link Em pagamento ou Resultado a conferir não é liberado.
+Gate: Database
+Done when: o registro por fora e o cancelamento dos links escolhidos têm um só efeito auditado.
+Status: Complete
+
+Evidência no PR 457: PostgreSQL 17 sintético: suítes de cobrança com 92 aprovados e 0 falhas, 20 em `test/order-billing-links-postgres-live.test.js`.
+
+### LPC-T06: Conciliação e motivo da conferência (LPC-08)
+
+Depends on: LPC-T04
+Where: apps/api/src/order-billing-runtime.js
+Tests: `reconcile` com `cancel_open_links`; `apply_current` disponível com link Em pagamento; `close_unpaid` só para cobranças sem link; `review.reason` projetado; pagamento tardio de link cancelado ou vencido vai para conferência.
+Gate: Database
+Done when: nenhuma confirmação tardia quita outro acordo em silêncio e a API diz o motivo da conferência.
+Status: Complete
+
+Evidência no PR 457: PostgreSQL 17 sintético: suítes de cobrança com 92 aprovados e 0 falhas, 20 em `test/order-billing-links-postgres-live.test.js`.
+
+### LPC-T07: Cancelamento automático na mudança de valor (LPC-08)
+
+Depends on: LPC-T04
+Where: apps/api/src/order-billing-runtime.js e a escrita comercial do pedido
+Tests: mudança de valor cancela os links `open` com `cancel_reason = order_changed` e auditoria; links já clicados seguem para conferência.
+Gate: Database
+Done when: nenhum link não clicado sobrevive a uma mudança de valor do pedido.
+Status: Complete
+
+Evidência no PR 457: PostgreSQL 17 sintético: suítes de cobrança com 92 aprovados e 0 falhas, 20 em `test/order-billing-links-postgres-live.test.js`.
+
+### LPC-T08: Seção Cobranças e recebimentos redesenhada (LPC-09)
+
+Depends on: LPC-T04, LPC-T05, LPC-T06
+Where: apps/edge-web/src/components/order/OrderBillingSection.vue, OrderBillingSummary.vue, apps/edge-web/src/components/order/billing/ e apps/edge-web/src/lib/order-billing-view.js
+Tests: Situação, Próximo passo e Movimentações; um verbo por ação; selo do estado mais urgente igual no resumo lateral; tom e ícone do design.md; teclado, foco e axe em notebook e celular, nos dois temas; papel sem operação mostra a linha do responsável.
+Gate: E2E
+Done when: a seção segue o vocabulário e os estados da RFC 074, sem "Link vencido", "Gerar novo link" ou "Encerrar link vencido".
+Status: Complete
+
+Evidência no PR 457: Seção do pedido com 16 E2E e 22 unitários.
+
+### LPC-T09: Diálogo único na Caixa de Entrada (LPC-09)
+
+Depends on: LPC-T08
+Where: apps/edge-web/src/components/inbox/ConversationBillingAction.vue
+Tests: um só diálogo na casca `JourneyDialog`, pedido pré-selecionado, mesma Situação e Próximo passo do pedido, prévia da mensagem, envio acompanhado até Entregue, Copiar link e Cancelar link enquanto não há clique, condição não perguntada de novo.
+Gate: E2E
+Done when: a ferramenta Cobranças e recebimentos não abre diálogo por cima de outro.
+Status: Complete
+
+Evidência no PR 457: 12 E2E em `billing-chat-real`; 361 aprovados somados aos E2E de pedidos, linha do tempo do pedido e Inbox.
+
+### LPC-T10: Decisão e fontes canônicas
+
+Depends on: none
+Where: docs/adr/098-link-de-pagamento-do-crm-e-cobrancas-que-somam.md, RULES.md, spec.md, TECHNICAL-DESIGN.md, design.md, docs/runbooks/order-billing.md
+Tests: links relativos conferidos, `npx prettier --check` nos arquivos formatados e `git diff --check`.
+Gate: Full
+Done when: ADR 098 registrada, RFC 074 marcada como aprovada e regras, spec, TDD, design e runbook atualizados.
+Status: Complete
+
+Evidência no PR 457: `npx prettier --check` nos arquivos formatados, `git diff --check` e links relativos conferidos.

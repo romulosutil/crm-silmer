@@ -1,13 +1,14 @@
 # Request for Comments
 
-## Proposta de 23/11/2026
+## Decisão de 23/11/2026
 
 - [074 — Link de pagamento do CRM e cobranças que somam](074-link-de-pagamento-do-crm-e-cobrancas-que-somam.md),
   com o [protótipo navegável](../prototypes/cobrancas-recebimentos.html): link do
   CRM cancelável até o cliente clicar em Pagar, vários links que reservam e
   somam, e a seção Cobranças e recebimentos em Situação, Próximo passo e
-  Movimentações. Aguarda a decisão do proprietário; supersederia a regra de uma
-  cobrança ativa do ADR 058.
+  Movimentações. Aprovada pelo proprietário na
+  [ADR 098](../adr/098-link-de-pagamento-do-crm-e-cobrancas-que-somam.md), que
+  supersede a regra de uma cobrança ativa da ADR 058.
 
 ## Decisão de 21/11/2026
 

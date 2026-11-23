@@ -838,3 +838,401 @@ export async function mockOrders(page, options = {}) {
   });
   return { orders };
 }
+
+// RFC 074 — "Cobranças e recebimentos" (docs/api/order-billing-links.md).
+// A synthetic seller billing view with CRM payment links that add up. Each
+// write mutates it and answers with the whole view, as the API does; figures
+// and the section badge are recomputed the way the server defines them.
+
+/** Synthetic instant in the store's clock (UTC−3). @param {number} day @param {number} hour @param {number} minute */
+export function billingAt(day, hour, minute) {
+  return new Date(Date.UTC(2026, 10, day, hour + 3, minute)).toISOString();
+}
+
+/** @param {string} code @param {number} [port] */
+export function billingLinkUrl(
+  code,
+  port = Number(process.env.E2E_PORT ?? 4173),
+) {
+  return `http://127.0.0.1:${port}/pagar/${code.padEnd(26, '0')}`;
+}
+
+/** @param {Record<string, any>} values */
+export function billingLink(values) {
+  return {
+    id: 'link-1',
+    kind: 'signal',
+    amountCents: 240000,
+    state: 'open',
+    origin: 'sent',
+    url: billingLinkUrl('7Q4K2M'),
+    chargeId: null,
+    createdAt: billingAt(23, 13, 44),
+    createdBy: 'Marina A.',
+    sentAt: null,
+    deliveredAt: null,
+    pageOpenedAt: null,
+    clickedAt: null,
+    providerValidUntil: null,
+    paidAt: null,
+    payMethod: 'pix',
+    refundedCents: 0,
+    cancelledAt: null,
+    cancelledBy: null,
+    cancelReason: null,
+    verifying: null,
+    inReview: false,
+    history: null,
+    ...values,
+  };
+}
+
+/** @param {any} billing */
+function refreshFigures(billing) {
+  const total = billing.totalAmountCents;
+  const paid = billing.links.filter(
+    (/** @type {any} */ l) => l.state === 'paid' && !l.inReview,
+  );
+  const received =
+    paid.reduce(
+      (/** @type {number} */ s, /** @type {any} */ l) =>
+        s + l.amountCents - l.refundedCents,
+      0,
+    ) +
+    billing.receipts
+      .filter((/** @type {any} */ r) => !r.reversedAt)
+      .reduce(
+        (/** @type {number} */ s, /** @type {any} */ r) => s + r.amountCents,
+        0,
+      );
+  const remaining = Math.max(0, total - received);
+  const held = billing.links
+    .filter((/** @type {any} */ l) => l.state === 'paid' && l.inReview)
+    .reduce(
+      (/** @type {number} */ s, /** @type {any} */ l) => s + l.amountCents,
+      0,
+    );
+  const open = billing.links.filter((/** @type {any} */ l) =>
+    ['open', 'checkout_requested', 'checkout_open', 'unknown'].includes(
+      l.state,
+    ),
+  );
+  const reserved = Math.min(
+    remaining,
+    open.reduce(
+      (/** @type {number} */ s, /** @type {any} */ l) => s + l.amountCents,
+      0,
+    ),
+  );
+  billing.figures = {
+    totalCents: total,
+    receivedCents: received,
+    remainingCents: remaining,
+    heldCents: held,
+    reservedCents: reserved,
+    freeCents: Math.max(0, remaining - reserved),
+  };
+  billing.receivedAmountCents = received;
+  billing.balanceAmountCents = remaining;
+  /** @param {string} state */
+  const has = (state) => open.some((/** @type {any} */ l) => l.state === state);
+  billing.situation = has('unknown')
+    ? 'unknown'
+    : billing.review
+      ? 'review'
+      : has('checkout_open') || has('checkout_requested')
+        ? 'paying'
+        : has('open')
+          ? 'waiting'
+          : remaining <= 0
+            ? 'settled'
+            : received > 0
+              ? 'partial'
+              : 'none';
+}
+
+/**
+ * Mocks GET/POST `/api/v1/orders/:id/billing…` and the order's conversation.
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {{order: any, billing?: Record<string, any>, raceCancel?: boolean, raceExternal?: boolean, confirmConflict?: boolean, stillValid?: boolean, reconcileExceeds?: boolean, intentStates?: string[]}} options
+ */
+export async function mockOrderBilling(page, options) {
+  const order = options.order;
+  /** @type {any} */
+  const billing = {
+    enabled: true,
+    chatSendEnabled: true,
+    paymentCheckEnabled: true,
+    managed: true,
+    canManage: true,
+    canOperate: true,
+    ownerName: 'Marina A.',
+    version: 1,
+    orderVersion: order.version,
+    condition: { percent: 50 },
+    percent: 50,
+    totalAmountCents: order.finalAmountCents,
+    review: null,
+    settledAt: null,
+    links: [],
+    receipts: [],
+    charges: [],
+    payments: [],
+    ...JSON.parse(JSON.stringify(options.billing ?? {})),
+  };
+  refreshFigures(billing);
+  /** @type {Array<{path: string, body: any, key: string}>} */
+  const writes = [];
+  const committed = new Map();
+  /** @type {Map<string, {polls: number, linkId: string}>} */
+  const intents = new Map();
+  const states = options.intentStates ?? ['sending', 'sent', 'delivered'];
+  let seq = 10;
+  const bump = () => {
+    billing.version += 1;
+    refreshFigures(billing);
+  };
+  await page.route('**/api/v1/inbox/conversations/*', (route) =>
+    route.fulfill({
+      json: {
+        conversation: {
+          id: order.conversationId,
+          channel: 'whatsapp',
+          contact: { label: 'Escola Aurora' },
+          version: 7,
+        },
+      },
+    }),
+  );
+  await page.route('**/api/v1/orders/*/billing**', async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname.replace(
+      /^\/api\/v1\/orders\/[^/]+\/billing\/?/u,
+      '',
+    );
+    /** @param {number} status @param {any} body */
+    const json = (status, body) => route.fulfill({ status, json: body });
+    if (request.method() === 'GET') {
+      const intent = /^send-intents\/([^/]+)$/u.exec(path);
+      if (intent) {
+        const record = intents.get(intent[1]);
+        if (!record) return json(404, { error: { code: 'NOT_FOUND' } });
+        const state = states[Math.min(record.polls, states.length - 1)];
+        record.polls += 1;
+        const link = billing.links.find(
+          (/** @type {any} */ l) => l.id === record.linkId,
+        );
+        if (link && (state === 'sent' || state === 'delivered'))
+          link.sentAt ??= billingAt(23, 14, 6);
+        if (link && state === 'delivered')
+          link.deliveredAt ??= billingAt(23, 14, 7);
+        return json(200, { id: intent[1], state, version: record.polls });
+      }
+      return json(200, { billing });
+    }
+    const key = request.headers()['idempotency-key'];
+    const body = request.postDataJSON();
+    if (!key) return json(400, { error: { code: 'IDEMPOTENCY_KEY_REQUIRED' } });
+    writes.push({ path, body, key });
+    if (committed.has(key)) return json(200, committed.get(key));
+    if (
+      body.expectedVersion !== billing.orderVersion ||
+      body.expectedBillingVersion !== billing.version
+    )
+      return json(409, { error: { code: 'VERSION_CONFLICT' } });
+    const findLink = (/** @type {string} */ id) =>
+      billing.links.find((/** @type {any} */ l) => l.id === id);
+    let status = 200;
+    /** @type {any} */
+    let result = null;
+    if (path === 'plan') {
+      billing.condition = { percent: body.percent };
+      billing.percent = body.percent;
+    } else if (path === 'links') {
+      if (
+        body.percent !== undefined &&
+        billing.condition?.percent === undefined
+      )
+        billing.condition = { percent: body.percent };
+      if (billing.condition === null && body.percent !== undefined)
+        billing.condition = { percent: body.percent };
+      billing.links.push(
+        billingLink({
+          id: `link-${++seq}`,
+          kind: 'installment',
+          amountCents: body.amountCents,
+          origin: 'generated',
+          url: billingLinkUrl(`G${seq}`),
+          createdAt: billingAt(23, 14, 5),
+        }),
+      );
+      status = 201;
+    } else if (path === 'send-intents') {
+      let linkId = body.linkId;
+      if (body.action === 'issue_link') {
+        if (billing.condition === null && body.percent !== undefined)
+          billing.condition = { percent: body.percent };
+        linkId = `link-${++seq}`;
+        billing.links.push(
+          billingLink({
+            id: linkId,
+            kind:
+              body.amountCents === billing.totalAmountCents / 2
+                ? 'signal'
+                : 'installment',
+            amountCents: body.amountCents,
+            url: billingLinkUrl(`S${seq}`),
+            createdAt: billingAt(23, 14, 5),
+          }),
+        );
+      }
+      const id = `intent-${++seq}`;
+      intents.set(id, { polls: 0, linkId });
+      bump();
+      result = { id, state: 'queued', linkId, version: 0 };
+      committed.set(key, result);
+      return json(202, result);
+    } else {
+      const cancel = /^links\/([^/]+)\/cancel$/u.exec(path);
+      const confirm = /^links\/([^/]+)\/confirm-result$/u.exec(path);
+      const reverse = /^external-receipts\/([^/]+)\/reverse$/u.exec(path);
+      if (cancel) {
+        const link = findLink(cancel[1]);
+        if (options.raceCancel || link.state !== 'open') {
+          Object.assign(link, {
+            state: 'checkout_open',
+            pageOpenedAt: billingAt(23, 14, 2),
+            clickedAt: billingAt(23, 14, 3),
+            providerValidUntil: billingAt(24, 14, 3),
+          });
+          bump();
+          return json(409, {
+            error: {
+              code: 'BILLING_LINK_NOT_OPEN',
+              state: 'checkout_open',
+              clickedAt: link.clickedAt,
+            },
+          });
+        }
+        Object.assign(link, {
+          state: 'cancelled',
+          cancelledAt: billingAt(23, 14, 5),
+          cancelledBy: 'Marina A.',
+          cancelReason: 'seller',
+        });
+      } else if (confirm) {
+        // Contract decision 11: both receipt ids queue a provider check;
+        // neither releases an attempt whose validity passed.
+        const link = findLink(confirm[1]);
+        if (options.confirmConflict) {
+          // The 'created' callback arrived first.
+          Object.assign(link, {
+            state: 'checkout_open',
+            providerValidUntil: billingAt(24, 14, 2),
+          });
+          bump();
+        }
+        if (link.state !== 'unknown')
+          return json(409, {
+            error: {
+              code: 'BILLING_CONFLICT',
+              state: link.state,
+              clickedAt: link.clickedAt,
+            },
+          });
+        if (body.invoiceSlug && body.transactionNsu)
+          link.verifying = {
+            checkId: 'check-1',
+            state: 'queued',
+            requestedAt: billingAt(23, 14, 5),
+            checkedAt: null,
+            nextAt: billingAt(23, 14, 10),
+          };
+        else if (
+          options.stillValid ||
+          (link.providerValidUntil &&
+            Date.parse(link.providerValidUntil) > Date.now())
+        )
+          return json(409, { error: { code: 'BILLING_LINK_STILL_VALID' } });
+        else
+          Object.assign(link, {
+            state: 'open',
+            verifying: null,
+            providerValidUntil: null,
+          });
+      } else if (path === 'external-receipts') {
+        for (const id of body.cancelLinkIds ?? []) {
+          const link = findLink(id);
+          if (options.raceExternal) {
+            Object.assign(link, {
+              state: 'checkout_open',
+              clickedAt: billingAt(23, 14, 3),
+              providerValidUntil: billingAt(24, 14, 3),
+            });
+            bump();
+            return json(409, {
+              error: {
+                code: 'BILLING_LINK_NOT_OPEN',
+                state: 'checkout_open',
+                clickedAt: link.clickedAt,
+              },
+            });
+          }
+          Object.assign(link, {
+            state: 'cancelled',
+            cancelledAt: billingAt(23, 14, 5),
+            cancelledBy: 'Marina A.',
+            cancelReason: 'external_receipt',
+          });
+        }
+        billing.receipts.push({
+          id: `receipt-${++seq}`,
+          amountCents: body.amountCents,
+          receivedOn: body.receivedOn,
+          method: body.method,
+          note: body.note,
+          recordedBy: 'seller-marina',
+          recordedByName: 'Marina A.',
+          recordedAt: billingAt(23, 14, 5),
+          reversedAt: null,
+        });
+      } else if (path === 'reconcile') {
+        if (body.decision === 'apply_current' && options.reconcileExceeds) {
+          // A link opened meanwhile: payments + reserving links > total.
+          options.reconcileExceeds = false;
+          billing.links.push(
+            billingLink({
+              id: `link-${++seq}`,
+              kind: 'installment',
+              amountCents: 300000,
+              sentAt: billingAt(23, 14, 4),
+              createdAt: billingAt(23, 14, 4),
+            }),
+          );
+          bump();
+          return json(409, { error: { code: 'BILLING_LINK_EXCEEDS_FREE' } });
+        }
+        if (body.decision === 'apply_current')
+          billing.links.forEach((/** @type {any} */ l) => (l.inReview = false));
+        else
+          billing.links
+            .filter((/** @type {any} */ l) => l.state === 'open')
+            .forEach((/** @type {any} */ l) => (l.state = 'cancelled'));
+        billing.review = null;
+      } else if (reverse) {
+        const receipt = billing.receipts.find(
+          (/** @type {any} */ r) => r.id === reverse[1],
+        );
+        receipt.reversedAt = billingAt(23, 14, 5);
+        receipt.reversedByName = 'Marina A.';
+        receipt.reversalReason = body.reason;
+      }
+    }
+    bump();
+    result = { billing: JSON.parse(JSON.stringify(billing)) };
+    committed.set(key, result);
+    return json(status, result);
+  });
+  return { billing, writes };
+}

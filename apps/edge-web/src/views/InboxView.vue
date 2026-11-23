@@ -2759,6 +2759,12 @@ async function mediaSent() {
   await loadInbox(true);
 }
 
+/** RFC 074: the billing link left through the conversation; show it in the thread. */
+async function billingSent() {
+  if (activeId.value) keepOpenId = activeId.value;
+  await loadInbox(true);
+}
+
 async function loadAssignableUsers() {
   if (assignableUsers.value.length) return;
   try {
@@ -4095,6 +4101,8 @@ onBeforeUnmount(() => {
                   :conversation-id="active.id"
                   :conversation-version="active.version"
                   :destination-label="active.contact?.label || ''"
+                  :channel="active.channel"
+                  :owner-name="ownedByMe ? '' : ownerLabel"
                   :subjects="subjectState.subjects"
                   :linked-order="active.order"
                   :disabled="
@@ -4105,6 +4113,7 @@ onBeforeUnmount(() => {
                     active.channel === 'site_chat'
                   "
                   :revision="orderRevision"
+                  @sent="billingSent"
                 />
                 <ConversationShippingQuote
                   v-if="canQuoteShipping"

@@ -1,20 +1,53 @@
+import { mkdirSync } from 'node:fs';
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { mockOrders, ownConfirmedOrder } from './support/orders-mock.js';
+import {
+  billingAt,
+  billingLink,
+  mockOrderBilling,
+  mockOrders,
+  ownConfirmedOrder,
+} from './support/orders-mock.js';
 
-/** @param {import('@playwright/test').Page} page @param {any} [options] */
+// RFC 074 (LPC-09): "Cobranças e recebimentos" on the order page — Situação,
+// Próximo passo and Movimentações, the journey dialogs and the rail, on a
+// notebook and a phone, in both themes. Synthetic data only.
+
+const SHOTS = process.env.BILLING_SHOTS_DIR ?? '';
+
+/** Text with the no-break space Intl puts after "R$" made plain. @param {string} value */
+const money = (value) =>
+  new RegExp(
+    value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&').replaceAll(' ', '\\s'),
+    'u',
+  );
+
+/**
+ * @param {import('@playwright/test').Page} page
+ * @param {{billing?: Record<string, any>, raceCancel?: boolean, raceExternal?: boolean, confirmConflict?: boolean, stillValid?: boolean, reconcileExceeds?: boolean, theme?: 'light'|'dark'}} [options]
+ */
 async function setup(page, options = {}) {
   const order = {
     ...ownConfirmedOrder,
+    number: '07-CRM',
+    finalAmountCents: 480000,
     paidOn: null,
     origin: 'atendimento',
-    finalAmountCents: options.amount ?? 180000,
-    status: options.orderStatus ?? ownConfirmedOrder.status,
+    ficha: {
+      ...ownConfirmedOrder.ficha,
+      summary: {
+        ...ownConfirmedOrder.ficha.summary,
+        cliente: 'Escola Aurora',
+        nome: 'Jogos 2026',
+      },
+    },
   };
+  if (options.theme)
+    await page.addInitScript((theme) => {
+      globalThis.localStorage.setItem('silmer-theme', theme);
+    }, options.theme);
   await mockOrders(page, { orders: [order] });
-  await page.route('**/api/v1/orders/order-confirmado', (route) =>
-    route.fulfill({ json: { order } }),
-  );
+  const mock = await mockOrderBilling(page, { order, ...options });
   await page.context().addCookies([
     {
       name: 'crm_csrf',
@@ -22,718 +55,936 @@ async function setup(page, options = {}) {
       url: `http://127.0.0.1:${process.env.E2E_PORT ?? 4173}`,
     },
   ]);
-  const billing = {
-    version: 0,
-    orderVersion: order.version,
-    percent: null,
-    totalAmountCents: order.finalAmountCents,
-    receivedAmountCents: 0,
-    balanceAmountCents: order.finalAmountCents,
-    canManage: true,
-    managed: false,
-    blockedReason: null,
-    charges: [],
-    enabled: true,
-    ...options.billing,
-  };
-  /** @type {any[]} */
-  const writes = [];
-  const committed = new Map();
-  let responseLost = false;
-  let failRead = options.failRead ?? false;
-  await page.route('**/api/v1/orders/*/billing**', async (route) => {
-    const request = route.request();
-    const path = new URL(request.url()).pathname;
-    const json = (/** @type {number} */ status, /** @type {any} */ body) =>
-      route.fulfill({ status, json: body });
-    if (options.disabled) return json(404, { code: 'NOT_FOUND' });
-    if (request.method() === 'GET') {
-      if (failRead) {
-        failRead = false;
-        return json(503, { code: 'SERVICE_UNAVAILABLE' });
-      }
-      return json(200, { billing });
-    }
-    expect(request.headers()['idempotency-key']).toBeTruthy();
-    const body = request.postDataJSON();
-    const key = request.headers()['idempotency-key'];
-    writes.push({ path, body, key });
-    if (committed.has(key)) return json(200, committed.get(key));
-    if (options.writeFailure)
-      return json(options.writeFailure.status, {
-        code: options.writeFailure.code,
-      });
-    if (path.endsWith('/plan')) {
-      billing.percent = body.percent;
-      billing.managed = true;
-      billing.version++;
-    } else if (path.endsWith('/charges')) {
-      billing.percent = body.percent;
-      billing.needsNewCondition = false;
-      billing.managed = true;
-      billing.version++;
-      const signal = billing.receivedAmountCents === 0 && body.percent === 50;
-      billing.charges.push({
-        id: `billing-${billing.charges.length + 1}`,
-        kind: signal
-          ? 'signal'
-          : billing.receivedAmountCents > 0
-            ? 'balance'
-            : 'full',
-        amountCents: signal
-          ? Math.round((billing.totalAmountCents * body.percent) / 100)
-          : billing.balanceAmountCents,
-        status: options.createStatus ?? 'waiting',
-        checkoutUrl: 'https://checkout.infinitepay.io/synthetic-checkout',
-        receiptUrl: null,
-        method: null,
-        installments: null,
-        refundableAmountCents: 0,
-        validUntil: new Date(Date.now() + 86_400_000).toISOString(),
-      });
-    } else if (path.endsWith('/refund')) {
-      const charge = billing.charges[0];
-      charge.refundedAmountCents =
-        (charge.refundedAmountCents ?? 0) + body.amountCents;
-      charge.refundableAmountCents -= body.amountCents;
-      billing.receivedAmountCents = Math.max(
-        0,
-        billing.receivedAmountCents - body.amountCents,
-      );
-      billing.balanceAmountCents =
-        billing.totalAmountCents - billing.receivedAmountCents;
-      billing.version++;
-      billing.orderVersion = ++order.version;
-    } else if (path.endsWith('/reconcile')) {
-      billing.blockedReason = null;
-      billing.version++;
-      billing.orderVersion = ++order.version;
-      billing.charges.forEach((/** @type {any} */ charge) => {
-        charge.status = body.decision === 'close_unpaid' ? 'closed' : 'paid';
-      });
-    }
-    const result = { billing: JSON.parse(JSON.stringify(billing)) };
-    committed.set(key, result);
-    if (
-      options.loseResponse &&
-      path.endsWith(`/${options.loseResponse}`) &&
-      !responseLost
-    ) {
-      responseLost = true;
-      return route.abort('failed');
-    }
-    return json(200, result);
-  });
   await page.goto(`/pedidos/${order.id}#cobrancas`);
-  const section = page.getByRole('region', { name: 'Cobranças', exact: true });
+  const section = page.getByRole('region', {
+    name: 'Cobranças e recebimentos',
+    exact: true,
+  });
   await expect(section).toBeVisible();
-  if (!options.failRead && !options.disabled)
-    await expect(section.getByRole('definition').first()).toBeVisible();
-  return {
-    section,
-    billing,
-    writes,
-    failNextRead() {
-      failRead = true;
-    },
-    pay(method = 'pix', installments = 1) {
-      const charge = billing.charges.at(-1);
-      charge.status = 'paid';
-      charge.method = method;
-      charge.installments = installments;
-      charge.paidAt = '2026-11-05T15:00:00.000Z';
-      charge.receiptUrl = 'https://infinitepay.io/synthetic-receipt';
-      charge.refundableAmountCents = charge.amountCents;
-      billing.receivedAmountCents += charge.amountCents;
-      billing.balanceAmountCents -= charge.amountCents;
-      billing.version++;
-      billing.orderVersion = ++order.version;
-    },
-  };
-}
-
-/** @param {import('@playwright/test').Page} page @param {import('@playwright/test').Locator} section */
-async function issue(page, section) {
-  await section
-    .getByRole('button', { name: /Revisar cobrança|Cobrar saldo|Cobrar R\$/u })
-    .click();
-  const dialog = page.getByRole('dialog');
-  await dialog
-    .getByRole('button', { name: 'Gerar link de pagamento', exact: true })
-    .click();
-  await expect(dialog).not.toBeVisible();
-}
-
-test('0% saves no checkout, then lets the owner explicitly charge the total', async ({
-  page,
-}, testInfo) => {
-  const { section, writes } = await setup(page);
-  await page.evaluate(() => globalThis.scrollTo(0, 0));
-  await page.screenshot({
-    path: testInfo.outputPath('billing-desktop.png'),
-    fullPage: true,
-  });
-  await section.getByRole('radio', { name: '0% Sem entrada' }).check();
-  await section.getByRole('button', { name: 'Salvar sem entrada' }).click();
-  expect(writes).toHaveLength(1);
-  expect(writes[0].path).toMatch(/\/plan$/u);
-  expect(writes[0].body.percent).toBe(0);
-  await expect(section).toContainText('Nenhum link de entrada foi gerado');
   await expect(
-    section.getByRole('link', { name: 'Abrir cobrança' }),
-  ).toHaveCount(0);
-  await issue(page, section);
-  expect(writes).toHaveLength(2);
-  expect(writes[1].body.percent).toBe(0);
-  await expect(
-    section.getByRole('link', { name: 'Abrir cobrança' }),
+    section.getByText('Falta receber', { exact: true }),
   ).toBeVisible();
-  await expect(section.locator('.billing-totals')).toContainText('R$ 0,00');
-});
+  return { section, ...mock };
+}
 
-test('a signal paid in card installments leaves the balance; Pix settles only after server confirmation', async ({
-  page,
-}, testInfo) => {
-  const { section, writes, pay } = await setup(page);
-  await section.getByRole('radio', { name: '50% Entrada parcial' }).check();
-  await issue(page, section);
-  expect(writes[0].body.percent).toBe(50);
-  await expect(section.locator('.billing-history')).toContainText('R$ 900,00');
-  await expect(section.locator('.billing-totals')).toContainText('R$ 0,00');
-  await expect(
-    section.getByRole('button', { name: 'Revisar cobrança' }),
-  ).toHaveCount(0);
-  const checkoutLink = section.getByRole('link', { name: 'Abrir cobrança' });
-  expect(
-    (await checkoutLink.boundingBox())?.height ?? 0,
-  ).toBeGreaterThanOrEqual(44);
-  await page.evaluate(() => globalThis.scrollTo(0, 0));
-  await page.screenshot({
-    path: testInfo.outputPath('billing-link-desktop.png'),
-    fullPage: true,
+const paidSignal = () =>
+  billingLink({
+    id: 'sig',
+    state: 'paid',
+    chargeId: 'ch-sig',
+    createdAt: billingAt(22, 9, 12),
+    sentAt: billingAt(22, 9, 13),
+    deliveredAt: billingAt(22, 9, 13),
+    pageOpenedAt: billingAt(22, 10, 25),
+    clickedAt: billingAt(22, 10, 28),
+    providerValidUntil: billingAt(23, 10, 28),
+    paidAt: billingAt(22, 10, 30),
   });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await checkoutLink.scrollIntoViewIfNeeded();
-  await page.screenshot({ path: testInfo.outputPath('billing-link-390.png') });
-  await page.setViewportSize({ width: 1280, height: 720 });
-  pay('credit_card', 3);
-  await section
-    .getByRole('button', { name: 'Atualizar cobranças', exact: true })
-    .click();
-  await expect(section).toContainText('Pago parcialmente');
-  await expect(section.locator('.billing-live')).toContainText('900,00');
-  const announcement =
-    (await section.locator('.billing-live').textContent()) ?? '';
-  await section
-    .getByRole('button', { name: 'Atualizar cobranças', exact: true })
-    .click();
-  await expect(section.locator('.billing-live')).toHaveText(announcement);
-  expect(
-    (
-      await section
-        .getByRole('link', { name: 'Comprovante InfinitePay' })
-        .boundingBox()
-    )?.height ?? 0,
-  ).toBeGreaterThanOrEqual(44);
-  await expect(section.locator('.billing-history')).toContainText(
-    'Cartão em 3x',
+const waitingSignal = () =>
+  billingLink({
+    sentAt: billingAt(23, 13, 45),
+    deliveredAt: billingAt(23, 13, 46),
+    pageOpenedAt: billingAt(23, 13, 50),
+  });
+
+/** @param {import('@playwright/test').Page} page @param {string} name */
+async function shot(page, name) {
+  if (!SHOTS) return;
+  mkdirSync(SHOTS, { recursive: true });
+  await page
+    .locator('section.billing-section')
+    .screenshot({ path: `${SHOTS}/${name}.png`, animations: 'disabled' });
+}
+
+test('sem cobrança: the condition is chosen once and the first link is sent and followed to Entregue', async ({
+  page,
+}) => {
+  const { section, writes } = await setup(page, {
+    billing: { condition: null, percent: null, managed: false },
+  });
+  await expect(section.getByText('Sem cobrança').first()).toBeVisible();
+  await expect(
+    section.getByText('Condição: ainda não combinada'),
+  ).toBeVisible();
+  const next = section.getByRole('region', { name: 'Próximo passo' });
+  await expect(
+    next.getByText('Combine a condição com o cliente.'),
+  ).toBeVisible();
+  const terms = next.getByRole('group', { name: 'Condição de pagamento' });
+  await expect(terms.getByRole('radio')).toHaveCount(3);
+  await terms
+    .getByRole('radio', { name: /100% · Pagamento integral/u })
+    .check();
+  await expect(
+    next.getByRole('button', {
+      name: money('Enviar link de R$ 4.800,00 na conversa'),
+    }),
+  ).toBeVisible();
+  await terms.getByRole('radio', { name: /0% · Sem entrada/u }).check();
+  await expect(
+    next.getByRole('button', { name: 'Salvar sem entrada' }),
+  ).toBeVisible();
+  await expect(
+    next.getByText(
+      'Nenhum link é gerado. Você cobra o valor integral quando quiser.',
+    ),
+  ).toBeVisible();
+  await terms.getByRole('radio', { name: /50% · Entrada/u }).check();
+  const primary = next.getByRole('button', {
+    name: money('Enviar link de R$ 2.400,00 na conversa'),
+  });
+  await primary.click();
+
+  const dialog = page.getByRole('dialog', { name: 'Enviar link do sinal' });
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole('heading', { name: 'Enviar link do sinal' }),
+  ).toBeFocused();
+  await expect(dialog.getByText('Escola Aurora (WhatsApp)')).toBeVisible();
+  await expect(
+    dialog.getByText('Fica salva no pedido ao enviar'),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole('group', {
+      name: 'Prévia da mensagem, como o cliente recebe',
+    }),
+  ).toContainText(
+    money('Pedido 07-CRM — sinal de R$ 2.400,00. Link para pagamento:'),
   );
   await expect(
-    section.getByRole('button', { name: /Cobrar saldo de R\$/u }),
-  ).toContainText('900,00');
-  await issue(page, section);
-  expect(writes[1].body.percent).toBe(50);
-  pay();
-  await section
-    .getByRole('button', { name: 'Atualizar cobranças', exact: true })
-    .click();
-  await expect(section).toContainText('Pedido integralmente pago');
-  await expect(section.locator('.billing-totals dd').nth(1)).toHaveText(
-    'R$ 1.800,00',
-  );
-  await expect(section.locator('.billing-totals dd').nth(2)).toHaveText(
-    'R$ 0,00',
-  );
-});
+    dialog.getByText(
+      'Você pode cancelar este link enquanto o cliente não clicar em Pagar. Enviar não confirma o pagamento.',
+    ),
+  ).toBeVisible();
+  // Esc returns the focus to the trigger; nothing was sent.
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(primary).toBeFocused();
+  expect(writes).toHaveLength(0);
 
-test('100% card payment in 6x settles the entire order without collecting card details in CRM', async ({
-  page,
-}) => {
-  const { section, writes, pay } = await setup(page);
-  await section.getByRole('radio', { name: '100% Pagamento integral' }).check();
-  await section.getByRole('button', { name: 'Revisar cobrança' }).click();
-  await expect(page.getByRole('dialog')).toContainText('R$ 1.800,00');
-  await expect(page.getByLabel(/cartão|parcelas/iu)).toHaveCount(0);
-  await page
-    .getByRole('dialog')
-    .getByRole('button', { name: 'Gerar link de pagamento', exact: true })
+  await primary.click();
+  await dialog
+    .getByRole('button', { name: money('Enviar link de R$ 2.400,00') })
     .click();
-  expect(writes[0].body.percent).toBe(100);
-  pay('credit_card', 6);
-  await section
-    .getByRole('button', { name: 'Atualizar cobranças', exact: true })
-    .click();
-  await expect(section).toContainText('Quitado');
-  await expect(section).toContainText('Cartão em 6x');
-});
-
-test('an ended 30% signal remains visible while the order can be charged in full', async ({
-  page,
-}) => {
-  const { section, billing, writes } = await setup(page, {
-    amount: 5000,
-    billing: {
-      managed: true,
-      percent: 30,
-      needsNewCondition: true,
-      charges: [
-        {
-          id: 'legacy-signal',
-          kind: 'signal',
-          status: 'closed',
-          amountCents: 1500,
-        },
-      ],
+  await expect(dialog).toBeHidden();
+  expect(writes[0]).toMatchObject({
+    path: 'send-intents',
+    body: {
+      action: 'issue_link',
+      amountCents: 240000,
+      percent: 50,
+      conversationId: 'conversation-5',
+      expectedConversationVersion: 7,
     },
   });
   await expect(
-    section.getByRole('radio', { name: '100% Pagamento integral' }),
-  ).toBeChecked();
-  await issue(page, section);
-  expect(writes[0].body.percent).toBe(100);
-  expect(
-    billing.charges.map((/** @type {any} */ charge) => charge.amountCents),
-  ).toEqual([1500, 5000]);
-});
-
-test('offers only 50% for a partial payment, rounds the signal and restores keyboard focus', async ({
-  page,
-}) => {
-  const { section } = await setup(page, { amount: 10001 });
-  await expect(section.getByRole('radio')).toHaveCount(3);
-  const full = section.getByRole('radio', { name: '100% Pagamento integral' });
-  await expect(full).toBeChecked();
-  await full.focus();
-  await page.keyboard.press('ArrowLeft');
-  await expect(
-    section.getByRole('radio', { name: '50% Entrada parcial' }),
-  ).toBeChecked();
-  await expect(section.locator('.billing-preview')).toContainText('R$ 50,01');
-  await expect(section.locator('.billing-preview')).toContainText('R$ 50,00');
-  const trigger = section.getByRole('button', { name: 'Revisar cobrança' });
-  await trigger.click();
-  await page.keyboard.press('Escape');
-  await expect(trigger).toBeFocused();
-});
-
-test('an uncertain charge cannot be emitted again and exposes explicit provider review', async ({
-  page,
-}) => {
-  const { section } = await setup(page, { createStatus: 'unknown' });
-  await issue(page, section);
-  await expect(section).toContainText(
-    'Precisamos conferir se o link foi criado',
+    next.getByRole('list', { name: 'Estado do envio' }),
+  ).toBeVisible();
+  await expect(next.getByRole('status')).toContainText(
+    'Link do sinal enviado na conversa e entregue às 14:07. Você pode cancelá-lo enquanto o cliente não clicar em Pagar.',
+    { timeout: 10_000 },
   );
+  await expect(section.getByText('Aguardando o cliente').first()).toBeVisible();
   await expect(
-    section.getByRole('button', { name: 'Revisar cobrança' }),
-  ).toHaveCount(0);
-  await section.getByText('Conferência e devoluções', { exact: true }).click();
+    page
+      .getByRole('group', { name: 'Cobranças e recebimentos' })
+      .getByText('Aguardando o cliente'),
+  ).toBeVisible();
+});
+
+test('aguardando o cliente: cancel a link before the click', async ({
+  page,
+}) => {
+  const { section, writes } = await setup(page, {
+    billing: { links: [waitingSignal()] },
+  });
+  await expect(
+    section.getByText(money('Em links abertos R$ 2.400,00')),
+  ).toBeVisible();
+  const next = section.getByRole('region', { name: 'Próximo passo' });
+  await expect(
+    next.getByText(
+      'Link do sinal enviado na conversa · Entregue às 13:46. O cliente ainda não clicou em Pagar.',
+    ),
+  ).toBeVisible();
+  await next.getByRole('button', { name: 'Cancelar link' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Cancelar link' });
+  await expect(
+    dialog.getByText(
+      'O cliente abriu a página às 13:50, mas não clicou em Pagar',
+    ),
+  ).toBeVisible();
+  await expect(
+    dialog.getByText(
+      money('Em links abertos passa a R$ 0,00 · livre para cobrar R$ 4.800,00'),
+    ),
+  ).toBeVisible();
+  await dialog.getByRole('button', { name: 'Cancelar link' }).click();
+  await expect(dialog).toBeHidden();
+  expect(writes.at(-1)).toMatchObject({ path: 'links/link-1/cancel' });
+  await expect(next.getByRole('status')).toContainText(
+    money(
+      'Link de R$ 2.400,00 cancelado. Quem abrir o link verá que ele foi cancelado.',
+    ),
+  );
+  const row = section.getByRole('listitem').filter({ hasText: 'Sinal · 50%' });
+  await expect(row.getByText('Cancelado', { exact: true })).toBeVisible();
+  await expect(row.getByText('fora da soma')).toBeVisible();
+});
+
+test('corrida: the click wins and the cancel is refused in place', async ({
+  page,
+}) => {
+  const { section } = await setup(page, {
+    billing: { links: [waitingSignal()] },
+    raceCancel: true,
+  });
   await section
-    .getByRole('button', { name: 'Conferir cobrança', exact: true })
+    .getByRole('button', { name: 'Mais ações desta cobrança: Sinal · 50%' })
     .click();
-  const dialog = page.getByRole('dialog');
-  await dialog.getByRole('button', { name: 'Registrar conferência' }).click();
-  await expect(dialog.getByRole('alert')).toContainText(
-    'Confira a cobrança na InfinitePay',
+  await page.getByRole('menuitem', { name: 'Cancelar link' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Cancelar link' });
+  await dialog.getByRole('button', { name: 'Cancelar link' }).click();
+  const refusal = dialog.getByRole('alert');
+  await expect(refusal).toHaveText(
+    'Não deu para cancelar: o cliente clicou em Pagar às 14:03. Acompanhe o pagamento.',
   );
-});
-
-for (const scenario of [
-  { name: 'agreement review', status: 'review', review: true, expired: false },
-  { name: 'expired link', status: 'waiting', review: false, expired: true },
-  {
-    name: 'uncertain result',
-    status: 'unknown',
-    review: false,
-    expired: false,
-  },
-  {
-    name: 'reopened order',
-    status: 'waiting',
-    review: false,
-    expired: false,
-    reopened: true,
-  },
-]) {
-  test(`does not offer to send a financial link after ${scenario.name}`, async ({
-    page,
-  }) => {
-    const { section } = await setup(page, {
-      orderStatus: scenario.reopened ? 'pendente' : 'confirmado',
-      billing: {
-        managed: true,
-        percent: 30,
-        reviewRequired: scenario.review,
-        blockedReason: scenario.review
-          ? 'BILLING_REVIEW_REQUIRED'
-          : 'BILLING_ACTIVE_CHARGE',
-        charges: [
-          {
-            id: 'previous-agreement-charge',
-            kind: 'signal',
-            amountCents: 54000,
-            status: scenario.status,
-            checkoutUrl:
-              'https://checkout.infinitepay.io/synthetic-previous-agreement',
-            validUntil: new Date(
-              Date.now() + (scenario.expired ? -86_400_000 : 86_400_000),
-            ).toISOString(),
-          },
-        ],
-      },
-    });
-    await expect(
-      section.getByRole('button', { name: 'Copiar link', exact: true }),
-    ).toHaveCount(0);
-    await expect(
-      section.getByRole('button', { name: 'Preparar mensagem', exact: true }),
-    ).toHaveCount(0);
-    await expect(
-      section.getByRole('link', { name: 'Abrir cobrança', exact: true }),
-    ).toHaveCount(0);
-    if (scenario.expired) await expect(section).toContainText('Link vencido');
-    await section
-      .getByText('Conferência e devoluções', { exact: true })
-      .click();
-    await expect(
-      section.getByRole('link', {
-        name: 'Abrir cobrança anterior para conferência',
-        exact: true,
-      }),
-    ).toBeVisible();
-    if (!scenario.reopened)
-      await expect(
-        section.getByRole('button', { name: 'Conferir cobrança', exact: true }),
-      ).toBeVisible();
-  });
-}
-
-test('billing-managed orders expose only the dedicated delivery command, without a payment form (DDE-01)', async ({
-  page,
-}) => {
-  await setup(page, { billing: { managed: true, percent: 0 } });
-  const dates = page.getByRole('region', {
-    name: 'Datas do pedido',
-    exact: true,
-  });
-  const toggle = dates.getByRole('button', { name: /Datas do pedido/u });
-  if (await toggle.count()) await toggle.click();
+  await expect(refusal).toBeFocused();
   await expect(
-    dates.getByRole('button', { name: 'Editar datas', exact: true }),
+    dialog.getByRole('button', { name: 'Cancelar link' }),
   ).toHaveCount(0);
-  await expect(dates.getByLabel('Pago em', { exact: true })).toHaveCount(0);
-  await dates
-    .getByRole('button', { name: 'Confirmar entrega', exact: true })
-    .click();
-  const dialog = page.getByRole('dialog', {
-    name: 'Confirmar entrega',
-    exact: true,
-  });
-  await expect(dialog.getByLabel('Pago em', { exact: true })).toHaveCount(0);
-  await expect(dialog.getByLabel('Entregue em', { exact: true })).toHaveCount(
-    0,
-  );
-  await dialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
-  await expect(dialog).not.toBeVisible();
+  await dialog.getByRole('button', { name: 'Fechar' }).last().click();
+  await expect(section.getByText('Em pagamento').first()).toBeVisible();
+  await expect(
+    section.getByText(
+      'O cliente abriu o pagamento na InfinitePay às 14:03. Este link não pode mais ser cancelado.',
+    ),
+  ).toBeVisible();
 });
 
-test('read-only users see amounts without a checkout link or financial commands', async ({
+test('vários links: another link of any amount up to the free amount', async ({
   page,
 }) => {
   const { section, writes } = await setup(page, {
     billing: {
-      canManage: false,
-      managed: true,
-      percent: 100,
-      charges: [
-        {
-          id: 'read-only-charge',
-          kind: 'full',
-          amountCents: 180000,
-          status: 'waiting',
-          checkoutUrl: 'https://checkout.infinitepay.io/private-link',
-        },
+      links: [
+        paidSignal(),
+        billingLink({
+          id: 'part',
+          kind: 'installment',
+          amountCents: 120000,
+          createdAt: billingAt(23, 10, 15),
+          sentAt: billingAt(23, 10, 15),
+          deliveredAt: billingAt(23, 10, 16),
+        }),
       ],
     },
   });
-  await expect(section).toContainText('Somente o responsável pelo pedido');
-  await expect(section.getByRole('link')).toHaveCount(0);
-  await expect(section.getByRole('radio')).toHaveCount(0);
-  expect(writes).toHaveLength(0);
+  await expect(
+    section.getByText(money('Recebido R$ 2.400,00 de R$ 4.800,00 · 50%')),
+  ).toBeVisible();
+  await expect(
+    section.getByText(
+      money('Em links abertos R$ 1.200,00 · Livre para cobrar R$ 1.200,00'),
+    ),
+  ).toBeVisible();
+  // Row menu by keyboard: ArrowDown opens, Esc closes and returns the focus.
+  const more = section.getByRole('button', {
+    name: 'Mais ações desta cobrança: Parcela',
+  });
+  await more.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(
+    page.getByRole('menuitem', { name: 'Copiar link' }),
+  ).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(
+    page.getByRole('menuitem', { name: 'Cancelar link' }),
+  ).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(more).toBeFocused();
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+
+  await section
+    .getByRole('button', {
+      name: money('Enviar outro link de até R$ 1.200,00'),
+    })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Enviar outro link' });
+  const amount = dialog.getByLabel('Valor do link');
+  await expect(amount).toBeFocused();
+  await expect(amount).toHaveValue('1.200,00');
+  await amount.fill('1.500,00');
+  await dialog
+    .getByRole('button', { name: 'Enviar link', exact: true })
+    .click();
+  await expect(
+    dialog.getByText(
+      money('O valor passa do livre para cobrar (R$ 1.200,00).'),
+    ),
+  ).toBeVisible();
+  await expect(amount).toHaveAttribute('aria-invalid', 'true');
+  await expect(amount).toBeFocused();
+  await amount.fill('0,50');
+  await dialog
+    .getByRole('button', { name: 'Enviar link', exact: true })
+    .click();
+  await expect(
+    dialog.getByText('O valor mínimo de um link é R$ 1,00.'),
+  ).toBeVisible();
+  await amount.fill('600,00');
+  await expect(amount).toHaveAttribute('aria-invalid', 'false');
+  await expect(
+    dialog.getByText(
+      money(
+        'Em links abertos passa a R$ 1.800,00 · livre para cobrar R$ 600,00',
+      ),
+    ),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole('definition').filter({ hasText: 'Parcela' }),
+  ).toBeVisible();
+  await dialog.getByRole('button', { name: 'Só gerar o link' }).click();
+  await expect(dialog).toBeHidden();
+  expect(writes.at(-1)).toMatchObject({
+    path: 'links',
+    body: { amountCents: 60000 },
+  });
+  await expect(
+    section.getByRole('region', { name: 'Próximo passo' }).getByRole('status'),
+  ).toContainText(
+    'Link da parcela gerado. Ele ainda não foi enviado ao cliente.',
+  );
+  await expect(
+    section
+      .getByRole('listitem')
+      .filter({ hasText: 'Link gerado, não enviado' }),
+  ).toHaveCount(1);
 });
 
-test('a failed refresh preserves amounts but blocks sharing the previous link until recovery', async ({
+test('pago por fora com link aberto: one confirmation cancels the link and records the receipt', async ({
   page,
 }) => {
-  const mock = await setup(page);
-  await issue(page, mock.section);
-  const open = mock.section.getByRole('link', {
-    name: 'Abrir cobrança',
-    exact: true,
+  const { section, writes } = await setup(page, {
+    billing: {
+      links: [
+        paidSignal(),
+        billingLink({
+          id: 'bal',
+          kind: 'balance',
+          amountCents: 240000,
+          createdAt: billingAt(23, 9, 10),
+          sentAt: billingAt(23, 9, 10),
+          deliveredAt: billingAt(23, 9, 11),
+        }),
+      ],
+    },
   });
-  await expect(open).toBeVisible();
-  mock.failNextRead();
-  await mock.section
-    .getByRole('button', { name: 'Atualizar cobranças', exact: true })
+  const next = section.getByRole('region', { name: 'Próximo passo' });
+  await next
+    .getByRole('button', { name: 'Registrar pagamento por fora' })
     .click();
-  await expect(mock.section.getByRole('alert')).toContainText(
-    'Os valores anteriores foram preservados',
-  );
-  await expect(mock.section.locator('.billing-totals')).toContainText(
-    '1.800,00',
-  );
-  await expect(open).toHaveCount(0);
+  const dialog = page.getByRole('dialog', {
+    name: 'Registrar pagamento por fora',
+  });
+  const amount = dialog.getByLabel('Valor recebido');
+  await expect(amount).toBeFocused();
+  await amount.fill('2.400,00');
   await expect(
-    mock.section.getByRole('link', {
-      name: 'Abrir cobrança anterior para conferência',
-      exact: true,
+    dialog.getByText(
+      money(
+        'R$ 2.400,00 deste valor está reservado no link do saldo (R$ 2.400,00), que o cliente ainda não clicou. Para registrar, o link é cancelado no mesmo passo.',
+      ),
+    ),
+  ).toBeVisible();
+  await expect(
+    dialog.getByText(
+      money(
+        'Link do saldo: cancelado · Recebido passa a R$ 4.800,00 · Quitado',
+      ),
+    ),
+  ).toBeVisible();
+  const confirm = dialog.getByRole('button', {
+    name: money('Cancelar o link do saldo e registrar R$ 2.400,00'),
+  });
+  await confirm.click();
+  await expect(dialog.getByText('Escolha a forma de pagamento.')).toBeVisible();
+  await dialog.getByRole('radio', { name: 'Transferência bancária' }).check();
+  await confirm.click();
+  await expect(dialog).toBeHidden();
+  expect(writes.at(-1)).toMatchObject({
+    path: 'external-receipts',
+    body: {
+      amountCents: 240000,
+      method: 'bank_transfer',
+      cancelLinkIds: ['bal'],
+    },
+  });
+  await expect(section.locator('#order-billing-next-status')).toContainText(
+    money(
+      'R$ 2.400,00 registrado como recebido por fora (Transferência). O link do saldo foi cancelado.',
+    ),
+  );
+  await expect(section.getByText('Quitado').first()).toBeVisible();
+  await expect(
+    section.getByRole('heading', { name: 'Tudo recebido' }),
+  ).toBeVisible();
+});
+
+test('pago por fora: a link Em pagamento refuses with the reason', async ({
+  page,
+}) => {
+  const { section } = await setup(page, {
+    billing: {
+      links: [
+        paidSignal(),
+        billingLink({
+          id: 'bal',
+          kind: 'balance',
+          amountCents: 240000,
+          state: 'checkout_open',
+          chargeId: 'ch-bal',
+          sentAt: billingAt(23, 9, 10),
+          clickedAt: billingAt(23, 14, 2),
+          providerValidUntil: billingAt(24, 14, 2),
+        }),
+      ],
+    },
+  });
+  await section
+    .getByRole('button', { name: 'Registrar pagamento por fora' })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Registrar pagamento por fora',
+  });
+  await dialog.getByLabel('Valor recebido').fill('2.400,00');
+  const reason = dialog.getByText(
+    money(
+      'Link do saldo (R$ 2.400,00) está Em pagamento. O cliente está pagando este link na InfinitePay. Aguarde ou verifique o pagamento.',
+    ),
+  );
+  await expect(reason).toBeVisible();
+  const primary = dialog.getByRole('button', { name: 'Registrar pagamento' });
+  await expect(primary).toHaveAttribute('aria-disabled', 'true');
+  await expect(primary).toHaveAccessibleDescription(
+    money(
+      'Link do saldo (R$ 2.400,00) está Em pagamento. O cliente está pagando este link na InfinitePay. Aguarde ou verifique o pagamento.',
+    ),
+  );
+});
+
+test('precisa de conferência: the cause, then a two-step resolution', async ({
+  page,
+}) => {
+  const { section, writes } = await setup(page, {
+    billing: {
+      review: {
+        reason: 'order_changed',
+        previousTotalCents: 450000,
+        heldCents: 225000,
+      },
+      links: [
+        billingLink({
+          id: 'held',
+          state: 'paid',
+          inReview: true,
+          amountCents: 225000,
+          chargeId: 'ch-held',
+          createdAt: billingAt(22, 9, 12),
+          sentAt: billingAt(22, 9, 13),
+          clickedAt: billingAt(22, 10, 28),
+          paidAt: billingAt(22, 10, 30),
+        }),
+        billingLink({
+          id: 'bal',
+          kind: 'balance',
+          amountCents: 225000,
+          state: 'cancelled',
+          createdAt: billingAt(22, 11, 0),
+          sentAt: billingAt(22, 11, 0),
+          cancelledAt: billingAt(23, 9, 0),
+          cancelReason: 'order_changed',
+        }),
+      ],
+    },
+  });
+  await expect(
+    section.getByText('Precisa de conferência').first(),
+  ).toBeVisible();
+  const next = section.getByRole('region', { name: 'Próximo passo' });
+  await expect(
+    next.getByText(
+      money(
+        'O valor do pedido mudou de R$ 4.500,00 para R$ 4.800,00 depois que o sinal foi pago. O sinal de R$ 2.250,00 está guardado, mas ainda não conta no recebido.',
+      ),
+    ),
+  ).toBeVisible();
+  await expect(
+    next.getByText(
+      'Até resolver, não é possível cobrar, enviar link ou registrar pagamento por fora.',
+    ),
+  ).toBeVisible();
+  await next.getByRole('button', { name: 'Resolver conferência' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Resolver conferência' });
+  await expect(
+    dialog.getByText('Passo 1 de 2 · Confira na InfinitePay'),
+  ).toBeVisible();
+  await dialog.getByRole('button', { name: 'Continuar' }).click();
+  await expect(
+    dialog.getByText('Confirme que conferiu os pagamentos na InfinitePay.'),
+  ).toBeVisible();
+  await dialog
+    .getByRole('checkbox', {
+      name: 'Conferi os pagamentos desta cobrança na InfinitePay.',
+    })
+    .check();
+  await dialog.getByRole('button', { name: 'Continuar' }).click();
+  await expect(
+    dialog.getByText('Passo 2 de 2 · Escolha o que fazer'),
+  ).toBeVisible();
+  const cancelOption = dialog.getByRole('radio', {
+    name: /Cancelar links que o cliente ainda não clicou/u,
+  });
+  await expect(cancelOption).toHaveAttribute('aria-disabled', 'true');
+  await expect(cancelOption).toHaveAccessibleDescription(
+    'Não há link que o cliente ainda não clicou.',
+  );
+  await expect(
+    dialog.getByRole('radio', {
+      name: /Aplicar os pagamentos ao valor atual/u,
     }),
-  ).toHaveCount(0);
-  await expect(
-    mock.section.getByRole('button', { name: 'Copiar link', exact: true }),
-  ).toHaveCount(0);
-  await mock.section
-    .getByRole('button', { name: 'Atualizar cobranças', exact: true })
-    .click();
-  await expect(open).toBeVisible();
-});
-
-test('read failure recovers without showing a false zero', async ({ page }) => {
-  const { section } = await setup(page, { failRead: true });
-  await expect(section.getByRole('alert')).toContainText(
-    'Não foi possível consultar',
+  ).toBeChecked();
+  await dialog.getByRole('button', { name: 'Aplicar pagamentos' }).click();
+  await expect(dialog).toBeHidden();
+  expect(writes.at(-1)).toMatchObject({
+    path: 'reconcile',
+    body: { decision: 'apply_current', confirmedProviderReview: true },
+  });
+  await expect(next.getByRole('status')).toContainText(
+    money(
+      'Conferência resolvida. Recebido passa a R$ 2.250,00 · falta R$ 2.550,00.',
+    ),
   );
-  await expect(section.locator('.billing-totals')).toHaveCount(0);
-  await section
-    .getByRole('button', { name: 'Atualizar cobranças', exact: true })
-    .click();
-  await expect(section.locator('.billing-totals')).toContainText('R$ 1.800,00');
 });
 
-test('multiple receipts in review permit refunding the full remaining received amount', async ({
+test('precisa de conferência: a link that tips the sum over the total is refused in place', async ({
   page,
 }) => {
-  const { section, writes, billing } = await setup(page, {
-    amount: 10000,
+  const { section, writes } = await setup(page, {
+    reconcileExceeds: true,
     billing: {
-      version: 1,
-      percent: 100,
-      managed: true,
-      reviewRequired: true,
-      blockedReason: 'BILLING_REVIEW_REQUIRED',
-      receivedAmountCents: 10000,
-      balanceAmountCents: 0,
-      charges: [
-        {
-          id: 'multiple-receipts-charge',
-          kind: 'full',
-          amountCents: 10000,
-          status: 'review',
-          paidAt: '2026-11-05T15:00:00Z',
-          method: 'pix',
-          installments: 1,
-          refundedAmountCents: 0,
-          // Two distinct R$100 receipts; the second requires review.
-          refundableAmountCents: 20000,
-        },
+      review: {
+        reason: 'order_changed',
+        previousTotalCents: 450000,
+        heldCents: 225000,
+      },
+      links: [
+        billingLink({
+          id: 'held',
+          state: 'paid',
+          inReview: true,
+          amountCents: 225000,
+          chargeId: 'ch-held',
+          createdAt: billingAt(22, 9, 12),
+          clickedAt: billingAt(22, 10, 28),
+          paidAt: billingAt(22, 10, 30),
+        }),
       ],
     },
   });
-  await section.getByText('Conferência e devoluções', { exact: true }).click();
-  const refund = section.getByRole('button', {
-    name: 'Registrar devolução do pagamento integral',
-  });
-  await refund.click();
-  const dialog = page.getByRole('dialog');
-  const amount = dialog.getByLabel('Valor já devolvido', { exact: true });
-  const submit = dialog.getByRole('button', { name: 'Registrar conferência' });
-  await amount.fill('200,01');
-  await dialog.getByRole('checkbox').check();
-  await submit.click();
-  await expect(dialog.getByRole('alert')).toContainText(
-    'Informe o valor já devolvido',
+  await section.getByRole('button', { name: 'Resolver conferência' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Resolver conferência' });
+  await dialog
+    .getByRole('checkbox', {
+      name: 'Conferi os pagamentos desta cobrança na InfinitePay.',
+    })
+    .check();
+  await dialog.getByRole('button', { name: 'Continuar' }).click();
+  await dialog.getByRole('button', { name: 'Aplicar pagamentos' }).click();
+  const alert = dialog.getByRole('alert');
+  const reason = money(
+    'Os pagamentos e os links abertos somam R$ 5.250,00, mais que o total de R$ 4.800,00. Cancele links que o cliente ainda não clicou antes de aplicar.',
   );
+  await expect(alert).toHaveText(reason);
+  await expect(alert).toBeFocused();
+  const apply = dialog.getByRole('radio', {
+    name: /Aplicar os pagamentos ao valor atual/u,
+  });
+  await expect(apply).toHaveAttribute('aria-disabled', 'true');
+  await expect(
+    dialog.getByRole('button', { name: 'Aplicar pagamentos' }),
+  ).toHaveAttribute('aria-disabled', 'true');
+  // Cancelling the unclicked links stays available.
+  await dialog
+    .getByRole('radio', {
+      name: /Cancelar links que o cliente ainda não clicou/u,
+    })
+    .check();
+  await dialog.getByRole('button', { name: 'Cancelar links' }).click();
+  await expect(dialog).toBeHidden();
+  expect(writes.at(-1)).toMatchObject({
+    path: 'reconcile',
+    body: { decision: 'cancel_open_links', confirmedProviderReview: true },
+  });
+});
+
+/** A link in "Resultado a conferir" whose attempt is valid until `validUntil`. @param {string|null} validUntil */
+const unknownLink = (validUntil) =>
+  billingLink({
+    state: 'unknown',
+    chargeId: 'ch-1',
+    sentAt: billingAt(23, 13, 45),
+    clickedAt: billingAt(23, 14, 2),
+    providerValidUntil: validUntil,
+    history: [
+      { kind: 'created', at: billingAt(23, 13, 44), actor: 'Marina A.' },
+      { kind: 'clicked', at: billingAt(23, 14, 2) },
+      { kind: 'checkout_unknown', at: billingAt(23, 14, 3) },
+    ],
+  });
+const hoursFromNow = (/** @type {number} */ hours) =>
+  new Date(Date.now() + hours * 3_600_000).toISOString();
+
+test('resultado a conferir: the customer says they paid — a provider check, no second payment', async ({
+  page,
+}) => {
+  const { section, writes } = await setup(page, {
+    billing: { links: [unknownLink(hoursFromNow(20))] },
+  });
+  await expect(section.getByText('Resultado a conferir').first()).toBeVisible();
+  const next = section.getByRole('region', { name: 'Próximo passo' });
+  await expect(
+    next.getByText(
+      'A integração tenta de novo sozinha · última tentativa 14:03',
+    ),
+  ).toBeVisible();
+  const primary = next.getByRole('button', {
+    name: 'Confirmar resultado na InfinitePay',
+  });
+  await primary.click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Confirmar resultado na InfinitePay',
+  });
+  await expect(
+    dialog.getByRole('heading', { name: 'Confirmar resultado na InfinitePay' }),
+  ).toBeFocused();
+  await expect(
+    dialog.getByText('O link fica travado até confirmar.', { exact: false }),
+  ).toBeVisible();
+  const release = dialog.getByRole('radio', { name: /Liberar o link/u });
+  await expect(release).toHaveAttribute('aria-disabled', 'true');
+  await expect(release).toHaveAccessibleDescription(
+    /^Disponível depois de \d{2}\/\d{2}, \d{2}:\d{2}, quando o pagamento aberto na InfinitePay vence\.$/u,
+  );
+  await expect(
+    dialog.getByRole('radio', { name: /O cliente diz que pagou/u }),
+  ).toBeChecked();
+  const ask = dialog.getByRole('button', { name: 'Pedir verificação' });
+  await ask.click();
+  await expect(dialog.getByText('Informe o código da fatura.')).toBeVisible();
+  await expect(dialog.getByLabel('Código da fatura')).toBeFocused();
   expect(writes).toHaveLength(0);
-
-  await amount.fill('150,00');
-  await submit.click();
-  await expect(dialog).not.toBeVisible();
-  expect(writes[0].body.amountCents).toBe(15000);
-  expect(billing.charges[0].refundableAmountCents).toBe(5000);
-  await expect(refund).toBeVisible();
-  await expect(refund).toBeFocused();
-
-  await refund.press('Enter');
-  await amount.fill('50,00');
-  await dialog.getByRole('checkbox').check();
-  await submit.click();
-  await expect(dialog).not.toBeVisible();
-  expect(writes).toHaveLength(2);
-  expect(writes[1].body.amountCents).toBe(5000);
-  expect(billing.charges[0].refundedAmountCents).toBe(20000);
-  expect(billing.charges[0].refundableAmountCents).toBe(0);
-  await expect(refund).toHaveCount(0);
+  await dialog.getByLabel('Código da fatura').fill('FAT-SINTETICA-1');
+  await dialog.getByLabel('NSU da transação').fill('000123');
+  await ask.click();
+  await expect(dialog).toBeHidden();
+  expect(writes.at(-1)).toMatchObject({
+    path: 'links/link-1/confirm-result',
+    body: { invoiceSlug: 'FAT-SINTETICA-1', transactionNsu: '000123' },
+  });
+  await expect(next.getByRole('status')).toContainText(
+    'Verificação pedida. A InfinitePay responde na próxima consulta, às 14:10.',
+  );
+  const busy = next.getByRole('button', { name: 'Confirmando resultado…' });
+  await expect(busy).toHaveAttribute('aria-busy', 'true');
+  await expect(busy).toHaveAttribute('aria-disabled', 'true');
 });
 
-test('refund retry keeps its original intent after commit, response loss and a newer read', async ({
+test('resultado a conferir: after the attempt expired, the link is released for a new click', async ({
   page,
 }) => {
-  const { section, writes, billing } = await setup(page, {
-    loseResponse: 'refund',
-    billing: {
-      version: 1,
-      percent: 100,
-      managed: true,
-      receivedAmountCents: 180000,
-      balanceAmountCents: 0,
-      charges: [
-        {
-          id: 'paid-charge',
-          kind: 'full',
-          amountCents: 180000,
-          status: 'paid',
-          paidAt: '2026-11-05T15:00:00Z',
-          method: 'pix',
-          installments: 1,
-          refundedAmountCents: 0,
-          refundableAmountCents: 180000,
-        },
-      ],
-    },
+  const { section, writes } = await setup(page, {
+    billing: { links: [unknownLink(hoursFromNow(-1))] },
   });
-  await section.getByText('Conferência e devoluções', { exact: true }).click();
   await section
-    .getByRole('button', { name: 'Registrar devolução do pagamento integral' })
+    .getByRole('button', { name: 'Confirmar resultado na InfinitePay' })
     .click();
-  const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Valor já devolvido', { exact: true }).fill('100,00');
-  await dialog.getByRole('checkbox').check();
-  await dialog.getByRole('button', { name: 'Registrar conferência' }).click();
-  await expect(dialog.getByRole('alert')).toContainText(
-    'Não foi possível confirmar a resposta',
+  const dialog = page.getByRole('dialog', {
+    name: 'Confirmar resultado na InfinitePay',
+  });
+  const release = dialog.getByRole('radio', { name: /Liberar o link/u });
+  await expect(release).not.toHaveAttribute('aria-disabled', 'true');
+  await release.check();
+  await expect(dialog.getByLabel('Código da fatura')).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Liberar o link' }).click();
+  await expect(dialog).toBeHidden();
+  expect(writes.at(-1)?.path).toBe('links/link-1/confirm-result');
+  expect(Object.keys(writes.at(-1)?.body ?? {}).sort()).toEqual([
+    'expectedBillingVersion',
+    'expectedVersion',
+  ]);
+  await expect(section.locator('#order-billing-next-status')).toContainText(
+    'Link liberado: o cliente pode clicar em Pagar de novo.',
   );
-  await expect(
-    dialog.getByLabel('Valor já devolvido', { exact: true }),
-  ).toBeDisabled();
-  await dialog.getByRole('button', { name: 'Voltar', exact: true }).click();
-  await section
-    .getByRole('button', { name: 'Atualizar cobranças', exact: true })
+  await expect(section.getByText('Aguardando o cliente').first()).toBeVisible();
+});
+
+test('resultado a conferir: refusals are said in place', async ({ page }) => {
+  const still = await setup(page, {
+    billing: { links: [unknownLink(null)] },
+    stillValid: true,
+  });
+  await still.section
+    .getByRole('button', { name: 'Confirmar resultado na InfinitePay' })
     .click();
-  await expect(section.locator('.billing-totals dd').nth(1)).toHaveText(
-    'R$ 1.700,00',
+  let dialog = page.getByRole('dialog', {
+    name: 'Confirmar resultado na InfinitePay',
+  });
+  await dialog.getByRole('radio', { name: /Liberar o link/u }).check();
+  await dialog.getByRole('button', { name: 'Liberar o link' }).click();
+  const stillAlert = dialog.getByRole('alert');
+  await expect(stillAlert).toHaveText(
+    'Ainda não dá para liberar: o pagamento aberto na InfinitePay ainda vale.',
   );
-  await section
-    .getByRole('button', { name: 'Conferir registro pendente' })
+  await expect(stillAlert).toBeFocused();
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+
+  // The InfinitePay's own answer arrives first (BILLING_CONFLICT).
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+  const raced = await setup(page, {
+    billing: { links: [unknownLink(hoursFromNow(20))] },
+    confirmConflict: true,
+  });
+  await raced.section
+    .getByRole('button', { name: 'Confirmar resultado na InfinitePay' })
     .click();
-  await dialog.getByRole('button', { name: 'Registrar conferência' }).click();
-  await expect(dialog).not.toBeVisible();
-  expect(writes).toHaveLength(2);
-  expect(writes[1].key).toBe(writes[0].key);
-  expect(writes[1].body).toEqual(writes[0].body);
-  expect(billing.charges[0].refundedAmountCents).toBe(10000);
+  dialog = page.getByRole('dialog', {
+    name: 'Confirmar resultado na InfinitePay',
+  });
+  await dialog.getByLabel('Código da fatura').fill('FAT-SINTETICA-2');
+  await dialog.getByLabel('NSU da transação').fill('000456');
+  await dialog.getByRole('button', { name: 'Pedir verificação' }).click();
+  const conflict = dialog.getByRole('alert');
+  await expect(conflict).toHaveText(
+    'O resultado já chegou: a InfinitePay abriu o pagamento. Acompanhe o pagamento.',
+  );
+  await expect(conflict).toBeFocused();
   await expect(
-    section.getByText('Há um registro com resultado incerto.', {
-      exact: false,
-    }),
+    dialog.getByRole('button', { name: 'Pedir verificação' }),
   ).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Fechar' }).last().click();
+  await expect(raced.section.getByText('Em pagamento').first()).toBeVisible();
 });
 
-test('reconciliation retry replays the same operation after a newer billing and order version', async ({
+test('quitado: receipts add up, the cancelled link stays out of the sum, history opens', async ({
   page,
 }) => {
-  const { section, writes, billing } = await setup(page, {
-    loseResponse: 'reconcile',
+  const { section } = await setup(page, {
     billing: {
-      version: 1,
-      percent: 100,
-      managed: true,
-      blockedReason: 'BILLING_REVIEW_REQUIRED',
-      charges: [
+      settledAt: billingAt(23, 11, 30),
+      links: [
+        paidSignal(),
+        billingLink({
+          id: 'c',
+          kind: 'installment',
+          amountCents: 200000,
+          state: 'cancelled',
+          createdAt: billingAt(23, 9, 0),
+          sentAt: billingAt(23, 9, 0),
+          cancelledAt: billingAt(23, 9, 4),
+          cancelledBy: 'Marina A.',
+          cancelReason: 'seller',
+        }),
+        billingLink({
+          id: 'p',
+          kind: 'installment',
+          amountCents: 120000,
+          state: 'paid',
+          chargeId: 'ch-p',
+          payMethod: 'credit_card',
+          createdAt: billingAt(23, 10, 15),
+          sentAt: billingAt(23, 10, 15),
+          paidAt: billingAt(23, 10, 42),
+        }),
+      ],
+      receipts: [
         {
-          id: 'review-charge',
-          kind: 'full',
-          amountCents: 180000,
-          status: 'review',
-          paidAt: '2026-11-05T15:00:00Z',
-          method: 'pix',
-          installments: 1,
+          id: 'r1',
+          amountCents: 120000,
+          receivedOn: '2026-11-23',
+          method: 'bank_transfer',
+          note: '',
+          recordedByName: 'Marina A.',
+          recordedAt: billingAt(23, 11, 30),
+          reversedAt: null,
         },
       ],
     },
   });
-  await section.getByText('Conferência e devoluções', { exact: true }).click();
-  await section
-    .getByRole('button', { name: 'Conferir cobrança', exact: true })
-    .click();
-  const dialog = page.getByRole('dialog');
-  await dialog.getByRole('checkbox').check();
-  await dialog.getByRole('button', { name: 'Registrar conferência' }).click();
-  await expect(dialog.getByRole('alert')).toContainText(
-    'Não foi possível confirmar a resposta',
-  );
-  await expect(dialog.getByRole('radio').first()).toBeDisabled();
-  await dialog.getByRole('button', { name: 'Voltar', exact: true }).click();
-  await section
-    .getByRole('button', { name: 'Atualizar cobranças', exact: true })
-    .click();
-  expect(billing.version).toBe(2);
-  expect(billing.orderVersion).toBeGreaterThan(writes[0].body.expectedVersion);
-  await section
-    .getByRole('button', { name: 'Conferir registro pendente' })
-    .click();
-  await dialog.getByRole('button', { name: 'Registrar conferência' }).click();
-  await expect(dialog).not.toBeVisible();
-  expect(writes).toHaveLength(2);
-  expect(writes[1].key).toBe(writes[0].key);
-  expect(writes[1].body).toEqual(writes[0].body);
-  expect(billing.version).toBe(2);
-});
-
-test('mobile light and dark preserve layout, labels, keyboard and accessible dialogs', async ({
-  page,
-}, info) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  const { section } = await setup(page);
+  await expect(section.getByText('Quitado').first()).toBeVisible();
   await expect(
-    section.getByRole('button', { name: /Cobranças/u }),
+    section.getByRole('heading', { name: 'Tudo recebido' }),
+  ).toBeVisible();
+  await expect(
+    section.getByText(
+      money('Pedido quitado em 23/11: 3 recebimentos somam R$ 4.800,00.'),
+    ),
+  ).toBeVisible();
+  await expect(
+    section.getByText('4 movimentações · da mais antiga para a mais recente'),
+  ).toBeVisible();
+  const cancelled = section
+    .getByRole('listitem')
+    .filter({ hasText: 'cancelado por Marina A.' });
+  await expect(cancelled.getByText('fora da soma')).toBeVisible();
+  const toggle = cancelled.getByRole('button', {
+    name: 'Histórico desta cobrança',
+  });
+  await toggle.click();
+  await expect(
+    cancelled.getByRole('button', { name: 'Ocultar histórico' }),
   ).toHaveAttribute('aria-expanded', 'true');
+  await expect(
+    cancelled.getByText('Link cancelado por Marina A.'),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole('group', { name: 'Cobranças e recebimentos' })
+      .getByText('Quitado'),
+  ).toBeVisible();
+  await shot(page, 'billing-desktop-light-quitado');
+  const axe = await new AxeBuilder({ page })
+    .include('section.billing-section')
+    .analyze();
+  expect(axe.violations).toEqual([]);
+});
+
+test('other seller: numbers, badge and rows, but no link and no action', async ({
+  page,
+}) => {
+  const { section } = await setup(page, {
+    billing: {
+      canOperate: false,
+      canManage: false,
+      chatSendEnabled: false,
+      links: [{ ...waitingSignal(), url: null }],
+    },
+  });
+  await expect(section.getByText('Aguardando o cliente').first()).toBeVisible();
+  await expect(
+    section.getByText(
+      'Só Marina A. (responsável) ou um administrador opera as cobranças deste pedido.',
+    ),
+  ).toBeVisible();
+  await expect(
+    section.getByRole('region', { name: 'Próximo passo' }),
+  ).toHaveCount(0);
+  await expect(
+    section.getByRole('button', { name: /Mais ações/u }),
+  ).toHaveCount(0);
+  await expect(section.getByText('/pagar/')).toHaveCount(0);
+});
+
+test('notebook light: section and an open dialog pass axe', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  const { section } = await setup(page, {
+    billing: {
+      links: [
+        paidSignal(),
+        billingLink({
+          id: 'part',
+          kind: 'installment',
+          amountCents: 120000,
+          createdAt: billingAt(23, 10, 15),
+          sentAt: billingAt(23, 10, 15),
+          deliveredAt: billingAt(23, 10, 16),
+        }),
+      ],
+    },
+  });
+  await shot(page, 'billing-desktop-light');
   expect(
-    (await new AxeBuilder({ page }).include('.billing-section').analyze())
+    (
+      await new AxeBuilder({ page })
+        .include('section.billing-section')
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+  await section
+    .getByRole('button', { name: 'Registrar pagamento por fora' })
+    .click();
+  await expect(
+    page.getByRole('dialog', { name: 'Registrar pagamento por fora' }),
+  ).toBeVisible();
+  expect(
+    (await new AxeBuilder({ page }).include('dialog[open]').analyze())
       .violations,
   ).toEqual([]);
-  await section.screenshot({ path: info.outputPath('billing-390-light.png') });
-  await page.setViewportSize({ width: 320, height: 844 });
-  const overflow = await section.evaluate(
-    (el) => el.scrollWidth > el.clientWidth,
-  );
-  expect(overflow).toBe(false);
-  const touchGap = await section
-    .locator('.billing-choices label')
-    .evaluateAll((labels) => {
-      const first = labels[0].getBoundingClientRect();
-      const second = labels[1].getBoundingClientRect();
-      return second.top - first.bottom;
-    });
-  expect(touchGap).toBeGreaterThanOrEqual(7.5);
-  await section.screenshot({ path: info.outputPath('billing-320-light.png') });
-  await page.evaluate(() => {
-    globalThis.document.documentElement.dataset.theme = 'dark';
-  });
-  await section.screenshot({ path: info.outputPath('billing-320-dark.png') });
-  await section
-    .getByRole('button', { name: 'Revisar cobrança', exact: true })
-    .click();
-  expect(
-    (await new AxeBuilder({ page }).include('dialog').analyze()).violations,
-  ).toEqual([]);
 });
+
+for (const theme of /** @type {const} */ (['light', 'dark'])) {
+  test(`phone 390px ${theme}: one column, full-width actions, row menu as a sheet`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const { section } = await setup(page, {
+      theme,
+      billing: {
+        links: [
+          paidSignal(),
+          billingLink({
+            id: 'part',
+            kind: 'installment',
+            amountCents: 120000,
+            createdAt: billingAt(23, 10, 15),
+            sentAt: billingAt(23, 10, 15),
+            deliveredAt: billingAt(23, 10, 16),
+          }),
+        ],
+      },
+    });
+    await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+    const toggle = section.getByRole('button', {
+      name: /Cobranças e recebimentos/u,
+    });
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(toggle).toContainText('Aguardando o cliente');
+    const overflow = await page.evaluate(
+      () =>
+        globalThis.document.documentElement.scrollWidth -
+        globalThis.document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+    const primary = section.getByRole('button', {
+      name: money('Enviar outro link de até R$ 1.200,00'),
+    });
+    const box = await primary.boundingBox();
+    const body = await section.locator('#order-billing-body').boundingBox();
+    expect(box && body && box.width).toBeGreaterThan((body?.width ?? 0) - 80);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await shot(page, `billing-mobile-${theme}`);
+    expect(
+      (
+        await new AxeBuilder({ page })
+          .include('section.billing-section')
+          .analyze()
+      ).violations,
+    ).toEqual([]);
+    const more = section.getByRole('button', {
+      name: 'Mais ações desta cobrança: Parcela',
+    });
+    await more.click();
+    const sheet = page.getByRole('dialog', { name: 'Mais ações · Parcela' });
+    await expect(sheet).toBeVisible();
+    await expect(
+      sheet.getByRole('menuitem', { name: 'Copiar link' }),
+    ).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(sheet).toBeHidden();
+    await expect(more).toBeFocused();
+  });
+}

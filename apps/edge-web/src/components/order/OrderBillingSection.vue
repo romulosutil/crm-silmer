@@ -1,161 +1,155 @@
 <script setup>
-import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { commandKey, request } from '../../lib/api-client.js';
 import {
-  billingError,
-  billingMoney,
-  billingReason,
-  billingUrl,
-} from '../../lib/order-billing.js';
-import { parseBrl } from '../../lib/order-format.js';
-import { dateTimeBR } from '../../lib/format.js';
-import OrderSheetHead from './OrderSheetHead.vue';
-import OrderBillingWorkspace from './OrderBillingWorkspace.vue';
+  computed,
+  inject,
+  nextTick,
+  onBeforeUnmount,
+  provide,
+  ref,
+  watch,
+} from 'vue';
+import { request } from '../../lib/api-client.js';
+import { billingError, billingReason } from '../../lib/order-billing.js';
+import {
+  KIND,
+  deriveBillingView,
+  messageText,
+  nextCharge,
+  sendFlash,
+  sendProgress,
+  sendSteps,
+  timeOf,
+} from '../../lib/order-billing-view.js';
+import {
+  billingIntent,
+  copyText,
+  uncertainFailure,
+} from '../../lib/order-billing-command.js';
+import { CHANNEL_LABELS } from '../../lib/format.js';
+import OrderIcon from './OrderIcon.vue';
+import BillingAmountDialog from './billing/BillingAmountDialog.vue';
+import BillingBadge from './billing/BillingBadge.vue';
+import BillingCancelDialog from './billing/BillingCancelDialog.vue';
+import BillingExternalDialog from './billing/BillingExternalDialog.vue';
+import BillingMovements from './billing/BillingMovements.vue';
+import BillingNextStep from './billing/BillingNextStep.vue';
+import BillingConfirmDialog from './billing/BillingConfirmDialog.vue';
+import BillingReceiptDialog from './billing/BillingReceiptDialog.vue';
+import BillingReconcileDialog from './billing/BillingReconcileDialog.vue';
+import BillingRefundDialog from './billing/BillingRefundDialog.vue';
+import BillingReverseDialog from './billing/BillingReverseDialog.vue';
+import BillingSendDialog from './billing/BillingSendDialog.vue';
+import BillingSituation from './billing/BillingSituation.vue';
+import BillingVerifyDialog from './billing/BillingVerifyDialog.vue';
 
-// COB-T04: the seller creates a link; only the verified gateway callback
-// records a payment. Card details and installments stay in InfinitePay.
+/*
+ * RFC 074 (LPC-09), "Cobranças e recebimentos": Situação, Próximo passo and
+ * Movimentações, with the same name and badge in the section, the rail and
+ * the Inbox. Only the owner or an administrator operates; another seller
+ * reads numbers, badge and rows, and a locked line instead of the next step.
+ *
+ * The section owns the reads (GET billing, send-intent progress) and the
+ * write runner; every dialog reaches them through `orderBillingContext`.
+ * Writes carry `expectedVersion`/`expectedBillingVersion` and an
+ * Idempotency-Key; an uncertain answer freezes the whole intent and a retry
+ * repeats it (billingIntent).
+ */
 const props = defineProps({ order: { type: Object, required: true } });
 const emit = defineEmits(['state', 'changed']);
-const editing = inject('orderEditing', null);
+const editing = /** @type {any} */ (inject('orderEditing', null));
+
+/** @type {import('vue').Ref<any>} */
 const billing = ref(null);
-const readAt = ref(Date.now());
 const loading = ref(false);
 const reading = ref(false);
 const unavailable = ref(false);
 const error = ref('');
-const feedback = ref('');
+const pick = ref(/** @type {0|50|100} */ (50));
+const changingTerms = ref(false);
+/** @type {import('vue').Ref<any>} */
+const sending = ref(null);
+const busy = ref('');
+/** @type {import('vue').Ref<{text: string, tone: string}|null>} */
+const status = ref(null);
 const liveMessage = ref('');
-const editingCondition = ref(true);
-const choosing = computed(
-  () => editingCondition.value || billing.value?.needsNewCondition === true,
-);
-const plan = ref(100);
-const fieldError = ref('');
-const busy = ref(false);
-const modal = ref('');
-const dialog = ref(null);
+/** @type {import('vue').Ref<any>} */
+const uncertain = ref(null);
+const dialogOpen = ref(0);
+/** @type {import('vue').Ref<HTMLElement|null>} */
 const sectionRoot = ref(null);
-const workspace = ref(null);
-const planOptions = ref(null);
-const selectedCharge = ref(null);
-const refundAmount = ref('');
-const providerReviewed = ref(false);
-const reconcileDecision = ref('apply_current');
-const dialogError = ref('');
-const uncertain = ref(false);
-let controller;
-let timer;
-let returnFocus;
-let commandRecord;
-let pendingContext;
-let initialized = false;
+/** @type {Record<string, import('vue').Ref<any>>} */
+const dialogs = {
+  send: ref(null),
+  amount: ref(null),
+  cancel: ref(null),
+  external: ref(null),
+  verify: ref(null),
+  reconcile: ref(null),
+  refund: ref(null),
+  reverse: ref(null),
+  receipt: ref(null),
+  confirm: ref(null),
+};
+let controller = /** @type {AbortController|null} */ (null);
+let timer = /** @type {ReturnType<typeof setTimeout>|undefined} */ (undefined);
+let intentTimer = /** @type {ReturnType<typeof setTimeout>|undefined} */ (
+  undefined
+);
+let disposed = false;
+/** @type {{id: string, from: string}|null} */
+let confirming = null;
+let conversationCache = /** @type {any} */ (null);
 
+const base = computed(
+  () => `/api/v1/orders/${encodeURIComponent(props.order.id)}/billing`,
+);
+const isPhone = computed(() => Boolean(editing?.isPhone?.value));
 const open = computed(() => editing?.isSectionOpen?.('billing') ?? true);
+const toggleBlocked = computed(
+  () => isPhone.value && (editing?.editingSection?.value ?? '') !== '',
+);
 const visible = computed(
   () =>
     !unavailable.value &&
-    (props.order.status === 'confirmado' || billing.value?.managed),
+    (props.order.status === 'confirmado' || Boolean(billing.value?.managed)),
 );
-const charges = computed(() => billing.value?.charges ?? []);
-const hasWorkspace = computed(
-  () =>
-    billing.value?.chatSendEnabled !== undefined ||
-    billing.value?.externalReceipts !== undefined,
-);
-const integratedSend = computed(() =>
-  Boolean(billing.value?.chatSendEnabled && props.order.conversationId),
-);
-const workspaceBlocked = computed(
-  () => hasWorkspace.value && workspace.value?.mutable === false,
-);
-const active = computed(() =>
-  charges.value.find((charge) =>
-    ['queued', 'creating', 'waiting', 'unknown', 'review'].includes(
-      charge.status,
-    ),
-  ),
-);
-const canManage = computed(() => Boolean(billing.value?.canManage));
 const cancelled = computed(
   () =>
     Boolean(props.order.cancelledAt) ||
     billing.value?.blockedReason === 'ORDER_CANCELLED',
 );
-const canMutate = computed(() => canManage.value && !cancelled.value);
-const canInspectPrivate = computed(
-  () =>
-    canManage.value &&
-    !error.value &&
-    !loading.value &&
-    Number(billing.value?.orderVersion) === Number(props.order.version),
+const conv = computed(() =>
+  Boolean(
+    billing.value?.chatSendEnabled &&
+    props.order.conversationId &&
+    props.order.status === 'confirmado',
+  ),
 );
-const activeExpired = computed(() => {
-  const until = Date.parse(active.value?.validUntil ?? '');
-  return Number.isFinite(until) && until <= readAt.value;
+const readOnly = computed(() => {
+  if (cancelled.value) return billingReason('ORDER_CANCELLED');
+  if (billing.value && billing.value.enabled === false)
+    return billingReason('BILLING_DISABLED');
+  if (uncertain.value)
+    return 'A última operação não teve resposta confirmada. Repita a mesma operação antes de iniciar outra.';
+  return '';
 });
-const canShareActive = computed(
-  () =>
-    canInspectPrivate.value &&
-    !cancelled.value &&
-    props.order.status === 'confirmado' &&
-    !uncertain.value &&
-    !billing.value?.reviewRequired &&
-    active.value?.status === 'waiting' &&
-    active.value?.amountCents <= balance.value &&
-    balance.value > 0 &&
-    Number.isFinite(Date.parse(active.value?.validUntil ?? '')) &&
-    !activeExpired.value &&
-    Boolean(billingUrl(active.value?.checkoutUrl)),
+const orderNumber = computed(() => String(props.order.number ?? ''));
+const orderTitle = computed(() => {
+  const summary = props.order.ficha?.summary ?? {};
+  return [summary.cliente, summary.nome].filter(Boolean).join(' — ');
+});
+const view = computed(() =>
+  deriveBillingView(billing.value ?? {}, {
+    conv: conv.value,
+    pick: pick.value,
+    sending: sending.value,
+    busy: busy.value,
+    orderNumber: orderNumber.value,
+    destination: conversationCache?.label ?? 'a conversa vinculada',
+    changingTerms: changingTerms.value,
+    readOnly: readOnly.value,
+  }),
 );
-const otherEditing = computed(
-  () =>
-    editing?.editingSection?.value &&
-    editing.editingSection.value !== 'billing',
-);
-const received = computed(() => billing.value?.receivedAmountCents ?? 0);
-const balance = computed(() => billing.value?.balanceAmountCents ?? 0);
-const total = computed(() => billing.value?.totalAmountCents ?? 0);
-const paid = computed(() => total.value > 0 && balance.value === 0);
-const statusLabel = computed(() => {
-  if (!billing.value) return loading.value ? 'Consultando' : 'Indisponível';
-  if (billing.value.reviewRequired || active.value?.amountCents > balance.value)
-    return 'Precisa de conferência';
-  if (active.value?.status === 'review') return 'Precisa de conferência';
-  if (active.value?.status === 'unknown') return 'Resultado a conferir';
-  if (active.value?.status === 'waiting' && activeExpired.value)
-    return 'Link vencido';
-  if (paid.value) return 'Quitado';
-  return received.value > 0 ? 'Pago parcialmente' : 'A receber';
-});
-const nextAmount = computed(() => {
-  if (received.value > 0) return balance.value;
-  const percent = choosing.value ? plan.value : billing.value?.percent || 100;
-  return Math.round(total.value * (percent / 100));
-});
-const canIssue = computed(
-  () =>
-    canMutate.value &&
-    !uncertain.value &&
-    billing.value?.enabled &&
-    !active.value &&
-    !paid.value &&
-    ![
-      'BILLING_LEGACY_PAYMENT',
-      'BILLING_REVIEW_REQUIRED',
-      'BILLING_ORDER_NOT_CONFIRMED',
-    ].includes(billing.value?.blockedReason),
-);
-const conditionLabel = computed(() => {
-  const value = billing.value?.percent;
-  if (value === 0) return 'Sem entrada · 0%';
-  if (value === 100) return 'Pagamento integral · 100%';
-  return `${value}% de entrada e ${100 - Number(value)}% depois`;
-});
-const shareText = computed(() => {
-  const charge = selectedCharge.value;
-  if (!charge) return '';
-  return `Olá! Aqui está o link para pagar ${charge.kind === 'signal' ? 'o sinal' : charge.kind === 'balance' ? 'o saldo' : 'o valor integral'} do pedido ${props.order.number}, no valor de ${billingMoney(charge.amountCents)}. Você pode escolher Pix ou cartão na InfinitePay.\n\n${billingUrl(charge.checkoutUrl)}`;
-});
 
 function currentState(ready = true) {
   emit('state', {
@@ -174,45 +168,33 @@ function currentState(ready = true) {
       (props.order.status === 'confirmado' || Boolean(billing.value?.managed)),
   });
 }
-async function refreshAll() {
-  await Promise.all([load(), workspace.value?.refresh()]);
-}
-function billingSignature(value) {
-  return JSON.stringify([
-    value?.receivedAmountCents,
-    value?.balanceAmountCents,
-    value?.reviewRequired,
-    value?.enabled,
-    (value?.charges ?? []).map((charge) => [charge.id, charge.status]),
-  ]);
-}
+
+/** @param {any} value */
 function applyBilling(value) {
-  const previous = billing.value;
-  const previouslyExpired = activeExpired.value;
-  readAt.value = Date.now();
+  const previous = billing.value ? view.value : null;
   billing.value = value;
-  if (
-    previous &&
-    !busy.value &&
-    (billingSignature(previous) !== billingSignature(value) ||
-      previouslyExpired !== activeExpired.value)
-  )
-    liveMessage.value = `${statusLabel.value}. Recebido: ${billingMoney(value.receivedAmountCents)}. Falta receber: ${billingMoney(value.balanceAmountCents)}.`;
+  const next = view.value;
+  if (previous && previous.announce !== next.announce && !sending.value)
+    liveMessage.value = next.announce;
+  if (confirming) {
+    const link = next.links.find((l) => l.id === confirming?.id);
+    if (link && link.status !== 'unknown') {
+      flash(
+        link.status === 'paying'
+          ? `Resultado confirmado: a InfinitePay abriu o pagamento às ${timeOf(link.clickedAt)}. Nenhum pagamento novo foi criado.`
+          : link.status === 'paid'
+            ? 'Resultado confirmado: o pagamento foi recebido.'
+            : 'Resultado confirmado: a InfinitePay não abriu o pagamento. O link voltou a aguardar o cliente; nada foi cobrado.',
+      );
+      confirming = null;
+    }
+  }
   currentState();
-  if (modal.value === 'share' && !canShareActive.value) {
-    dialog.value?.close();
-    feedback.value =
-      'A cobrança mudou ou venceu. Confira o estado atual antes de compartilhar.';
-  }
-  if (!initialized) {
-    plan.value =
-      value?.percent === 0 || value?.percent === 50 ? value.percent : 100;
-    editingCondition.value = !value?.managed;
-    initialized = true;
-  }
   if (Number(value?.orderVersion) > Number(props.order.version))
     emit('changed');
 }
+
+/** @param {boolean} [silent] */
 async function load(silent = false) {
   controller?.abort();
   globalThis.clearTimeout(timer);
@@ -226,336 +208,461 @@ async function load(silent = false) {
   }
   currentState(Boolean(billing.value) && !error.value);
   try {
-    const response = await request(
-      `/api/v1/orders/${encodeURIComponent(orderId)}/billing`,
-      { signal: own.signal },
-    );
+    const response = await request(base.value, { signal: own.signal });
     if (own.signal.aborted || props.order.id !== orderId) return;
     unavailable.value = false;
     error.value = '';
     applyBilling(response.data.billing);
   } catch (cause) {
     if (own.signal.aborted) return;
-    if (Number(cause?.status) === 404) {
+    if (Number(/** @type {any} */ (cause)?.status) === 404) {
       unavailable.value = true;
       billing.value = null;
-      liveMessage.value = '';
-      currentState();
-    } else {
+    } else
       error.value =
         'Não foi possível consultar as cobranças. Os valores anteriores foram preservados.';
-      currentState(false);
-    }
   } finally {
     if (own === controller) {
       loading.value = false;
       reading.value = false;
       currentState(!error.value);
-      if (active.value && !unavailable.value && !hasWorkspace.value)
-        timer = globalThis.setTimeout(
-          () => {
-            if (globalThis.document?.visibilityState === 'visible')
-              void load(true);
-            else void scheduleLater();
-          },
-          active.value.status === 'queued' || active.value.status === 'creating'
-            ? 3000
-            : 10000,
-        );
+      schedule();
     }
   }
 }
-function scheduleLater() {
-  timer = globalThis.setTimeout(() => void load(true), 10000);
+/** Open links change without the seller: read again while any is open. */
+function schedule() {
+  globalThis.clearTimeout(timer);
+  if (disposed || unavailable.value || !billing.value) return;
+  const v = view.value;
+  const watching =
+    v.groups.open.length > 0 ||
+    v.links.some((l) => l.verifying) ||
+    Boolean(confirming);
+  if (!watching) return;
+  timer = globalThis.setTimeout(() => {
+    if (
+      globalThis.document?.visibilityState === 'visible' &&
+      !dialogOpen.value &&
+      !sending.value
+    )
+      void load(true);
+    else schedule();
+  }, 10000);
 }
-function validatePercent() {
-  if (
-    choosing.value &&
-    plan.value === 50 &&
-    (nextAmount.value < 100 || total.value - nextAmount.value < 100)
-  )
-    return 'O sinal e o saldo precisam ser de pelo menos R$ 1,00. Escolha pagamento integral.';
-  return '';
-}
-function editCondition() {
-  if (otherEditing.value || busy.value || charges.value.length) return;
-  editingCondition.value = true;
-  editing?.start?.('billing');
-  void nextTick(() =>
-    planOptions.value?.querySelector('input:checked')?.focus(),
-  );
-}
-function markEditing() {
-  if (!otherEditing.value) editing?.start?.('billing');
-  fieldError.value = '';
-}
-function cancelCondition() {
-  const value = billing.value?.percent;
-  plan.value = value === 0 || value === 50 ? value : 100;
-  editingCondition.value = !billing.value?.managed;
-  fieldError.value = '';
-  editing?.stop?.();
-}
-async function showDialog(mode, event, charge = null) {
-  if (busy.value || otherEditing.value || cancelled.value) return;
-  if (workspaceBlocked.value && !uncertain.value) return;
-  if (mode === 'share') {
-    readAt.value = Date.now();
-    if (!canShareActive.value || charge?.id !== active.value?.id) {
-      feedback.value =
-        'Confira o estado atual da cobrança antes de compartilhar.';
-      return;
-    }
-  }
-  if (uncertain.value && mode !== 'share') {
-    await resumePending(event);
-    return;
-  }
-  returnFocus =
-    event?.submitter ??
-    event?.currentTarget ??
-    globalThis.document?.activeElement;
-  selectedCharge.value = charge;
-  dialogError.value = '';
-  providerReviewed.value = false;
-  refundAmount.value = '';
-  reconcileDecision.value = 'apply_current';
-  modal.value = mode;
-  await nextTick();
-  dialog.value?.showModal();
-}
-function closeDialog() {
-  if (busy.value) return;
-  dialog.value?.close();
-}
-function dialogClosed() {
-  modal.value = '';
-  dialogError.value = '';
-  if (returnFocus?.isConnected) returnFocus.focus();
-  else sectionRoot.value?.querySelector('button')?.focus();
-}
+
 function versions() {
   return {
     expectedVersion: billing.value?.orderVersion ?? props.order.version,
     expectedBillingVersion: billing.value?.version ?? 0,
   };
 }
-async function write(path, body) {
-  // An uncertain response may already have committed. Freeze the WHOLE
-  // intent, including versions, across a later GET/poll and every retry.
-  if (!commandRecord) {
-    commandRecord = {
-      path,
-      orderId: props.order.id,
-      body: Object.freeze({ ...body }),
-      key: commandKey(),
-    };
-    pendingContext = {
-      mode: modal.value || 'plan',
-      charge: selectedCharge.value,
-      amount: refundAmount.value,
-      reviewed: providerReviewed.value,
-      decision: reconcileDecision.value,
-    };
-  }
-  const intent = commandRecord;
+/** @param {{path: string, body: Record<string, unknown>, key: string}} record */
+async function run(record) {
   let response;
   try {
     response = await request(
-      `/api/v1/orders/${encodeURIComponent(intent.orderId)}/billing/${intent.path}`,
-      { method: 'POST', body: intent.body, idempotencyKey: intent.key },
+      `/api/v1/orders/${encodeURIComponent(props.order.id)}/billing/${record.path}`,
+      { method: 'POST', body: record.body, idempotencyKey: record.key },
     );
   } catch (cause) {
-    const status = Number(cause?.status);
-    uncertain.value = uncertain.value || !status || status >= 500;
-    if (!uncertain.value) {
-      commandRecord = null;
-      pendingContext = null;
-    }
+    if (uncertainFailure(cause)) uncertain.value = record;
+    else if (uncertain.value?.key === record.key) uncertain.value = null;
+    if (Number(/** @type {any} */ (cause)?.status) === 409) await load(true);
     throw cause;
   }
-  commandRecord = null;
-  pendingContext = null;
-  uncertain.value = false;
+  if (uncertain.value?.key === record.key) uncertain.value = null;
   if (response.data?.billing) applyBilling(response.data.billing);
   else await load(true);
-  editingCondition.value = false;
-  editing?.stop?.();
   emit('changed');
   return response;
 }
-async function resumePending(event) {
-  if (!commandRecord || !pendingContext || busy.value || cancelled.value)
-    return;
-  if (pendingContext.mode === 'plan') {
-    busy.value = true;
-    try {
-      await write(commandRecord.path, commandRecord.body);
-      feedback.value =
-        'Condição sem entrada conferida. Nenhum link foi gerado.';
-      error.value = '';
-    } catch (cause) {
-      error.value = billingError(cause);
-    } finally {
-      busy.value = false;
-    }
-    return;
-  }
-  returnFocus = event?.currentTarget ?? globalThis.document?.activeElement;
-  selectedCharge.value = pendingContext.charge;
-  refundAmount.value = pendingContext.amount;
-  providerReviewed.value = pendingContext.reviewed;
-  reconcileDecision.value = pendingContext.decision;
-  modal.value = pendingContext.mode;
-  dialogError.value =
-    'O resultado anterior ainda precisa ser conferido. A próxima tentativa mantém exatamente o mesmo registro.';
-  await nextTick();
-  dialog.value?.showModal();
-}
-async function prepare(event) {
-  if (
-    busy.value ||
-    !canIssue.value ||
-    otherEditing.value ||
-    workspaceBlocked.value
-  )
-    return;
-  fieldError.value = validatePercent();
-  if (fieldError.value) {
-    await nextTick();
-    planOptions.value?.querySelector('input:checked')?.focus();
-    return;
-  }
-  if (plan.value === 0 && choosing.value) {
-    busy.value = true;
-    try {
-      await write('plan', { ...versions(), percent: 0 });
-      feedback.value = 'Condição sem entrada salva. Nenhum link foi gerado.';
-    } catch (cause) {
-      error.value = billingError(cause);
-    } finally {
-      busy.value = false;
-    }
-    return;
-  }
-  await showDialog('issue', event);
-}
-async function submitDialog() {
-  if (busy.value) return;
-  if (workspaceBlocked.value && !uncertain.value) {
-    dialogError.value =
-      'Atualize as cobranças antes de confirmar esta operação.';
-    return;
-  }
-  if (cancelled.value) {
-    dialogError.value = billingReason('ORDER_CANCELLED');
-    return;
-  }
-  dialogError.value = '';
-  let path = 'charges';
-  let body = {
-    ...versions(),
-    percent: choosing.value
-      ? plan.value
-      : (billing.value?.percent ?? plan.value),
-  };
-  if (uncertain.value && commandRecord) {
-    path = commandRecord.path;
-    body = commandRecord.body;
-  } else if (modal.value === 'refund') {
-    const amount = parseBrl(refundAmount.value);
-    if (
-      !providerReviewed.value ||
-      !amount ||
-      amount > selectedCharge.value.refundableAmountCents
-    ) {
-      dialogError.value =
-        'Informe o valor já devolvido e confirme a conferência na InfinitePay.';
-      return;
-    }
-    path = `charges/${encodeURIComponent(selectedCharge.value.id)}/refund`;
-    body = { ...versions(), amountCents: amount };
-  } else if (modal.value === 'reconcile') {
-    if (!providerReviewed.value) {
-      dialogError.value =
-        'Confira a cobrança na InfinitePay e marque a confirmação.';
-      return;
-    }
-    path = 'reconcile';
-    body = {
-      ...versions(),
-      decision: reconcileDecision.value,
-      confirmedProviderReview: true,
-    };
-  }
-  busy.value = true;
+async function retryUncertain() {
+  const record = uncertain.value;
+  if (!record || busy.value) return;
+  busy.value = 'retry';
   try {
-    await write(path, body);
-    feedback.value =
-      modal.value === 'issue'
-        ? 'Solicitação de cobrança registrada.'
-        : 'Conferência registrada no histórico do pedido.';
-    busy.value = false;
-    closeDialog();
-    await load(true);
+    await run(record);
+    flash('Operação confirmada.');
   } catch (cause) {
-    dialogError.value = billingError(cause);
-    if (uncertain.value)
-      dialogError.value =
-        'Não foi possível confirmar a resposta. Os valores desta operação ficam preservados; confira o resultado antes de iniciar outro registro.';
+    if (!uncertainFailure(cause)) flash(billingError(cause), 'error');
   } finally {
-    busy.value = false;
+    busy.value = '';
   }
 }
-async function copyLink(charge) {
-  readAt.value = Date.now();
-  if (!canShareActive.value || charge?.id !== active.value?.id) {
-    feedback.value =
-      'Confira o estado atual da cobrança antes de compartilhar.';
+
+async function conversation() {
+  const id = props.order.conversationId;
+  if (!id) throw new Error('NO_CONVERSATION');
+  const response = await request(
+    `/api/v1/inbox/conversations/${encodeURIComponent(id)}`,
+  );
+  const data = response.data?.conversation ?? {};
+  const inner = data.conversation ?? data;
+  const name = inner.contact?.label || data.contact?.label || 'Cliente';
+  const channel =
+    CHANNEL_LABELS[
+      /** @type {keyof typeof CHANNEL_LABELS} */ (inner.channel ?? data.channel)
+    ] ?? 'conversa';
+  conversationCache = {
+    id,
+    version: Number(data.version ?? inner.version ?? 0),
+    label: `${name} (${channel})`,
+  };
+  return conversationCache;
+}
+
+/** @param {string} text @param {string} [tone] */
+function flash(text, tone = 'success') {
+  status.value = { text, tone };
+}
+
+const generateIntent = billingIntent(run);
+const planIntent = billingIntent(run);
+const sendIntent = billingIntent(run);
+
+/**
+ * Generates a link, or sends one through the conversation. Resolves once the
+ * server accepted the command; the send progress continues in Próximo passo.
+ *
+ * @param {{mode: 'send'|'generate', kind: any, amountCents: number, linkId?: string, percent?: number}} payload
+ */
+async function startSend(payload) {
+  status.value = null;
+  const percent = payload.percent;
+  if (
+    percent !== undefined &&
+    changingTerms.value &&
+    (billing.value?.condition?.percent ?? null) !== null
+  ) {
+    await planIntent.send(() => ({
+      path: 'plan',
+      body: { ...versions(), percent },
+    }));
+  }
+  const withPercent =
+    percent !== undefined && !changingTerms.value ? { percent } : {};
+  if (payload.mode === 'generate') {
+    sending.value = {
+      mode: 'generate',
+      kind: payload.kind,
+      amountCents: payload.amountCents,
+      steps: sendSteps('generate', false),
+      index: 0,
+    };
+    try {
+      await generateIntent.send(() => ({
+        path: 'links',
+        body: {
+          ...versions(),
+          amountCents: payload.amountCents,
+          ...withPercent,
+        },
+      }));
+    } catch (cause) {
+      sending.value = null;
+      throw cause;
+    }
+    changingTerms.value = false;
+    sending.value = { ...sending.value, index: 1, done: true };
+    sending.value = null;
+    flash(sendFlash('generate', payload.kind, null));
+    await focusNextIfLost();
     return;
   }
-  const link = billingUrl(charge.checkoutUrl);
-  if (!link) return;
-  try {
-    await globalThis.navigator.clipboard.writeText(link);
-    feedback.value = 'Link copiado. Compartilhe manualmente com o cliente.';
-  } catch {
-    feedback.value = 'Selecione o link e copie pelo menu do aparelho.';
+  const target = conversationCache ?? (await conversation());
+  const steps = sendSteps('send', Boolean(payload.linkId));
+  const response = await sendIntent.send(() => ({
+    path: 'send-intents',
+    body: {
+      ...versions(),
+      action: payload.linkId ? 'send_link' : 'issue_link',
+      conversationId: target.id,
+      expectedConversationVersion: target.version,
+      ...(payload.linkId
+        ? { linkId: payload.linkId }
+        : { amountCents: payload.amountCents, ...withPercent }),
+    },
+  }));
+  changingTerms.value = false;
+  const intent = response.data ?? {};
+  sending.value = {
+    mode: 'send',
+    kind: payload.kind,
+    amountCents: payload.amountCents,
+    linkId: payload.linkId ?? intent.linkId ?? null,
+    steps,
+    index: sendProgress(steps, intent.state).index,
+    intentId: intent.id,
+  };
+  followIntent(intent.id, intent.state, 0);
+}
+
+/**
+ * Follows a send intent until "Entregue", a failure, or a quiet "Enviado".
+ * @param {string} id @param {string} state @param {number} polls
+ */
+function followIntent(id, state, polls) {
+  const current = sending.value;
+  if (!current || current.intentId !== id || disposed) return;
+  const progress = sendProgress(current.steps, state);
+  if (progress.failed) {
+    sending.value = null;
+    flash(
+      progress.failed === 'blocked'
+        ? 'O envio foi bloqueado pela conversa. O cliente não recebeu a mensagem; o link pode ser cancelado ou enviado de novo.'
+        : 'Não foi possível confirmar o envio na conversa. Confira a conversa antes de enviar de novo.',
+      'error',
+    );
+    void load(true);
+    return;
+  }
+  if (progress.done || (state === 'sent' && polls >= 20) || polls >= 90) {
+    void finishSend(current, progress.done);
+    return;
+  }
+  if (progress.index !== current.index) {
+    sending.value = { ...current, index: progress.index };
+    if (state === 'sent') void load(true);
+  }
+  intentTimer = globalThis.setTimeout(async () => {
+    try {
+      const response = await request(
+        `${base.value}/send-intents/${encodeURIComponent(id)}`,
+      );
+      followIntent(id, response.data?.state ?? state, polls + 1);
+    } catch {
+      followIntent(id, state, polls + 1);
+    }
+  }, 1000);
+}
+/** @param {any} current @param {boolean} delivered */
+async function finishSend(current, delivered) {
+  await load(true);
+  const link =
+    view.value.links.find((l) => l.id === current.linkId) ??
+    [...view.value.links]
+      .filter((l) => l.amountCents === current.amountCents)
+      .at(-1);
+  sending.value = null;
+  flash(
+    sendFlash(
+      'send',
+      current.kind,
+      delivered ? (link?.deliveredAt ?? new Date().toISOString()) : null,
+    ),
+  );
+  await focusNextIfLost();
+}
+
+async function focusNextIfLost() {
+  await nextTick();
+  const active = globalThis.document?.activeElement;
+  if (!active || active === globalThis.document.body || !active.isConnected)
+    /** @type {HTMLElement|null} */ (
+      globalThis.document?.getElementById('order-billing-next-title')
+    )?.focus();
+}
+function dialogClosed() {
+  dialogOpen.value = Math.max(0, dialogOpen.value - 1);
+  void focusNextIfLost();
+  schedule();
+}
+/** @param {string} name @param {HTMLElement} trigger @param {...any} args */
+function openDialog(name, trigger, ...args) {
+  dialogOpen.value += 1;
+  status.value = null;
+  void dialogs[name].value?.open(trigger, ...args);
+}
+
+/** @param {string} id */
+const linkById = (id) => view.value.links.find((l) => l.id === id);
+
+/**
+ * Próximo passo actions.
+ * @param {any} action @param {Event} event
+ */
+async function act(action, event) {
+  const trigger = /** @type {HTMLElement} */ (event.currentTarget);
+  const v = view.value;
+  const link = action.id ? linkById(action.id) : null;
+  switch (action.act) {
+    case 'send': {
+      const nc = nextCharge(v, pick.value);
+      return openDialog('send', trigger, { ...nc });
+    }
+    case 'send-existing':
+      if (!link) return;
+      return openDialog('send', trigger, {
+        kind: link.kind,
+        amountCents: link.amountCents,
+        linkId: link.id,
+        url: link.url,
+      });
+    case 'send-amount':
+    case 'send-another':
+      return openDialog('amount', trigger);
+    case 'generate': {
+      const nc = nextCharge(v, pick.value);
+      try {
+        await startSend({
+          mode: 'generate',
+          kind: nc.kind,
+          amountCents: nc.amountCents,
+          percent:
+            nc.fromPick || changingTerms.value ? nc.condition : undefined,
+        });
+      } catch (cause) {
+        flash(billingError(cause), 'error');
+      }
+      return;
+    }
+    case 'save-zero':
+      busy.value = 'save';
+      try {
+        await planIntent.send(() => ({
+          path: 'plan',
+          body: { ...versions(), percent: 0 },
+        }));
+        changingTerms.value = false;
+        flash('Condição salva: sem entrada. Nenhum link foi gerado.');
+      } catch (cause) {
+        flash(billingError(cause), 'error');
+      } finally {
+        busy.value = '';
+      }
+      return focusNextIfLost();
+    case 'change-terms':
+      changingTerms.value = true;
+      pick.value = 50;
+      status.value = null;
+      await nextTick();
+      /** @type {HTMLElement|null} */ (
+        sectionRoot.value?.querySelector('input[name="order-billing-terms"]')
+      )?.focus();
+      return;
+    case 'copy-link':
+    case 'copy-message': {
+      const target = link ?? v.groups.waiting[0];
+      if (!target?.url) return;
+      const copied = await copyText(
+        action.act === 'copy-link'
+          ? target.url
+          : messageText(
+              orderNumber.value,
+              target.kind,
+              target.amountCents,
+              target.url,
+            ),
+      );
+      if (!copied)
+        flash(
+          'Não foi possível copiar. Selecione o texto e copie pelo menu do aparelho.',
+          'error',
+        );
+      else
+        flash(
+          action.act === 'copy-link'
+            ? 'Link copiado.'
+            : 'Mensagem copiada. Cole na conversa com o cliente.',
+        );
+      return;
+    }
+    case 'cancel-link':
+      if (link) openDialog('cancel', trigger, link);
+      return;
+    case 'external':
+      return openDialog('external', trigger);
+    case 'verify':
+      if (link) openDialog('verify', trigger, link);
+      return;
+    case 'reconcile':
+      return openDialog('reconcile', trigger);
+    case 'confirm-unknown': {
+      const target = link ?? v.groups.unknown[0];
+      if (target) openDialog('confirm', trigger, target);
+      return;
+    }
   }
 }
-function checkActiveLink(event) {
-  readAt.value = Date.now();
-  if (canShareActive.value) return;
-  event.preventDefault();
-  feedback.value = 'Confira o estado atual da cobrança antes de compartilhar.';
+/**
+ * Row menu actions.
+ * @param {string} name @param {any} row @param {HTMLElement} button
+ */
+async function rowAct(name, row, button) {
+  const item = row.item;
+  switch (name) {
+    case 'copy-link': {
+      const copied = await copyText(item.url);
+      flash(
+        copied
+          ? `Link ${KIND[/** @type {keyof typeof KIND} */ (item.kind)].of} copiado.`
+          : 'Não foi possível copiar. Selecione o texto e copie pelo menu do aparelho.',
+        copied ? 'success' : 'error',
+      );
+      return;
+    }
+    case 'provider': {
+      const url = view.value.providerUrl(item);
+      if (url) globalThis.open?.(url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    case 'cancel-link':
+      return openDialog('cancel', button, item);
+    case 'verify':
+      return openDialog('verify', button, item);
+    case 'confirm-unknown':
+      return openDialog('confirm', button, item);
+    case 'receipt-view':
+      return openDialog('receipt', button, item);
+    case 'refund':
+      return openDialog('refund', button, item);
+    case 'reverse':
+      return openDialog('reverse', button, item);
+  }
 }
-function chargeName(charge) {
-  return charge.kind === 'signal'
-    ? 'Sinal'
-    : charge.kind === 'balance'
-      ? 'Saldo'
-      : 'Pagamento integral';
+
+/** @param {0|50|100} value */
+function choose(value) {
+  pick.value = value;
+  status.value = null;
 }
-function chargeStatus(charge) {
-  return (
-    {
-      queued: 'Aguardando emissão',
-      creating: 'Gerando link',
-      waiting: 'Aguardando pagamento',
-      unknown: 'Resultado a conferir',
-      paid: 'Pagamento confirmado',
-      review: 'Precisa de conferência',
-      closed: 'Encerrada sem pagamento',
-    }[charge.status] ?? 'Precisa de conferência'
-  );
+
+async function toggle() {
+  if (toggleBlocked.value) return;
+  editing?.toggleSection?.('billing');
 }
+
+provide('orderBillingContext', {
+  view,
+  conv,
+  orderNumber,
+  orderTitle,
+  versions,
+  run,
+  startSend,
+  conversation,
+  flash,
+  reload: () => load(true),
+  /** Announce the outcome of 'Confirmar resultado' when it arrives. @param {string} id */
+  track: (id) => {
+    confirming = { id, from: 'unknown' };
+    schedule();
+  },
+});
+
 watch(
   () => [props.order.id, props.order.version],
   (next, previous) => {
     if (!previous || next[0] !== previous[0]) {
       billing.value = null;
       unavailable.value = false;
-      initialized = false;
+      sending.value = null;
+      status.value = null;
+      uncertain.value = null;
+      changingTerms.value = false;
+      conversationCache = null;
+      confirming = null;
       currentState(false);
     }
     void load(Boolean(billing.value));
@@ -563,9 +670,10 @@ watch(
   { immediate: true },
 );
 onBeforeUnmount(() => {
+  disposed = true;
   controller?.abort();
   globalThis.clearTimeout(timer);
-  dialog.value?.close();
+  globalThis.clearTimeout(intentTimer);
 });
 </script>
 
@@ -573,929 +681,96 @@ onBeforeUnmount(() => {
   <section
     v-if="visible"
     ref="sectionRoot"
-    class="op-sheet billing-section"
+    class="op-sheet billing-section bl-section"
     aria-labelledby="order-billing-title"
   >
-    <OrderSheetHead
-      title-id="order-billing-title"
-      title="Cobranças"
-      :state="statusLabel"
-      :tone="statusLabel === 'Quitado' ? 'ok' : 'neutral'"
-      section="billing"
-      body-id="order-billing-body"
-      :can-edit="canMutate && !charges.length && !choosing && billing?.enabled"
-      edit-label="Alterar condição"
-      :blocked="Boolean(otherEditing)"
-      @edit="editCondition"
-    />
-    <p
-      class="sr-only billing-live"
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
+    <div
+      v-if="isPhone"
+      class="op-sheet-head"
+      data-accordion
+      :data-collapsed="!open || undefined"
     >
+      <h2 class="op-sheet-title">
+        <button
+          type="button"
+          class="op-sheet-toggle"
+          :aria-expanded="open ? 'true' : 'false'"
+          aria-controls="order-billing-body"
+          :aria-disabled="toggleBlocked || undefined"
+          :aria-describedby="
+            toggleBlocked ? 'order-billing-toggle-reason' : undefined
+          "
+          @click="toggle"
+        >
+          <span class="op-sheet-toggle-text">
+            <span id="order-billing-title" class="op-sheet-toggle-title"
+              >Cobranças e recebimentos</span
+            >
+            <span v-if="billing" class="op-visually-hidden">, </span>
+            <span v-if="billing" class="op-sheet-state"
+              ><BillingBadge :badge="view.badge"
+            /></span>
+          </span>
+          <OrderIcon name="chevron" class="op-sheet-chevron" />
+        </button>
+      </h2>
+      <p
+        v-if="toggleBlocked"
+        id="order-billing-toggle-reason"
+        class="op-visually-hidden"
+      >
+        Salve ou cancele a edição aberta.
+      </p>
+    </div>
+    <div v-else class="op-sheet-head">
+      <h2 id="order-billing-title" tabindex="-1">Cobranças e recebimentos</h2>
+      <BillingBadge v-if="billing" class="bl-head-state" :badge="view.badge" />
+    </div>
+    <p class="sr-only" role="status" aria-live="polite" aria-atomic="true">
       {{ liveMessage }}
     </p>
-    <div id="order-billing-body" class="op-sheet-body" :hidden="!open">
+    <div id="order-billing-body" class="op-sheet-body bl-body" :hidden="!open">
       <p v-if="loading && !billing" role="status">Consultando cobranças…</p>
-      <div v-if="error" class="op-alert" role="alert">
+      <div v-if="error" class="op-alert bl-alert" role="alert">
         <p>{{ error }}</p>
-        <button type="button" @click="refreshAll">Atualizar cobranças</button>
+        <button type="button" @click="load()">Atualizar cobranças</button>
       </div>
       <template v-if="billing">
-        <div v-if="uncertain" class="op-alert" role="alert">
-          <p>
-            Há um registro com resultado incerto. Confira esta operação antes de
-            iniciar outra.
-          </p>
-          <button
-            type="button"
-            :disabled="busy || cancelled"
-            @click="resumePending"
-          >
-            Conferir registro pendente
-          </button>
-        </div>
-        <dl class="billing-totals" aria-label="Valores do pedido">
+        <div v-if="uncertain" class="bl-warn bl-uncertain" role="alert">
+          <OrderIcon name="alert" />
           <div>
-            <dt>Total do pedido</dt>
-            <dd>{{ billingMoney(total) }}</dd>
-          </div>
-          <div>
-            <dt>Recebido</dt>
-            <dd>{{ billingMoney(received) }}</dd>
-          </div>
-          <div>
-            <dt>Falta receber</dt>
-            <dd>{{ billingMoney(balance) }}</dd>
-          </div>
-        </dl>
-        <p v-if="!billing.enabled" class="op-hint">
-          {{ billingReason('BILLING_DISABLED') }}
-        </p>
-        <p v-else-if="!canManage" class="op-hint">
-          {{ billingReason('FORBIDDEN') }}
-        </p>
-        <p
-          v-if="
-            cancelled &&
-            billing.chatSendEnabled === undefined &&
-            billing.externalReceipts === undefined
-          "
-          role="status"
-          class="op-hint"
-        >
-          {{ billingReason('ORDER_CANCELLED') }}
-        </p>
-        <div
-          v-if="
-            active &&
-            (!hasWorkspace ||
-              active.amountCents > balance ||
-              activeExpired ||
-              ['unknown', 'review'].includes(active.status))
-          "
-          class="billing-state"
-          :data-attention="
-            ['unknown', 'review'].includes(active.status) || undefined
-          "
-        >
-          <strong v-if="active.amountCents > balance"
-            >Link anterior em circulação</strong
-          >
-          <strong v-else>{{
-            activeExpired && active.status === 'waiting'
-              ? 'Link vencido'
-              : chargeStatus(active)
-          }}</strong>
-          <p v-if="active.amountCents > balance">
-            O recebido mudou e este link cobra mais que o saldo atual. Não o
-            envie ao cliente. O link não foi cancelado na InfinitePay; um
-            pagamento posterior precisará de conferência.
-          </p>
-          <p v-else-if="active.status === 'unknown'">
-            Precisamos conferir se o link foi criado. Não gere outra cobrança
-            para substituir esta emissão.
-          </p>
-          <p v-else-if="active.status === 'review'">
-            O pagamento ou o acordo do pedido mudou. Confira a cobrança antes de
-            aplicar o recebimento ao pedido atual.
-          </p>
-          <p v-else-if="['queued', 'creating'].includes(active.status)">
-            A cobrança está reservada. Aguarde o link; repetir a emissão não
-            cria outra cobrança.
-          </p>
-          <p v-else-if="activeExpired">
-            A validade deste link terminou. Não o envie ao cliente. Confira a
-            cobrança antes de encerrar esta emissão ou gerar outra.
-          </p>
-          <p v-else>
-            O recebido acompanha os pagamentos confirmados pela InfinitePay e os
-            recebimentos externos registrados no pedido.
-          </p>
-        </div>
-        <div
-          v-else-if="paid && !hasWorkspace"
-          class="billing-state"
-          data-success="true"
-        >
-          <strong>Pedido integralmente pago</strong>
-          <p>
-            Não há saldo a cobrar. O status comercial do pedido continua o
-            mesmo.
-          </p>
-        </div>
-        <p
-          v-else-if="
-            billing.blockedReason &&
-            !['BILLING_ACTIVE_CHARGE', 'BILLING_ALREADY_PAID'].includes(
-              billing.blockedReason,
-            )
-          "
-          class="op-hint"
-        >
-          {{ billingReason(billing.blockedReason) }}
-        </p>
-        <form
-          v-if="canIssue && choosing"
-          class="billing-plan"
-          novalidate
-          @submit.prevent="prepare"
-        >
-          <fieldset ref="planOptions" :disabled="busy || Boolean(otherEditing)">
-            <legend>Entrada combinada com o cliente</legend>
-            <div class="billing-choices">
-              <label
-                v-for="choice in [
-                  { value: 0, label: 'Sem entrada' },
-                  { value: 50, label: 'Entrada parcial' },
-                  { value: 100, label: 'Pagamento integral' },
-                ]"
-                :key="choice.value"
-              >
-                <input
-                  v-model="plan"
-                  type="radio"
-                  name="billing-plan"
-                  :value="choice.value"
-                  :aria-describedby="
-                    fieldError && choice.value === 50
-                      ? 'billing-percent-error'
-                      : undefined
-                  "
-                  @change="markEditing"
-                />
-                <span
-                  ><strong>{{ choice.value }}%</strong
-                  ><small>{{ choice.label }}</small></span
-                >
-              </label>
-            </div>
-          </fieldset>
-          <p
-            v-if="fieldError"
-            id="billing-percent-error"
-            role="alert"
-            class="op-field-error"
-          >
-            {{ fieldError }}
-          </p>
-          <dl class="billing-preview">
-            <div>
-              <dt>
-                {{
-                  plan === 0
-                    ? 'Entrada agora'
-                    : plan === 50
-                      ? 'Cobrar sinal agora'
-                      : 'Cobrar agora'
-                }}
-              </dt>
-              <dd>{{ billingMoney(nextAmount) }}</dd>
-            </div>
-            <div>
-              <dt>
-                {{ plan === 0 ? 'Cobrar depois' : 'Saldo após este pagamento' }}
-              </dt>
-              <dd>
-                {{ billingMoney(total - nextAmount) }}
-              </dd>
-            </div>
-          </dl>
-          <p class="op-hint">
-            Pix ou cartão, com parcelamento na InfinitePay. O cliente escolhe no
-            pagamento.
-          </p>
-          <div class="billing-actions">
-            <p v-if="otherEditing" class="op-hint">
-              Salve ou cancele a edição aberta.
+            <p>
+              A última operação não teve resposta confirmada. Repetir envia
+              exatamente o mesmo pedido, sem duplicar.
             </p>
             <button
-              v-if="editing?.editingSection?.value === 'billing'"
               type="button"
-              :disabled="busy"
-              @click="cancelCondition"
+              :aria-busy="busy === 'retry' ? 'true' : undefined"
+              @click="retryUncertain"
             >
-              Cancelar edição
-            </button>
-            <button
-              type="submit"
-              class="primary"
-              :aria-disabled="busy || Boolean(otherEditing) || undefined"
-              :aria-busy="busy || undefined"
-            >
-              {{
-                busy
-                  ? 'Salvando…'
-                  : plan === 0
-                    ? 'Salvar sem entrada'
-                    : 'Revisar cobrança'
-              }}
-            </button>
-          </div>
-        </form>
-        <template v-else-if="canIssue && !integratedSend">
-          <p class="billing-condition">
-            <strong>{{ conditionLabel }}</strong>
-          </p>
-          <p v-if="billing.percent === 0 && !charges.length" class="op-hint">
-            Nenhum link de entrada foi gerado. Você decide quando cobrar o valor
-            integral.
-          </p>
-          <div class="billing-actions">
-            <button
-              type="button"
-              class="primary"
-              :aria-disabled="Boolean(otherEditing) || undefined"
-              @click="prepare"
-            >
-              {{
-                received > 0
-                  ? `Cobrar saldo de ${billingMoney(balance)}`
-                  : `Cobrar ${billingMoney(balance)}`
-              }}
-            </button>
-          </div>
-        </template>
-        <div v-if="canShareActive && !hasWorkspace" class="billing-link">
-          <p>
-            <strong
-              >{{ chargeName(active) }} de
-              {{ billingMoney(active.amountCents) }}</strong
-            >
-          </p>
-          <p class="op-hint">Válido até {{ dateTimeBR(active.validUntil) }}</p>
-          <label for="billing-checkout-link">Link da cobrança</label>
-          <input
-            id="billing-checkout-link"
-            readonly
-            :value="billingUrl(active.checkoutUrl)"
-            @focus="$event.target.select()"
-          />
-          <div class="billing-actions">
-            <button type="button" @click="copyLink(active)">Copiar link</button
-            ><a
-              class="button-link billing-open-link"
-              :href="billingUrl(active.checkoutUrl)"
-              target="_blank"
-              rel="noopener noreferrer"
-              referrerpolicy="no-referrer"
-              @click="checkActiveLink"
-              >Abrir cobrança</a
-            ><button
-              type="button"
-              class="quiet"
-              @click="showDialog('share', $event, active)"
-            >
-              Preparar mensagem
+              Repetir a mesma operação
             </button>
           </div>
         </div>
-        <OrderBillingWorkspace
-          ref="workspace"
-          v-if="hasWorkspace"
-          :order="order"
-          :initial-billing="billing"
-          :disabled="
-            busy || Boolean(otherEditing) || uncertain || !canInspectPrivate
-          "
-          :allow-issue="!choosing || !canIssue"
-          :pause-refresh="
-            Boolean(modal) || editing?.editingSection?.value === 'billing'
-          "
-          compact
-          @snapshot="applyBilling"
-          @changed="
-            feedback = '';
-            load(true);
-            emit('changed');
-          "
-        >
-          <template #issue-actions="{ blocked }">
-            <button
-              v-if="canIssue && !choosing && integratedSend"
-              type="button"
-              class="quiet"
-              :disabled="Boolean(otherEditing) || blocked"
-              @click="prepare"
-            >
-              Gerar só o link
-            </button>
-          </template>
-          <template #charge-actions="{ charge, blocked, readable }">
-            <template v-if="canInspectPrivate && readable">
-              <template v-if="charge.id === active?.id && canShareActive">
-                <button type="button" @click="copyLink(charge)">
-                  Copiar link
-                </button>
-                <a
-                  class="button-link billing-open-link"
-                  :href="billingUrl(charge.checkoutUrl)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  referrerpolicy="no-referrer"
-                  @click="checkActiveLink"
-                  >Abrir cobrança</a
-                >
-                <button
-                  v-if="!integratedSend"
-                  type="button"
-                  class="quiet"
-                  @click="showDialog('share', $event, charge)"
-                >
-                  Preparar mensagem
-                </button>
-              </template>
-              <a
-                v-else-if="billingUrl(charge.checkoutUrl)"
-                :href="billingUrl(charge.checkoutUrl)"
-                target="_blank"
-                rel="noopener noreferrer"
-                referrerpolicy="no-referrer"
-                >Abrir link anterior para conferência</a
-              >
-              <a
-                v-if="
-                  billingUrl(charge.receiptUrl) &&
-                  !billing.payments?.some(
-                    (payment) =>
-                      payment.chargeId === charge.id &&
-                      billingUrl(payment.receiptUrl),
-                  )
-                "
-                :href="billingUrl(charge.receiptUrl)"
-                target="_blank"
-                rel="noopener noreferrer"
-                referrerpolicy="no-referrer"
-                >Comprovante InfinitePay</a
-              >
-            </template>
-            <button
-              v-if="
-                canManage &&
-                charge.id === (active?.id ?? charges[0]?.id) &&
-                (['unknown', 'review'].includes(charge.status) ||
-                  activeExpired ||
-                  billing.reviewRequired)
-              "
-              type="button"
-              :disabled="blocked || cancelled"
-              @click="showDialog('reconcile', $event, charge)"
-            >
-              Conferir cobrança
-            </button>
-            <button
-              v-if="
-                canManage &&
-                ['paid', 'review'].includes(charge.status) &&
-                charge.refundableAmountCents > 0
-              "
-              type="button"
-              :disabled="blocked || cancelled"
-              @click="showDialog('refund', $event, charge)"
-            >
-              Registrar devolução do
-              {{ chargeName(charge).toLocaleLowerCase('pt-BR') }}
-            </button>
-          </template>
-        </OrderBillingWorkspace>
-        <section
-          v-if="charges.length && !hasWorkspace"
-          class="billing-history"
-          aria-label="Histórico de cobranças"
-        >
-          <h3>Histórico de cobranças</h3>
-          <ol>
-            <li v-for="charge in charges" :key="charge.id">
-              <div>
-                <strong>{{ chargeName(charge) }}</strong>
-                <p>{{ chargeStatus(charge) }}</p>
-                <small v-if="charge.paidAt"
-                  >{{ dateTimeBR(charge.paidAt) }} ·
-                  {{
-                    charge.method === 'credit_card'
-                      ? `Cartão em ${charge.installments}x`
-                      : 'Pix'
-                  }}</small
-                ><small v-if="charge.refundedAmountCents"
-                  >Devolução conciliada:
-                  {{ billingMoney(charge.refundedAmountCents) }}</small
-                ><a
-                  v-if="canInspectPrivate && billingUrl(charge.receiptUrl)"
-                  :href="billingUrl(charge.receiptUrl)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  referrerpolicy="no-referrer"
-                  >Comprovante InfinitePay</a
-                >
-                <a
-                  v-if="
-                    canInspectPrivate &&
-                    charge.id !== active?.id &&
-                    billingUrl(charge.checkoutUrl)
-                  "
-                  :href="billingUrl(charge.checkoutUrl)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  referrerpolicy="no-referrer"
-                  >Abrir link anterior para conferência</a
-                >
-              </div>
-              <strong class="op-num">{{
-                billingMoney(charge.amountCents)
-              }}</strong>
-            </li>
-          </ol>
-        </section>
-        <details
-          v-if="
-            canManage &&
-            (billing.managed || charges.length) &&
-            (!hasWorkspace || (!charges.length && billing.reviewRequired))
-          "
-          class="billing-review"
-        >
-          <summary>Conferência e devoluções</summary>
-          <p class="op-hint">
-            Use após conferir a cobrança na InfinitePay. Estas ações só
-            conciliam o CRM; não cancelam links nem devolvem dinheiro.
-          </p>
-          <a
-            v-if="
-              canInspectPrivate &&
-              !canShareActive &&
-              billingUrl(active?.checkoutUrl)
-            "
-            class="button-link billing-open-link"
-            :href="billingUrl(active.checkoutUrl)"
-            target="_blank"
-            rel="noopener noreferrer"
-            referrerpolicy="no-referrer"
-            >Abrir cobrança anterior para conferência</a
-          >
-          <button
-            v-if="
-              ['unknown', 'review'].includes(active?.status) ||
-              activeExpired ||
-              billing.blockedReason === 'BILLING_REVIEW_REQUIRED'
-            "
-            type="button"
-            :disabled="cancelled"
-            @click="showDialog('reconcile', $event)"
-          >
-            Conferir cobrança</button
-          ><template v-for="charge in charges" :key="`refund-${charge.id}`"
-            ><button
-              v-if="
-                ['paid', 'review'].includes(charge.status) &&
-                charge.refundableAmountCents > 0
-              "
-              type="button"
-              :disabled="cancelled"
-              @click="showDialog('refund', $event, charge)"
-            >
-              Registrar devolução do
-              {{ chargeName(charge).toLocaleLowerCase('pt-BR') }}
-            </button></template
-          >
-        </details>
-        <div class="billing-refresh">
-          <button
-            v-if="!error"
-            type="button"
-            class="quiet"
-            :aria-busy="loading || undefined"
-            @click="refreshAll"
-          >
-            Atualizar cobranças
-          </button>
-        </div>
+        <BillingSituation :view="view" />
+        <BillingNextStep
+          :step="view.next"
+          :status="status"
+          @act="act"
+          @pick="choose"
+        />
+        <BillingMovements :rows="view.rows" :sheet="isPhone" @act="rowAct" />
       </template>
-      <p v-if="feedback" role="status" class="op-hint">{{ feedback }}</p>
     </div>
-    <dialog
-      v-if="modal"
-      ref="dialog"
-      class="op-dialog"
-      aria-labelledby="billing-dialog-title"
-      @close="dialogClosed"
-      @cancel="busy && $event.preventDefault()"
-    >
-      <h2 id="billing-dialog-title">
-        {{
-          modal === 'share'
-            ? 'Mensagem para o cliente'
-            : modal === 'refund'
-              ? 'Registrar devolução já realizada'
-              : modal === 'reconcile'
-                ? 'Conferir cobrança'
-                : received > 0
-                  ? 'Gerar cobrança do saldo'
-                  : 'Gerar link de pagamento'
-        }}
-      </h2>
-      <p v-if="dialogError" role="alert" class="op-alert">{{ dialogError }}</p>
-      <template v-if="modal === 'share'"
-        ><label for="billing-share-message"
-          >Texto para compartilhar manualmente</label
-        ><textarea
-          id="billing-share-message"
-          :value="shareText"
-          readonly
-          @focus="$event.target.select()"
-        ></textarea>
-        <p class="op-hint">
-          Copie o texto e envie pela conversa. Nenhuma mensagem é enviada
-          automaticamente.
-        </p></template
-      >
-      <template v-else-if="modal === 'issue'"
-        ><dl class="billing-preview">
-          <div>
-            <dt>Pedido</dt>
-            <dd>{{ order.number }}</dd>
-          </div>
-          <div>
-            <dt>Valor da cobrança</dt>
-            <dd>{{ billingMoney(nextAmount) }}</dd>
-          </div>
-          <div>
-            <dt>Formas de pagamento</dt>
-            <dd>Pix ou cartão</dd>
-          </div>
-          <div>
-            <dt>Saldo após o pagamento</dt>
-            <dd>{{ billingMoney(balance - nextAmount) }}</dd>
-          </div>
-        </dl>
-        <p class="op-hint">
-          Gerar o link não envia uma mensagem nem confirma o pagamento.
-        </p></template
-      >
-      <template v-else-if="modal === 'refund'"
-        ><p>
-          Registre somente um valor que já foi devolvido e conferido na
-          InfinitePay.
-        </p>
-        <div class="op-field">
-          <label for="billing-refund-amount">Valor já devolvido</label
-          ><input
-            id="billing-refund-amount"
-            v-model="refundAmount"
-            :disabled="busy || uncertain"
-            type="text"
-            inputmode="decimal"
-            autocomplete="off"
-            placeholder="0,00"
-          />
-        </div>
-        <label class="op-check"
-          ><input
-            v-model="providerReviewed"
-            type="checkbox"
-            :disabled="busy || uncertain"
-          /><span
-            >Conferi a devolução na InfinitePay e quero conciliá-la no
-            CRM.</span
-          ></label
-        ></template
-      >
-      <template v-else-if="modal === 'reconcile'"
-        ><fieldset class="billing-reconcile" :disabled="busy || uncertain">
-          <legend>Resultado da conferência</legend>
-          <label
-            ><input
-              v-model="reconcileDecision"
-              type="radio"
-              value="apply_current"
-              name="billing-reconcile"
-            /><span
-              >Aplicar os pagamentos confirmados ao acordo atual do pedido</span
-            ></label
-          ><label
-            ><input
-              v-model="reconcileDecision"
-              type="radio"
-              value="close_unpaid"
-              name="billing-reconcile"
-            /><span
-              >Encerrar emissão sem pagamento, após a validade do link</span
-            ></label
-          >
-        </fieldset>
-        <label class="op-check"
-          ><input
-            v-model="providerReviewed"
-            type="checkbox"
-            :disabled="busy || uncertain"
-          /><span
-            >Conferi os registros na InfinitePay e confirmo este
-            resultado.</span
-          ></label
-        >
-        <p class="op-hint">
-          Encerrar no CRM não cancela o link na InfinitePay. A API impede
-          encerrar antes da validade.
-        </p></template
-      >
-      <div class="op-dialog-actions">
-        <button type="button" :disabled="busy" @click="closeDialog">
-          {{ modal === 'share' ? 'Voltar ao pedido' : 'Voltar' }}</button
-        ><button
-          v-if="modal !== 'share'"
-          type="button"
-          class="primary"
-          :aria-disabled="busy || undefined"
-          :aria-busy="busy || undefined"
-          @click="submitDialog"
-        >
-          {{
-            busy
-              ? 'Registrando…'
-              : modal === 'issue'
-                ? 'Gerar link de pagamento'
-                : 'Registrar conferência'
-          }}
-        </button>
-      </div>
-    </dialog>
+    <BillingSendDialog :ref="dialogs.send" @close="dialogClosed" />
+    <BillingAmountDialog :ref="dialogs.amount" @close="dialogClosed" />
+    <BillingCancelDialog :ref="dialogs.cancel" @close="dialogClosed" />
+    <BillingExternalDialog :ref="dialogs.external" @close="dialogClosed" />
+    <BillingVerifyDialog :ref="dialogs.verify" @close="dialogClosed" />
+    <BillingReconcileDialog :ref="dialogs.reconcile" @close="dialogClosed" />
+    <BillingRefundDialog :ref="dialogs.refund" @close="dialogClosed" />
+    <BillingReverseDialog :ref="dialogs.reverse" @close="dialogClosed" />
+    <BillingReceiptDialog :ref="dialogs.receipt" @close="dialogClosed" />
+    <BillingConfirmDialog :ref="dialogs.confirm" @close="dialogClosed" />
   </section>
 </template>
-
-<style scoped>
-.billing-totals {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-4);
-  margin-block: 0 var(--space-5);
-  padding-block-end: var(--space-5);
-  border-block-end: 1px solid var(--color-border);
-}
-.billing-totals dt {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-}
-.billing-totals dd {
-  margin: var(--space-1) 0 0;
-  font-size: var(--text-xl);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.billing-plan fieldset {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  min-width: 0;
-}
-.billing-plan legend {
-  font-weight: 600;
-  margin-block-end: var(--space-3);
-}
-.billing-choices {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-2);
-}
-.billing-choices label {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  min-height: var(--target-min);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
-}
-.billing-choices label:has(:checked) {
-  background: var(--color-selected);
-  border-color: var(--color-selection-border);
-}
-.billing-choices input {
-  width: var(--space-4);
-  height: var(--space-4);
-  min-height: 0;
-  flex-shrink: 0;
-  accent-color: var(--color-focus);
-}
-.billing-choices strong,
-.billing-choices small {
-  display: block;
-}
-.billing-choices small {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-}
-.billing-preview {
-  display: grid;
-  gap: var(--space-2);
-  padding-block: var(--space-4);
-  margin-block: var(--space-4);
-  border-block: 1px solid var(--color-border);
-}
-.billing-preview > div {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-4);
-}
-.billing-preview dt {
-  color: var(--color-text-muted);
-}
-.billing-preview dd {
-  margin: 0;
-  font-weight: 600;
-  text-align: end;
-  font-variant-numeric: tabular-nums;
-}
-.billing-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  align-items: center;
-  flex-wrap: wrap;
-  margin-block-start: var(--space-4);
-}
-.billing-state {
-  padding: var(--space-4);
-  margin-block: var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--status-info-surface);
-  color: var(--status-info-text);
-}
-.billing-state[data-attention] {
-  color: var(--status-warning-text);
-  background: var(--status-warning-surface);
-}
-.billing-state[data-success] {
-  color: var(--status-success-text);
-  background: var(--status-success-surface);
-}
-.billing-state p {
-  margin-block: var(--space-1) 0;
-}
-.billing-link {
-  margin-block: var(--space-5);
-}
-.billing-link > label {
-  display: block;
-  margin-block-end: var(--space-2);
-  font-weight: 500;
-}
-.billing-link input {
-  width: 100%;
-}
-.billing-open-link {
-  min-block-size: var(--target-min);
-}
-.billing-condition {
-  margin-block-start: var(--space-4);
-}
-.billing-history {
-  margin-block-start: var(--space-5);
-  padding-block-start: var(--space-4);
-  border-block-start: 1px solid var(--color-border);
-}
-.billing-history h3 {
-  font-size: var(--text-base);
-}
-.billing-history ol {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.billing-history li {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding-block: var(--space-3);
-  border-block-end: 1px solid var(--color-border-subtle);
-}
-.billing-history li > strong {
-  white-space: nowrap;
-}
-.billing-history p {
-  margin: 0;
-}
-.billing-history small,
-.billing-history a {
-  display: block;
-  font-size: var(--text-xs);
-}
-.billing-history small {
-  color: var(--color-text-muted);
-}
-.billing-history a {
-  display: flex;
-  align-items: center;
-  min-block-size: var(--target-min);
-  margin-block-start: var(--space-2);
-}
-.billing-review {
-  margin-block-start: var(--space-4);
-}
-.billing-review summary {
-  min-height: var(--target-min);
-  display: list-item;
-  align-content: center;
-}
-.billing-review button {
-  margin: var(--space-2) var(--space-2) 0 0;
-}
-.billing-refresh {
-  display: flex;
-  justify-content: flex-end;
-  margin-block-start: var(--space-3);
-}
-.billing-reconcile {
-  border: 0;
-  margin: var(--space-4) 0;
-  padding: 0;
-}
-.billing-reconcile legend {
-  font-weight: 600;
-}
-.billing-reconcile label {
-  display: flex;
-  gap: var(--space-2);
-  align-items: flex-start;
-  min-height: var(--target-min);
-  margin-block-start: var(--space-2);
-  margin-block-end: 0;
-}
-.billing-reconcile input {
-  width: var(--space-4);
-  min-height: 0;
-  flex-shrink: 0;
-  margin-block-start: var(--space-1);
-}
-.op-dialog textarea {
-  min-height: 12rem;
-  width: 100%;
-}
-@media (max-width: 520px) {
-  .billing-totals {
-    gap: var(--space-2);
-  }
-  .billing-totals dd {
-    font-size: var(--text-base);
-  }
-  .billing-totals dt {
-    min-block-size: calc(var(--text-xs) * 3);
-  }
-  .billing-choices label {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: var(--space-2);
-  }
-  .billing-actions button.primary {
-    width: 100%;
-  }
-}
-@media (max-width: 360px) {
-  .billing-totals {
-    grid-template-columns: 1fr;
-  }
-  .billing-totals > div {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--space-2);
-  }
-  .billing-totals dt {
-    min-block-size: 0;
-  }
-  .billing-choices {
-    grid-template-columns: 1fr;
-  }
-  .billing-choices label,
-  .billing-choices label > span {
-    flex-direction: row;
-    align-items: center;
-    display: flex;
-    gap: var(--space-3);
-  }
-  .billing-choices strong {
-    min-width: var(--space-12);
-  }
-}
-</style>

@@ -272,3 +272,10 @@ PostgreSQL e serialização HTTP preservam vínculo de correção/retry e null
 nos demais registros. Gate HTTP 11/11, matriz PostgreSQL 46/46 e validate
 integrado 2.002 aprovados/24 skips condicionais, zero falhas e build aprovado.
 Sem migração ou alteração do frontend; homologação remota continua aberta.
+
+### COB-T50 — Entrada parcial fixa em 50%
+
+COB-02, COB-05 e COB-10. Oferecer 50% de entrada e 100% integral na ficha e no
+chat. Preservar 0% sem entrada, saldos legados, replays e histórico. Permitir uma
+nova condição em plano legado sem crédito após o encerramento das cobranças
+anteriores, mantendo a conferência na InfinitePay e a validade do link.

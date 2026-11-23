@@ -74,7 +74,7 @@ async function command(pool, orderId, extra = {}) {
     expectedBillingVersion: Number(row.billing_version ?? 0),
     expectedConversationVersion: Number(row.conversation_version),
     action: 'issue',
-    percent: 30,
+    percent: 50,
     correlationId: randomUUID(),
     idempotencyKey: randomUUID(),
     ...extra,
@@ -182,13 +182,16 @@ if (!url) {
   test('BAPI-06: concurrent identical submissions persist one intent, charge, job, audit and encrypted replay', async () => {
     const id = await order(pool);
     const input = await command(pool, id);
+    await assert.rejects(runtime.submit({ ...input, percent: 30 }), {
+      code: 'BILLING_INVALID_PERCENT',
+    });
     const results = await Promise.all([
       runtime.submit(input),
       runtime.submit({ ...input, correlationId: randomUUID() }),
     ]);
     assert.deepEqual(results[0], results[1]);
     assert.equal(results[0].state, 'waiting_link');
-    assert.equal(results[0].amountCents, 36000);
+    assert.equal(results[0].amountCents, 60000);
     assert.deepEqual(await counts(pool, id), {
       intents: 1,
       charges: 1,
@@ -228,7 +231,7 @@ if (!url) {
     ).rows[0];
     assert.doesNotMatch(
       JSON.stringify(replayRow.response),
-      /waiting_link|conversation_id|36000/,
+      /waiting_link|conversation_id|60000/,
     );
     assert.equal(
       (await pool.query('SELECT count(*)::int AS n FROM crm.messages')).rows[0]
@@ -349,15 +352,15 @@ if (!url) {
     const balance = await runtime.submit(
       await actionCommand(pool, id, 'balance'),
     );
-    assert.equal(balance.amountCents, 84000);
+    assert.equal(balance.amountCents, 60000);
     assert.equal(balance.action, 'balance');
     await assert.rejects(
       runtime.submit(await actionCommand(pool, id, 'balance')),
       { code: 'BILLING_ACTIVE_CHARGE' },
     );
     const partial = await runtime.getHistory({ actor: SELLER, orderId: id });
-    assert.equal(partial.receivedAmountCents, 36000);
-    assert.equal(partial.balanceAmountCents, 84000);
+    assert.equal(partial.receivedAmountCents, 60000);
+    assert.equal(partial.balanceAmountCents, 60000);
     assert.equal(
       (await pool.query('SELECT paid_on FROM crm.orders WHERE id=$1', [id]))
         .rows[0].paid_on,
@@ -435,7 +438,7 @@ if (!url) {
       )
     ).rows[0];
     assert.equal(old.status, 'closed');
-    assert.equal(Number(old.amount_cents), 36000);
+    assert.equal(Number(old.amount_cents), 60000);
     assert.ok(old.checkout_envelope);
     assert.equal(
       (
@@ -557,7 +560,7 @@ if (!url) {
       orderId: id,
       expectedVersion: b.billing.orderVersion,
       expectedBillingVersion: b.billing.version,
-      percent: 30,
+      percent: 50,
       idempotencyKey: randomUUID(),
       correlationId: randomUUID(),
     });
@@ -889,7 +892,7 @@ if (!url) {
       )
     ).rows;
     assert.equal(payments.length, 1);
-    assert.equal(Number(payments[0].principal_amount_cents), 36000);
+    assert.equal(Number(payments[0].principal_amount_cents), 60000);
     assert.equal(payments[0].application_valid, false);
     assert.equal(
       (await pool.query('SELECT paid_on FROM crm.orders WHERE id=$1', [id]))

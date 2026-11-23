@@ -47,6 +47,7 @@ export function billingReason(code) {
         'Há um pagamento ou acordo anterior que precisa de conferência. Não gere outro link antes de resolver.',
       BILLING_ACTIVE_CHARGE:
         'Já existe uma cobrança em andamento para este pedido.',
+      BILLING_INVALID_PERCENT: 'Escolha entrada de 50% ou pagamento integral.',
       BILLING_ALREADY_PAID: 'O valor integral deste pedido já foi recebido.',
       FORBIDDEN:
         'Somente o responsável pelo pedido ou um administrador pode gerar cobranças.',

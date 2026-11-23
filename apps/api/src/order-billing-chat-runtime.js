@@ -19,6 +19,7 @@ import {
   PostgresIdempotencyRecordStore,
 } from '@crm-silmer/integration-reliability';
 import {
+  billingCanReplaceLegacyPercent,
   billingSplit,
   decryptOrderPrivateJson,
   billingUrl,
@@ -559,7 +560,9 @@ export function createOrderBillingChatRuntime(database, options) {
       } else {
         if (
           f.paid > 0 ||
-          (f.charges.length && command.percent !== c.plan?.percent)
+          (f.charges.length &&
+            command.percent !== c.plan?.percent &&
+            !billingCanReplaceLegacyPercent(c.plan?.percent, f.charges, f.paid))
         )
           throw error('BILLING_REVIEW_REQUIRED', 409);
         percent = command.percent;

@@ -13,7 +13,7 @@ expressa para implementar.
 ## Fronteira
 
 Pedidos confirmados fora da loja. 0% salva sem entrada e a cobrança integral
-é posterior, humana; X% gera sinal e depois saldo por nova ação humana; 100%
+é posterior, humana; 50% gera sinal e depois saldo por nova ação humana; 100%
 quita integralmente, permitindo cartão parcelado pela InfinitePay.
 Percentual inteiro, sinal arredondado ao centavo, saldo por subtração e mínimo
 de R$ 1,00 em cada parte. Os valores do protótipo são fictícios.
@@ -23,7 +23,7 @@ de R$ 1,00 em cada parte. Os valores do protótipo são fictícios.
 | ID     | Critério verificável                                                                                                                                                                                                                       |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | COB-01 | Responsável atual pelo pedido/conversa ou administrador pode configurar e emitir; usuário desativado, outro vendedor, perfil Financeiro e agente são recusados. Revalidar ACL sob lock, inclusive no replay.                               |
-| COB-02 | 0% não emite link de zero; X% exibe sinal e saldo corretos; 100% cobra o integral. Valores inválidos, acima de 100%, parte abaixo de R$ 1,00, ausência de preço e pedido pendente são recusados; R$ 1,00 com sinal de 50% é caso negativo. |
+| COB-02 | 0% salva sem entrada, 50% é a única entrada parcial e 100% cobra o integral. A emissão recusa outros percentuais, partes abaixo de R$ 1,00, ausência de preço e pedido pendente. Histórico, replays e cobranças de saldo de planos antigos continuam disponíveis. Um plano antigo sem crédito pode receber nova condição após o encerramento de todas as cobranças anteriores. |
 | COB-03 | Pix e cartão são reconhecidos; parcelamento do cartão não gera parcelas comerciais no CRM nem altera o preço aprovado.                                                                                                                     |
 | COB-04 | Sessão, CSRF, origem, idempotência e revisão protegem emissão; duas ações concorrentes produzem uma única reserva de cobrança.                                                                                                             |
 | COB-05 | Repetição idêntica devolve o mesmo resultado; corpo divergente conflita; timeout após início do efeito permanece desconhecido, sem novo link automático.                                                                                   |

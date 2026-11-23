@@ -19,6 +19,7 @@ export {
 export {
   BillingError,
   billingPercent,
+  billingCanReplaceLegacyPercent,
   billingSplit,
   billingUrl,
   billingIdentifier,

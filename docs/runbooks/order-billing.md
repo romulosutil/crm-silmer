@@ -71,8 +71,8 @@ Contrato HTTP: [OpenAPI das cobranças](../api/order-billing.v1.json).
 ## Fluxo e limites
 
 Responsável/admin abre pedido confirmado, escolhe 0%, X% ou 100%, revisa
-valor e gera link. 0% salva sem emitir; X% permite sinal e depois saldo;
-100% cobra integral. O cliente escolhe Pix/cartão e parcelas na InfinitePay.
+valor e gera link. 0% salva sem emitir, 50% cobra sinal e depois saldo, e 100%
+cobra integral. O cliente escolhe Pix/cartão e parcelas na InfinitePay.
 Compartilhamento é humano. “Pago parcialmente” não muda o status comercial
 nem qualifica quitação do Financeiro. A interface real não tem simulação.
 
@@ -242,6 +242,11 @@ continua com saldo; acima do devido exige revisão/devolução.
 explícita no painel. Não cancela o link no gateway nem ignora callback tardio:
 um recebimento posterior fica em revisão. Não usar encerramento da conversa
 ou troca de vendedor como descarte de cobrança.
+
+Para refazer uma cobrança de plano anterior à entrada fixa de 50%, confirme
+o pedido, confira a ausência de pagamento na InfinitePay e encerre o link
+depois do vencimento. Com todas as cobranças anteriores encerradas e nenhum
+crédito aplicado, escolha a condição atual e revise o novo valor antes de emitir.
 
 Registrar devolução só depois de fazê-la/conferi-la na InfinitePay. Informar
 valor devolvido no comando da cobrança, com idempotência e versões; isso

@@ -960,7 +960,7 @@ test(
           expectedBillingVersion: 0,
           expectedConversationVersion: Number(c.version),
           action: 'issue',
-          percent: 30,
+          percent: 50,
           correlationId: randomUUID(),
           idempotencyKey: randomUUID(),
         };

@@ -6,10 +6,10 @@ import {
   billingUrl,
 } from '../modules/orders/src/domain/billing.js';
 
-test('COB-02: exact cent split for 0, X and 100 percent', () => {
-  assert.deepEqual(billingSplit(10001, 30), {
-    signalAmountCents: 3000,
-    balanceAmountCents: 7001,
+test('COB-02: exact cent split for 0, 50 and 100 percent', () => {
+  assert.deepEqual(billingSplit(10001, 50), {
+    signalAmountCents: 5001,
+    balanceAmountCents: 5000,
   });
   assert.deepEqual(billingSplit(10001, 0), {
     signalAmountCents: 0,
@@ -19,11 +19,11 @@ test('COB-02: exact cent split for 0, X and 100 percent', () => {
     signalAmountCents: 10001,
     balanceAmountCents: 0,
   });
-  assert.deepEqual(billingSplit(Number.MAX_SAFE_INTEGER, 99), {
-    signalAmountCents: 8917127262193581,
-    balanceAmountCents: 90071992547410,
+  assert.deepEqual(billingSplit(Number.MAX_SAFE_INTEGER, 50), {
+    signalAmountCents: 4503599627370496,
+    balanceAmountCents: 4503599627370495,
   });
-  for (const value of [-1, 101, 10.5, '30', null])
+  for (const value of [-1, 1, 30, 49, 51, 99, 101, 50.5, '50', null])
     assert.throws(() => billingPercent(value), {
       code: 'BILLING_INVALID_PERCENT',
     });

@@ -69,13 +69,17 @@ async function setup(page, options = {}) {
       billing.version++;
     } else if (path.endsWith('/charges')) {
       billing.percent = body.percent;
+      billing.needsNewCondition = false;
       billing.managed = true;
       billing.version++;
-      const signal =
-        !billing.charges.length && body.percent > 0 && body.percent < 100;
+      const signal = billing.receivedAmountCents === 0 && body.percent === 50;
       billing.charges.push({
         id: `billing-${billing.charges.length + 1}`,
-        kind: signal ? 'signal' : billing.charges.length ? 'balance' : 'full',
+        kind: signal
+          ? 'signal'
+          : billing.receivedAmountCents > 0
+            ? 'balance'
+            : 'full',
         amountCents: signal
           ? Math.round((billing.totalAmountCents * body.percent) / 100)
           : billing.balanceAmountCents,
@@ -191,10 +195,10 @@ test('a signal paid in card installments leaves the balance; Pix settles only af
   page,
 }, testInfo) => {
   const { section, writes, pay } = await setup(page);
-  await section.getByLabel('Percentual de entrada', { exact: true }).fill('30');
+  await section.getByRole('radio', { name: '50% Entrada parcial' }).check();
   await issue(page, section);
-  expect(writes[0].body.percent).toBe(30);
-  await expect(section.locator('.billing-history')).toContainText('R$ 540,00');
+  expect(writes[0].body.percent).toBe(50);
+  await expect(section.locator('.billing-history')).toContainText('R$ 900,00');
   await expect(section.locator('.billing-totals')).toContainText('R$ 0,00');
   await expect(
     section.getByRole('button', { name: 'Revisar cobrança' }),
@@ -217,7 +221,7 @@ test('a signal paid in card installments leaves the balance; Pix settles only af
     .getByRole('button', { name: 'Atualizar cobranças', exact: true })
     .click();
   await expect(section).toContainText('Pago parcialmente');
-  await expect(section.locator('.billing-live')).toContainText('540,00');
+  await expect(section.locator('.billing-live')).toContainText('900,00');
   const announcement =
     (await section.locator('.billing-live').textContent()) ?? '';
   await section
@@ -236,9 +240,9 @@ test('a signal paid in card installments leaves the balance; Pix settles only af
   );
   await expect(
     section.getByRole('button', { name: /Cobrar saldo de R\$/u }),
-  ).toContainText('1.260,00');
+  ).toContainText('900,00');
   await issue(page, section);
-  expect(writes[1].body.percent).toBe(30);
+  expect(writes[1].body.percent).toBe(50);
   pay();
   await section
     .getByRole('button', { name: 'Atualizar cobranças', exact: true })
@@ -273,23 +277,49 @@ test('100% card payment in 6x settles the entire order without collecting card d
   await expect(section).toContainText('Cartão em 6x');
 });
 
-test('rounds the signal by cents, rejects invalid percentages and keeps keyboard focus', async ({
+test('an ended 30% signal remains visible while the order can be charged in full', async ({
   page,
 }) => {
-  const { section, writes } = await setup(page, { amount: 10001 });
-  await section.getByLabel('Percentual de entrada', { exact: true }).fill('30');
-  await expect(section.locator('.billing-preview')).toContainText('R$ 30,00');
-  await expect(section.locator('.billing-preview')).toContainText('R$ 70,01');
-  await section
-    .getByLabel('Percentual de entrada', { exact: true })
-    .fill('101');
-  await section.getByRole('button', { name: 'Revisar cobrança' }).click();
-  await expect(section.getByRole('alert')).toContainText('1% a 99%');
+  const { section, billing, writes } = await setup(page, {
+    amount: 5000,
+    billing: {
+      managed: true,
+      percent: 30,
+      needsNewCondition: true,
+      charges: [
+        {
+          id: 'legacy-signal',
+          kind: 'signal',
+          status: 'closed',
+          amountCents: 1500,
+        },
+      ],
+    },
+  });
   await expect(
-    section.getByLabel('Percentual de entrada', { exact: true }),
-  ).toBeFocused();
-  expect(writes).toHaveLength(0);
-  await section.getByLabel('Percentual de entrada', { exact: true }).fill('30');
+    section.getByRole('radio', { name: '100% Pagamento integral' }),
+  ).toBeChecked();
+  await issue(page, section);
+  expect(writes[0].body.percent).toBe(100);
+  expect(
+    billing.charges.map((/** @type {any} */ charge) => charge.amountCents),
+  ).toEqual([1500, 5000]);
+});
+
+test('offers only 50% for a partial payment, rounds the signal and restores keyboard focus', async ({
+  page,
+}) => {
+  const { section } = await setup(page, { amount: 10001 });
+  await expect(section.getByRole('radio')).toHaveCount(3);
+  const full = section.getByRole('radio', { name: '100% Pagamento integral' });
+  await expect(full).toBeChecked();
+  await full.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(
+    section.getByRole('radio', { name: '50% Entrada parcial' }),
+  ).toBeChecked();
+  await expect(section.locator('.billing-preview')).toContainText('R$ 50,01');
+  await expect(section.locator('.billing-preview')).toContainText('R$ 50,00');
   const trigger = section.getByRole('button', { name: 'Revisar cobrança' });
   await trigger.click();
   await page.keyboard.press('Escape');

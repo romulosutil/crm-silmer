@@ -286,7 +286,8 @@
               "percent": {
                 "type": "integer",
                 "minimum": 1,
-                "maximum": 100
+                "maximum": 100,
+                "description": "50 or 100 for new charges. Other historical percentages are accepted only for idempotent replay."
               }
             }
           },

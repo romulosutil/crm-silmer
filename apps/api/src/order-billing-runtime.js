@@ -9,6 +9,7 @@ import {
 import {
   BillingError,
   billingCents,
+  billingCanReplaceLegacyPercent,
   billingIdentifier,
   billingPercent,
   billingSplit,
@@ -277,6 +278,11 @@ export function createOrderBillingRuntime(database, options) {
         version: Number(plan?.version ?? 0),
         orderVersion: Number(order.version),
         percent: plan?.percent ?? null,
+        needsNewCondition: billingCanReplaceLegacyPercent(
+          plan?.percent,
+          charges,
+          paid,
+        ),
         totalAmountCents: Number(order.final_amount_cents ?? 0),
         receivedAmountCents: paid,
         balanceAmountCents: Math.max(
@@ -898,21 +904,20 @@ export function createOrderBillingRuntime(database, options) {
     },
     /** @param {any} input */
     async configure(input) {
-      const percent = billingPercent(input.percent);
       return humanCommand(
         input,
         'configure',
         async (client, order, plan, actor) => {
           const charges = await chargesFor(client, order.id);
-          const reason = blocked(
-            order,
-            plan,
-            charges,
-            received(await paymentsFor(client, order.id)),
-          );
+          const paid = received(await paymentsFor(client, order.id));
+          const reason = blocked(order, plan, charges, paid);
           if (reason) throw new BillingError(409, reason);
-          if (charges.length)
+          if (
+            charges.length &&
+            !billingCanReplaceLegacyPercent(plan?.percent, charges, paid)
+          )
             throw new BillingError(409, 'BILLING_CONDITION_LOCKED');
+          const percent = billingPercent(input.percent);
           billingSplit(Number(order.final_amount_cents), percent);
           await savePlan(client, order, plan, percent, actor);
           return view(client, order, actor);
@@ -921,7 +926,6 @@ export function createOrderBillingRuntime(database, options) {
     },
     /** @param {any} input */
     async issue(input) {
-      const percent = billingPercent(input.percent);
       return humanCommand(
         input,
         'issue',
@@ -930,13 +934,21 @@ export function createOrderBillingRuntime(database, options) {
           const paid = received(await paymentsFor(client, order.id));
           const reason = blocked(order, plan, charges, paid);
           if (reason) throw new BillingError(409, reason);
-          if (charges.length && percent !== plan.percent)
+          const percent =
+            paid > 0 && plan && input.percent === plan.percent
+              ? plan.percent
+              : billingPercent(input.percent);
+          if (
+            charges.length &&
+            percent !== plan?.percent &&
+            !billingCanReplaceLegacyPercent(plan?.percent, charges, paid)
+          )
             throw new BillingError(409, 'BILLING_CONDITION_LOCKED');
-          const split = billingSplit(Number(order.final_amount_cents), percent);
           const amount =
             paid > 0 || percent === 0
               ? Number(order.final_amount_cents) - paid
-              : split.signalAmountCents;
+              : billingSplit(Number(order.final_amount_cents), percent)
+                  .signalAmountCents;
           if (amount < 100)
             throw new BillingError(422, 'BILLING_MINIMUM_AMOUNT');
           await savePlan(client, order, plan, percent, actor);
@@ -1337,6 +1349,11 @@ export function createOrderBillingRuntime(database, options) {
               "UPDATE crm.order_billing_charges c SET status='paid',updated_at=$2 WHERE order_id=$1 AND EXISTS(SELECT 1 FROM crm.order_billing_payments p WHERE p.charge_id=c.id)",
               [order.id, clock()],
             );
+          }
+          if (
+            input.decision === 'apply_current' ||
+            (order.status === 'confirmado' && payments.length === 0)
+          ) {
             await client.query(
               'UPDATE crm.order_billing_plans SET review_required=false,confirmed_at=$2,final_amount_cents=$3,payment_condition=$4,version=version+1,updated_at=$5 WHERE order_id=$1',
               [

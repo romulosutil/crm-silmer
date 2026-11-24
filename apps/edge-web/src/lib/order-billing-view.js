@@ -667,6 +667,18 @@ function receiptBadge(r) {
     : { label: 'Recebido por fora', tone: 'success', icon: 'check' };
 }
 
+/**
+ * Why a link was cancelled, by `cancel_reason`. The seller's own cancel says
+ * only who did it.
+ * @type {Readonly<Record<string, string>>}
+ */
+const CANCEL_WHY = Object.freeze({
+  order_changed: 'o valor do pedido mudou',
+  order_cancelled: 'o pedido foi cancelado',
+  external_receipt: 'pagamento registrado por fora',
+  reconcile: 'resolvido na conferência',
+});
+
 /** @param {Link} l */
 function chargeMeta(l) {
   const how = l.sentAt
@@ -681,10 +693,11 @@ function chargeMeta(l) {
         : `Cliente clicou em Pagar às ${fT(l.clickedAt)} · abrindo o pagamento na InfinitePay`;
     case 'unknown':
       return `Cliente clicou em Pagar às ${fT(l.clickedAt)} · sem resposta da InfinitePay`;
-    case 'canceled':
-      return l.cancelReason === 'order_changed' || !l.cancelledBy
-        ? `${how} · cancelado às ${fT(l.cancelledAt)}: o valor do pedido mudou`
-        : `${how} · cancelado por ${l.cancelledBy} às ${fT(l.cancelledAt)}`;
+    case 'canceled': {
+      const by = l.cancelledBy ? ` por ${l.cancelledBy}` : '';
+      const why = CANCEL_WHY[l.cancelReason ?? ''];
+      return `${how} · cancelado${by} às ${fT(l.cancelledAt)}${why ? `: ${why}` : ''}`;
+    }
     case 'review':
       return `Pago por ${l.payMethod} em ${fDT(l.paidAt)} · guardado, ainda não conta no recebido`;
     case 'paid':
@@ -726,11 +739,13 @@ function chargeEvents(l, billing) {
           item.at,
           l.cancelReason === 'order_changed' && !actor
             ? 'Link cancelado sozinho: o valor do pedido mudou'
-            : l.cancelReason === 'external_receipt'
-              ? `Link cancelado${actor ? ` por ${actor}` : ''} ao registrar pagamento por fora`
-              : l.cancelReason === 'reconcile'
-                ? `Link cancelado${actor ? ` por ${actor}` : ''} na conferência`
-                : `Link cancelado${actor ? ` por ${actor}` : ''}`,
+            : l.cancelReason === 'order_cancelled'
+              ? `Link cancelado${actor ? ` por ${actor}` : ' sozinho'}: o pedido foi cancelado`
+              : l.cancelReason === 'external_receipt'
+                ? `Link cancelado${actor ? ` por ${actor}` : ''} ao registrar pagamento por fora`
+                : l.cancelReason === 'reconcile'
+                  ? `Link cancelado${actor ? ` por ${actor}` : ''} na conferência`
+                  : `Link cancelado${actor ? ` por ${actor}` : ''}`,
         ]);
       else if (kind === 'refund')
         e.push([

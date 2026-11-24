@@ -786,3 +786,57 @@ test('reconcile: reserving links count before applying the payments', () => {
     'Os pagamentos somam R$ 5.000,00, mais que o total de R$ 4.800,00.',
   );
 });
+
+test('cancelled link rows say why the link was cancelled', () => {
+  const cancelled = (
+    /** @type {string} */ id,
+    /** @type {string} */ cancelReason,
+    /** @type {string|null} */ cancelledBy,
+  ) =>
+    link({
+      id,
+      kind: 'installment',
+      amountCents: 100000,
+      state: 'cancelled',
+      createdAt: at(23, 9, 0),
+      cancelledAt: at(23, 9, 4),
+      cancelledBy,
+      cancelReason,
+      history: [
+        { kind: 'created', at: at(23, 9, 0), actor: 'Ana R.' },
+        { kind: 'cancelled', at: at(23, 9, 4), actor: cancelledBy },
+      ],
+    });
+  const v = derive(
+    billing({
+      links: [
+        cancelled('a', 'order_cancelled', null),
+        cancelled('b', 'order_changed', null),
+        cancelled('c', 'external_receipt', 'Ana R.'),
+        cancelled('d', 'reconcile', 'Ana R.'),
+        cancelled('e', 'seller', 'Ana R.'),
+      ],
+    }),
+  );
+  const how = 'Link gerado, não enviado · 23/11, 09:00 · cancelado';
+  deq(
+    v.rows.map((r) => r.meta),
+    [
+      `${how} às 09:04: o pedido foi cancelado`,
+      `${how} às 09:04: o valor do pedido mudou`,
+      `${how} por Ana R. às 09:04: pagamento registrado por fora`,
+      `${how} por Ana R. às 09:04: resolvido na conferência`,
+      `${how} por Ana R. às 09:04`,
+    ],
+  );
+  deq(
+    v.rows.map((r) => r.events.map((/** @type {any} */ e) => e.label).at(-1)),
+    [
+      'Link cancelado sozinho: o pedido foi cancelado',
+      'Link cancelado sozinho: o valor do pedido mudou',
+      'Link cancelado por Ana R. ao registrar pagamento por fora',
+      'Link cancelado por Ana R. na conferência',
+      'Link cancelado por Ana R.',
+    ],
+  );
+});

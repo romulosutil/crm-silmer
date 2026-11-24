@@ -96,6 +96,8 @@ let intentTimer = /** @type {ReturnType<typeof setTimeout>|undefined} */ (
   undefined
 );
 let disposed = false;
+/** A write succeeded since the last dialog opened (LPC-09 focus). */
+let committed = false;
 /** @type {{id: string, from: string}|null} */
 let confirming = null;
 let conversationCache = /** @type {any} */ (null);
@@ -272,6 +274,7 @@ async function run(record) {
     throw cause;
   }
   if (uncertain.value?.key === record.key) uncertain.value = null;
+  committed = true;
   if (response.data?.billing) applyBilling(response.data.billing);
   else await load(true);
   emit('changed');
@@ -367,7 +370,8 @@ async function startSend(payload) {
     sending.value = { ...sending.value, index: 1, done: true };
     sending.value = null;
     flash(sendFlash('generate', payload.kind, null));
-    await focusNextIfLost();
+    // From a dialog, dialogClosed moves the focus once the dialog closes.
+    if (!dialogOpen.value) await focusNext();
     return;
   }
   const target = conversationCache ?? (await conversation());
@@ -455,22 +459,36 @@ async function finishSend(current, delivered) {
   await focusNextIfLost();
 }
 
-async function focusNextIfLost() {
+/** @param {boolean} [onlyIfLost] */
+async function focusNext(onlyIfLost = false) {
   await nextTick();
   const active = globalThis.document?.activeElement;
-  if (!active || active === globalThis.document.body || !active.isConnected)
+  if (
+    !onlyIfLost ||
+    !active ||
+    active === globalThis.document.body ||
+    !active.isConnected
+  )
     /** @type {HTMLElement|null} */ (
       globalThis.document?.getElementById('order-billing-next-title')
     )?.focus();
 }
+const focusNextIfLost = () => focusNext(true);
+/**
+ * After a write the state changed: the trigger the dialog returned the focus
+ * to may leave with the next re-read, so the focus goes to the Próximo passo
+ * title, where the outcome is announced. Esc/Voltar keeps it on the trigger.
+ */
 function dialogClosed() {
   dialogOpen.value = Math.max(0, dialogOpen.value - 1);
-  void focusNextIfLost();
+  void focusNext(!committed);
+  committed = false;
   schedule();
 }
 /** @param {string} name @param {HTMLElement} trigger @param {...any} args */
 function openDialog(name, trigger, ...args) {
   dialogOpen.value += 1;
+  committed = false;
   status.value = null;
   void dialogs[name].value?.open(trigger, ...args);
 }

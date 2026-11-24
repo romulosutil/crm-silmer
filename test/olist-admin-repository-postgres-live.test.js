@@ -126,7 +126,7 @@ else
           .n,
       );
       await pool.query(
-        "INSERT INTO crm.orders(id,number_sequence,number,conversation_id,status,fab_code,ficha_envelope,created_by_kind,created_by,created_at,updated_at,manual_owner_id,manual_create_key,contact_id) VALUES($1,$2,$3,NULL,'pendente','SYNTHETIC','{}'::jsonb,'user',$4,$5,$5,$4,$6,$7)",
+        "INSERT INTO crm.orders(id,number_sequence,number,conversation_id,status,fab_code,ficha_envelope,final_amount_cents,payment_condition,order_date,confirmed_at,confirmed_by,created_by_kind,created_by,created_at,updated_at,manual_owner_id,manual_create_key,contact_id) VALUES($1,$2,$3,NULL,'confirmado','SYNTHETIC','{}'::jsonb,600,'pix','2026-11-06'::date,$5,$4,'user',$4,$5,$5,$4,$6,$7)",
         [
           orderId,
           n,
@@ -561,7 +561,7 @@ else
               .rows[0].n,
           );
           await pool.query(
-            'INSERT INTO crm.orders(id,number_sequence,number,conversation_id,status,fab_code,ficha_envelope,created_by_kind,created_by,created_at,updated_at,manual_owner_id,manual_create_key,contact_id) SELECT $2,$3,$4,NULL,status,fab_code,ficha_envelope,created_by_kind,created_by,created_at,updated_at,manual_owner_id,$5,contact_id FROM crm.orders WHERE id=$1',
+            'INSERT INTO crm.orders(id,number_sequence,number,conversation_id,status,fab_code,ficha_envelope,final_amount_cents,payment_condition,order_date,confirmed_at,confirmed_by,created_by_kind,created_by,created_at,updated_at,manual_owner_id,manual_create_key,contact_id) SELECT $2,$3,$4,NULL,status,fab_code,ficha_envelope,final_amount_cents,payment_condition,order_date,confirmed_at,confirmed_by,created_by_kind,created_by,created_at,updated_at,manual_owner_id,$5,contact_id FROM crm.orders WHERE id=$1',
             [
               f.orderId,
               other,

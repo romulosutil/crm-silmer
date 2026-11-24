@@ -1223,3 +1223,21 @@ test('OLC-T02 dispatcher sends frozen valorFrete outside unit prices and marks u
   assert.equal(second.outcome, 'outcome_unknown');
   assert.equal(div.posts.length, 1, 'no second POST after uncertain readback');
 });
+
+test('OLC-01 dispatcher stops with ORDER_NOT_CONFIRMED and zero ERP HTTP calls when source is no longer confirmado', async () => {
+  const f = fixture();
+  const origValidate = f.repository.validateDispatch;
+  f.repository.validateDispatch = async (/** @type {any} */ input) => {
+    await origValidate(input);
+    throw Object.assign(new Error('ORDER_NOT_CONFIRMED'), {
+      code: 'ORDER_NOT_CONFIRMED',
+    });
+  };
+  const result = await f.dispatcher().dispatch({ exportId: EXPORT_ID });
+  assert.equal(result.outcome, 'failed');
+  assert.equal(result.errorCode, 'ORDER_NOT_CONFIRMED');
+  noRetry(result);
+  assert.equal(f.posts.length, 0);
+  assert.equal(f.reads.length, 0);
+  assert.equal(f.operation.last_error_code, 'ORDER_NOT_CONFIRMED');
+});

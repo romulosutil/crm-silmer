@@ -160,13 +160,19 @@ test('T06 builds exact identity-addressed lines, minimal buyer and São Paulo pr
   );
 });
 
-test('T06 complete pendente and confirmado have equal proposals; existing orderDate wins', () => {
+test('OLC-01 only confirmado is eligible for new send; pendente is blocked while historical link ignores status', () => {
   const input = fixture();
   input.source.order.orderDate = '2026-10-31';
   const confirmed = buildOlistPreviewPlan(input);
-  input.source.order.status = 'pendente';
-  assert.deepEqual(buildOlistPreviewPlan(input), confirmed);
+  assert.equal(confirmed.eligible, true);
   assert.equal(confirmed.commercial.orderDate, '2026-10-31');
+  input.source.order.status = 'pendente';
+  const pendente = buildOlistPreviewPlan(input);
+  hasIssue(pendente, 'ORDER_NOT_CONFIRMED');
+  assert.deepEqual(pendente.commercial.groups, []);
+  const historical = buildOlistPreviewPlan({ ...input, historicalLink: true });
+  assert.equal(historical.eligible, true);
+  assert.deepEqual(historical, confirmed);
 });
 
 test('T06 confirmed missingFields=[] never proves completeness', () => {

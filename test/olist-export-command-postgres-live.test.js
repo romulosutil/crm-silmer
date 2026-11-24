@@ -22,6 +22,7 @@ import {
 import { encryptJson } from '../modules/orders/src/adapters/envelope.js';
 import {
   EMPTY_OLIST_SETTINGS,
+  createOlistRepository,
   identityHash,
   olistConfiguration,
   open,
@@ -231,7 +232,7 @@ else
           serviceData: { secret: 'CONVERSATION_SENTINEL' },
           ...(patch.legacy ? {} : { sizePricing: groups }),
         };
-        const orderStatus = patch.status ?? 'pendente';
+        const orderStatus = patch.status ?? 'confirmado';
         await pool.query(
           `WITH n AS(SELECT nextval('crm.order_number_seq') v) INSERT INTO crm.orders(id,number_sequence,number,conversation_id,contact_id,manual_owner_id,manual_create_key,status,fab_code,ficha_envelope,total_pieces,missing_fields,final_amount_cents,payment_condition,order_date,confirmed_at,confirmed_by,created_by_kind,created_by,created_at,updated_at) SELECT $1,v,lpad(v::text,2,'0')||'-CRM',NULL,$2,$3,$4,$5,'SYNTHETIC',$6::jsonb,3,'{}',$7,'pix',CASE WHEN $5='confirmado' THEN '2026-11-06'::date ELSE NULL END,$8,$9,'user',$3,$10,$10 FROM n`,
           [
@@ -252,12 +253,12 @@ else
         const source = {
           order: {
             id: orderId,
-            status: orderStatus,
+            status: 'confirmado',
             origin: 'atendimento',
             ficha,
             finalAmountCents: patch.subtotal ?? 600,
             paymentCondition: 'pix',
-            orderDate: orderStatus === 'confirmado' ? '2026-11-06' : null,
+            orderDate: '2026-11-06',
           },
           sourceRevision: 0,
           issues: [],
@@ -749,8 +750,8 @@ else
           const otherOrderId = randomUUID();
           await pool.query(
             `WITH n AS(SELECT nextval('crm.order_number_seq') v)
-            INSERT INTO crm.orders(id,number_sequence,number,conversation_id,contact_id,manual_owner_id,manual_create_key,status,fab_code,ficha_envelope,total_pieces,final_amount_cents,payment_condition,created_by_kind,created_by,created_at,updated_at)
-            SELECT $1,v,lpad(v::text,2,'0')||'-CRM',NULL,$2,$3,$4,'pendente','SYNTHETIC',$5::jsonb,3,600,'pix','user',$3,$6,$6 FROM n`,
+            INSERT INTO crm.orders(id,number_sequence,number,conversation_id,contact_id,manual_owner_id,manual_create_key,status,fab_code,ficha_envelope,total_pieces,final_amount_cents,payment_condition,order_date,confirmed_at,confirmed_by,created_by_kind,created_by,created_at,updated_at)
+            SELECT $1,v,lpad(v::text,2,'0')||'-CRM',NULL,$2,$3,$4,'confirmado','SYNTHETIC',$5::jsonb,3,600,'pix','2026-11-06'::date,$6,$3,'user',$3,$6,$6 FROM n`,
             [
               otherOrderId,
               f.contactId,
@@ -781,7 +782,7 @@ else
           for (const mutate of [
             (/** @type {any} */ f) =>
               pool.query(
-                'UPDATE crm.orders SET version=version+1 WHERE id=$1',
+                'UPDATE crm.orders SET version=version+1,commercial_revision=commercial_revision+1 WHERE id=$1',
                 [f.orderId],
               ),
             (/** @type {any} */ f) =>
@@ -1062,6 +1063,408 @@ else
           } finally {
             await api.close();
           }
+        },
+      );
+      await t.test(
+        'OLC-T03 direct /export without previewToken: mounted & concurrent acceptance, per_order paymentDueOn, confirmed-only, ADR 082, exact cents, and WAP-07/08 isolation',
+        async () => {
+          // 1. Pending and cancelled orders are refused on direct /export without ERP calls.
+          const pending = await fixture({ status: 'pendente' });
+          await assert.rejects(
+            pending.runtime.exportOrder({
+              ...pending.input,
+              idempotencyKey: 'direct-pending',
+            }),
+            { code: 'ORDER_NOT_CONFIRMED', statusCode: 409 },
+          );
+          assert.equal(pending.calls.length, 0);
+          assert.deepEqual(await counts(), {
+            exports: 0,
+            jobs: 0,
+            events: 0,
+            audits: 0,
+            receipts: 0,
+          });
+          await pool.query(
+            "UPDATE crm.orders SET status='confirmado',order_date='2026-11-06'::date,confirmed_at=$2,confirmed_by=$3,version=version+1,commercial_revision=commercial_revision+1 WHERE id=$1",
+            [pending.orderId, NOW, pending.actors.owner.actor.id],
+          );
+          await pool.query(
+            'UPDATE crm.orders SET cancelled_at=$2,cancelled_by=$3,cancellation_reason_envelope=$4::jsonb,version=version+1 WHERE id=$1',
+            [
+              pending.orderId,
+              NOW,
+              pending.actors.owner.actor.id,
+              JSON.stringify(
+                seal('r', config.envelopeKey, 'x', config.accountKey, 'y'),
+              ),
+            ],
+          );
+          await assert.rejects(
+            pending.runtime.exportOrder({
+              ...pending.input,
+              idempotencyKey: 'direct-cancelled',
+            }),
+            { code: 'ORDER_CANCELLED', statusCode: 409 },
+          );
+
+          // 2. WAP-07/08 (F12): another seller cannot run direct /export on a private wallet order (404, zero PII, zero rows).
+          const secretWallet = await fixture({ status: 'confirmado' });
+          await pool.query(
+            'UPDATE crm.contacts SET wallet_created=true WHERE id=$1',
+            [secretWallet.contactId],
+          );
+          await pool.query(
+            `INSERT INTO crm.seller_client_links(id,seller_id,contact_id,provenance,status,version,created_by,updated_by,created_at,updated_at)
+             VALUES($1,$2,$3,'explicit_link','active',1,$2,$2,$4,$4)`,
+            [
+              randomUUID(),
+              secretWallet.actors.owner.actor.id,
+              secretWallet.contactId,
+              NOW,
+            ],
+          );
+          await assert.rejects(
+            secretWallet.runtime.exportOrder({
+              ...secretWallet.input,
+              idempotencyKey: 'direct-hidden-wallet',
+            }),
+            (/** @type {any} */ error) => {
+              assert.equal(error.code, 'ORDER_NOT_FOUND');
+              assert.equal(error.statusCode, 404);
+              assert.doesNotMatch(
+                JSON.stringify(error),
+                /Comprador|7253|52998224725/u,
+              );
+              return true;
+            },
+          );
+          const hiddenApi = createApi(
+            {},
+            {
+              olist: secretWallet.runtime,
+              logger: /** @type {any} */ ({ info() {}, warn() {}, error() {} }),
+            },
+          );
+          try {
+            const hiddenHttp = await hiddenApi.inject({
+              method: 'POST',
+              url: '/api/v1/orders/' + secretWallet.orderId + '/olist/export',
+              headers: {
+                cookie: 'crm_session=' + secretWallet.actors.seller.token,
+                origin: environment.APP_ORIGIN,
+                'x-csrf-token': 'synthetic-csrf',
+                'idempotency-key': 'direct-hidden-wallet-http',
+              },
+              payload: {},
+            });
+            assert.equal(hiddenHttp.statusCode, 404);
+            assert.equal(hiddenHttp.json().code, 'ORDER_NOT_FOUND');
+            assert.deepEqual(await counts(), {
+              exports: 0,
+              jobs: 0,
+              events: 0,
+              audits: 0,
+              receipts: 0,
+            });
+          } finally {
+            await hiddenApi.close();
+          }
+
+          // 3. Complete buyer registration (ADR 082), peças+frete=finalAmountCents, exact cents.
+          const incomplete = await fixture({ status: 'confirmado' });
+          await pool.query(
+            'UPDATE crm.contacts SET registration_envelope=NULL,version=version+1 WHERE id=$1',
+            [incomplete.contactId],
+          );
+          await assert.rejects(
+            incomplete.runtime.exportOrder({
+              ...incomplete.input,
+              idempotencyKey: 'direct-incomplete-buyer',
+            }),
+            { code: 'OLIST_CUSTOMER_INVALID', statusCode: 409 },
+          );
+          const mismatch = await fixture({ status: 'confirmado' });
+          await pool.query(
+            'UPDATE crm.orders SET final_amount_cents=601,version=version+1,commercial_revision=commercial_revision+1 WHERE id=$1',
+            [mismatch.orderId],
+          );
+          await assert.rejects(
+            mismatch.runtime.exportOrder({
+              ...mismatch.input,
+              idempotencyKey: 'direct-total-mismatch',
+            }),
+            { code: 'OLIST_ORDER_INCOMPLETE', statusCode: 409 },
+          );
+          const fractional = await fixture({
+            status: 'confirmado',
+            subtotal: 100,
+          });
+          await assert.rejects(
+            fractional.runtime.exportOrder({
+              ...fractional.input,
+              idempotencyKey: 'direct-fractional-cent',
+            }),
+            { code: 'OLIST_SALE_EXACT_CENT_REQUIRED', statusCode: 409 },
+          );
+
+          // 4. Direct export via mounted HTTP {} + per_order paymentDueOn + concurrent convergence & conflict.
+          const f = await fixture({ status: 'confirmado' });
+          await pool.query(
+            'UPDATE crm.olist_settings SET settings_envelope=$2::jsonb,version=version+1 WHERE account_key=$1',
+            [
+              config.accountKey,
+              JSON.stringify(
+                seal(
+                  {
+                    ...EMPTY_OLIST_SETTINGS,
+                    sellerId: 11,
+                    operationNatureId: 12,
+                    warehouseId: 13,
+                    paymentMethodId: 14,
+                    originId: 15,
+                    paymentDuePolicy: 'per_order',
+                    paymentDueOn: null,
+                    paymentTerms: '30 dias',
+                    receivingMethodId: 16,
+                    priceListId: null,
+                    purchaseOrder: null,
+                    productFiscal: { ncm: '61091000', origin: 0, unit: 'UN' },
+                  },
+                  config.envelopeKey,
+                  'settings',
+                  config.accountKey,
+                  'central',
+                ),
+              ),
+            ],
+          );
+          await assert.rejects(
+            f.runtime.exportOrder({
+              ...f.input,
+              idempotencyKey: 'direct-missing-due',
+            }),
+            { code: 'OLIST_PAYMENT_DUE_REQUIRED', statusCode: 409 },
+          );
+          const api = createApi(
+            {},
+            {
+              olist: f.runtime,
+              logger: /** @type {any} */ ({ info() {}, warn() {}, error() {} }),
+            },
+          );
+          try {
+            const url = '/api/v1/orders/' + f.orderId + '/olist/export';
+            const baseHeaders = {
+              cookie: 'crm_session=' + f.actors.seller.token,
+              origin: environment.APP_ORIGIN,
+              'x-csrf-token': 'synthetic-csrf',
+            };
+            const invalidNull = await api.inject({
+              method: 'POST',
+              url,
+              headers: { ...baseHeaders, 'idempotency-key': 'direct-null-tok' },
+              payload: { previewToken: null },
+            });
+            assert.equal(invalidNull.statusCode, 400);
+            const [resA, resB] = await Promise.all([
+              api.inject({
+                method: 'POST',
+                url,
+                headers: { ...baseHeaders, 'idempotency-key': 'direct-tab-1' },
+                payload: { paymentDueOn: '2026-12-06' },
+              }),
+              api.inject({
+                method: 'POST',
+                url,
+                headers: { ...baseHeaders, 'idempotency-key': 'direct-tab-2' },
+                payload: { paymentDueOn: '2026-12-06' },
+              }),
+            ]);
+            assert.equal(resA.statusCode, 202, resA.body);
+            assert.equal(resB.statusCode, 202, resB.body);
+            assert.equal(resA.json().operationId, resB.json().operationId);
+            assert.equal(f.calls.length, 0);
+            const conflict = await api.inject({
+              method: 'POST',
+              url,
+              headers: { ...baseHeaders, 'idempotency-key': 'direct-tab-3' },
+              payload: { paymentDueOn: '2026-12-10' },
+            });
+            assert.equal(conflict.statusCode, 409);
+            assert.equal(conflict.json().code, 'OLIST_EXPORT_CONFLICT');
+          } finally {
+            await api.close();
+          }
+
+          // 5. Compatible billing/delivery updates bump version without invalidating queued commercial_revision snapshot.
+          await pool.query(
+            "UPDATE crm.orders SET version=version+1,paid_on='2026-11-06'::date,delivered_on='2026-11-20'::date,finance_payment_review_required=false WHERE id=$1",
+            [f.orderId],
+          );
+          const olistRepo = createOlistRepository(database, {
+            envelopeKey: config.envelopeKey,
+            hmacKey: config.hmacKey,
+            clock: () => NOW,
+          });
+          const op = (
+            await pool.query(
+              'SELECT id,authorization_version,connection_generation,settings_version FROM crm.olist_exports WHERE order_id=$1',
+              [f.orderId],
+            )
+          ).rows[0];
+          const dispatchInput = {
+            ...f.input,
+            accountKey: config.accountKey,
+            contextKey: config.contextKey,
+            exportId: op.id,
+            authorizationVersion: Number(op.authorization_version),
+            connectionGeneration: Number(op.connection_generation),
+            settingsVersion: Number(op.settings_version),
+          };
+          const validated = await olistRepo.validateDispatch(dispatchInput);
+          assert.equal(validated.id, op.id);
+          await pool.query(
+            "UPDATE crm.orders SET status='pendente',version=version+1 WHERE id=$1",
+            [f.orderId],
+          );
+          await assert.rejects(olistRepo.validateDispatch(dispatchInput), {
+            code: 'ORDER_NOT_CONFIRMED',
+          });
+        },
+      );
+      await t.test(
+        'OLC-T03 projection pendingFields/retrySafe and safe auto-resume (OLIST_EXPORT_RESUMED)',
+        async () => {
+          // 1. Local pendingFields computed without ERP calls for confirmed order (pendente reports creation disabled).
+          const pendingProj = await fixture({ status: 'pendente' });
+          await pool.query(
+            'UPDATE crm.contacts SET registration_envelope=NULL,version=version+1 WHERE id=$1',
+            [pendingProj.contactId],
+          );
+          const projPending = await pendingProj.runtime.project(
+            pendingProj.input,
+          );
+          assert.equal(pendingProj.calls.length, 0);
+          assert.equal(projPending.creationEnabled, false);
+          assert.equal(
+            projPending.pendingFields[0]?.code,
+            'OLIST_CREATION_DISABLED',
+          );
+          await pool.query(
+            "UPDATE crm.orders SET status='confirmado',order_date='2026-11-06'::date,confirmed_at=$2,confirmed_by=$3,version=version+1,commercial_revision=commercial_revision+1 WHERE id=$1",
+            [pendingProj.orderId, NOW, pendingProj.actors.owner.actor.id],
+          );
+          const projConfirmed = await pendingProj.runtime.project(
+            pendingProj.input,
+          );
+          assert.equal(pendingProj.calls.length, 0);
+          assert.equal(projConfirmed.creationEnabled, true);
+          assert.ok(Array.isArray(projConfirmed.pendingFields));
+          assert.ok(
+            projConfirmed.pendingFields.some((/** @type {any} */ p) =>
+              String(p.field ?? '').startsWith('buyer.registration.'),
+            ),
+          );
+
+          // 2. retrySafe is true only when SQL proves zero remote effect/job active; auto-resumes safely on retrySafe.
+          const f = await fixture({ status: 'confirmado' });
+          const first = await f.runtime.exportOrder({
+            ...f.input,
+            idempotencyKey: 'resume-first',
+          });
+          // While outbox job is pending, retrySafe is omitted.
+          let proj = await f.runtime.project(f.input);
+          assert.equal(proj.operation.state, 'queued');
+          assert.equal(proj.operation.retrySafe, undefined);
+
+          // Move outbox job to retry -> still active, retrySafe must stay omitted.
+          await pool.query(
+            "UPDATE crm.outbox_jobs SET status='retry' WHERE olist_export_id=$1",
+            [first.operationId],
+          );
+          proj = await f.runtime.project(f.input);
+          assert.equal(proj.operation.retrySafe, undefined);
+
+          // Move outbox job to dead_letter + open reconciliation + safe stop code -> retrySafe === true.
+          await pool.query(
+            "UPDATE crm.outbox_jobs SET status='dead_letter',completed_at=$2 WHERE olist_export_id=$1",
+            [first.operationId, NOW],
+          );
+          await pool.query(
+            "UPDATE crm.olist_exports SET last_error_code='OLIST_UNAVAILABLE' WHERE id=$1",
+            [first.operationId],
+          );
+          await pool.query(
+            "INSERT INTO crm.reconciliation_items(id,job_id,status,reason,created_at) SELECT $1,id,'open','OLIST_UNAVAILABLE',$3 FROM crm.outbox_jobs WHERE olist_export_id=$2",
+            [randomUUID(), first.operationId, NOW],
+          );
+          proj = await f.runtime.project(f.input);
+          assert.equal(proj.operation.retrySafe, true);
+
+          // Direct /export auto-resumes: invalidates old generation (OLIST_EXPORT_RESUMED), retires dead_letter job & resolves reconciliation, enqueues new generation.
+          const resumed = await f.runtime.exportOrder({
+            ...f.input,
+            idempotencyKey: 'resume-second',
+          });
+          assert.notEqual(resumed.operationId, first.operationId);
+          assert.equal(resumed.state, 'queued');
+          assert.equal(f.calls.length, 0);
+          const states = (
+            await pool.query(
+              'SELECT id,state FROM crm.olist_exports WHERE order_id=$1 ORDER BY created_at',
+              [f.orderId],
+            )
+          ).rows;
+          assert.equal(states.length, 2);
+          assert.equal(states[0].state, 'invalidated');
+          assert.equal(states[1].state, 'queued');
+          assert.equal(
+            (
+              await pool.query(
+                'SELECT status FROM crm.outbox_jobs WHERE olist_export_id=$1',
+                [first.operationId],
+              )
+            ).rows[0].status,
+            'completed',
+          );
+          assert.equal(
+            (
+              await pool.query(
+                'SELECT r.status FROM crm.reconciliation_items r JOIN crm.outbox_jobs j ON j.id=r.job_id WHERE j.olist_export_id=$1',
+                [first.operationId],
+              )
+            ).rows[0].status,
+            'resolved',
+          );
+          assert.equal(
+            Number(
+              (
+                await pool.query(
+                  "SELECT count(*)::int c FROM crm.olist_events ev JOIN crm.olist_exports ex ON ex.id=ev.export_id WHERE ev.event_code='OLIST_EXPORT_RESUMED' AND ex.order_id=$1",
+                  [f.orderId],
+                )
+              ).rows[0].c,
+            ),
+            1,
+          );
+
+          // Uncertain error code keeps retrySafe omitted even with dead_letter job, preventing auto-resume.
+          await pool.query(
+            "UPDATE crm.outbox_jobs SET status='dead_letter',completed_at=$2 WHERE olist_export_id=$1",
+            [resumed.operationId, NOW],
+          );
+          await pool.query(
+            "UPDATE crm.olist_exports SET last_error_code='OLIST_SALE_ALREADY_EXISTS' WHERE id=$1",
+            [resumed.operationId],
+          );
+          proj = await f.runtime.project(f.input);
+          assert.equal(proj.operation.retrySafe, undefined);
+          const same = await f.runtime.exportOrder({
+            ...f.input,
+            idempotencyKey: 'resume-third-idempotent',
+          });
+          assert.equal(same.operationId, resumed.operationId);
         },
       );
     } finally {

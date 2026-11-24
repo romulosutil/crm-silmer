@@ -219,9 +219,15 @@ test('aguardando o cliente: cancel a link before the click', async ({
       money('Em links abertos passa a R$ 0,00 · livre para cobrar R$ 4.800,00'),
     ),
   ).toBeVisible();
-  await dialog.getByRole('button', { name: 'Cancelar link' }).click();
+  await dialog.getByRole('button', { name: 'Cancelar link' }).press('Enter');
   await expect(dialog).toBeHidden();
   expect(writes.at(-1)).toMatchObject({ path: 'links/link-1/cancel' });
+  // LPC-09: the trigger left with the open link, so the focus lands on the
+  // Próximo passo title and stays there after the section re-reads.
+  const nextTitle = page.locator('#order-billing-next-title');
+  await expect(nextTitle).toBeFocused();
+  await page.waitForTimeout(1500);
+  await expect(nextTitle).toBeFocused();
   await expect(next.getByRole('status')).toContainText(
     money(
       'Link de R$ 2.400,00 cancelado. Quem abrir o link verá que ele foi cancelado.',
@@ -344,8 +350,12 @@ test('vários links: another link of any amount up to the free amount', async ({
   await expect(
     dialog.getByRole('definition').filter({ hasText: 'Parcela' }),
   ).toBeVisible();
-  await dialog.getByRole('button', { name: 'Só gerar o link' }).click();
+  await dialog.getByRole('button', { name: 'Só gerar o link' }).press('Enter');
   await expect(dialog).toBeHidden();
+  // LPC-09: the focus never falls to the page body after the link is made.
+  await page.waitForTimeout(1500);
+  await expect(page.locator('body')).not.toBeFocused();
+  await expect(page.locator('section.billing-section :focus')).toHaveCount(1);
   expect(writes.at(-1)).toMatchObject({
     path: 'links',
     body: { amountCents: 60000 },

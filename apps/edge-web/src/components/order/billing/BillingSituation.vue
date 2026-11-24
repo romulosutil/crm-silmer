@@ -6,7 +6,10 @@ import BillingMeter from './BillingMeter.vue';
 /*
  * RFC 074, Situação: "Falta receber" first, then "Recebido X de Y · N%" with
  * the meter tied to that sentence, the open-links legend only when links
- * reserve money, and the agreed condition.
+ * reserve money, and the agreed condition. The words come from
+ * `view.summary` (situationSummary): a link A conferir is never counted as
+ * aberto, a cancelled order owes nothing, and nothing is "livre para cobrar"
+ * during conferência.
  *
  * Props
  * - `view`: the result of `deriveBillingView` (figures, terms, heldHint, badge).
@@ -34,10 +37,8 @@ defineProps({
     <h3 v-else :id="headingId" class="sr-only">Situação</h3>
     <div class="bl-figures">
       <p class="bl-due">
-        <span class="bl-due-label">Falta receber</span
-        ><strong class="bl-due-value">{{
-          billingMoney(view.figures.remaining)
-        }}</strong>
+        <span class="bl-due-label">{{ view.summary.due.label }}</span
+        ><strong class="bl-due-value">{{ view.summary.due.value }}</strong>
       </p>
       <div class="bl-progress">
         <p class="bl-progress-line">
@@ -46,10 +47,12 @@ defineProps({
           ><span class="bl-progress-pct"> · {{ view.figures.pct }}%</span>
         </p>
         <BillingMeter :figures="view.figures" />
-        <p v-if="view.figures.reserved > 0" class="bl-progress-legend">
-          <span class="bl-swatch" aria-hidden="true"></span>Em links abertos
-          <strong>{{ billingMoney(view.figures.reserved) }}</strong> · Livre
-          para cobrar <strong>{{ billingMoney(view.figures.free) }}</strong>
+        <p v-if="view.summary.legend" class="bl-progress-legend">
+          <span class="bl-swatch" aria-hidden="true"></span
+          ><template v-for="(part, at) in view.summary.legend" :key="at"
+            ><strong v-if="typeof part === 'object'">{{ part.strong }}</strong
+            ><template v-else>{{ part }}</template></template
+          >
         </p>
       </div>
     </div>

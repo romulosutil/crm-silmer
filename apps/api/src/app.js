@@ -26,7 +26,12 @@ import { registerDashboardCheckpointRoutes } from './dashboard-checkpoint-routes
 import { registerDashboardMetricsRoutes } from './dashboard-metrics-routes.js';
 import { registerConversationReminderRoutes } from './conversation-reminder-routes.js';
 import { registerLeadOutcomeRoutes } from './lead-outcome-routes.js';
-import { registerOrderBillingRoutes } from './order-billing-routes.js';
+import {
+  answerUndecodablePublicPath,
+  isPublicPaymentPath,
+  publicRequestErrorCode,
+  registerOrderBillingRoutes,
+} from './order-billing-routes.js';
 import { registerOrderBillingChatRoutes } from './order-billing-chat-routes.js';
 import { registerShippingRoutes } from './shipping-routes.js';
 import { registerOlistRoutes } from './olist-routes.js';
@@ -88,7 +93,12 @@ export const WEBHOOK_REQUESTS_PER_SECOND = 20;
  * }} [runtime]
  */
 export function createApi(options = {}, runtime = {}) {
-  const api = Fastify({ ...options, logger: false });
+  const api = Fastify({
+    frameworkErrors: (error, request, reply) =>
+      routerError(error, request, reply, runtime.billing),
+    ...options,
+    logger: false,
+  });
   const logger = runtime.logger ?? createSafeLogger({ service: SERVICES.api });
   const metrics = runtime.metrics ?? new MetricRegistry({ logger });
   const readiness = runtime.readiness ?? (() => false);
@@ -141,6 +151,21 @@ export function createApi(options = {}, runtime = {}) {
 
   api.addHook('onError', async (request, _reply, error) => {
     const context = requests.get(request);
+    // LPC-02: on the public payment page a visitor's 4xx (broken JSON, odd
+    // media type, oversized body) is a classified warn, never an error.
+    const publicCode =
+      typeof runtime.billing?.publicLink === 'function' &&
+      isPublicPaymentPath(request.url)
+        ? publicRequestErrorCode(/** @type {any} */ (error)?.statusCode)
+        : null;
+    if (publicCode) {
+      logger.warn('api_request_failed', {
+        correlation_id: context?.correlationId,
+        error_code: publicCode,
+        request_id: context?.requestId,
+      });
+      return;
+    }
     logger.error('api_request_failed', {
       correlation_id: context?.correlationId,
       error_code:
@@ -445,10 +470,16 @@ export function createApi(options = {}, runtime = {}) {
     }));
   }
   if (runtime.billing) {
-    registerOrderBillingRoutes(api, runtime.billing, (request) => ({
-      correlationId: requests.get(request)?.correlationId ?? 'billing-request',
-      requestId: requests.get(request)?.requestId ?? 'billing-request',
-    }));
+    registerOrderBillingRoutes(
+      api,
+      runtime.billing,
+      (request) => ({
+        correlationId:
+          requests.get(request)?.correlationId ?? 'billing-request',
+        requestId: requests.get(request)?.requestId ?? 'billing-request',
+      }),
+      logger,
+    );
   }
   if (runtime.billingChat) {
     registerOrderBillingChatRoutes(
@@ -549,6 +580,41 @@ function genericErrorHandler(error, _request, reply) {
       error: {
         code: status === 503 ? 'SERVICE_UNAVAILABLE' : 'INTERNAL_ERROR',
       },
+    });
+}
+
+/**
+ * LPC-02: errors the router raises before any route or hook runs (a malformed
+ * %-sequence, a parameter over `maxParamLength`). Fastify's own answer echoes
+ * the whole path, which can carry a capability token; this one never does.
+ * Under the public payment prefix the answer is the page's uniform one.
+ *
+ * @param {any} error
+ * @param {import('fastify').FastifyRequest} request
+ * @param {import('fastify').FastifyReply} reply
+ * @param {any} billing
+ */
+function routerError(error, request, reply, billing) {
+  // Same trace headers as a routed request, so the answer looks the same.
+  const requestId = normalizeTraceId(request.headers['x-request-id']);
+  reply.header('x-request-id', requestId);
+  reply.header(
+    'x-correlation-id',
+    normalizeTraceId(request.headers['x-correlation-id'] ?? requestId),
+  );
+  if (
+    typeof billing?.publicLink === 'function' &&
+    isPublicPaymentPath(request.url)
+  )
+    return answerUndecodablePublicPath(request, reply, billing.publicOrigins);
+  const declared = Number(error?.statusCode);
+  const status = declared >= 400 && declared <= 599 ? declared : 400;
+  return reply
+    .code(status)
+    .header('cache-control', 'no-store')
+    .type('application/json; charset=utf-8')
+    .send({
+      error: { code: status >= 500 ? 'INTERNAL_ERROR' : 'INVALID_REQUEST' },
     });
 }
 

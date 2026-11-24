@@ -118,14 +118,20 @@ function publicLinkBody(value) {
   );
 }
 
-/** Fixed window per token digest; the token itself is never kept.
- * @param {number} max @param {number} windowMs */
-export function paymentLinkTokenLimiter(max, windowMs) {
+/** Fixed window per token digest; the token itself is never kept. A refusal
+ * says how many whole seconds remain until the window frees (`Retry-After`).
+ * @param {number} max @param {number} windowMs
+ * @param {() => number} [clock] */
+export function paymentLinkTokenLimiter(
+  max,
+  windowMs,
+  clock = () => Date.now(),
+) {
   /** @type {Map<string,{count:number,resetAt:number}>} */
   const windows = new Map();
-  /** @param {unknown} token */
+  /** @param {unknown} token @returns {{allowed:boolean,retryAfter:number}} */
   return (token) => {
-    const now = Date.now();
+    const now = clock();
     if (windows.size > 10000)
       for (const [entryKey, entry] of windows)
         if (entry.resetAt <= now) windows.delete(entryKey);
@@ -135,11 +141,23 @@ export function paymentLinkTokenLimiter(max, windowMs) {
     const entry = windows.get(digest);
     if (!entry || entry.resetAt <= now) {
       windows.set(digest, { count: 1, resetAt: now + windowMs });
-      return true;
+      return { allowed: true, retryAfter: 0 };
     }
     entry.count += 1;
-    return entry.count <= max;
+    if (entry.count <= max) return { allowed: true, retryAfter: 0 };
+    return {
+      allowed: false,
+      retryAfter: retryAfterSeconds(entry.resetAt - now, windowMs),
+    };
   };
+}
+
+/** Whole seconds, at least 1 and at most the window.
+ * @param {number} remainingMs @param {number} windowMs */
+function retryAfterSeconds(remainingMs, windowMs) {
+  const seconds = Math.ceil(Number(remainingMs) / 1000);
+  const cap = Math.max(1, Math.ceil(windowMs / 1000));
+  return Number.isFinite(seconds) ? Math.min(cap, Math.max(1, seconds)) : cap;
 }
 
 /** @param {any} reply @param {unknown} error */
@@ -208,8 +226,9 @@ async function human(request, billing, write) {
  * @param {import('fastify').FastifyInstance} api
  * @param {any} billing
  * @param {(request:any)=>{correlationId:string,requestId:string}} contextFor
+ * @param {{warn: (event: string, context?: Record<string, unknown>) => unknown}} [logger]
  */
-export function registerOrderBillingRoutes(api, billing, contextFor) {
+export function registerOrderBillingRoutes(api, billing, contextFor, logger) {
   api.register(async (scope) => {
     await scope.register(rateLimit, {
       global: false,
@@ -378,30 +397,130 @@ export function registerOrderBillingRoutes(api, billing, contextFor) {
       else scope.post(`${technicalPrefix}/${operation}`, options, handler);
     }
   });
-  if (typeof billing.publicLink === 'function') registerPublic(api, billing);
+  if (typeof billing.publicLink === 'function')
+    registerPublic(api, billing, contextFor, logger);
+}
+
+const PUBLIC_PREFIX = '/api/v1/payment-links/';
+const CHECKOUT_SUFFIX = '/checkout';
+const PUBLIC_WINDOW_MS = 60000;
+
+/** @param {any} reply */
+function publicHeaders(reply) {
+  reply.header('cache-control', 'no-store');
+  reply.header('referrer-policy', 'no-referrer');
+  reply.header('x-robots-tag', 'noindex, nofollow');
+  reply.header('x-content-type-options', 'nosniff');
+}
+
+/** @param {unknown} url */
+function pathOf(url) {
+  const text = String(url ?? '');
+  const query = text.indexOf('?');
+  return query === -1 ? text : text.slice(0, query);
+}
+
+/** @param {unknown} url */
+function hasQuery(url) {
+  const text = String(url ?? '');
+  const query = text.indexOf('?');
+  return query !== -1 && query < text.length - 1;
+}
+
+/** LPC-02: does a URL belong to the public page?
+ * @param {unknown} url */
+export function isPublicPaymentPath(url) {
+  return pathOf(url).startsWith(PUBLIC_PREFIX);
+}
+
+/** LPC-02: stable log code for a 4xx a public request raises before its
+ * handler (body parsing, size, media type). A visitor's bad request is
+ * logged as a classified warn, never as an unclassified error.
+ * @param {unknown} statusCode */
+export function publicRequestErrorCode(statusCode) {
+  const status = Number(statusCode);
+  if (!(status >= 400 && status <= 499)) return null;
+  if (status === 413) return 'REQUEST_TOO_LARGE';
+  if (status === 415) return 'UNSUPPORTED_MEDIA_TYPE';
+  return 'INVALID_REQUEST';
+}
+
+/** LPC-02: answer for a public path the router could not decode (a malformed
+ * %-sequence). Nothing is read: such a token can never be valid, so it gets
+ * the uniform `unavailable` (or the Origin refusal on the click) with the same
+ * headers, and the path is never echoed.
+ * @param {any} request @param {any} reply @param {readonly string[]} [origins] */
+export function answerUndecodablePublicPath(request, reply, origins = []) {
+  publicHeaders(reply);
+  if (request.method === 'GET' || request.method === 'HEAD') {
+    if (hasQuery(request.url)) return problem(reply, invalid());
+    return reply.code(200).send({ state: 'unavailable' });
+  }
+  if (
+    request.method === 'POST' &&
+    pathOf(request.url).endsWith(CHECKOUT_SUFFIX)
+  ) {
+    const origin = request.headers?.origin;
+    if (typeof origin !== 'string' || !origins.includes(origin))
+      return problem(reply, invalid('FORBIDDEN', 403));
+    if (hasQuery(request.url)) return problem(reply, invalid());
+    return reply.code(200).send({ state: 'unavailable' });
+  }
+  return problem(reply, invalid('INVALID_REQUEST', 404));
 }
 
 /** LPC-01/02: the client's page `/pagar/{token}`. No session, cookie or CSRF:
  * the token is the only capability. Uniform `unavailable`, no PII, no-store,
  * noindex, no-referrer, per-IP and per-token limits, Origin on the click.
  * The token stays out of logs: the API logger never records URLs or params.
- * @param {import('fastify').FastifyInstance} api @param {any} billing */
-function registerPublic(api, billing) {
+ * Every 429 carries `Retry-After` and logs one classified `RATE_LIMITED` warn
+ * (never `error`), so a visitor cannot raise error logs or alerts at will.
+ * @param {import('fastify').FastifyInstance} api @param {any} billing
+ * @param {(request:any)=>{correlationId:string,requestId:string}} contextFor
+ * @param {{warn: (event: string, context?: Record<string, unknown>) => unknown}} [logger] */
+function registerPublic(api, billing, contextFor, logger) {
   api.register(async (scope) => {
-    await scope.register(rateLimit, {
-      global: false,
-      errorResponseBuilder: () => invalid('RATE_LIMITED', 429),
-    });
+    await scope.register(rateLimit, { global: false });
     // The page polls every 2.5 s with backoff: reads and clicks are limited
-    // apart, per token digest and per IP (CGNAT-tolerant reads).
-    const readsPerToken = paymentLinkTokenLimiter(60, 60000);
-    const clicksPerToken = paymentLinkTokenLimiter(10, 60000);
+    // apart, per token digest and per IP (CGNAT-tolerant reads). The per-IP
+    // limiters run by hand so their 429 is answered here, never thrown into
+    // the root onError hook (which logs `error` for anything it sees).
+    const readsPerIp = scope.createRateLimit({
+      max: 120,
+      timeWindow: PUBLIC_WINDOW_MS,
+    });
+    const clicksPerIp = scope.createRateLimit({
+      max: 20,
+      timeWindow: PUBLIC_WINDOW_MS,
+    });
+    const readsPerToken = paymentLinkTokenLimiter(60, PUBLIC_WINDOW_MS);
+    const clicksPerToken = paymentLinkTokenLimiter(10, PUBLIC_WINDOW_MS);
     const origins = new Set(billing.publicOrigins ?? []);
+    /** @param {any} request @param {any} reply @param {number} seconds */
+    const limited = (request, reply, seconds) => {
+      reply.header('retry-after', String(seconds));
+      const context = contextFor?.(request);
+      logger?.warn('api_request_failed', {
+        correlation_id: context?.correlationId,
+        error_code: 'RATE_LIMITED',
+        request_id: context?.requestId,
+      });
+      return problem(reply, invalid('RATE_LIMITED', 429));
+    };
+    /** @param {(request: any) => Promise<any>} limiter */
+    const perIp =
+      (limiter) =>
+      async (/** @type {any} */ request, /** @type {any} */ reply) => {
+        const limit = await limiter(request);
+        if (!limit.isAllowed && limit.isExceeded)
+          return limited(
+            request,
+            reply,
+            retryAfterSeconds(limit.ttl, PUBLIC_WINDOW_MS),
+          );
+      };
     scope.addHook('onRequest', async (_request, reply) => {
-      reply.header('cache-control', 'no-store');
-      reply.header('referrer-policy', 'no-referrer');
-      reply.header('x-robots-tag', 'noindex, nofollow');
-      reply.header('x-content-type-options', 'nosniff');
+      publicHeaders(reply);
     });
     scope.setErrorHandler((error, _request, reply) => {
       const status = Number(/** @type {any} */ (error).statusCode);
@@ -414,18 +533,21 @@ function registerPublic(api, billing) {
             : error,
       );
     });
-    const path = '/api/v1/payment-links/:token';
+    // A wildcard, not `:token`: the router answers a parameter over 100
+    // characters with a 414 that echoes the path before any hook or limit
+    // runs. The wildcard has no length limit, so every token shape (long,
+    // empty, with `/`) reaches the same limits and the same uniform answer.
+    const path = `${PUBLIC_PREFIX}*`;
     scope.get(
       path,
-      {
-        bodyLimit: 1024,
-        config: { rateLimit: { max: 120, timeWindow: '1 minute' } },
-      },
+      { bodyLimit: 1024, onRequest: perIp(readsPerIp) },
       async (request, reply) => {
         try {
           if (Object.keys(request.query ?? {}).length) throw invalid();
-          const { token } = /** @type {any} */ (request.params);
-          if (!readsPerToken(token)) throw invalid('RATE_LIMITED', 429);
+          const token = String(/** @type {any} */ (request.params)['*'] ?? '');
+          const perToken = readsPerToken(token);
+          if (!perToken.allowed)
+            return limited(request, reply, perToken.retryAfter);
           return reply.send(
             publicLinkBody(await billing.publicLink({ token })),
           );
@@ -434,22 +556,35 @@ function registerPublic(api, billing) {
         }
       },
     );
+    // Shape and Origin are settled right after the per-IP limit, before the
+    // body is parsed: a foreign click is refused whatever its body.
+    /** @param {any} request @param {any} reply */
+    const clickGate = async (request, reply) => {
+      const rest = String(request.params?.['*'] ?? '');
+      // Only `{token}/checkout` exists; the literal suffix is read from the
+      // raw path, so an encoded `%2Fcheckout` is not a click.
+      if (
+        !rest.endsWith(CHECKOUT_SUFFIX) ||
+        !pathOf(request.url).endsWith(CHECKOUT_SUFFIX)
+      )
+        return problem(reply, invalid('INVALID_REQUEST', 404));
+      const origin = request.headers.origin;
+      if (typeof origin !== 'string' || !origins.has(origin))
+        return problem(reply, invalid('FORBIDDEN', 403));
+    };
     scope.post(
-      `${path}/checkout`,
-      {
-        bodyLimit: 1024,
-        config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
-      },
+      path,
+      { bodyLimit: 1024, onRequest: [perIp(clicksPerIp), clickGate] },
       async (request, reply) => {
         try {
-          const origin = request.headers.origin;
-          if (typeof origin !== 'string' || !origins.has(origin))
-            throw invalid('FORBIDDEN', 403);
+          const rest = String(/** @type {any} */ (request.params)['*'] ?? '');
           if (Object.keys(request.query ?? {}).length) throw invalid();
           if (request.body !== undefined && request.body !== null)
             body(request.body, []);
-          const { token } = /** @type {any} */ (request.params);
-          if (!clicksPerToken(token)) throw invalid('RATE_LIMITED', 429);
+          const token = rest.slice(0, -CHECKOUT_SUFFIX.length);
+          const perToken = clicksPerToken(token);
+          if (!perToken.allowed)
+            return limited(request, reply, perToken.retryAfter);
           const result = await billing.publicCheckout({ token });
           return reply
             .code(result.statusCode)

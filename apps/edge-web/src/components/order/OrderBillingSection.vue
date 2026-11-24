@@ -150,6 +150,7 @@ const view = computed(() =>
     destination: conversationCache?.label ?? 'a conversa vinculada',
     changingTerms: changingTerms.value,
     readOnly: readOnly.value,
+    cancelled: cancelled.value,
   }),
 );
 

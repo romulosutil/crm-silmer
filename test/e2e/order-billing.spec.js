@@ -62,7 +62,12 @@ async function setup(page, options = {}) {
   });
   await expect(section).toBeVisible();
   await expect(
-    section.getByText('Falta receber', { exact: true }),
+    section.getByText(
+      options.billing?.blockedReason === 'ORDER_CANCELLED'
+        ? 'Pedido cancelado'
+        : 'Falta receber',
+      { exact: true },
+    ),
   ).toBeVisible();
   return { section, ...mock };
 }
@@ -665,7 +670,7 @@ test('resultado a conferir: the customer says they paid — a provider check, no
   const next = section.getByRole('region', { name: 'Próximo passo' });
   await expect(
     next.getByText(
-      'A integração tenta de novo sozinha · última tentativa 14:03',
+      'Sem resposta da InfinitePay desde 14:03. O link não reabre sozinho e nenhum pagamento novo é criado até você confirmar o resultado.',
     ),
   ).toBeVisible();
   const primary = next.getByRole('button', {
@@ -998,3 +1003,218 @@ for (const theme of /** @type {const} */ (['light', 'dark'])) {
     await expect(more).toBeFocused();
   });
 }
+
+// QA findings on PR 457 (LPC-09). Synthetic data only.
+const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+/** @param {import('@playwright/test').Page} page @param {string} include */
+async function wcag(page, include) {
+  const result = await new AxeBuilder({ page })
+    .withTags(WCAG)
+    .include(include)
+    .analyze();
+  return result.violations.map(
+    (v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`,
+  );
+}
+const severalLinks = () => ({
+  links: [
+    paidSignal(),
+    billingLink({
+      id: 'part',
+      kind: 'installment',
+      amountCents: 120000,
+      createdAt: billingAt(23, 10, 15),
+      sentAt: billingAt(23, 10, 15),
+      deliveredAt: billingAt(23, 10, 16),
+    }),
+  ],
+});
+/** Writes that create or send a link. @param {Array<{path: string}>} writes */
+const linkWrites = (writes) =>
+  writes.filter((w) => w.path === 'links' || w.path === 'send-intents');
+
+test.describe('QA PR 457: diálogo de valor', () => {
+  test('Enter in the amount sends once; an invalid amount keeps the focus and sends nothing', async ({
+    page,
+  }) => {
+    const { section, writes } = await setup(page, { billing: severalLinks() });
+    await section
+      .getByRole('button', {
+        name: money('Enviar outro link de até R$ 1.200,00'),
+      })
+      .click();
+    const dialog = page.getByRole('dialog', { name: 'Enviar outro link' });
+    const amount = dialog.getByLabel('Valor do link');
+    await expect(amount).toBeFocused();
+
+    await amount.fill('1.500,00');
+    await amount.press('Enter');
+    await expect(dialog).toBeVisible();
+    await expect(amount).toHaveAttribute('aria-invalid', 'true');
+    await expect(amount).toBeFocused();
+    await expect(
+      dialog.getByText(
+        money('O valor passa do livre para cobrar (R$ 1.200,00).'),
+      ),
+    ).toBeVisible();
+    expect(linkWrites(writes)).toHaveLength(0);
+
+    await amount.fill('600,00');
+    // Two quick Enters: the second lands on the same field, after the first
+    // was accepted (the closing dialog's field still has the focus).
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
+    await expect(dialog).toBeHidden();
+    await page.waitForTimeout(500);
+    expect(linkWrites(writes)).toHaveLength(1);
+    expect(linkWrites(writes)[0]).toMatchObject({
+      path: 'send-intents',
+      body: { action: 'issue_link', amountCents: 60000 },
+    });
+  });
+
+  test('an invalid amount never reaches the preview, and the dialog passes axe', async ({
+    page,
+  }) => {
+    await setup(page, { billing: severalLinks() });
+    await page
+      .getByRole('button', {
+        name: money('Enviar outro link de até R$ 1.200,00'),
+      })
+      .click();
+    const dialog = page.getByRole('dialog', { name: 'Enviar outro link' });
+    const amount = dialog.getByLabel('Valor do link');
+    const preview = dialog.getByRole('group', {
+      name: 'Prévia da mensagem, como o cliente recebe',
+    });
+    await amount.fill('600,00');
+    await expect(preview).toContainText(money('parcela de R$ 600,00'));
+    await amount.fill('abc');
+    await expect(preview).not.toContainText('R$');
+    await expect(preview).toContainText(
+      'A prévia aparece quando o valor for válido.',
+    );
+    await amount.fill('1.500,00');
+    await dialog
+      .getByRole('button', { name: 'Enviar link', exact: true })
+      .click();
+    await expect(amount).toHaveAttribute('aria-invalid', 'true');
+    await expect(preview).not.toContainText('R$');
+    expect(await wcag(page, 'dialog[open]')).toEqual([]);
+  });
+
+  test('Gerar outro link (no conversation) speaks of generating, not sending', async ({
+    page,
+  }) => {
+    await setup(page, {
+      billing: { ...severalLinks(), chatSendEnabled: false },
+    });
+    await page
+      .getByRole('button', {
+        name: money('Gerar outro link de até R$ 1.200,00'),
+      })
+      .click();
+    const dialog = page.getByRole('dialog', { name: 'Gerar outro link' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).not.toContainText('Enviar não confirma');
+    await expect(dialog).not.toContainText('criado ao enviar');
+    await expect(
+      dialog.getByText(
+        'Você pode cancelar este link enquanto o cliente não clicar em Pagar. Gerar o link não envia a mensagem nem confirma o pagamento.',
+      ),
+    ).toBeVisible();
+    await expect(
+      dialog.getByText('link do CRM, criado ao gerar'),
+    ).toBeVisible();
+  });
+});
+
+test.describe('QA PR 457: link de outra origem (APP_BASE_URL)', () => {
+  const foreign = `https://crm-oficial.example.test/pagar/${'G1'.padEnd(26, '0')}`;
+  for (const conv of [false, true])
+    test(`a link from another CRM origin warns and never shows an empty message (${conv ? 'conversa' : 'sem conversa'})`, async ({
+      page,
+    }) => {
+      const { section } = await setup(page, {
+        billing: {
+          chatSendEnabled: conv,
+          links: [
+            billingLink({
+              id: 'gen',
+              origin: 'generated',
+              url: foreign,
+              createdAt: billingAt(23, 13, 44),
+            }),
+          ],
+        },
+      });
+      const next = section.getByRole('region', { name: 'Próximo passo' });
+      await expect(
+        next.getByText(
+          'O endereço deste link é diferente do endereço deste CRM',
+          { exact: false },
+        ),
+      ).toBeVisible();
+      await expect(next.getByText(/Link para pagamento:/u)).toHaveCount(0);
+      await expect(
+        next.getByRole('button', { name: 'Copiar mensagem' }),
+      ).toHaveCount(0);
+      await expect(section.getByText(/crm-oficial/u)).toHaveCount(0);
+      expect(await wcag(page, 'section.billing-section')).toEqual([]);
+    });
+});
+
+test.describe('QA PR 457: Situação', () => {
+  test('a link in Resultado a conferir is shown apart from the open links', async ({
+    page,
+  }) => {
+    const { section } = await setup(page, {
+      billing: {
+        links: [
+          paidSignal(),
+          billingLink({
+            id: 'unk',
+            kind: 'installment',
+            amountCents: 120000,
+            state: 'unknown',
+            createdAt: billingAt(23, 10, 15),
+            sentAt: billingAt(23, 10, 15),
+            clickedAt: billingAt(23, 14, 2),
+          }),
+        ],
+      },
+    });
+    await expect(
+      section.getByText(
+        money('A conferir R$ 1.200,00 · Livre para cobrar R$ 1.200,00'),
+      ),
+    ).toBeVisible();
+    await expect(section.getByText(/Em links abertos/u)).toHaveCount(0);
+    const next = section.getByRole('region', { name: 'Próximo passo' });
+    await expect(next).not.toContainText('tenta de novo sozinha');
+    await expect(
+      next.getByText('O link não reabre sozinho', { exact: false }),
+    ).toBeVisible();
+    expect(await wcag(page, 'section.billing-section')).toEqual([]);
+  });
+
+  test('a cancelled order shows no amount due and no way to charge', async ({
+    page,
+  }) => {
+    const { section } = await setup(page, {
+      billing: { blockedReason: 'ORDER_CANCELLED', links: [paidSignal()] },
+    });
+    await expect(
+      section.getByText('Falta receber', { exact: true }),
+    ).toHaveCount(0);
+    // Situação and Próximo passo (the closed dialogs stay in the DOM).
+    const shown = section.locator('.bl-situation, .bl-next, .bl-readonly');
+    await expect(shown.getByText(/Livre para cobrar/u)).toHaveCount(0);
+    await expect(shown.getByText(/Falta/u)).toHaveCount(0);
+    await expect(section.getByText('Nada a receber')).toBeVisible();
+    await expect(
+      section.getByRole('button', { name: /link|Registrar/u }),
+    ).toHaveCount(0);
+    expect(await wcag(page, 'section.billing-section')).toEqual([]);
+  });
+});

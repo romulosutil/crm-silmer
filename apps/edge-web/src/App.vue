@@ -1089,7 +1089,10 @@ function onCursor(cursor) {
     </div>
   </div>
 
-  <p class="sr-only" role="status" aria-live="polite">{{ runtimeStatus }}</p>
+  <!-- RFC 074 (LPC-02): the customer's page has no session to announce. -->
+  <p v-if="!publicPage" class="sr-only" role="status" aria-live="polite">
+    {{ runtimeStatus }}
+  </p>
   <AppToast ref="toast" />
   <div
     v-if="errorMessage"

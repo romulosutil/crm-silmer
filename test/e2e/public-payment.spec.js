@@ -315,7 +315,7 @@ test.describe('LPC-02/LPC-09: página pública de pagamento', () => {
     await expectNoAxeViolations(page);
   });
 
-  test('Cancelado: missing and cancelled links read the same, without the order', async ({
+  test('Link indisponível: missing, malformed and cancelled links read the same, without the order', async ({
     page,
   }) => {
     for (const answer of [{ state: 'unavailable' }, 404]) {
@@ -324,12 +324,14 @@ test.describe('LPC-02/LPC-09: página pública de pagamento', () => {
       await expect(
         page.getByRole('heading', { level: 1, name: 'Silmer', exact: true }),
       ).toBeVisible();
-      await expect(page.locator('.cp-badge')).toHaveText('Cancelado');
+      await expect(page.locator('.cp-badge')).toHaveText('Link indisponível');
       await expect(
         page.getByText(
-          'Este link foi cancelado. Fale com a Silmer pelo WhatsApp.',
+          'Este link não está disponível. Fale com a Silmer pelo WhatsApp.',
         ),
       ).toBeVisible();
+      // The uniform answer never claims why (LPC-02).
+      await expect(page.getByText(/cancelad/iu)).toHaveCount(0);
       await expect(page.getByText(/Pedido|R\$/u)).toHaveCount(0);
       await expect(page.getByRole('button')).toHaveCount(0);
       await page.unrouteAll({ behavior: 'ignoreErrors' });
@@ -342,10 +344,36 @@ test.describe('LPC-02/LPC-09: página pública de pagamento', () => {
       return route.fulfill({ json: READY });
     });
     await page.goto('/pagar/abc');
-    await expect(page.locator('.cp-badge')).toHaveText('Cancelado');
+    await expect(page.locator('.cp-badge')).toHaveText('Link indisponível');
     expect(calls).toBe(0);
     await expectNoAxeViolations(page);
   });
+
+  // QA PR 457: the shell's sr-only "Verificando sua sessão…" status must not
+  // exist on the customer's page, in any state.
+  for (const [name, answer] of /** @type {const} */ ([
+    ['ready', READY],
+    ['unavailable', { state: 'unavailable' }],
+    ['failed', { ...READY, state: 'failed' }],
+  ]))
+    test(`no session announcement and WCAG 2.2 AA (${name})`, async ({
+      page,
+    }) => {
+      await mockLink(page, { get: () => answer });
+      await page.goto(PAGE);
+      await expect(page.locator('.cp-badge')).toBeVisible();
+      await page.waitForTimeout(300);
+      const live = await page
+        .locator('[role="status"], [role="alert"], [role="log"], [aria-live]')
+        .evaluateAll((nodes) => nodes.map((n) => n.textContent ?? ''));
+      expect(live.join(' | ')).not.toMatch(/sess[aã]o|login|acesso/iu);
+      const tree = await page.locator('body').ariaSnapshot();
+      expect(tree).not.toMatch(/sess[aã]o/iu);
+      const results = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+        .analyze();
+      expect(results.violations).toEqual([]);
+    });
 
   test('Falha ao abrir: Tentar de novo re-asks the same checkout and keeps focus', async ({
     page,

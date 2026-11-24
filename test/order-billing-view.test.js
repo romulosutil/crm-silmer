@@ -11,6 +11,10 @@ import {
   outsideReview,
   parseAmount,
   reconcileOptions,
+  reviewCheck,
+  reviewSource,
+  cancelReview,
+  LINK_URL_BLOCKED,
   sendFlash,
   sendProgress,
   sendSteps,
@@ -549,15 +553,25 @@ test('scenario 9: resultado a conferir locks the link', () => {
   eq(v.next.primary?.label, 'Confirmar resultado na InfinitePay');
   eq(
     text(v.next.after[0]),
-    'A integração tenta de novo sozinha · última tentativa 14:03',
+    'Sem resposta da InfinitePay desde 14:03. O link não reabre sozinho e nenhum pagamento novo é criado até você confirmar o resultado.',
   );
+  // Decision 7 + 11: it reserves, but is never counted as aberto.
   eq(v.figures.reserved, 240000);
+  eq(v.figures.checking, 240000);
+  eq(v.figures.opened, 0);
+  deq(v.summary.legend, [
+    'A conferir ',
+    { strong: 'R$ 2.400,00' },
+    ' · ',
+    'Livre para cobrar ',
+    { strong: 'R$ 2.400,00' },
+  ]);
   deq(
     v.rows[0].events.map((/** @type {any} */ e) => e.label),
     [
       'Link do CRM criado por Ana R.',
       'Cliente clicou em Pagar',
-      'Sem resposta da InfinitePay · nova tentativa automática',
+      'Sem resposta da InfinitePay · o link fica travado até confirmar o resultado',
     ],
   );
   const busy = derive(
@@ -838,5 +852,230 @@ test('cancelled link rows say why the link was cancelled', () => {
       'Link cancelado por Ana R. na conferência',
       'Link cancelado por Ana R.',
     ],
+  );
+});
+
+// QA findings on PR 457 (LPC-09). Synthetic data only.
+
+test('QA 6: conferência held by a Pix registered outside speaks of it, not of the InfinitePay', () => {
+  const pix = {
+    id: 'r1',
+    amountCents: 150000,
+    receivedOn: '2026-11-22',
+    method: 'pix_external',
+    recordedByName: 'Ana R.',
+    recordedAt: at(22, 15, 0),
+    applicationValid: false,
+  };
+  const v = deriveBillingView(
+    billing({
+      externalReceipts: [pix],
+      receipts: undefined,
+      review: {
+        reason: 'order_changed',
+        previousTotalCents: 450000,
+        heldCents: 150000,
+      },
+      figures: {
+        totalCents: 480000,
+        receivedCents: 0,
+        remainingCents: 480000,
+        heldCents: 150000,
+        reservedCents: 0,
+        freeCents: 480000,
+      },
+    }),
+    { orderNumber: '07-CRM', conv: true },
+  );
+  eq(reviewSource(v), 'outside');
+  const all = body(v.next);
+  eq(
+    text(v.next.body[0]),
+    'O valor do pedido mudou de R$ 4.500,00 para R$ 4.800,00 depois que um pagamento por fora (Pix) foi registrado. O recebimento de R$ 1.500,00 está guardado, mas ainda não conta no recebido.',
+  );
+  assert.doesNotMatch(all, /confirmad|InfinitePay/u);
+  eq(
+    text(v.next.body.at(-1)),
+    'Resolver pede que você confira o que foi registrado por fora e escolha o que fazer com esses pagamentos.',
+  );
+  eq(v.rows[0].badge.label, 'Guardado para conferência');
+  assert.doesNotMatch(reviewCheck('outside').lead, /InfinitePay/u);
+  // QA 9: nothing is "livre para cobrar" during conferência.
+  eq(v.summary.legend, null);
+  // Without previousTotalCents the sentence never invents R$ 0,00.
+  const noPrev = deriveBillingView(
+    billing({
+      externalReceipts: [pix],
+      receipts: undefined,
+      review: { reason: 'order_changed', heldCents: 150000 },
+    }),
+  );
+  assert.match(text(noPrev.next.body[0]), /^O acordo do pedido mudou depois/u);
+  // A link payment held keeps the InfinitePay wording; both say both.
+  const held = link({ id: 'h', state: 'paid', inReview: true });
+  const both = deriveBillingView(
+    billing({
+      links: [held],
+      externalReceipts: [pix],
+      receipts: undefined,
+      review: { reason: 'outside_agreement', heldCents: 390000 },
+    }),
+  );
+  eq(reviewSource(both), 'both');
+  assert.match(
+    text(both.next.body.at(-1)),
+    /InfinitePay e os registrados por fora/u,
+  );
+  const late = deriveBillingView(
+    billing({
+      externalReceipts: [pix],
+      receipts: undefined,
+      review: { reason: 'outside_agreement', heldCents: 150000 },
+    }),
+  );
+  eq(
+    text(late.next.body[0]),
+    'Um pagamento registrado por fora (Pix) não cabe no acordo atual do pedido. R$ 1.500,00 está guardado, mas ainda não conta no recebido.',
+  );
+});
+
+test('QA 7/8: a link A conferir is apart from the open links and never said to retry', () => {
+  const v = derive(
+    billing({
+      links: [
+        paidSignal(),
+        link({
+          id: 'u',
+          kind: 'installment',
+          amountCents: 120000,
+          state: 'unknown',
+          clickedAt: at(23, 14, 2),
+        }),
+        link({
+          id: 'w',
+          kind: 'installment',
+          amountCents: 60000,
+          sentAt: at(23, 13, 45),
+        }),
+      ],
+    }),
+  );
+  eq(v.figures.reserved, 180000);
+  eq(v.figures.opened, 60000);
+  eq(v.figures.checking, 120000);
+  deq(v.summary.legend, [
+    'Em links abertos ',
+    { strong: 'R$ 600,00' },
+    ' · ',
+    'A conferir ',
+    { strong: 'R$ 1.200,00' },
+    ' · ',
+    'Livre para cobrar ',
+    { strong: 'R$ 600,00' },
+  ]);
+  const words = JSON.stringify(plain(v.next)) + JSON.stringify(plain(v.rows));
+  assert.doesNotMatch(words, /tenta de novo|tentativa automática/u);
+  // Cancelling the waiting link frees only the open part.
+  eq(cancelReview(v.groups.waiting[0], v.figures).reserved, 0);
+});
+
+test('QA 9: during conferência the legend never offers a free amount', () => {
+  const v = deriveBillingView(
+    billing({
+      links: [
+        link({ id: 'h', state: 'paid', inReview: true, amountCents: 150000 }),
+        link({
+          id: 'p',
+          kind: 'balance',
+          state: 'checkout_open',
+          amountCents: 120000,
+          clickedAt: at(23, 14, 2),
+        }),
+      ],
+      review: { reason: 'late_payment', heldCents: 150000 },
+      figures: {
+        totalCents: 480000,
+        receivedCents: 0,
+        remainingCents: 480000,
+        heldCents: 150000,
+        reservedCents: 120000,
+        freeCents: 360000,
+      },
+    }),
+  );
+  deq(v.summary.legend, ['Em links abertos ', { strong: 'R$ 1.200,00' }]);
+  assert.doesNotMatch(
+    JSON.stringify(plain(v.next)),
+    /Livre para cobrar|outro link/u,
+  );
+});
+
+test('QA 10: a cancelled order owes nothing and offers no charge', () => {
+  for (const ctx of [
+    { cancelled: true },
+    { readOnly: 'Pedido cancelado.' },
+    {},
+  ]) {
+    const v = deriveBillingView(
+      billing({
+        blockedReason: ctx.cancelled || ctx.readOnly ? null : 'ORDER_CANCELLED',
+        links: [link({ state: 'cancelled', cancelReason: 'order_cancelled' })],
+      }),
+      { ...ctx, cancelled: ctx.cancelled || Boolean(ctx.readOnly) },
+    );
+    deq(v.summary.due, { label: 'Pedido cancelado', value: 'Nada a receber' });
+    eq(v.summary.legend, null);
+    eq(v.next.primary, null);
+    deq(v.next.secondary, []);
+    assert.ok(v.next.lock);
+    assert.doesNotMatch(v.announce, /Falta receber/u);
+  }
+});
+
+test('QA 11: a link from another CRM origin is said, never copied empty', () => {
+  const foreign =
+    'https://crm-oficial.example.test/pagar/G10000000000000000000000';
+  for (const conv of [false, true]) {
+    const v = derive(
+      billing({ links: [link({ origin: 'generated', url: foreign })] }),
+      { conv },
+    );
+    eq(v.links[0].url, '');
+    eq(v.links[0].urlBlocked, true);
+    const all = plain(v.next);
+    assert.ok(
+      all.body.some(
+        (/** @type {any} */ p) =>
+          p.tone === 'warning' && text(p) === plain(LINK_URL_BLOCKED),
+      ),
+    );
+    assert.ok(!all.body.some((/** @type {any} */ p) => p.tone === 'message'));
+    assert.doesNotMatch(JSON.stringify(all), /Link para pagamento: ?["\]]/u);
+    assert.ok(
+      ![all.primary, ...all.secondary].some(
+        (/** @type {any} */ a) => a && /^copy-/u.test(a.act),
+      ),
+    );
+    assert.doesNotMatch(JSON.stringify(all), /crm-oficial/u);
+  }
+  // Another seller gets no URL at all: no warning for them.
+  const other = derive(
+    billing({
+      canOperate: false,
+      links: [link({ origin: 'generated', url: null })],
+    }),
+  );
+  eq(other.links[0].urlBlocked, false);
+});
+
+test('QA 12 (not changed): one generated link, nothing received, keeps the approved next step', () => {
+  // RFC 074 prototype scenario 3 ("Sem primária; secundárias Copiar link ·
+  // Cancelar link") and §16 (at most two secondaries) — see the report.
+  const v = derive(billing({ links: [link({ origin: 'generated' })] }), {
+    conv: false,
+  });
+  deq(
+    [v.next.primary?.act, ...v.next.secondary.map((a) => a.act)],
+    ['copy-message', 'cancel-link'],
   );
 });

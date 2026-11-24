@@ -43,6 +43,18 @@ worker não mudam.
   `Origin` igual à origem de `APP_BASE_URL` ou a uma de `APP_ORIGIN`; se a
   página for servida por outro domínio, inclua-o em `APP_ORIGIN`, senão o
   clique recebe 403.
+- O CRM do vendedor só mostra ou copia um link cuja origem é a mesma da
+  página aberta (defesa contra um endereço estranho vindo da API: o vendedor
+  nunca repassa ao cliente um domínio que não reconhece). Se o CRM for aberto
+  por outro endereço que não o de `APP_BASE_URL` (domínio interno, IP,
+  Tailscale), o link continua existindo, mas a seção mostra o aviso "O
+  endereço deste link é diferente do endereço deste CRM, então ele não é
+  mostrado nem copiado aqui…", some "Copiar link"/"Copiar mensagem" e
+  nenhuma mensagem sai com o link vazio. **Enviar link na conversa** continua
+  funcionando, porque a API monta a mensagem com `APP_BASE_URL`. Correção:
+  abrir o CRM pelo endereço de `APP_BASE_URL` ou corrigir `APP_BASE_URL`.
+  Aceitar outra origem no navegador foi recusado de propósito: a página não
+  tem como saber qual origem é a oficial.
 - Publicar a edge com o `docker/nginx.conf` novo: `/pagar/` serve a página e
   `/api/v1/payment-links/` vai à API, ambos sem access log nem error log, para
   o token não ficar em log. Conferir em produção que a página responde com
@@ -59,7 +71,10 @@ worker não mudam.
   `ORDER_BILLING_ENABLED=true`. Só com `ORDER_BILLING_RECEIVE_ENABLED=true`, a
   página abre e o clique num link aberto mostra a falha, sem criar nada. Com as
   duas falsas, as rotas públicas não existem (404). Com alguma ligada, token
-  inexistente, malformado ou cancelado recebe a mesma página "indisponível".
+  inexistente, malformado ou cancelado recebe a mesma página "Link
+  indisponível" ("Este link não está disponível. Fale com a Silmer pelo
+  WhatsApp."), que não diz o motivo; a página do cliente também não anuncia
+  sessão a leitores de tela.
 
 ### Estados de cada link
 
@@ -76,7 +91,10 @@ criou. O link fica travado e continua reservando o valor, para não cobrar duas
 vezes. Ele aparece quando o n8n reservou a tentativa e não respondeu em 120 s,
 ou quando o comando se perdeu depois da reserva. Se o comando morreu antes de
 o n8n reservar a tentativa, o link volta sozinho a Aguardando o cliente
-(evento "falha ao abrir"), porque o provedor nunca a cria.
+(evento "falha ao abrir"), porque o provedor nunca a cria. Na Situação, o
+valor dele aparece como "A conferir", separado de "Em links abertos"; o
+Próximo passo diz que o link não reabre sozinho e que nenhum pagamento novo é
+criado até a confirmação.
 
 Para resolver, procure o pedido no painel da InfinitePay e use **Confirmar
 resultado na InfinitePay** na linha:
@@ -119,9 +137,16 @@ sozinhos, com o motivo "mudança de valor". Confira a Situação e envie um link
 novo com o livre para cobrar. Links já clicados seguem para conferência quando
 necessário. Em Precisa de conferência, **Resolver conferência** pode aplicar os
 pagamentos mesmo com link Em pagamento, ou cancelar os links abertos.
+Durante a conferência a Situação não mostra "Livre para cobrar" (a API
+recusa link novo com `BILLING_REVIEW_REQUIRED`). Se o dinheiro guardado é um
+recebimento registrado por fora (por exemplo, Pix fora da InfinitePay), o texto
+diz isso e pede para conferir o registro, não o painel da InfinitePay; a linha
+do registro aparece como "Guardado para conferência".
 
 **Pedido cancelado.** Os links Aguardando o cliente são cancelados sozinhos,
-com o motivo "pedido cancelado"; a página mostra "indisponível". Tentativas já
+com o motivo "pedido cancelado"; a página mostra "Link indisponível". Na
+seção do pedido, a Situação mostra "Pedido cancelado · Nada a receber", sem
+"Falta receber" nem "Livre para cobrar", e não há ação de cobrança. Tentativas já
 clicadas seguem a regra de pedido cancelado: o pagamento fica como evidência,
 sem ser aplicado.
 

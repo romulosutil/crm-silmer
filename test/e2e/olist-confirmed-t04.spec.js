@@ -907,3 +907,75 @@ test('T04 handles read failure safely, clears actions on concurrent 403 revocati
     olistSection(page).getByRole('button', { name: 'Gerar no Olist' }),
   ).toHaveCount(0);
 });
+
+test('T04 failed_safe resume blocks actionable gaps and forwards paymentDueOn when paymentDuePolicy is per_order', async ({
+  page,
+}, testInfo) => {
+  await setCsrf(page, testInfo.project.use.baseURL);
+  const order = structuredClone(ownConfirmedOrder);
+  let hasGap = true;
+  /** @type {any[]} */
+  const posted = [];
+
+  await mockOrders(page, {
+    user: { ...SELLER_MARINA, olistEnabled: true },
+    orders: [order],
+  });
+  await page.route(`**/api/v1/orders/${order.id}/olist`, async (route) => {
+    await route.fulfill({
+      json: {
+        orderId: order.id,
+        number: order.number,
+        status: 'confirmado',
+        creationEnabled: true,
+        paymentDuePolicy: 'per_order',
+        pendingFields: hasGap
+          ? [
+              {
+                code: 'OLIST_CUSTOMER_INVALID',
+                field: 'buyer.registration.postalCode',
+                label: 'Pendência para gerar no Olist.',
+              },
+            ]
+          : [],
+        operation: {
+          state: 'failed_safe',
+          stage: 'customer',
+          number: null,
+          errorCode: 'OLIST_UNAVAILABLE',
+          retrySafe: true,
+        },
+      },
+    });
+  });
+  await page.route(
+    `**/api/v1/orders/${order.id}/olist/export`,
+    async (route) => {
+      posted.push(route.request().postDataJSON());
+      await route.fulfill({
+        status: 202,
+        json: {
+          orderId: order.id,
+          number: order.number,
+          operationId: 'op-t04-resume-due',
+          state: 'queued',
+          stage: 'customer',
+        },
+      });
+    },
+  );
+
+  await page.goto(`/pedidos/${order.id}`);
+  const section = olistSection(page);
+  await expect(section).toContainText('Cadastro do comprador: CEP.');
+  await expect(
+    section.getByRole('button', { name: 'Retomar geração' }),
+  ).toHaveCount(0);
+
+  hasGap = false;
+  await section.getByRole('button', { name: 'Atualizar situação' }).click();
+  await expect(section.getByLabel('Vencimento deste pedido')).toBeVisible();
+  await section.getByLabel('Vencimento deste pedido').fill('2026-12-20');
+  await section.getByRole('button', { name: 'Retomar geração' }).click();
+  expect(posted).toEqual([{ paymentDueOn: '2026-12-20' }]);
+});

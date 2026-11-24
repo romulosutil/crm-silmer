@@ -44,10 +44,14 @@ revisão QA.
       antes de inclusões, também na API/revalidação/worker e com token/job
       antigo. Não usar comprador ERP por nome/telefone para contornar esse gate.
       Preservar contratos de vínculo histórico e recuperação de efeitos.
-- [ ] Implementar checkbox default falso, gestão Admin e política que combina
+- [x] Implementar checkbox default falso, gestão Admin e política que combina
       usuário ativo, habilitação, leitura comercial do Pedido e piloto privado;
       Admin não herda geração e Financeiro não ganha entrada/projeção nova.
-- [ ] Persistir composição monetária aditiva por tamanho com IDs estáveis,
+      *(Verificado em `0063`, `identity-access`, `modules/olist/src/access.js`,
+      `UsersView.vue` e reforçado em `OLC-T05` para bloquear `pendingFields`/
+      `retrySafe` na projeção de `Financeiro` e exigir `requireCommercialRead`
+      na API e no worker).*
+- [x] Persistir composição monetária aditiva por tamanho com IDs estáveis,
       revisão humana, versão e auditoria, reutilizando o núcleo existente.
       Derivar grade/IDs no servidor e exigir correspondência 1:1 com grupos,
       tamanhos/quantidades confirmados. Pedido novo: reaproveitar os subtotais
@@ -56,7 +60,9 @@ revisão QA.
       sem igualar outro total. A composição aditiva serve a Pedido antigo ou da
       loja que só tem total: a soma deve igualar exatamente esse total
       existente (ADR 057 item 6). Sem rateio automático nem alteração de
-      grade/atributo pelo enriquecimento.
+      grade/atributo pelo enriquecimento. *(Verificado em `0065`,
+      `size-pricing*.js`, `order-source.js`, `store-order-source.js` e
+      `orders-source-postgres-live`).*
 - [x] **Implementar o contrato do frete no Pedido** (decisão do PO de
       10/11/2026, ADR 079 decisão 9; desenho fechado na
       [ADR 080](../../../docs/adr/080-valor-final-com-frete.md) /
@@ -110,14 +116,22 @@ revisão QA.
     abaixo do cotado; cotação de origem desatualizada só como aviso, sem
     bloquear a confirmação; performance por responsável (ADR 059) com o
     mesmo total com frete.
-- [ ] Compor cadastro e adapter da loja/legado; comando específico de
+- [x] Compor cadastro e adapter da loja/legado; comando específico de
       enriquecimento não reabre, não reprecifica, não altera snapshot/PDF.
-- [ ] Definir operação/recursos compartilhados/etapas, referências protegidas,
+      *(Verificado em `order-routes.js` `/price-breakdown`,
+      `store-order-source.js`, `OrderPriceBreakdown.vue` e
+      `orders-source-postgres-live`).*
+- [x] Definir operação/recursos compartilhados/etapas, referências protegidas,
       unicidades, snapshot cifrado e contratos versionados em OpenAPI.
-- [ ] Preparar guardas de alteração incompatível em todos os comandos
+      *(Verificado em `0064`, `0066`–`0072` e `docs/api/openapi.v1.yaml`).*
+- [x] Preparar guardas de alteração incompatível em todos os comandos
       comerciais relevantes, incluindo reabertura e correção da loja.
-- [ ] Verificar migration expand, autorização negativa, aritmética, revisão,
+      *(Verificado em `olist-commercial-lock.js`, `postgres-order-repository.js`
+      e `order-olist-guards-postgres-live`).*
+- [x] Verificar migration expand, autorização negativa, aritmética, revisão,
       concorrência e compatibilidade de leitura. Documentar rollback.
+      *(Verificado em `migrations-live`, `olist-upgrade-compat-postgres-live`,
+      `order-freight.md`, `olist-phase2`–`6.md` e `olist-confirmed.md`).*
 
 Não remover campo/tabela do Financeiro nem alterar total, snapshot ou cobrança de
 Pedido existente: o frete vale para Pedido novo, não é retroativo.
@@ -192,14 +206,20 @@ Dono Frontend/A11y com QA.
 
 Requisitos OLC-01–16. Depende OLC-T01–T04. Dono QA/Tech Lead com DevOps.
 
-- [ ] Executar os cenários de aceite e regressão com PostgreSQL dedicado e
+- [x] Executar os cenários de aceite e regressão com PostgreSQL dedicado e
       dados sintéticos; confirmar Financeiro, InfinitePay e PDF preservados.
-- [ ] Executar `git diff --check`, `npm run validate`, `npm run test:e2e`,
+- [x] Executar `git diff --check`, `npm run validate`, `npm run test:e2e`,
       `npm audit --audit-level=high` e suítes live/gates afetados do projeto.
-- [ ] Publicar runbook por etapa com configuração, mínimos fiscais, quotas,
+- [x] Publicar runbook por etapa com configuração, mínimos fiscais, quotas,
       retenção/PII, reconexão, restore, reconciliação e rollback conservador.
-- [ ] Preparar ambiente com escrita desligada e conferir migrations, digest,
+      *(Publicado em [docs/runbooks/olist-confirmed.md](../../../docs/runbooks/olist-confirmed.md)).*
+- [x] Preparar ambiente com escrita desligada e conferir migrations, digest,
       health e compatibilidade; deixar aprovação/caso real para OLC-T06.
+      *(Escrita real mantida desligada por padrão (`creation_enabled=false`,
+      `OLIST_DISPATCH_ENABLED` desligado), migrations até `0079` e compatibilidade
+      validadas em Docker/PostgreSQL 17.12 sintético; conferência remota de
+      digest/health no EasyPanel após merge/deploy fica na abertura de
+      `OLC-T06`).*
 
 Gate: sem achados críticos/altos ou divergência monetária sem tratamento, com
 os filtros de cancelamento (cancelados fora dos universos ativos) validados.

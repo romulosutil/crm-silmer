@@ -5,6 +5,7 @@ import { Pool } from 'pg';
 import { createApi } from '../apps/api/src/app.js';
 import { createOlistApiRuntime } from '../apps/api/src/olist-runtime.js';
 import { buildOlistPreviewPlan } from '../apps/api/src/olist-preview-plan.js';
+import { createOlistDispatchRuntime } from '../apps/worker/src/olist-runtime.js';
 import {
   loadMigrations,
   migrate,
@@ -1366,6 +1367,18 @@ else
               String(p.field ?? '').startsWith('buyer.registration.'),
             ),
           );
+          // OLC-02: Financeiro never receives the new localPlan pendingFields projection.
+          const financeProj = await pendingProj.runtime.project({
+            ...pendingProj.actors.finance,
+            orderId: pendingProj.orderId,
+          });
+          assert.equal(financeProj.creationEnabled, false);
+          assert.deepEqual(financeProj.pendingFields, [
+            {
+              code: 'OLIST_CREATION_DISABLED',
+              label: 'Geração Olist ainda indisponível.',
+            },
+          ]);
 
           // 2. retrySafe is true only when SQL proves zero remote effect/job active; auto-resumes safely on retrySafe.
           const f = await fixture({ status: 'confirmado' });
@@ -1401,6 +1414,12 @@ else
           );
           proj = await f.runtime.project(f.input);
           assert.equal(proj.operation.retrySafe, true);
+          const financeStoppedProj = await f.runtime.project({
+            ...f.actors.finance,
+            orderId: f.orderId,
+          });
+          assert.equal(financeStoppedProj.creationEnabled, false);
+          assert.equal(financeStoppedProj.operation.retrySafe, undefined);
 
           // Direct /export auto-resumes: invalidates old generation (OLIST_EXPORT_RESUMED), retires dead_letter job & resolves reconciliation, enqueues new generation.
           const resumed = await f.runtime.exportOrder({
@@ -1465,6 +1484,39 @@ else
             idempotencyKey: 'resume-third-idempotent',
           });
           assert.equal(same.operationId, resumed.operationId);
+
+          // 3. Worker refuses dispatch if the actor loses Vendedor commercial read (demoted to Financeiro) after queuing.
+          const w = await fixture({ status: 'confirmado' });
+          const queued = await w.runtime.exportOrder({
+            ...w.input,
+            idempotencyKey: 'worker-demote-check',
+          });
+          await pool.query(
+            "UPDATE crm.user_functions SET function_name='Financeiro' WHERE user_id=$1",
+            [w.input.actor.id],
+          );
+          let workerHttp = 0;
+          const workerDispatch = createOlistDispatchRuntime({
+            database,
+            environment: {
+              ...environment,
+              OLIST_PILOT_USER_IDS: w.input.actor.id,
+            },
+            fetch: async () => {
+              workerHttp += 1;
+              throw new Error('Unexpected ERP HTTP call');
+            },
+            clock: () => NOW,
+          });
+          const stopped = await workerDispatch.dispatch(
+            { exportId: queued.operationId },
+            { heartbeat: async () => true },
+          );
+          assert.equal(stopped.outcome, 'failed');
+          assert.equal(stopped.errorCode, 'FORBIDDEN');
+          assert.equal(stopped.retryable, false);
+          assert.equal(stopped.retrySafe, false);
+          assert.equal(workerHttp, 0);
         },
       );
     } finally {

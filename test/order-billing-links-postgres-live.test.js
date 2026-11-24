@@ -1197,4 +1197,88 @@ if (!url) {
       assert.equal(final.figures.reservedCents, 7000);
       assert.equal(final.figures.receivedCents, 0);
     });
+
+  test('LPC-02 over HTTP with the real runtime: long, extended and undecodable tokens answer like an unknown one, write nothing and log no token', async (t) => {
+    const { createApi } = await import('../apps/api/src/app.js');
+    const { createSafeLogger, MetricRegistry } =
+      await import('../modules/shared/src/index.js');
+    /** @type {Array<Record<string, unknown>>} */
+    const records = [];
+    const logger = createSafeLogger({
+      service: 'crm-silmer-api',
+      sink: (record) => records.push(record),
+    });
+    const api = createApi(
+      {},
+      { logger, metrics: new MetricRegistry({ logger }), billing: runtime },
+    );
+    t.after(() => api.close());
+    const orderId = await order(10000);
+    const link = await createLink(orderId, 5000);
+    const token = tokenOf(link);
+    const events = async () =>
+      (
+        await pool.query(
+          'SELECT count(*)::int AS n FROM crm.order_billing_link_events WHERE link_id=$1',
+          [link.id],
+        )
+      ).rows[0].n;
+    const before = await events();
+    const unknown = await api.inject({
+      url: `/api/v1/payment-links/${'Z'.repeat(26)}`,
+      remoteAddress: '10.230.0.1',
+    });
+    assert.equal(unknown.statusCode, 200);
+    assert.equal(unknown.body, '{"state":"unavailable"}');
+    const unknownClick = await api.inject({
+      method: 'POST',
+      url: `/api/v1/payment-links/${'Z'.repeat(26)}/checkout`,
+      headers: { origin: BASE_URL },
+      remoteAddress: '10.230.0.2',
+    });
+    let address = 2;
+    // The real token extended past 100 characters, or broken by a bad escape,
+    // is a different (malformed) token: same answer, no page_opened, no click.
+    for (const path of [
+      `${token}${'0'.repeat(200)}`,
+      `${token}${'0'.repeat(5000)}`,
+      `${token}%zz`,
+      `${token}/x`,
+    ]) {
+      address += 1;
+      const read = await api.inject({
+        url: `/api/v1/payment-links/${path}`,
+        remoteAddress: `10.230.0.${address}`,
+      });
+      assert.equal(read.statusCode, 200, path.slice(0, 40));
+      assert.equal(read.body, unknown.body);
+      assert.equal(read.headers['cache-control'], 'no-store');
+      assert.equal(read.headers['x-robots-tag'], 'noindex, nofollow');
+      assert.equal(read.headers['referrer-policy'], 'no-referrer');
+      const click = await api.inject({
+        method: 'POST',
+        url: `/api/v1/payment-links/${path}/checkout`,
+        headers: { origin: BASE_URL },
+        remoteAddress: `10.230.1.${address}`,
+      });
+      assert.equal(click.statusCode, unknownClick.statusCode);
+      assert.equal(click.body, unknownClick.body);
+    }
+    assert.equal(await events(), before, 'nothing recorded for the link');
+    assert.equal((await charges(link.id)).length, 0, 'no attempt created');
+    // The real token still works through the same wildcard route.
+    const real = await api.inject({
+      url: `/api/v1/payment-links/${token.toLowerCase()}`,
+      remoteAddress: '10.230.2.1',
+    });
+    assert.equal(real.statusCode, 200);
+    assert.equal(real.json().state, 'ready');
+    const logged = JSON.stringify(records);
+    assert.equal(logged.includes(token), false);
+    assert.equal(logged.includes(token.toLowerCase()), false);
+    assert.equal(
+      records.some((record) => record.level === 'error'),
+      false,
+    );
+  });
 }

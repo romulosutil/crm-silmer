@@ -45,11 +45,19 @@ const shown = computed(
       </p>
       <BillingMeter :figures="view.figures" />
       <p
-        v-if="view.figures.reserved > 0"
+        v-if="view.figures.reserved > 0 && !view.cancelled"
         class="op-billing-summary-line op-billing-summary-sub op-num"
       >
-        <span class="bl-swatch" aria-hidden="true"></span>Em links abertos
-        <strong>{{ billingMoney(view.figures.reserved) }}</strong>
+        <span class="bl-swatch" aria-hidden="true"></span
+        ><template v-if="view.figures.opened > 0"
+          >Em links abertos
+          <strong>{{ billingMoney(view.figures.opened) }}</strong></template
+        ><template v-if="view.figures.opened > 0 && view.figures.checking > 0">
+          · </template
+        ><template v-if="view.figures.checking > 0"
+          >A conferir
+          <strong>{{ billingMoney(view.figures.checking) }}</strong></template
+        >
       </p>
       <button
         type="button"

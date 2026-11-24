@@ -18,7 +18,9 @@ import OrderIcon from '../OrderIcon.vue';
 /*
  * "Enviar outro link" (RFC 074): any amount from R$ 1,00 up to the free
  * amount. The line's name (Sinal, Saldo or Parcela) comes from the value; the
- * review is the message itself.
+ * review is the message itself. Without a conversation the action is "Gerar"
+ * and the words say so; an amount that will not be used never reaches the
+ * preview; Enter in the field is the primary action, with the same checks.
  */
 const ctx = /** @type {any} */ (inject('orderBillingContext'));
 const dlg = ref(/** @type {any} */ (null));
@@ -34,6 +36,12 @@ const view = computed(() => snapshot.value ?? ctx.view.value);
 const max = computed(() => view.value.figures.free);
 const conv = computed(() => Boolean(ctx.conv.value));
 const verb = computed(() => (conv.value ? 'Enviar' : 'Gerar'));
+/** The primary action: send in the conversation, or only generate. */
+const primaryMode = computed(() =>
+  conv.value
+    ? /** @type {const} */ ('send')
+    : /** @type {const} */ ('generate'),
+);
 const value = computed(() => parseAmount(raw.value));
 /** @param {number|null} v */
 const valid = (v) =>
@@ -49,8 +57,12 @@ const title = computed(() =>
     : `${verb.value} link ${KIND[linkKind(view.value, max.value)].of}`,
 );
 
+/** One accepted write per opening: later presses are ignored. */
+let done = false;
+
 /** @param {HTMLElement} trigger */
 async function open(trigger) {
+  done = false;
   snapshot.value = ctx.view.value;
   raw.value = decimal(max.value);
   invalid.value = '';
@@ -69,6 +81,16 @@ async function open(trigger) {
 function onInput() {
   if (invalid.value && ok.value) invalid.value = '';
 }
+/** Enter submits like the primary button; busy() keeps it to one write.
+ * @param {KeyboardEvent} event */
+function onEnter(event) {
+  if (event.isComposing) return;
+  event.preventDefault();
+  // After a send the dialog is closed but its field can still hold the
+  // focus for a moment: a second Enter must not create a second link.
+  if (done || !dlg.value?.element?.open) return;
+  void submit(primaryMode.value);
+}
 function validate() {
   const v = value.value;
   invalid.value =
@@ -85,7 +107,7 @@ function validate() {
 }
 /** @param {'send'|'generate'} mode */
 async function submit(mode) {
-  if (busy.value) return;
+  if (busy.value || done) return;
   if (!validate()) {
     dlg.value?.element?.querySelector('#order-billing-amount')?.focus();
     return;
@@ -98,6 +120,7 @@ async function submit(mode) {
       kind: kind.value,
       amountCents: amount.value,
     });
+    done = true;
     busy.value = '';
     dlg.value.close();
   } catch (cause) {
@@ -133,7 +156,9 @@ defineExpose({ open });
           autocomplete="off"
           :aria-invalid="invalid ? 'true' : 'false'"
           aria-describedby="order-billing-amount-hint order-billing-amount-error"
+          enterkeyhint="send"
           @input="onInput"
+          @keydown.enter="onEnter"
         />
       </div>
       <p id="order-billing-amount-hint" class="op-hint">
@@ -175,7 +200,7 @@ defineExpose({ open });
     <p class="bl-review" aria-live="polite">
       <template v-if="ok"
         >Em links abertos passa a
-        <strong>{{ billingMoney(view.figures.reserved + amount) }}</strong> ·
+        <strong>{{ billingMoney(view.figures.opened + amount) }}</strong> ·
         livre para cobrar
         <strong>{{ billingMoney(max - amount) }}</strong></template
       ><template v-else
@@ -191,19 +216,26 @@ defineExpose({ open });
         role="group"
         aria-labelledby="order-billing-amount-wa"
       >
-        <div class="bl-bubble">
+        <div v-if="ok" class="bl-bubble">
           Pedido {{ ctx.orderNumber.value }} — {{ KIND[kind].noun }} de
           {{ billingMoney(amount) }}. Link para pagamento:
           <span class="bl-bubble-link" data-pending
-            >link do CRM, criado ao enviar</span
-          ><span class="bl-bubble-meta">agora</span>
+            >link do CRM, criado ao {{ conv ? 'enviar' : 'gerar' }}</span
+          ><span v-if="conv" class="bl-bubble-meta">agora</span>
         </div>
+        <p v-else class="op-hint">
+          A prévia aparece quando o valor for válido.
+        </p>
       </div>
     </div>
     <p class="bl-note">
       <OrderIcon name="info" /><span
         >Você pode cancelar este link enquanto o cliente não clicar em Pagar.
-        Enviar não confirma o pagamento.</span
+        {{
+          conv
+            ? 'Enviar não confirma o pagamento.'
+            : 'Gerar o link não envia a mensagem nem confirma o pagamento.'
+        }}</span
       >
     </p>
     <template #footer>
@@ -222,7 +254,7 @@ defineExpose({ open });
         class="primary"
         :aria-disabled="busy ? 'true' : undefined"
         :aria-busy="busy === 'send' || (!conv && busy) ? 'true' : undefined"
-        @click="submit(conv ? 'send' : 'generate')"
+        @click="submit(primaryMode)"
       >
         {{ ok ? `${verb} link de ${billingMoney(amount)}` : `${verb} link` }}
       </button>

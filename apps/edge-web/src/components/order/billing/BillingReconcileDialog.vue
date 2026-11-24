@@ -5,6 +5,8 @@ import {
   dayMonthTimeOf,
   linkName,
   reconcileOptions,
+  reviewCheck,
+  reviewSource,
   timeOf,
 } from '../../../lib/order-billing-view.js';
 import {
@@ -38,6 +40,7 @@ const view = computed(() => ctx.view.value);
 const options = computed(() => reconcileOptions(view.value));
 const ok = computed(() => options.value[choice.value].ok);
 const heldLink = computed(() => view.value.groups.review[0] ?? null);
+const words = computed(() => reviewCheck(reviewSource(view.value)));
 const providerUrl = computed(() =>
   heldLink.value ? view.value.providerUrl(heldLink.value) : '',
 );
@@ -81,9 +84,7 @@ async function pick(value, event) {
 async function confirm() {
   if (busy.value) return;
   if (step.value === 1) {
-    checkError.value = checked.value
-      ? ''
-      : 'Confirme que conferiu os pagamentos na InfinitePay.';
+    checkError.value = checked.value ? '' : words.value.error;
     if (checkError.value) {
       dlg.value?.element?.querySelector('#order-billing-rc-check')?.focus();
       return;
@@ -148,11 +149,8 @@ defineExpose({ open });
       <OrderIcon name="alert" /><span>{{ error }}</span>
     </p>
     <template v-if="step === 1">
-      <p class="bl-step">Passo 1 de 2 · Confira na InfinitePay</p>
-      <p class="bl-lead">
-        Antes de decidir, confira na InfinitePay os pagamentos desta cobrança:
-        valores, datas e se o cliente abriu algum pagamento.
-      </p>
+      <p class="bl-step">{{ words.step }}</p>
+      <p class="bl-lead">{{ words.lead }}</p>
       <dl class="bl-dl">
         <div v-for="row in view.rows" :key="row.id">
           <dt>
@@ -193,7 +191,7 @@ defineExpose({ open });
           :aria-invalid="checkError ? 'true' : 'false'"
           aria-describedby="order-billing-rc-error"
           @change="checked && (checkError = '')"
-        />Conferi os pagamentos desta cobrança na InfinitePay.</label
+        />{{ words.check }}</label
       >
       <p id="order-billing-rc-error" class="bl-field-error">
         <template v-if="checkError"

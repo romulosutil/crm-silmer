@@ -90,6 +90,11 @@ const categoricalPolicies = new Map([
         'OPERATIONAL_CLEANUP_INCOMPLETE',
         'MEDIA_LEASE_LOST',
         'MEDIA_PROCESS_UNAVAILABLE',
+        // LPC-02: a public payment page 4xx/429, logged as warn, never error.
+        'RATE_LIMITED',
+        'INVALID_REQUEST',
+        'REQUEST_TOO_LARGE',
+        'UNSUPPORTED_MEDIA_TYPE',
         'CLAM_SIGNATURE_REFRESH_FAILED',
         'READINESS_CHECK_FAILED',
         'SYNTHETIC_FAILURE',

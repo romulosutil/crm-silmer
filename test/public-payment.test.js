@@ -136,11 +136,11 @@ test('LPC-09: copy of the five states follows the prototype', () => {
   assert.equal(paid.label, 'Já pago');
   assert.equal(paid.strong, 'Pagamento confirmado em 23/11, 14:05.');
   assert.equal(paid.action, null);
-  const cancelled = paymentStateView({ state: 'unavailable' }, options);
-  assert.equal(cancelled.label, 'Cancelado');
-  assert.equal(cancelled.strong, 'Este link foi cancelado.');
-  assert.equal(cancelled.text, 'Fale com a Silmer pelo WhatsApp.');
-  assert.equal(cancelled.action, null);
+  const unavailable = paymentStateView({ state: 'unavailable' }, options);
+  assert.equal(unavailable.label, 'Link indisponível');
+  assert.equal(unavailable.strong, 'Este link não está disponível.');
+  assert.equal(unavailable.text, 'Fale com a Silmer pelo WhatsApp.');
+  assert.equal(unavailable.action, null);
   const failed = paymentStateView({ ...base, state: 'failed' }, options);
   assert.equal(failed.label, 'Falha ao abrir');
   assert.equal(failed.action?.kind, 'retry');

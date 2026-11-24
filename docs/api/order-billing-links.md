@@ -261,8 +261,12 @@ e as de `APP_ORIGIN`.
   a InfinitePay já devolveu) · `paid` (inclui `paidAt`) · `failed` (`unknown`)
   · `unavailable`.
 - `unavailable` é idêntico (200 `{ "state": "unavailable" }`, sem número de
-  pedido) para token inexistente, malformado e cancelado, e para pedido
-  cancelado. O token é lido sem diferenciar maiúsculas.
+  pedido, com os mesmos cabeçalhos) para token inexistente, malformado e
+  cancelado, e para pedido cancelado. O token é lido sem diferenciar
+  maiúsculas. Malformado inclui qualquer forma: vazio, com mais de 100
+  caracteres (a rota é um curinga, sem o 414 do roteador), com `/`, unicode,
+  bytes de controle ou `%` inválido (este responde sem passar pelos limites,
+  porque nada é lido). Nenhuma resposta ecoa o caminho ou o token.
 - Registra `page_opened` na primeira abertura (sem mudar a versão da cobrança).
   Depois disso, a leitura não bloqueia nem escreve: só toma os bloqueios do
   pedido quando uma transição preguiçosa está devida.
@@ -280,9 +284,24 @@ e as de `APP_ORIGIN`.
 - `unknown` → `{ "state": "failed" }`, sem nova tentativa (LPC-05).
 - `paid` → `{ "state": "paid", paidAt }`; `cancelled`/inexistente →
   `{ "state": "unavailable" }`.
+- Só `POST {token}/checkout` é clique; outro POST sob o prefixo → 404
+  `INVALID_REQUEST`, sem eco. A ordem é: limite por IP → forma do caminho e
+  `Origin` (antes de ler o corpo) → corpo → limite por token.
+- Corpo inválido no clique (JSON quebrado ou envenenado, corpo que não é `{}`)
+  → 400 `INVALID_REQUEST`; corpo acima de 1024 bytes → 413
+  `REQUEST_TOO_LARGE`; tipo de conteúdo sem leitor → 415
+  `UNSUPPORTED_MEDIA_TYPE`. Sempre `application/problem+json` fixo
+  (`{type,title,status,code}`), com os cabeçalhos públicos e sem eco. Quando o
+  erro vem do leitor do corpo, registra um único `warn` `api_request_failed`
+  com esse código, nunca `error`, sem token.
+- Conjunto fechado de status do clique: 200, 202, 400, 403, 404, 413, 415, 429.
 - Proteções: limite por IP (GET 120/min, POST 20/min, tolerante a CGNAT) e por
   token, pelo hash (GET 60/min, POST 10/min, contados à parte; a página consulta
-  a cada 2,5 s com recuo), `Cache-Control: no-store`, `Referrer-Policy: no-referrer`,
+  a cada 2,5 s com recuo). Todo 429 (por IP ou por token, GET ou POST) é
+  `application/problem+json` com `code: "RATE_LIMITED"` e `Retry-After` em
+  segundos inteiros (de 1 até 60) até a janela liberar; registra um único
+  `warn` `api_request_failed` com `error_code: RATE_LIMITED`, nunca `error`,
+  sem token nem caminho. `Cache-Control: no-store`, `Referrer-Policy: no-referrer`,
   `X-Robots-Tag: noindex, nofollow`, `Origin` obrigatória no POST (403
   `FORBIDDEN`), só os campos acima saem, nenhum token nem PII em log (o logger
   da API não registra URL nem parâmetros; a auditoria usa o id do link).

@@ -223,12 +223,14 @@ export function paymentStateView(link, { companyName, loadFailed = false }) {
         action: null,
       };
     }
+    // One answer for a cancelled, missing or malformed token (LPC-02): it
+    // must not say which, so it never claims the link was cancelled.
     case 'unavailable':
       return {
-        label: 'Cancelado',
+        label: 'Link indisponível',
         tone: 'neutral',
-        icon: 'close',
-        strong: 'Este link foi cancelado.',
+        icon: 'info',
+        strong: 'Este link não está disponível.',
         text: `Fale com a ${companyName} pelo WhatsApp.`,
         action: null,
       };

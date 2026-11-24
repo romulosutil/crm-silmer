@@ -7,7 +7,12 @@
  *
  * Money is integer cents; instants are ISO strings read in the store's clock.
  */
-import { billingLinkUrl, billingMoney, billingUrl } from './order-billing.js';
+import {
+  billingLinkUrl,
+  billingMoney,
+  billingReason,
+  billingUrl,
+} from './order-billing.js';
 import {
   dateBR,
   dateTimeCommaBR,
@@ -190,6 +195,8 @@ export function normalizeLink(link, context) {
     origin: link?.origin === 'generated' ? 'generated' : 'sent',
     url: billingLinkUrl(link?.url) || '',
     rawUrl: typeof link?.url === 'string' ? link.url : '',
+    // The API sent an address this page refuses (another origin, LPC-01).
+    urlBlocked: Boolean(link?.url) && !billingLinkUrl(link?.url),
     chargeId: link?.chargeId ?? null,
     createdAt: link?.createdAt ?? null,
     createdBy: link?.createdBy ?? '',
@@ -231,6 +238,8 @@ export function normalizeReceipt(receipt) {
     by: receipt?.recordedByName || 'Vendedor',
     recordedAt: receipt?.recordedAt ?? null,
     reversed: Boolean(receipt?.reversedAt),
+    // Held for conferência (application_valid false): out of the received.
+    held: receipt?.applicationValid === false && !receipt?.reversedAt,
     reversedAt: receipt?.reversedAt ?? null,
     reversedBy: receipt?.reversedByName || '',
     reverseReason:
@@ -259,13 +268,16 @@ function groupLinks(links) {
 /**
  * Situação: the API's figures when present, else the same arithmetic as the
  * server. Falta receber = total − recebido; Livre para cobrar = falta receber
- * − links abertos. A link in "Resultado a conferir" reserves too.
+ * − links abertos. A link in "Resultado a conferir" reserves too (decision 7)
+ * but is never "aberto": `checking` is its part of `reserved`, `opened` the
+ * rest (`opened + checking = reserved`).
  *
  * @param {any} billing @param {Link[]} links @param {Receipt[]} receipts
  */
 export function figuresOf(billing, links, receipts) {
   const f = billing?.figures;
   const total = cents(f?.totalCents ?? billing?.totalAmountCents);
+  const g = groupLinks(links);
   let received;
   let remaining;
   let held;
@@ -278,29 +290,45 @@ export function figuresOf(billing, links, receipts) {
     reserved = cents(f.reservedCents);
     free = cents(f.freeCents);
   } else {
-    const g = groupLinks(links);
+    const live = receipts.filter((r) => !r.reversed);
     received =
       g.paid.reduce((s, l) => s + l.amountCents - l.refundedCents, 0) +
-      receipts
-        .filter((r) => !r.reversed)
-        .reduce((s, r) => s + r.amountCents, 0);
+      live.filter((r) => !r.held).reduce((s, r) => s + r.amountCents, 0);
     if (!links.length && Number.isSafeInteger(billing?.receivedAmountCents))
       received = cents(billing.receivedAmountCents);
     remaining = Math.max(0, total - received);
-    held = g.review.reduce((s, l) => s + l.amountCents - l.refundedCents, 0);
+    held =
+      g.review.reduce((s, l) => s + l.amountCents - l.refundedCents, 0) +
+      live.filter((r) => r.held).reduce((s, r) => s + r.amountCents, 0);
     reserved = Math.min(
       remaining,
       g.open.reduce((s, l) => s + l.amountCents, 0),
     );
     free = Math.max(0, remaining - reserved);
   }
+  const checking = Math.min(
+    reserved,
+    g.unknown.reduce((s, l) => s + l.amountCents, 0),
+  );
+  const opened = reserved - checking;
   const pct =
     total > 0 ? Math.min(100, Math.round((received / total) * 100)) : 0;
   const pctRes =
     reserved > 0 && total > 0
       ? Math.max(1, Math.min(100 - pct, Math.round((reserved / total) * 100)))
       : 0;
-  return { total, received, remaining, held, reserved, free, pct, pctRes };
+  return {
+    total,
+    received,
+    remaining,
+    held,
+    reserved,
+    opened,
+    checking,
+    free,
+    pct,
+    pctRes,
+  };
 }
 /** @typedef {ReturnType<typeof figuresOf>} Figures */
 
@@ -477,19 +505,44 @@ export function decimal(amountCents) {
  * Why the order is in "Precisa de conferência", in plain words (API
  * `review.reason`).
  * @param {any} billing @param {Link[]} links @param {Figures} k
+ * @param {Receipt[]} [receipts]
  */
-export function reviewCause(billing, links, k) {
+export function reviewCause(billing, links, k, receipts = []) {
   const r = billing?.review;
   if (!r) return '';
   const held = links.find((l) => l.status === 'review');
   const heldCents = cents(r.heldCents) || k.held;
+  // Money held only by receipts registered outside the InfinitePay.
+  const outside = held ? [] : receipts.filter((x) => x.held);
+  // previousTotalCents comes only when the total itself changed.
+  const changed = Number.isSafeInteger(r.previousTotalCents)
+    ? `O valor do pedido mudou de ${money(r.previousTotalCents)} para ${money(k.total)}`
+    : 'O acordo do pedido mudou';
+  // Nothing held: never say "R$ 0,00 está guardado".
+  const keep =
+    heldCents > 0
+      ? ` ${money(heldCents)} está guardado, mas ainda não conta no recebido.`
+      : '';
+  if (outside.length && r.reason !== 'refund') {
+    const how =
+      outside.length === 1 ? ` (${methodOf(outside[0].method).short})` : '';
+    const one = outside.length === 1;
+    const what = one
+      ? `um pagamento por fora${how} foi registrado`
+      : `${outside.length} pagamentos por fora foram registrados`;
+    const subject = one ? 'O recebimento' : 'Os recebimentos';
+    const kept = one ? 'está guardado' : 'estão guardados';
+    if (r.reason === 'order_changed')
+      return `${changed} depois que ${what}.${heldCents > 0 ? ` ${subject} de ${money(heldCents)} ${kept}, mas ainda não conta no recebido.` : ''}`;
+    return `${one ? `Um pagamento registrado por fora${how} não cabe` : `${outside.length} pagamentos registrados por fora não cabem`} no acordo atual do pedido.${keep}`;
+  }
   if (r.reason === 'order_changed') {
     const K = held ? KIND[held.kind] : null;
     const paid = K
       ? `${K.art} ${K.noun} foi pag${K.art}`
       : 'um pagamento foi confirmado';
     const subject = K ? `${ucfirst(K.art)} ${K.noun}` : 'O pagamento';
-    return `O valor do pedido mudou de ${money(cents(r.previousTotalCents))} para ${money(k.total)} depois que ${paid}. ${subject} de ${money(heldCents)} está guardad${K?.art ?? 'o'}, mas ainda não conta no recebido.`;
+    return `${changed} depois que ${paid}.${heldCents > 0 ? ` ${subject} de ${money(heldCents)} está guardad${K?.art ?? 'o'}, mas ainda não conta no recebido.` : ' Confira os pagamentos antes de continuar.'}`;
   }
   if (r.reason === 'refund') {
     const refunded = [...links]
@@ -501,10 +554,85 @@ export function reviewCause(billing, links, k) {
     return `Foi registrada uma devolução de ${money(amount)} ${K.art === 'a' ? 'na' : 'no'} ${K.noun}. O recebido já desconta a devolução; confira na InfinitePay e aplique os pagamentos ao valor atual.`;
   }
   if (r.reason === 'late_payment')
-    return `Um pagamento chegou depois que o link foi cancelado ou que o pagamento na InfinitePay venceu. ${money(heldCents)} está guardado, mas ainda não conta no recebido.`;
+    return `Um pagamento chegou depois que o link foi cancelado ou que o pagamento na InfinitePay venceu.${keep}`;
   if (r.reason === 'outside_agreement')
-    return `Um pagamento confirmado pela InfinitePay não cabe no acordo atual do pedido. ${money(heldCents)} está guardado, mas ainda não conta no recebido.`;
+    return `Um pagamento confirmado pela InfinitePay não cabe no acordo atual do pedido.${keep}`;
   return `Um pagamento precisa de conferência antes de contar no recebido.`;
+}
+
+/**
+ * Where the money held in conferência came from: payments of links
+ * (InfinitePay), receipts registered outside it, or both.
+ * @param {{groups: {review: Link[]}, receipts: Receipt[]}} v
+ * @returns {'provider'|'outside'|'both'}
+ */
+export function reviewSource(v) {
+  const links = v.groups.review.length > 0;
+  const outside = v.receipts.some((r) => r.held);
+  if (outside && links) return 'both';
+  return outside ? 'outside' : 'provider';
+}
+
+/**
+ * The words of "Resolver conferência" for each source: the seller is never
+ * sent to the InfinitePay for a payment registered outside it.
+ * @param {'provider'|'outside'|'both'} source
+ */
+export function reviewCheck(source) {
+  if (source === 'outside')
+    return {
+      hint: 'Resolver pede que você confira o que foi registrado por fora e escolha o que fazer com esses pagamentos.',
+      step: 'Passo 1 de 2 · Confira os pagamentos',
+      lead: 'Antes de decidir, confira os pagamentos registrados por fora: valores, datas e meios.',
+      check: 'Conferi os pagamentos registrados por fora.',
+      error: 'Confirme que conferiu os pagamentos registrados por fora.',
+    };
+  if (source === 'both')
+    return {
+      hint: 'Resolver pede que você confira os pagamentos na InfinitePay e os registrados por fora e escolha o que fazer com eles.',
+      step: 'Passo 1 de 2 · Confira os pagamentos',
+      lead: 'Antes de decidir, confira na InfinitePay os pagamentos desta cobrança e os registrados por fora: valores, datas e se o cliente abriu algum pagamento.',
+      check: 'Conferi os pagamentos na InfinitePay e os registrados por fora.',
+      error:
+        'Confirme que conferiu os pagamentos na InfinitePay e os registrados por fora.',
+    };
+  return {
+    hint: 'Resolver pede que você confira os pagamentos na InfinitePay e escolha o que fazer com eles.',
+    step: 'Passo 1 de 2 · Confira na InfinitePay',
+    lead: 'Antes de decidir, confira na InfinitePay os pagamentos desta cobrança: valores, datas e se o cliente abriu algum pagamento.',
+    check: 'Conferi os pagamentos desta cobrança na InfinitePay.',
+    error: 'Confirme que conferiu os pagamentos na InfinitePay.',
+  };
+}
+
+/**
+ * Situação in words: what is due (nothing, in a cancelled order) and, when
+ * links reserve money, the legend. "A conferir" (unknown) never reads as
+ * "aberto"; during conferência or in a cancelled order nothing is "livre para
+ * cobrar" (the API refuses new links with BILLING_REVIEW_REQUIRED).
+ * @param {{figures: Figures, review: any, cancelled: boolean}} v
+ */
+export function situationSummary(v) {
+  const k = v.figures;
+  if (v.cancelled)
+    return {
+      due: { label: 'Pedido cancelado', value: 'Nada a receber' },
+      legend: null,
+    };
+  /** @type {Array<string|{strong: string}>} */
+  const legend = [];
+  /** @param {string} label @param {number} value */
+  const add = (label, value) => {
+    if (legend.length) legend.push(' · ');
+    legend.push(`${label} `, strong(money(value)));
+  };
+  if (k.opened > 0) add('Em links abertos', k.opened);
+  if (k.checking > 0) add('A conferir', k.checking);
+  if (legend.length && !v.review) add('Livre para cobrar', k.free);
+  return {
+    due: { label: 'Falta receber', value: money(k.remaining) },
+    legend: legend.length ? legend : null,
+  };
 }
 
 /** Links the server cancelled when the order's value changed. @param {Link[]} links */
@@ -563,7 +691,7 @@ export function sendProgress(steps, state) {
  * Derives everything the section shows.
  *
  * @param {any} billing the seller's billing view
- * @param {{conv?: boolean, pick?: 0|50|100, sending?: any, busy?: string, orderNumber?: string, destination?: string, changingTerms?: boolean, readOnly?: string}} [ctx]
+ * @param {{conv?: boolean, pick?: 0|50|100, sending?: any, busy?: string, orderNumber?: string, destination?: string, changingTerms?: boolean, readOnly?: string, cancelled?: boolean}} [ctx]
  */
 export function deriveBillingView(billing, ctx = {}) {
   const review = Boolean(billing?.review);
@@ -586,6 +714,9 @@ export function deriveBillingView(billing, ctx = {}) {
       ? Boolean(billing?.canManage)
       : Boolean(billing.canOperate);
   const ownerName = String(billing?.ownerName ?? '');
+  // A cancelled order owes nothing and charges nothing (ADR 068).
+  const cancelled =
+    Boolean(ctx.cancelled) || billing?.blockedReason === 'ORDER_CANCELLED';
   const condition = ctx.changingTerms
     ? null
     : conditionOf(billing?.condition?.percent ?? billing?.percent);
@@ -610,6 +741,7 @@ export function deriveBillingView(billing, ctx = {}) {
     condition,
     situation,
     badge,
+    cancelled,
     review: billing?.review ?? null,
     orderNumber: String(ctx.orderNumber ?? ''),
     /** The checkout of the link's current attempt, InfinitePay only. @param {Link} l */
@@ -635,9 +767,12 @@ export function deriveBillingView(billing, ctx = {}) {
   const view = { ...base, terms, heldHint };
   return {
     ...view,
+    summary: situationSummary(view),
     rows: movementRows(view),
     next: nextStep(view),
-    announce: `${badge.label}. Recebido ${money(figures.received)}. Falta receber ${money(figures.remaining)}.`,
+    announce: cancelled
+      ? `${badge.label}. Pedido cancelado. Recebido ${money(figures.received)}.`
+      : `${badge.label}. Recebido ${money(figures.received)}. Falta receber ${money(figures.remaining)}.`,
   };
 }
 /** @typedef {ReturnType<typeof deriveBillingView>} BillingView */
@@ -662,8 +797,9 @@ function chargeBadge(v, l) {
 }
 /** @param {Receipt} r */
 function receiptBadge(r) {
-  return r.reversed
-    ? { label: 'Estornado', tone: 'neutral', icon: '' }
+  if (r.reversed) return { label: 'Estornado', tone: 'neutral', icon: '' };
+  return r.held
+    ? { label: 'Guardado para conferência', tone: 'warning', icon: 'alert' }
     : { label: 'Recebido por fora', tone: 'success', icon: 'check' };
 }
 
@@ -712,7 +848,8 @@ const EVENT = Object.freeze({
   page_opened: 'Cliente abriu a página',
   clicked: 'Cliente clicou em Pagar',
   checkout_opened: 'Pagamento aberto na InfinitePay',
-  checkout_unknown: 'Sem resposta da InfinitePay · nova tentativa automática',
+  checkout_unknown:
+    'Sem resposta da InfinitePay · o link fica travado até confirmar o resultado',
   checkout_expired:
     'O pagamento na InfinitePay venceu sem ser pago · o link volta a aceitar um novo clique',
   applied: 'Aplicado ao valor atual do pedido',
@@ -965,6 +1102,26 @@ function movementRows(/** @type {any} */ v) {
  * @returns {{tone: string, title: string, body: Paragraph[], primary: Action|null, secondary: Action[], after: Paragraph[], quiet: (Action & {q: string})|null, lock: string, terms: any, sending: any}}
  */
 export function nextStep(v) {
+  const model = stepModel(v);
+  // LPC-01: a link whose address this page refuses is said, never dropped in
+  // silence (the copy actions are gone with it).
+  if (
+    !model.lock &&
+    !model.sending &&
+    v.groups.waiting.some((/** @type {Link} */ l) => l.urlBlocked)
+  )
+    model.body.push(para([LINK_URL_BLOCKED], 'warning'));
+  return model;
+}
+
+/**
+ * Shown when the API's link address is not this page's origin.
+ */
+export const LINK_URL_BLOCKED =
+  'O endereço deste link é diferente do endereço deste CRM, então ele não é mostrado nem copiado aqui. Abra o CRM pelo endereço oficial ou peça ao administrador para conferir o endereço público configurado (APP_BASE_URL).';
+
+/** @param {any} v */
+function stepModel(v) {
   const ctx = v.ctx;
   const k = /** @type {Figures} */ (v.figures);
   const conv = Boolean(ctx.conv);
@@ -986,8 +1143,8 @@ export function nextStep(v) {
       : 'Só o responsável pelo pedido ou um administrador opera as cobranças deste pedido.';
     return model;
   }
-  if (ctx.readOnly) {
-    model.lock = ctx.readOnly;
+  if (ctx.readOnly || v.cancelled) {
+    model.lock = ctx.readOnly || billingReason('ORDER_CANCELLED');
     return model;
   }
   /** @type {Link[]} */
@@ -1038,21 +1195,21 @@ export function nextStep(v) {
           'busy',
         ),
       );
+    // Decision 11: an uncertain link never reopens by itself and no new
+    // attempt is made while it is unknown.
     model.after.push(
       para(
         [
-          tried
-            ? `A integração tenta de novo sozinha · última tentativa ${fT(tried)}`
-            : 'A integração tenta de novo sozinha',
+          `${tried ? `Sem resposta da InfinitePay desde ${fT(tried)}. ` : ''}O link não reabre sozinho e nenhum pagamento novo é criado até você confirmar o resultado.`,
         ],
-        'busy',
+        'muted',
       ),
     );
     return model;
   }
   if (v.review) {
     model.tone = 'attention';
-    model.body.push(para([reviewCause(v.billing, v.links, k)]));
+    model.body.push(para([reviewCause(v.billing, v.links, k, v.receipts)]));
     const auto = autoCancelNote(v.billing, v.links);
     if (auto) model.body.push(para([auto]));
     model.body.push(
@@ -1060,14 +1217,7 @@ export function nextStep(v) {
         'Até resolver, não é possível cobrar, enviar link ou registrar pagamento por fora.',
       ]),
     );
-    model.body.push(
-      para(
-        [
-          'Resolver pede que você confira os pagamentos na InfinitePay e escolha o que fazer com eles.',
-        ],
-        'muted',
-      ),
-    );
+    model.body.push(para([reviewCheck(reviewSource(v)).hint], 'muted'));
     model.primary = { label: 'Resolver conferência', act: 'reconcile' };
     return model;
   }
@@ -1187,12 +1337,16 @@ export function nextStep(v) {
           id: single.id,
         };
         model.secondary = [
-          {
-            label: 'Copiar mensagem',
-            act: 'copy-message',
-            icon: 'copy',
-            id: single.id,
-          },
+          ...(single.url
+            ? [
+                {
+                  label: 'Copiar mensagem',
+                  act: 'copy-message',
+                  icon: 'copy',
+                  id: single.id,
+                },
+              ]
+            : []),
           { label: 'Cancelar link', act: 'cancel-link', id: single.id },
         ];
         model.quiet = outside;
@@ -1201,19 +1355,26 @@ export function nextStep(v) {
       model.body.push(
         ...recvP,
         para([
-          `Link ${of} gerado. Copie a mensagem e envie ao cliente pelo canal que vocês usam. Dá para cancelar o link enquanto o cliente não clicar em Pagar.`,
+          single.url
+            ? `Link ${of} gerado. Copie a mensagem e envie ao cliente pelo canal que vocês usam. Dá para cancelar o link enquanto o cliente não clicar em Pagar.`
+            : `Link ${of} gerado. Dá para cancelar o link enquanto o cliente não clicar em Pagar.`,
         ]),
-        para(
-          [
-            messageText(
-              v.orderNumber,
-              single.kind,
-              single.amountCents,
-              single.url,
-            ),
-          ],
-          'message',
-        ),
+        // Never a message with an empty link (LPC-01).
+        ...(single.url
+          ? [
+              para(
+                [
+                  messageText(
+                    v.orderNumber,
+                    single.kind,
+                    single.amountCents,
+                    single.url,
+                  ),
+                ],
+                'message',
+              ),
+            ]
+          : []),
       );
       model.primary = single.url
         ? {
@@ -1568,7 +1729,8 @@ export function outsidePrimary(
 /** What cancelling a link frees. @param {Link} l @param {Figures} k */
 export function cancelReview(l, k) {
   return {
-    reserved: Math.max(0, k.reserved - l.amountCents),
+    // "Em links abertos passa a": a link A conferir is not open.
+    reserved: Math.max(0, k.opened - l.amountCents),
     free: Math.min(k.remaining, k.free + l.amountCents),
   };
 }
@@ -1609,7 +1771,7 @@ export function reconcileOptions(v) {
       ok: cancelOk,
       title: 'Cancelar links que o cliente ainda não clicou',
       detail: unclicked.length
-        ? `Cancela ${unclicked.length === 1 ? `o ${linkName(unclicked[0])} (${money(sum)})` : `${unclicked.length} links (${money(sum)})`}. Em links abertos passa a ${money(Math.max(0, k.reserved - sum))}.${keep}`
+        ? `Cancela ${unclicked.length === 1 ? `o ${linkName(unclicked[0])} (${money(sum)})` : `${unclicked.length} links (${money(sum)})`}. Em links abertos passa a ${money(Math.max(0, k.opened - sum))}.${keep}`
         : `Nenhum link para cancelar.${keep}`,
       reason: paying
         ? `O cliente está pagando o ${linkName(paying)} na InfinitePay (aberto às ${fT(paying.clickedAt)}).`

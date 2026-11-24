@@ -152,6 +152,10 @@ const view = computed(() =>
     orderNumber: orderNumber.value,
     destination: destination.value,
     readOnly: readOnly.value,
+    cancelled: Boolean(
+      current.value?.order?.cancelledAt ||
+      billing.value?.blockedReason === 'ORDER_CANCELLED',
+    ),
   }),
 );
 const locked = computed(() => Boolean(billing.value) && !view.value.canOperate);

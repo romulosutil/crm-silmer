@@ -177,23 +177,29 @@ test('LPC-02: uniform unavailable passes through; reads and clicks are limited a
     statuses.push(response.statusCode);
     if (response.statusCode === 200)
       assert.deepEqual(response.json(), { state: 'unavailable' });
+    // LPC-02: the page waits what the API says (whole seconds, ≤ 1 window).
+    else {
+      assert.match(String(response.headers['retry-after']), /^[1-9]\d*$/u);
+      assert.ok(Number(response.headers['retry-after']) <= 60);
+    }
   }
   assert.equal(statuses.filter((s) => s === 200).length, 60);
   assert.equal(statuses.at(-1), 429);
   // Clicks have their own, tighter budget, unaffected by the page polls.
   const clicks = [];
-  for (let index = 0; index < 11; index += 1)
-    clicks.push(
-      (
-        await api.inject({
-          method: 'POST',
-          url: `${PUBLIC}/checkout`,
-          headers: { origin: ORIGIN },
-        })
-      ).statusCode,
-    );
+  /** @type {any} */ let lastClick;
+  for (let index = 0; index < 11; index += 1) {
+    lastClick = await api.inject({
+      method: 'POST',
+      url: `${PUBLIC}/checkout`,
+      headers: { origin: ORIGIN },
+    });
+    clicks.push(lastClick.statusCode);
+  }
   assert.equal(clicks.filter((s) => s === 202).length, 10);
   assert.equal(clicks.at(-1), 429);
+  assert.match(String(lastClick.headers['retry-after']), /^[1-9]\d*$/u);
+  assert.equal(lastClick.json().code, 'RATE_LIMITED');
   const other = await api.inject({
     url: '/api/v1/payment-links/ABCDEFGHJKMNPQRSTVWXYZ0123',
   });

@@ -80,8 +80,11 @@ const noun = computed(
         {{ noun }}
         de {{ billingMoney(amountCents) }}. Link para pagamento:
         <span v-if="url" class="bl-bubble-link">{{ url }}</span
-        ><span v-else class="bl-bubble-link" data-pending
-          >link do CRM, criado ao enviar</span
+        ><span v-else class="bl-bubble-link" data-pending>{{
+          existing
+            ? 'link do CRM deste pedido'
+            : 'link do CRM, criado ao enviar'
+        }}</span
         ><span class="bl-bubble-meta">agora</span>
       </div>
     </div>

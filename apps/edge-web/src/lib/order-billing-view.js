@@ -691,7 +691,7 @@ export function sendProgress(steps, state) {
  * Derives everything the section shows.
  *
  * @param {any} billing the seller's billing view
- * @param {{conv?: boolean, pick?: 0|50|100, sending?: any, busy?: string, orderNumber?: string, destination?: string, changingTerms?: boolean, readOnly?: string, cancelled?: boolean}} [ctx]
+ * @param {{conv?: boolean, pick?: 0|50|100, sending?: any, busy?: string, orderNumber?: string, destination?: string, changingTerms?: boolean, readOnly?: string, cancelled?: boolean, inbox?: boolean}} [ctx]
  */
 export function deriveBillingView(billing, ctx = {}) {
   const review = Boolean(billing?.review);
@@ -1320,6 +1320,19 @@ function stepModel(v) {
     const recv = receivedSentence(v.links, v.receipts, k);
     const recvP = recv ? [para([recv])] : [];
     const outside = { q: 'Recebeu por outro meio?', ...external };
+    // PO 2026-11-24: one link waiting also offers another one, up to the
+    // free amount, as with several links. The Inbox footer carries only
+    // copy/cancel, so it is left out there.
+    const more = ctx.inbox ? null : anotherLink(k, conv);
+    /**
+     * At most two secondaries (§16): when the new action does not fit,
+     * Cancelar link gives way — it stays in the row's Mais ações menu.
+     * @param {Action[]} list
+     */
+    const fit = (list) => {
+      const all = more ? [...list, more] : list;
+      return all.length > 2 ? all.filter((a) => a.act !== 'cancel-link') : all;
+    };
     if (single && single.origin !== 'sent' && !single.sentAt) {
       const of = KIND[single.kind].of;
       if (conv) {
@@ -1336,7 +1349,7 @@ function stepModel(v) {
           act: 'send-existing',
           id: single.id,
         };
-        model.secondary = [
+        model.secondary = fit([
           ...(single.url
             ? [
                 {
@@ -1348,7 +1361,7 @@ function stepModel(v) {
               ]
             : []),
           { label: 'Cancelar link', act: 'cancel-link', id: single.id },
-        ];
+        ]);
         model.quiet = outside;
         return model;
       }
@@ -1384,9 +1397,9 @@ function stepModel(v) {
             id: single.id,
           }
         : null;
-      model.secondary = [
+      model.secondary = fit([
         { label: 'Cancelar link', act: 'cancel-link', id: single.id },
-      ];
+      ]);
       model.quiet = outside;
       return model;
     }
@@ -1396,6 +1409,9 @@ function stepModel(v) {
           `Link ${KIND[single.kind].of} enviado na conversa · ${sentPhrase(single)}. O cliente ainda não clicou em Pagar.`,
         ]),
       );
+      // Nothing else is primary here: the new link takes that place, so
+      // Copiar link and Cancelar link both stay.
+      model.primary = more;
       model.secondary = [
         ...(single.url
           ? [
@@ -1476,10 +1492,7 @@ function stepModel(v) {
       ...recvP,
       para([...waitText, ' Livre para cobrar ', strong(money(k.free)), '.']),
     );
-    model.primary = {
-      label: `${conv ? 'Enviar' : 'Gerar'} outro link de até ${money(k.free)}`,
-      act: 'send-another',
-    };
+    model.primary = anotherLink(k, conv);
     model.secondary = [external];
     return model;
   }
@@ -1609,6 +1622,20 @@ function stepModel(v) {
     external,
   ];
   return model;
+}
+
+/**
+ * "Enviar outro link de até R$ X" ("Gerar" without a conversation): any
+ * amount from R$ 1,00 up to the free amount; null below the minimum.
+ * @param {Figures} k @param {boolean} conv @returns {Action|null}
+ */
+function anotherLink(k, conv) {
+  return k.free >= LINK_MIN_CENTS
+    ? {
+        label: `${conv ? 'Enviar' : 'Gerar'} outro link de até ${money(k.free)}`,
+        act: 'send-another',
+      }
+    : null;
 }
 
 /** The condition cards: "0% · Sem entrada" and what is charged now and later. */

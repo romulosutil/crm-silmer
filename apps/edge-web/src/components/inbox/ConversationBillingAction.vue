@@ -152,6 +152,8 @@ const view = computed(() =>
     orderNumber: orderNumber.value,
     destination: destination.value,
     readOnly: readOnly.value,
+    // Its footer carries only copy/cancel: no "outro link" slot here.
+    inbox: true,
     cancelled: Boolean(
       current.value?.order?.cancelledAt ||
       billing.value?.blockedReason === 'ORDER_CANCELLED',

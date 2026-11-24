@@ -140,6 +140,7 @@ function draw(r) {
     orderNumber: '07-CRM',
     destination: 'Cliente Teste (WhatsApp)',
     cancelled: cancelled && !billing.blockedReason,
+    inbox: r() < 0.15,
   };
   return { billing, ctx, cancelled };
 }
@@ -287,6 +288,42 @@ function check(sample) {
 
   // 7. §16: one primary, at most two secondaries.
   assert.ok(v.next.secondary.length <= 2);
+
+  // 8. PO 2026-11-24: while links wait for the customer (none Em pagamento
+  // or A conferir), an operator outside conferência and outside a cancelled
+  // order is always offered another link of up to the free amount (R$ 1,00
+  // minimum). Never with less free, in conferência, cancelled, for another
+  // seller or with a link A conferir. Not part of the rule: the Inbox (its
+  // footer carries only copy/cancel) and a link sent with the wrong amount,
+  // whose next step is to cancel it.
+  const another = actions.some(
+    (a) => /** @type {any} */ (a).act === 'send-another',
+  );
+  const exp =
+    v.condition === 50
+      ? Math.round(k.total / 2)
+      : v.condition === 100
+        ? k.total
+        : null;
+  const wrongAmount =
+    exp !== null &&
+    k.received === 0 &&
+    k.held === 0 &&
+    v.groups.open.length === 1 &&
+    waiting.length === 1 &&
+    waiting[0].origin === 'sent' &&
+    waiting[0].amountCents !== exp;
+  const eligible =
+    v.canOperate &&
+    !v.review &&
+    !v.cancelled &&
+    k.free >= 100 &&
+    waiting.length > 0 &&
+    v.groups.paying.length === 0 &&
+    v.groups.unknown.length === 0;
+  if (eligible && !sample.ctx.inbox && !wrongAmount)
+    assert.ok(another, 'another link must be offered');
+  if (!eligible) assert.ok(!another, 'another link must not be offered');
 }
 
 test.before(() => {

@@ -1218,3 +1218,102 @@ test.describe('QA PR 457: Situação', () => {
     expect(await wcag(page, 'section.billing-section')).toEqual([]);
   });
 });
+
+test.describe('PO 2026-11-24: outro link com um link ainda não enviado', () => {
+  test('keyboard only: Tab to Gerar outro link, Enter opens the amount, one write, focus kept, axe', async ({
+    page,
+  }) => {
+    const { section, writes } = await setup(page, {
+      billing: {
+        chatSendEnabled: false,
+        links: [
+          billingLink({
+            id: 'gen',
+            origin: 'generated',
+            createdAt: billingAt(23, 13, 44),
+          }),
+        ],
+      },
+    });
+    const next = section.getByRole('region', { name: 'Próximo passo' });
+    const another = next.getByRole('button', {
+      name: money('Gerar outro link de até R$ 2.400,00'),
+    });
+    await expect(another).toBeVisible();
+    // Cancelar link stays reachable next to it (no capability removed).
+    await expect(
+      next.getByRole('button', { name: 'Cancelar link' }),
+    ).toBeVisible();
+    // Copiar mensagem, Cancelar link, the new action and the quiet link.
+    await expect(next.getByRole('button')).toHaveCount(4);
+    expect(await wcag(page, 'section.billing-section')).toEqual([]);
+
+    // Keyboard only, from the Próximo passo title.
+    await page.locator('#order-billing-next-title').focus();
+    for (let i = 0; i < 6; i += 1) {
+      if (await another.evaluate((el) => el === el.ownerDocument.activeElement))
+        break;
+      await page.keyboard.press('Tab');
+    }
+    await expect(another).toBeFocused();
+    await page.keyboard.press('Enter');
+    const dialog = page.getByRole('dialog', { name: 'Gerar outro link' });
+    await expect(dialog).toBeVisible();
+    const amount = dialog.getByLabel('Valor do link');
+    await expect(amount).toBeFocused();
+    await expect(amount).toHaveValue('2.400,00');
+    expect(await wcag(page, 'dialog[open]')).toEqual([]);
+    await page.keyboard.press('ControlOrMeta+a');
+    await page.keyboard.type('1.000,00');
+    await page.keyboard.press('Enter');
+    await expect(dialog).toBeHidden();
+    await page.waitForTimeout(800);
+    expect(linkWrites(writes)).toHaveLength(1);
+    expect(linkWrites(writes)[0]).toMatchObject({
+      path: 'links',
+      body: { amountCents: 100000 },
+    });
+    // LPC-09: the focus never falls to the page body.
+    await expect(page.locator('body')).not.toBeFocused();
+    await expect(page.locator('section.billing-section :focus')).toHaveCount(1);
+    await expect(next.getByRole('status')).toContainText(
+      'Link da parcela gerado. Ele ainda não foi enviado ao cliente.',
+    );
+  });
+
+  test('with a conversation: Enviar outro link next to Copiar mensagem; Cancelar link in the row menu', async ({
+    page,
+  }) => {
+    const { section } = await setup(page, {
+      billing: {
+        links: [
+          billingLink({
+            id: 'gen',
+            origin: 'generated',
+            createdAt: billingAt(23, 13, 44),
+          }),
+        ],
+      },
+    });
+    const next = section.getByRole('region', { name: 'Próximo passo' });
+    await expect(
+      next.getByRole('button', { name: 'Enviar link na conversa' }),
+    ).toBeVisible();
+    await expect(
+      next.getByRole('button', { name: 'Copiar mensagem' }),
+    ).toBeVisible();
+    await expect(
+      next.getByRole('button', {
+        name: money('Enviar outro link de até R$ 2.400,00'),
+      }),
+    ).toBeVisible();
+    await expect(next.getByRole('button')).toHaveCount(4);
+    await section
+      .getByRole('button', { name: 'Mais ações desta cobrança: Sinal · 50%' })
+      .click();
+    await expect(
+      page.getByRole('menuitem', { name: 'Cancelar link' }),
+    ).toBeVisible();
+    expect(await wcag(page, 'section.billing-section')).toEqual([]);
+  });
+});

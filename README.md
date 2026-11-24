@@ -13,6 +13,8 @@ Direct é a próxima fase de canal.
 
 ## Comece por aqui
 
+Para entender o sistema em execução, comece pelo [guia ilustrado da topologia do CRM](docs/diagrams/topologia-crm-silmer.md). Ele acompanha uma mensagem da Inbox, localiza os serviços no EasyPanel e explica como cada parte se recupera de falhas.
+
 Leia nesta ordem antes de implementar:
 
 1. [`ABOUT.md`](ABOUT.md) — visão curta e mapa dos documentos.

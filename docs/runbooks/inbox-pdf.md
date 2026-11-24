@@ -119,6 +119,15 @@ marcadores `/* INBOX-VIDEO-01 */` e `/* INBOX-CDR-ZIP-01 */`, somente:
   `application/x-vnd.corel.draw.document+zip`, nome `documento.cdr`. O nome
   original serve apenas para admitir o candidato; ZIP genérico continua recusado
   pelo libmagic do CRM, que precisa detectar o tipo Corel declarado.
+- **CorelDRAW 17+ no CRM:** o CDR atual é um ZIP cuja primeira entrada
+  `mimetype` diz `application/x-vnd.corel.zcf.draw.document+zip`, e o libmagic
+  devolve exatamente esse tipo ("Corel Draw drawing, version 17-22"). O CRM só
+  aceitava a variante sem `zcf` e respondia 415 também na linha principal. O
+  scanner (`clamav-media-scanner.js`) passa a nomear a variante `zcf` pelo tipo
+  canônico `application/x-vnd.corel.draw.document+zip`; o resto do CRM não muda.
+  Os dois CDR de 23/11 receberam 415 no teste de 24/11 antes dessa correção e
+  ficaram `rejected` no CRM, portanto não podem ser reenviados pelo mesmo
+  identificador.
 
 Filtrar, Baixar e Medir recebem os dois blocos antes do código existente; os
 demais nós, conexões e configurações ficam idênticos, e imagem, áudio, PDF e
@@ -150,6 +159,12 @@ Aplicação, sempre sobre o export corrente e sem publicar pelo script:
 5. Verifique com um MP4 curto e um `.cdr` pequeno enviados ao número de teste:
    anexo presente, download com bytes idênticos e replay sem duplicata. Confira
    também que um ZIP comum e um arquivo acima de 16 MiB continuam sem anexo.
+
+Prova de 24/11/2026: o código novo de Baixar e Medir, executado pelo utilitário
+inativo de recuperação contra os arquivos reais de 23/11, gravou o vídeo de
+4,3 MB (anexo presente, download 200 `video/mp4` com o mesmo tamanho). Ordem de
+publicação: primeiro o CRM com o scanner corrigido, depois o patch no n8n, para
+que nenhum CDR novo seja recusado em definitivo.
 
 Rollback: restaurar o export privado anterior. Verificação local:
 `node --test test/evolution-inbound-video-cdr-zip-patch.test.js test/evolution-inbound-documents-patch.test.js test/evolution-inbound-pdf-patch.test.js`.

@@ -8,6 +8,17 @@ const SIGNATURE_FILES = Object.freeze([
   '/var/lib/clamav/main.cld',
   '/var/lib/clamav/main.cvd',
 ]);
+// INBOX-CDR-ZIP-01: libmagic names CorelDRAW 17+ (2015 on) by the ZIP's own
+// `mimetype` entry. It is the same CorelDRAW ZIP document the CRM already
+// accepts, stores and serves as .cdr, so it gets the one canonical name.
+const CANONICAL_MIME_TYPES = Object.freeze(
+  new Map([
+    [
+      'application/x-vnd.corel.zcf.draw.document+zip',
+      'application/x-vnd.corel.draw.document+zip',
+    ],
+  ]),
+);
 
 /**
  * Fail-closed adapter for the persistent ClamAV daemon and libmagic installed
@@ -78,7 +89,8 @@ export class ClamAvMediaScanner {
 
     return Object.freeze({
       clean,
-      detectedMimeType,
+      detectedMimeType:
+        CANONICAL_MIME_TYPES.get(detectedMimeType) ?? detectedMimeType,
       signatureUpdatedAt,
     });
   }

@@ -227,6 +227,32 @@ test('missing marker uses installed signature date but corrupt marker cannot cla
   );
 });
 
+test('names CorelDRAW 17+ ZIP documents with the canonical CorelDRAW ZIP type', async (context) => {
+  const fixture = await signatures(context);
+  for (const [detected, expected] of [
+    [
+      'application/x-vnd.corel.zcf.draw.document+zip',
+      'application/x-vnd.corel.draw.document+zip',
+    ],
+    [
+      'application/x-vnd.corel.draw.document+zip',
+      'application/x-vnd.corel.draw.document+zip',
+    ],
+    ['application/zip', 'application/zip'],
+  ]) {
+    const scanner = new ClamAvMediaScanner({
+      ...fixture,
+      async execFileImpl(/** @type {string} */ command) {
+        return { stdout: command === 'file' ? `${detected}\n` : '' };
+      },
+    });
+    assert.equal(
+      (await scanner.scan('/private/synthetic-cdr')).detectedMimeType,
+      expected,
+    );
+  }
+});
+
 test('rejects empty or multiline MIME detector responses after a clean daemon scan', async (context) => {
   const fixture = await signatures(context);
   for (const response of ['', 'image/png\naudio/ogg', 'image/png\raudio/ogg']) {

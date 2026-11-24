@@ -120,6 +120,7 @@ export function createOlistAdministration(database, options) {
       settings: current.settings,
       now: clock(),
       paymentDueOn: input.paymentDueOn,
+      historicalLink: true,
     });
     const irrelevant = new Set([
       'settings.sellerId',
@@ -631,7 +632,18 @@ export function createOlistAdministration(database, options) {
             operation?.snapshot.commercial.orderDate ??
             plan.commercial.orderDate,
         },
-        sourceVersions: before.sourceVersions,
+        sourceVersions: {
+          ...before.sourceVersions,
+          ...(operation?.snapshot?.sourceVersions?.commercialRevision !==
+          undefined
+            ? {
+                commercialRevision: Number(
+                  before.source.order.commercialRevision ??
+                    before.binding.orderVersion,
+                ),
+              }
+            : {}),
+        },
         productFiscal:
           before.productFiscal ?? before.settings?.productFiscal ?? null,
         productFiscalDeferred: before.productFiscalDeferred === true,

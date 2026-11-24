@@ -736,26 +736,19 @@ paths:
       operationId: requestOlistExport
       summary: Reservar uma operação Olist com snapshot e job locais
       description: >-
-        OLIST-T07 / OLIST-01–02,13–15,30,33. Humano ativo com checkbox Olist,
-        leitura comercial do Pedido (order.read) e piloto; Financeiro não inicia
-        novo envio (OLC-02). Pedido de outro responsável/origem é aceito. Cadastro
-        incompleto do comprador devolve 409 OLIST_CUSTOMER_INVALID sem reserva
-        nem job, inclusive com recibo antigo (ADR 082). Sessão,
-        CSRF, Origin e Idempotency-Key obrigatórios. Recebe somente o recibo cifrado
-        da prévia; nenhum preço, total, conta, vendedor, payload ou versão do navegador.
-        Primeira inclusão revalida a prévia/fonte/configuração sob os mesmos locks
-        que persistem operação, snapshot cifrado, job, evento, auditoria e recibo.
-        Uma operação por Pedido/conta; chaves/prévias distintas do mesmo plano
-        convergem sem duplicar jobs ou alterar o executor original. Mesma chave
-        com corpo/sessão/alvo divergentes é conflito; preserve chave e token no retry.
-        Replay mantém snapshot/data/resposta originais mesmo após expiração, com
-        autoridade, época e gates atuais. Nova chave com mesma operação confere
-        autenticidade e semântica antes de retornar o vínculo, sem novo envio.
-        Sem data ERP, congela o dia de São Paulo do primeiro comando aceito.
-        Não confirma nem muda pagamento/entrega do CRM. Conta permanece desabilitada
-        por padrão; exige creation_enabled e ausência de recovery. Sem HTTP ERP e
-        sem consumidor da fila olist nesta tarefa; despacho permanece T08.
-        Resposta private/no-store; dez comandos/minuto, corpo máximo 270000 bytes.
+        OLC-T03 / OLIST-T07 / OLC-01,03,07-12,14. Humano ativo com checkbox
+        Olist, leitura comercial do Pedido (order.read) e piloto; Financeiro
+        não inicia novo envio (OLC-02). Restrito a Pedido confirmado (não
+        cancelado); Pedido pendente retorna 409 ORDER_NOT_CONFIRMED. Aceita
+        comando direto sem previewToken obrigatório (opcionalmente informando
+        paymentDueOn quando a política central for per_order), mantendo
+        compatibilidade quando previewToken cifrado é enviado pela tela /olist.
+        Cadastro completo do comprador (ADR 082), peças + frete = total e
+        centavos exatos são validados antes de qualquer reserva ou inclusão.
+        Uma operação ativa por Pedido/conta; geração parada sem efeito remoto e
+        sem job ativo (retrySafe) pode ser retomada com segurança (OLIST_EXPORT_RESUMED).
+        Sessão, CSRF, Origin e Idempotency-Key obrigatórios. Sem payload ou versão
+        comercial vinda do navegador. Resposta private/no-store.
       security: [{ sessionCookie: [], csrfHeader: [], idempotencyKey: [] }]
       parameters:
         - $ref: '#/components/parameters/Origin'
@@ -767,13 +760,17 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [previewToken]
               properties:
                 previewToken:
                   {
                     type: string,
                     maxLength: 262144,
                     pattern: '^[A-Za-z0-9_-]+$',
+                  }
+                paymentDueOn:
+                  {
+                    type: string,
+                    format: date,
                   }
       responses:
         '202':
@@ -5410,6 +5407,7 @@ components:
       properties:
         orderId: { type: string }
         productFiscalRequired: { type: boolean }
+        productFiscalDeferred: { type: boolean }
         paymentDuePolicy: { enum: [fixed_date, per_order, erp] }
         number: { type: string }
         status: { enum: [pendente, confirmado] }
@@ -5421,8 +5419,9 @@ components:
             additionalProperties: false
             required: [code, label]
             properties:
-              code: { const: OLIST_CREATION_DISABLED }
-              label: { const: Geração Olist ainda indisponível. }
+              code: { type: string, pattern: '^[A-Z][A-Z0-9_]{0,63}$' }
+              field: { type: string }
+              label: { type: string }
         operation:
           oneOf:
             - type: 'null'
@@ -5449,6 +5448,7 @@ components:
                 stage: { enum: [customer, product, variation, sale, complete] }
                 number: { type: [string, 'null'] }
                 errorCode: { type: string, pattern: '^[A-Z][A-Z0-9_]{0,63}$' }
+                retrySafe: { type: boolean }
     OlistProblem:
       type: object
       additionalProperties: false

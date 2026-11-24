@@ -743,7 +743,7 @@ test('T07 strict export body refuses commercial authority and only active enable
   const valid = fixture({ olistEnabled: true });
   t.after(() => valid.api.close());
   for (const payload of [
-    {},
+    { previewToken: null },
     { previewToken: 'encrypted', snapshot: {} },
     { previewToken: 'encrypted', totalCents: 1 },
     { previewToken: 'encrypted', accountKey: 'forged' },
@@ -760,7 +760,27 @@ test('T07 strict export body refuses commercial authority and only active enable
     });
     assert.equal(response.statusCode, 400, response.body);
   }
-  assert.deepEqual(valid.calls, []);
+  assert.equal(valid.calls.length, 0);
+  const directResponse = await valid.api.inject({
+    method: 'POST',
+    url: '/api/v1/orders/order-of-another-owner/olist/export',
+    headers: { ...headers, 'content-type': 'application/json' },
+    payload: {},
+  });
+  assert.equal(directResponse.statusCode, 202, directResponse.body);
+  assert.equal(valid.calls.length, 1);
+  assert.equal(valid.calls[0].method, 'exportOrder');
+  assert.equal(valid.calls[0].input.previewToken, undefined);
+  const directDueResponse = await valid.api.inject({
+    method: 'POST',
+    url: '/api/v1/orders/order-of-another-owner/olist/export',
+    headers: { ...headers, 'content-type': 'application/json' },
+    payload: { paymentDueOn: '2026-12-20' },
+  });
+  assert.equal(directDueResponse.statusCode, 202, directDueResponse.body);
+  assert.equal(valid.calls.length, 2);
+  assert.equal(valid.calls[1].input.previewToken, undefined);
+  assert.equal(valid.calls[1].input.paymentDueOn, '2026-12-20');
   for (const patch of [
     { olistEnabled: false },
     { disabledAt: '2026-11-06T12:00:00Z' },

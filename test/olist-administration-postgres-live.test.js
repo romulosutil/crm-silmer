@@ -277,6 +277,7 @@ else
           },
           settings,
           now: NOW,
+          historicalLink: true,
         });
         /** @type {Map<string,any>} */
         const responses = new Map([

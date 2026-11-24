@@ -68,8 +68,12 @@ else
           new Map(ids.map((id) => [id, 'Nome alterado depois do snapshot'])),
       },
     });
-    /** @param {boolean} [exported] @param {string} [state] @returns {Promise<any>} */
-    async function fixture(exported = true, state = 'confirmed') {
+    /** @param {boolean} [exported] @param {string} [state] @param {'pendente'|'confirmado'} [status] @returns {Promise<any>} */
+    async function fixture(
+      exported = true,
+      state = 'confirmed',
+      status = 'confirmado',
+    ) {
       const id = 't10-order-' + randomUUID(),
         contactId = 't10-contact-' + randomUUID();
       await pool.query(
@@ -95,8 +99,8 @@ else
         32000,
       );
       await pool.query(
-        `INSERT INTO crm.orders(id,number_sequence,number,conversation_id,contact_id,manual_owner_id,manual_create_key,status,fab_code,ficha_envelope,total_pieces,final_amount_cents,payment_condition,created_by_kind,created_by,created_at,updated_at)
-      VALUES($1,$2,$3,NULL,$4,$5,$6,'pendente','01',$7::jsonb,32,32000,'pix','user',$5,$8,$8)`,
+        `INSERT INTO crm.orders(id,number_sequence,number,conversation_id,contact_id,manual_owner_id,manual_create_key,status,fab_code,ficha_envelope,total_pieces,final_amount_cents,payment_condition,order_date,confirmed_at,confirmed_by,created_by_kind,created_by,created_at,updated_at)
+      VALUES($1,$2,$3,NULL,$4,$5,$6,$7,'01',$8::jsonb,32,32000,'pix',$9::date,$10::timestamptz,$11::text,'user',$5,$12,$12)`,
         [
           id,
           n,
@@ -104,7 +108,11 @@ else
           contactId,
           OWNER.id,
           randomUUID(),
+          status,
           JSON.stringify(encryptJson(ficha, 'order-ficha:' + id, KEY)),
+          status === 'confirmado' ? '2026-11-06' : null,
+          status === 'confirmado' ? NOW : null,
+          status === 'confirmado' ? OWNER.id : null,
           NOW,
         ],
       );
@@ -153,15 +161,44 @@ else
       };
       let operation;
       if (exported) {
-        operation = await olistFor().prepareExport(input);
-        await pool.query(
-          'UPDATE crm.olist_exports SET state=$2,remote_id=$3 WHERE id=$1',
-          [
-            operation.id,
-            state,
-            ['confirmed', 'linked'].includes(state) ? '9100' : null,
-          ],
-        );
+        if (status === 'confirmado') {
+          operation = await olistFor().prepareExport(input);
+          await pool.query(
+            'UPDATE crm.olist_exports SET state=$2,remote_id=$3 WHERE id=$1',
+            [
+              operation.id,
+              state,
+              ['confirmed', 'linked'].includes(state) ? '9100' : null,
+            ],
+          );
+        } else {
+          // Historical pending-order export/link row created before OLC-01.
+          const opId = randomUUID();
+          operation = (
+            await pool.query(
+              'INSERT INTO crm.olist_exports(id,account_key,context_key,connection_generation,order_id,order_version,settings_version,actor_id,authorization_version,reference,snapshot_envelope,state,remote_id) VALUES($1,$2,$3,0,$4,1,0,$5,1,$6,$7::jsonb,$8,$9) RETURNING *',
+              [
+                opId,
+                accountKey,
+                contextKey,
+                id,
+                OWNER.id,
+                'CRM-' + opId,
+                JSON.stringify(
+                  seal(
+                    input.snapshot,
+                    KEY,
+                    'export-snapshot',
+                    accountKey,
+                    opId,
+                  ),
+                ),
+                state,
+                ['confirmed', 'linked'].includes(state) ? '9100' : null,
+              ],
+            )
+          ).rows[0];
+        }
       }
       return { id, input, operation, order: await repo.findById(id) };
     }
@@ -279,7 +316,7 @@ else
         'completed pending exports confirm with frozen client, ficha bytes, ERP snapshot and money intact',
         async () => {
           for (const state of ['confirmed', 'linked']) {
-            const f = await fixture(true, state),
+            const f = await fixture(true, state, 'pendente'),
               before = await persisted(f.id);
             const exportBefore = (
               await pool.query(
@@ -328,7 +365,7 @@ else
       await t.test(
         'even direct confirmation cannot change any ficha field, client, subtotal or payment condition',
         async () => {
-          const f = await fixture(),
+          const f = await fixture(true, 'confirmed', 'pendente'),
             before = await persisted(f.id);
           const candidate = confirmOrder(f.order, {
             actorId: OWNER.id,
@@ -380,13 +417,28 @@ else
         async () => {
           for (const state of ['invalidated', 'rejected']) {
             const f = await fixture(true, state);
-            await repo.saveSection(f.order, options);
+            const reopened = await service.reopen({
+              ...options,
+              orderId: f.id,
+              expectedVersion: f.order.version,
+            });
+            await repo.saveSection(reopened, {
+              ...options,
+              expectedVersion: reopened.version,
+            });
             const g = await fixture(true, state);
             await pool.query(
               'UPDATE crm.olist_exports SET observed_sale_id=$2 WHERE id=$1',
               [g.operation.id, '9102'],
             );
-            await assert.rejects(repo.saveSection(g.order, options), isLocked);
+            await assert.rejects(
+              service.reopen({
+                ...options,
+                orderId: g.id,
+                expectedVersion: g.order.version,
+              }),
+              isLocked,
+            );
             // Migration 0071 forbids a NEW sale attempt on an invalidated export,
             // so the surviving attempt is recorded before the row is archived.
             const h = await fixture(true, 'queued');
@@ -398,7 +450,14 @@ else
               'UPDATE crm.olist_exports SET state=$2 WHERE id=$1',
               [h.operation.id, state],
             );
-            await assert.rejects(repo.saveSection(h.order, options), isLocked);
+            await assert.rejects(
+              service.reopen({
+                ...options,
+                orderId: h.id,
+                expectedVersion: h.order.version,
+              }),
+              isLocked,
+            );
           }
         },
       );
@@ -584,6 +643,38 @@ else
         },
       );
       await t.test(
+        'OLC-01 / commercial_revision: milestones updating only order.version preserve queued dispatch when snapshot pins commercialRevision, while pending orders are rejected',
+        async () => {
+          const pending = await fixture(false, 'confirmed', 'pendente');
+          await assert.rejects(olistFor().prepareExport(pending.input), {
+            code: 'ORDER_NOT_CONFIRMED',
+          });
+          const f = await fixture(false);
+          const operation = await olistFor().prepareExport({
+            ...f.input,
+            snapshot: {
+              ...f.input.snapshot,
+              sourceVersions: {
+                sourceRevision: 0,
+                commercialRevision: 1,
+                contactId: f.order.contactId,
+                contactVersion: 1,
+              },
+            },
+          });
+          await service.recordMilestones({
+            ...options,
+            orderId: f.id,
+            paidOn: '2026-11-06',
+            paymentReviewed: true,
+          });
+          await olistFor().validateDispatch({
+            ...f.input,
+            exportId: operation.id,
+          });
+        },
+      );
+      await t.test(
         'export acceptance beats an incompatible concurrent edit on an independent connection',
         async () => {
           const f = await fixture(false),
@@ -608,8 +699,24 @@ else
             writer = new PostgresOrderRepository({
               database: pause.database,
               envelopeKey: KEY,
+            }),
+            writerService = createOrderService({
+              repository: writer,
+              fabCode: '01',
+              clock: () => NOW,
+              authorizeOwnership: async () => {},
+              authorizeManualOwnership: async () => {},
+              conversations: {
+                readOrderContexts: async () => new Map(),
+                searchConversationIds: async () => [],
+                readContactNames: async () => new Map(),
+              },
             });
-          const first = writer.saveSection(f.order, options);
+          const first = writerService.reopen({
+            ...options,
+            orderId: f.id,
+            expectedVersion: 1,
+          });
           await pause.locked;
           const second = olistFor().prepareExport(f.input);
           const resultPromise = Promise.allSettled([first, second]);
@@ -618,7 +725,11 @@ else
           assert.equal(result[0].status, 'fulfilled');
           assert.equal(result[1].status, 'rejected');
           if (result[1].status === 'rejected')
-            assert.equal(result[1].reason.code, 'VERSION_CONFLICT');
+            assert.ok(
+              ['VERSION_CONFLICT', 'ORDER_NOT_CONFIRMED'].includes(
+                result[1].reason.code,
+              ),
+            );
           assert.equal(
             Number(
               (

@@ -139,7 +139,7 @@ else
           .n,
       );
       await pool.query(
-        "INSERT INTO crm.orders(id,number_sequence,number,conversation_id,status,fab_code,ficha_envelope,created_by_kind,created_by,created_at,updated_at,contact_id,manual_owner_id,manual_create_key) VALUES($1,$2,$3,NULL,'pendente','SYNTHETIC',$4::jsonb,'user',$5,$6,$6,$7,$5,$8)",
+        "INSERT INTO crm.orders(id,number_sequence,number,conversation_id,status,fab_code,ficha_envelope,final_amount_cents,payment_condition,order_date,confirmed_at,confirmed_by,created_by_kind,created_by,created_at,updated_at,contact_id,manual_owner_id,manual_create_key) VALUES($1,$2,$3,NULL,'confirmado','SYNTHETIC',$4::jsonb,600,'pix','2026-11-06'::date,$6,$5,'user',$5,$6,$6,$7,$5,$8)",
         [
           orderId,
           n,

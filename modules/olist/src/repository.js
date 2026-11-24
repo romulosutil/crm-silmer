@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { OlistError, integer, text, object } from './errors.js';
 import { seal, open, identityHash } from './crypto.js';
 import { normalizeDocument } from './configuration.js';
-import { lockOlistActor, assertOlistPilotActor } from './access.js';
+import {
+  lockOlistActor,
+  assertOlistPilotActor,
+  assertOlistOrderCommercialRead,
+} from './access.js';
 import { assertOlistExistingBuyerSource } from './existing-buyer.js';
 /** Shared canonical identity for read-only plans and durable reservations.
  * Existing valid identities keep exactly the same normalization and hashes.
@@ -70,9 +74,16 @@ function requestPayload(value) {
   return normalized;
 }
 /** Server-only persistence port. Every returned ID is account scoped.
- * @param {any} database @param {{envelopeKey:Buffer,hmacKey:Buffer,clock?:()=>Date,pilotUserIds?:readonly string[]}} options */
+ * @param {any} database @param {{envelopeKey:Buffer,hmacKey:Buffer,clock?:()=>Date,pilotUserIds?:readonly string[],requireCommercialRead?:boolean}} options */
 export function createOlistRepository(database, options) {
   const clock = options.clock ?? (() => new Date());
+  /** @param {any} client @param {any} input */
+  async function lockExportActor(client, input) {
+    const actor = await lockOlistActor(client, input, 'olist.export', clock());
+    if (options.requireCommercialRead === true)
+      assertOlistOrderCommercialRead(actor);
+    return actor;
+  }
   /** @param {any} client @param {any} input @param {string} code @param {number} version @param {string|null} [exportId] @param {string|null} [resourceId] */
   async function event(
     client,
@@ -99,7 +110,7 @@ export function createOlistRepository(database, options) {
   /** @param {any} client @param {any} input */
   async function effectGuard(client, input) {
     assertOlistPilotActor(options.pilotUserIds, input);
-    await lockOlistActor(client, input, 'olist.export', clock());
+    await lockExportActor(client, input);
     const { rows } = await client.query(
       'SELECT c.*,a.creation_enabled,a.recovery_required FROM crm.olist_connections c JOIN crm.olist_accounts a USING(account_key) WHERE c.context_key=$1 AND c.account_key=$2 FOR SHARE OF c,a',
       [input.contextKey, input.accountKey],
@@ -120,7 +131,7 @@ export function createOlistRepository(database, options) {
    * @param {any} client @param {any} input */
   async function exportCommandGuard(client, input) {
     assertOlistPilotActor(options.pilotUserIds, input);
-    await lockOlistActor(client, input, 'olist.export', clock());
+    await lockExportActor(client, input);
     const connection = (
       await client.query(
         'SELECT c.*,a.creation_enabled,a.recovery_required FROM crm.olist_connections c JOIN crm.olist_accounts a USING(account_key) WHERE c.context_key=$1 AND c.account_key=$2 FOR SHARE OF c,a',
@@ -173,7 +184,7 @@ export function createOlistRepository(database, options) {
   async function resolutionGuard(client, input, effect) {
     const connection = effect ? await effectGuard(client, input) : null;
     if (!effect) {
-      await lockOlistActor(client, input, 'olist.export', clock());
+      await lockExportActor(client, input);
       const current = (
         await client.query(
           'SELECT generation FROM crm.olist_connections WHERE account_key=$1 AND context_key=$2 FOR SHARE',
@@ -1271,7 +1282,7 @@ export function createOlistRepository(database, options) {
         input,
       );
       return database.transaction(async (/** @type {any} */ client) => {
-        await lockOlistActor(client, input, 'olist.export', clock());
+        await lockExportActor(client, input);
         if (input.kind === 'variation') {
           const parent = await client.query(
             "SELECT id FROM crm.olist_resources WHERE id=$1 AND account_key=$2 AND kind='product' AND state='confirmed' FOR SHARE",

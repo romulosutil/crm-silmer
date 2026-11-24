@@ -71,6 +71,7 @@ export function createOlistExportCommand(
     envelopeKey: config.envelopeKey,
     hmacKey: config.hmacKey,
     pilotUserIds: config.pilotUserIds,
+    requireCommercialRead: true,
     clock,
   });
   /** Tokens carry only server-owned data. Random IVs, actors, sessions and

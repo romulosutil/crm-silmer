@@ -184,6 +184,7 @@ const canResume = computed(() => {
   if (!isConfirmed.value || !canOperate.value || denied.value) return false;
   if (props.cancelled || props.disabled || lastReadFailed.value) return false;
   if (exportState.value !== 'idle') return false;
+  if (actionableIssues.value.length > 0) return false;
   if (projection.value?.creationEnabled === false) return false;
   return canResumeOperation(projection.value?.operation);
 });
@@ -198,7 +199,7 @@ const canDirectGenerate = computed(() => {
 
 const showDueInput = computed(
   () =>
-    canDirectGenerate.value &&
+    (canDirectGenerate.value || canResume.value) &&
     projection.value?.paymentDuePolicy === 'per_order',
 );
 

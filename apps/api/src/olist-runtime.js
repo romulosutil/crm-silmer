@@ -203,9 +203,11 @@ export function createOlistApiRuntime(database, options) {
           ];
       // OLC-T04: the Order detail shows every local pendency of a confirmed
       // order (buyer registration, composition, exact cents) without any ERP
-      // call. The administrative lookup keeps its minimal projection.
+      // call. The administrative lookup keeps its minimal projection, and
+      // Financeiro never receives a new projection (OLC-02).
       if (
         input.lookup !== true &&
+        commercialRead &&
         order.status === 'confirmado' &&
         !order.cancelled_at
       ) {
@@ -250,6 +252,7 @@ export function createOlistApiRuntime(database, options) {
       }
       let retrySafe = false;
       if (
+        commercialRead &&
         operation?.id &&
         ['queued', 'resolving', 'ready'].includes(operation.state) &&
         operation.last_error_code

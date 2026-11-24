@@ -134,6 +134,7 @@ export function createOlistDispatchRuntime({
     envelopeKey: config.envelopeKey,
     hmacKey: config.hmacKey,
     pilotUserIds: config.pilotUserIds,
+    requireCommercialRead: true,
     clock,
   });
   return Object.freeze({

@@ -114,6 +114,19 @@ Plano e evidências em [order-timeline](../order-timeline/tasks.md), DTL-01–12
 Implementação autorizada pelo proprietário após protótipo DTL-P01–P06;
 controle de conclusão e gates no plano específico. Sem ativação de produção.
 
+## INBOX-VIDEO-01 — vídeo MP4 e CDR enviado como ZIP na linha pessoal (24/11/2026)
+
+INB-01, MSG-01–03 e PRV-03; continuação de INBOX-DOC-02 após medição em produção
+(23/11/2026) de vídeo MP4 e `.cdr` declarado `application/zip` descartados sem anexo.
+
+- [x] Preparar patch offline puro do ramo de mídia (Filtrar, Baixar, Medir) para
+      `video/mp4` com `ftyp` e `.cdr` em ZIP, base64/tamanho/assinatura
+      conferidos, limite de 16 MiB e recusa de reaplicação (INBOX-CDR-ZIP-01).
+- [ ] Aplicar o delta no workflow corrente da linha pessoal e publicar.
+- [ ] Homologar MP4 e `.cdr` reais; confirmar ZIP comum e arquivo acima de 16 MiB sem anexo.
+
+Evidências, limites e rollback: [runbook](../../../docs/runbooks/inbox-pdf.md).
+
 ## INBOX-DOC-02 — liberar documentos PDF e CDR recebidos (16/11/2026)
 
 INB-01, MSG-01–03 e PRV-03; solicitação explícita do proprietário.

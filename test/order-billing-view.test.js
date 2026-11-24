@@ -260,7 +260,11 @@ test('scenario 3: aguardando o cliente', () => {
     body(v.next),
     'Link do sinal enviado na conversa · Entregue às 13:46. O cliente ainda não clicou em Pagar.',
   );
-  eq(v.next.primary, null);
+  // PO 2026-11-24: another link up to the free amount is offered here too.
+  deq(plain(v.next.primary), {
+    label: 'Enviar outro link de até R$ 2.400,00',
+    act: 'send-another',
+  });
   deq(
     v.next.secondary.map((/** @type {any} */ a) => a.label),
     ['Copiar link', 'Cancelar link'],
@@ -1068,14 +1072,60 @@ test('QA 11: a link from another CRM origin is said, never copied empty', () => 
   eq(other.links[0].urlBlocked, false);
 });
 
-test('QA 12 (not changed): one generated link, nothing received, keeps the approved next step', () => {
-  // RFC 074 prototype scenario 3 ("Sem primária; secundárias Copiar link ·
-  // Cancelar link") and §16 (at most two secondaries) — see the report.
-  const v = derive(billing({ links: [link({ origin: 'generated' })] }), {
-    conv: false,
-  });
+test('QA 12 (PO 2026-11-24): one link not sent yet also offers another link up to the free amount', () => {
+  /** @param {any} v */
+  const acts = (v) =>
+    plain([
+      v.next.primary && [v.next.primary.act, v.next.primary.label],
+      ...v.next.secondary.map((/** @type {any} */ a) => [a.act, a.label]),
+    ]);
+  const generated = billing({ links: [link({ origin: 'generated' })] });
+  // Without a conversation: Gerar, as in the case of several links.
+  const plainView = derive(generated, { conv: false });
+  deq(acts(plainView), [
+    ['copy-message', 'Copiar mensagem'],
+    ['cancel-link', 'Cancelar link'],
+    ['send-another', 'Gerar outro link de até R$ 2.400,00'],
+  ]);
+  // With a conversation the two secondaries are full: Cancelar link stays in
+  // the row's "Mais ações" menu, where it already is (§16, nothing lost).
+  const conv = derive(generated);
+  deq(acts(conv), [
+    ['send-existing', 'Enviar link na conversa'],
+    ['copy-message', 'Copiar mensagem'],
+    ['send-another', 'Enviar outro link de até R$ 2.400,00'],
+  ]);
   deq(
-    [v.next.primary?.act, ...v.next.secondary.map((a) => a.act)],
-    ['copy-message', 'cancel-link'],
+    conv.rows[0].menu.map((/** @type {any} */ m) => m.act),
+    ['copy-link', 'cancel-link'],
   );
+  // The Inbox carries only copy/cancel in its footer: it keeps Cancelar link.
+  deq(acts(derive(generated, { inbox: true })), [
+    ['send-existing', 'Enviar link na conversa'],
+    ['copy-message', 'Copiar mensagem'],
+    ['cancel-link', 'Cancelar link'],
+  ]);
+  // Never below R$ 1,00 free, in conferência, cancelled or for another seller.
+  /** @param {any} v */
+  const offers = (v) =>
+    [v.next.primary, ...v.next.secondary].some(
+      (a) => a?.act === 'send-another',
+    );
+  const full = billing({
+    condition: { percent: 100 },
+    links: [link({ origin: 'generated', kind: 'full', amountCents: 479950 })],
+  });
+  eq(derive(full).figures.free, 50);
+  eq(offers(derive(full)), false);
+  eq(
+    offers(
+      derive({
+        ...generated,
+        review: { reason: 'late_payment', heldCents: 0 },
+      }),
+    ),
+    false,
+  );
+  eq(offers(derive(generated, { cancelled: true })), false);
+  eq(offers(derive({ ...generated, canOperate: false })), false);
 });

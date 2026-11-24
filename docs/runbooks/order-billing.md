@@ -120,6 +120,20 @@ use **Enviar outro link**. Se o cliente usou um link antigo, use **Copiar
 link** na linha aberta. Nunca peça ao cliente o link nem o token por escrito
 para investigar; o token não vai para log.
 
+**Outro link com um link aguardando (decisão do PO, 24/11/2026, em conversa
+com o PO).** Com um só link Aguardando o cliente, enviado ou ainda não
+enviado, e livre para cobrar de pelo menos R$ 1,00, o Próximo passo oferece
+**Enviar outro link de até R$ X** (sem conversa vinculada: **Gerar outro link
+de até R$ X**), o mesmo diálogo de valor de quando já há vários links. Link
+enviado: a ação vira a principal, e Copiar link e Cancelar link continuam ao
+lado. Link não enviado com conversa: Enviar link na conversa, Copiar mensagem e
+a ação nova; **Cancelar link** continua no menu "Mais ações desta cobrança" da
+linha (limite de duas secundárias da RFC 074). Não é oferecido com livre menor
+que R$ 1,00, em conferência, em pedido cancelado, para quem não opera as
+cobranças, com link Em pagamento ou Resultado a conferir, nem quando o link
+enviado tem o valor errado (o próximo passo é cancelá-lo). A Caixa de Entrada
+não mostra essa ação; ela fica na página do pedido.
+
 **Pagamento vencido e novo clique.** O pagamento na InfinitePay vale 24 h. Se
 vencer sem ser pago, o link volta a Aguardando o cliente e o próximo clique
 cria um pagamento novo. Não existe mais "Link vencido", "Gerar novo link" nem

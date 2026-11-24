@@ -172,20 +172,20 @@ Requisitos OLC-01/03/07–12/14. Depende OLC-T01/T02. Dono Backend/Integrações
 Requisitos OLC-01–06/10/13/14/16. Depende OLC-T01–T03.
 Dono Frontend/A11y com QA.
 
-- [ ] Adicionar bloco e **Gerar no Olist** no detalhe existente; preservar
+- [x] Adicionar bloco e **Gerar no Olist** no detalhe existente; preservar
       **Gerar pedido**, **Gerar PDF**, billing, loja e shell atuais.
-- [ ] Integrar pendências por origem e composição monetária autorizada, sem
+- [x] Integrar pendências por origem e composição monetária autorizada, sem
       total livre na exportação ou edição geral liberada pelo checkbox. Exibir
       peças, frete (com origem e aviso da cotação sugerida) e total conforme a
       ADR 080, também no Pedido pendente e em **Gerar pedido**; editar o
       frete e usar a cotação sugerida só para o vendedor responsável em Pedido
       pendente, por teclado e com erro associado; Confirmado mostra o frete
       somente leitura.
-- [ ] Exibir etapas, ambos os números, erro seguro, falha de consulta e
+- [x] Exibir etapas, ambos os números, erro seguro, falha de consulta e
       conferência necessária; recuperar após reload e impedir novo envio.
-- [ ] Conectar checkbox em Usuários e administração mínima de conexão usando
+- [x] Conectar checkbox em Usuários e administração mínima de conexão usando
       padrões atuais. Sem menu/lista/busca Olist ou assistente de prévia.
-- [ ] Verificar teclado/foco/ARIA/axe, temas, 320/390 px, desktop, duas abas,
+- [x] Verificar teclado/foco/ARIA/axe, temas, 320/390 px, desktop, duas abas,
       perda de conexão e revogação. Não declarar integração por mock.
 
 ## OLC-T05 QA e preparação operacional

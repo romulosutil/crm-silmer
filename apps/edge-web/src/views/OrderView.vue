@@ -14,7 +14,7 @@ import OrderCancelAction from '../components/order/OrderCancelAction.vue';
 import OrderReceiptPreview from '../components/order/OrderReceiptPreview.vue';
 import OrderMoreActions from '../components/order/OrderMoreActions.vue';
 import OrderWhatsAppPdfAction from '../components/order/OrderWhatsAppPdfAction.vue';
-import OrderOlistPanel from '../components/order/OrderOlistPanel.vue';
+import OrderOlistSection from '../components/order/OrderOlistSection.vue';
 import OrderPriceBreakdown from '../components/order/OrderPriceBreakdown.vue';
 import OrderBillingSummary from '../components/order/OrderBillingSummary.vue';
 import OrderClosingSection from '../components/order/OrderClosingSection.vue';
@@ -1229,8 +1229,9 @@ onBeforeUnmount(() => {
         :can-edit="canEdit && (!isStore || isAdmin)"
         @changed="load(true)"
       />
-      <OrderOlistPanel
+      <OrderOlistSection
         v-if="olistEnabled || isAdmin"
+        :order="order"
         :order-id="order.id"
         :revision="order.version"
         :cancelled="Boolean(order.cancelledAt)"

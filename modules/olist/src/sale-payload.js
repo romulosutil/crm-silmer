@@ -57,9 +57,9 @@ function id(value) {
   if (!Number.isSafeInteger(n) || String(n) !== s) refuse();
   return n;
 }
-/** @param {number} value */
-function cents(value) {
-  integer(value);
+/** @param {number} value @param {boolean} [allowZero] */
+function cents(value, allowZero = false) {
+  integer(value, allowZero);
   const n = BigInt(value);
   return `${n / 100n}.${String(n % 100n).padStart(2, '0')}`;
 }
@@ -172,11 +172,25 @@ export function buildOlistSalePayload({ snapshot, resolved, reference }) {
       })),
     })),
   );
+  const rawFreight =
+    snapshot.commercial.freightCents === undefined ||
+    snapshot.commercial.freightCents === null
+      ? 0
+      : snapshot.commercial.freightCents;
   if (
+    typeof rawFreight !== 'number' ||
+    !Number.isSafeInteger(rawFreight) ||
+    rawFreight < 0 ||
     !prepared.eligible ||
-    prepared.totalCents !== snapshot.commercial.totalCents
+    prepared.totalCents === null ||
+    !Number.isSafeInteger(prepared.totalCents + rawFreight) ||
+    prepared.totalCents + rawFreight !== snapshot.commercial.totalCents
   )
     refuse('OLIST_SALE_EXACT_CENT_REQUIRED');
+  const freightCents = rawFreight;
+  const totalCents = prepared.totalCents + freightCents;
+  const freightLexeme = cents(freightCents, true);
+  const totalLexeme = cents(totalCents);
   for (const group of groups)
     for (const source of group.lines) {
       const exact = prepared.lines.find(
@@ -252,11 +266,12 @@ export function buildOlistSalePayload({ snapshot, resolved, reference }) {
             parcelas: [
               {
                 data: paymentDueOn,
-                valor: cents(/** @type {number} */ (prepared.totalCents)),
+                valor: totalLexeme,
               },
             ],
           },
         }),
+    ...(freightCents > 0 ? { valorFrete: freightLexeme } : {}),
     itens: prepared.lines.map((line) => ({
       produto: { id: id(mapped.get(line.lineId).productId) },
       quantidade: line.quantity,
@@ -265,13 +280,13 @@ export function buildOlistSalePayload({ snapshot, resolved, reference }) {
     })),
   };
   const encoded = JSON.stringify(payload).replace(
-    /"(valorUnitario|valor)":"([0-9]+\.[0-9]{2})"/gu,
+    /"(valorUnitario|valor|valorFrete)":"([0-9]+\.[0-9]{2})"/gu,
     '"$1":$2',
   );
   if (Buffer.byteLength(encoded) > 262144) refuse();
   const plan = freeze({
     encoded,
-    prepared,
+    prepared: { ...prepared, freightCents },
     reference,
     customerId,
     originId,
@@ -297,7 +312,12 @@ export function buildOlistSalePayload({ snapshot, resolved, reference }) {
       paymentDueOn,
       paymentDuePolicy: settings.paymentDuePolicy ?? 'fixed_date',
     },
-    totalLexeme: cents(/** @type {number} */ (prepared.totalCents)),
+    freightCents,
+    freightLexeme,
+    productsTotalCents: prepared.totalCents,
+    productsTotalLexeme: cents(prepared.totalCents),
+    totalCents,
+    totalLexeme,
   });
   plans.add(plan);
   return plan;
@@ -385,9 +405,7 @@ export function reconcileOlistSale(plan, raw, remoteId, identityContext) {
         // 3 is the value observed on the authorized API-created proof order;
         // it is not interpreted as evidence of invoice or payment effects.
         ![0, 3].includes(olistIntegerFromJson(body.origemPedido, true))) ||
-      ![body.valorDesconto, body.valorFrete, body.valorOutrasDespesas].every(
-        absentOrZero,
-      )
+      ![body.valorDesconto, body.valorOutrasDespesas].every(absentOrZero)
     )
       refuse('OLIST_SALE_READBACK_MISMATCH');
     if (
@@ -438,18 +456,21 @@ export function reconcileOlistSale(plan, raw, remoteId, identityContext) {
             !emptyObject(installments[0].transacao)
           )
             refuse('OLIST_SALE_READBACK_MISMATCH');
+          const saleTotalCents =
+            plan.totalCents ??
+            plan.prepared.totalCents + (plan.freightCents ?? 0);
           const checked = reconcileExactCentExport(
             {
               policy: 'exact-cent-v1',
               eligible: true,
-              totalCents: plan.prepared.totalCents,
+              totalCents: saleTotalCents,
               issues: [],
               lines: [
                 {
                   ...plan.prepared.lines[0],
                   quantity: 1,
-                  subtotalCents: plan.prepared.totalCents,
-                  unitCents: plan.prepared.totalCents,
+                  subtotalCents: saleTotalCents,
+                  unitCents: saleTotalCents,
                   unitLexeme: plan.totalLexeme,
                 },
               ],
@@ -486,10 +507,17 @@ export function reconcileOlistSale(plan, raw, remoteId, identityContext) {
         unitLexeme: olistNumberLexeme(line.valorUnitario),
       };
     });
-    const checked = reconcileExactCentExport(plan.prepared, {
+    const expectedPrepared = Object.hasOwn(plan.prepared, 'freightCents')
+      ? plan.prepared
+      : { ...plan.prepared, freightCents: plan.freightCents ?? 0 };
+    const checked = reconcileExactCentExport(expectedPrepared, {
       lines,
       totalProductsLexeme: olistNumberLexeme(body.valorTotalProdutos),
       totalOrderLexeme: olistNumberLexeme(body.valorTotalPedido),
+      freightLexeme:
+        body.valorFrete === undefined || body.valorFrete === null
+          ? null
+          : olistNumberLexeme(body.valorFrete),
     });
     const number =
       body.numeroPedido === undefined || body.numeroPedido === null

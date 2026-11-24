@@ -2340,6 +2340,93 @@ else
           );
         },
       );
+      await t.test(
+        'OLC-T02: confirmed order with frozen freightCents previews, validates and freezes freight outside unit prices; mismatched total fails',
+        async () => {
+          const f = await fixture({
+            status: 'pendente',
+            pilotRoles: ['seller'],
+          });
+          await pool.query(
+            'UPDATE crm.olist_accounts SET creation_enabled=true,recovery_required=false WHERE account_key=$1',
+            [config.accountKey],
+          );
+          await withTransaction(pool, async (tx) => {
+            await tx.query(
+              "SELECT set_config('crm.order_pricing_rule','pieces-freight-v1',true)",
+            );
+            await tx.query(
+              "UPDATE crm.orders SET freight_cents=1590,freight_source='seller',freight_set_by=$2,freight_set_at=$3,pricing_rule='pieces-freight-v1',version=version+1 WHERE id=$1",
+              [f.orderId, f.actors.owner.actor.id, NOW],
+            );
+            await tx.query(
+              "UPDATE crm.orders SET status='confirmado',final_amount_cents=600+1590,order_date='2026-11-06'::date,confirmed_at=$3,confirmed_by=$2,version=version+1 WHERE id=$1",
+              [f.orderId, f.actors.owner.actor.id, NOW],
+            );
+          });
+          const preview = await f.runtime.preview(f.input);
+          assert.equal(preview.eligible, true, JSON.stringify(preview.issues));
+          assert.equal(preview.commercial.freightCents, 1590);
+          assert.equal(preview.commercial.totalCents, 2190);
+          assert.equal(
+            preview.commercial.groups[0].lines[0].unitLexeme,
+            '2.00',
+          );
+          assert.equal(
+            (
+              await f.runtime.checkPreview({
+                ...f.input,
+                previewToken: preview.previewToken,
+              })
+            ).valid,
+            true,
+          );
+          const accepted = await f.runtime.exportOrder({
+            ...f.input,
+            previewToken: preview.previewToken,
+            idempotencyKey: 'freight-positive-export',
+          });
+          const row = (
+            await pool.query(
+              'SELECT snapshot_envelope FROM crm.olist_exports WHERE id=$1',
+              [accepted.operationId],
+            )
+          ).rows[0];
+          const frozen = open(
+            row.snapshot_envelope,
+            config.envelopeKey,
+            'export-snapshot',
+            config.accountKey,
+            accepted.operationId,
+          );
+          assert.equal(frozen.commercial.freightCents, 1590);
+          assert.equal(frozen.commercial.totalCents, 2190);
+
+          const bad = await fixture({ status: 'pendente' });
+          await withTransaction(pool, async (tx) => {
+            await tx.query(
+              "SELECT set_config('crm.order_pricing_rule','pieces-freight-v1',true)",
+            );
+            await tx.query(
+              "UPDATE crm.orders SET freight_cents=500,freight_source='seller',freight_set_by=$2,freight_set_at=$3,pricing_rule='pieces-freight-v1',version=version+1 WHERE id=$1",
+              [bad.orderId, bad.actors.owner.actor.id, NOW],
+            );
+            await tx.query(
+              "UPDATE crm.orders SET status='confirmado',final_amount_cents=600,order_date='2026-11-06'::date,confirmed_at=$3,confirmed_by=$2,version=version+1 WHERE id=$1",
+              [bad.orderId, bad.actors.owner.actor.id, NOW],
+            );
+          });
+          const rejected = await bad.runtime.preview(bad.input);
+          assert.equal(rejected.eligible, false);
+          assert.ok(
+            rejected.issues.some(
+              (/** @type {any} */ issue) =>
+                issue.code === 'OLIST_TOTAL_MISMATCH' &&
+                issue.field === 'finalAmountCents',
+            ),
+          );
+        },
+      );
     } finally {
       await pool.query('DROP SCHEMA IF EXISTS crm_meta CASCADE');
       await pool.query('DROP SCHEMA IF EXISTS crm CASCADE');

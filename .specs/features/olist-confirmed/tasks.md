@@ -127,7 +127,7 @@ Pedido existente: o frete vale para Pedido novo, não é retroativo.
 Requisitos OLC-04/06–08/11/12/14 (e OLC-05f/g para o frete). Depende OLC-T01.
 Dono Integrações com Backend e QA.
 
-- [ ] **Tratar `valorFrete` no adapter e no inspector** (`modules/olist/src/`
+- [x] **Tratar `valorFrete` no adapter e no inspector** (`modules/olist/src/`
       `sale-payload.js` e `readonly-inspector.js`) em vez de exigir zero:
       enviar o frete do Pedido em centavos exatos, fora dos unitários, manter
       `valorDesconto` e `valorOutrasDespesas` zero e conferir na leitura que o
@@ -135,14 +135,14 @@ Dono Integrações com Backend e QA.
       das linhas mais o frete (ADR 062 integral); `valorFrete` ausente só vale
       como zero se o frete do Pedido for zero (ADR 080). Fixtures sintéticas:
       frete zero/ausente, positivo, divergente e fracionário.
-- [ ] Implementar conexão/configuração administrativa central, tokens cifrados,
+- [x] Implementar conexão/configuração administrativa central, tokens cifrados,
       renovação serializada, conta esperada e parâmetros comerciais versionados.
-- [ ] Implementar busca/criação e leitura conferida de comprador, produto pai,
+- [x] Implementar busca/criação e leitura conferida de comprador, produto pai,
       variações e venda, reaproveitando achados da prova F1 sem executar seus
       scripts como runtime ou reutilizar seus IDs/digests/credenciais.
-- [ ] Validar identidade fiscal/comercial, referência, quota, erro seguro,
+- [x] Validar identidade fiscal/comercial, referência, quota, erro seguro,
       precisão e ausência de sobrescrita de cadastros encontrados.
-- [ ] Testar adapter com fixtures sintéticas e falhas por fronteira; nenhuma
+- [x] Testar adapter com fixtures sintéticas e falhas por fronteira; nenhuma
       inclusão real ou ativação de conta é autorizada por este checklist.
 
 ## OLC-T03 Comando e processamento recuperável

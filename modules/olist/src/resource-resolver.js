@@ -2,10 +2,6 @@ import { OlistError } from './errors.js';
 import { olistProductFiscal } from './configuration.js';
 import { olistResourceIdentityHash } from './repository.js';
 import {
-  assertOlistExistingBuyerSource,
-  verifyOlistExistingBuyer,
-} from './existing-buyer.js';
-import {
   buildCustomerPayload,
   buildProductPayload,
   buildVariationPayload,
@@ -228,18 +224,11 @@ export function createOlistResourceResolver({
       contextKey: config.contextKey,
       settingsVersion: Number(operation.settings_version),
     };
-    const existingBuyer = plan.buyerSource?.mode === 'erp-existing-v1';
-    if (plan.buyerSource && !existingBuyer)
-      throw new OlistError('OLIST_RESOURCE_PLAN_INVALID', 400);
-    if (existingBuyer)
-      assertOlistExistingBuyerSource({
-        config,
-        customer: plan.customer,
-        buyerSource: plan.buyerSource,
-      });
-    const customer = existingBuyer
-      ? plan.customer
-      : buildCustomerPayload(plan.customer, 'CRM-customer');
+    // ADR 082: a new send requires the complete fiscal customer payload and
+    // never resolves resources over an ERP buyer reference (`erp-existing-v1`).
+    if (plan.buyerSource !== null && plan.buyerSource !== undefined)
+      throw new OlistError('OLIST_CUSTOMER_INVALID', 409);
+    const customer = buildCustomerPayload(plan.customer, 'CRM-customer');
     const fiscal =
       plan.productFiscal === null || plan.productFiscal === undefined
         ? null
@@ -322,10 +311,18 @@ export function createOlistResourceResolver({
           ),
         });
     }
+    const freight =
+      plan.commercial?.freightCents === undefined ||
+      plan.commercial?.freightCents === null
+        ? 0
+        : plan.commercial.freightCents;
     if (
+      typeof freight !== 'number' ||
+      !Number.isSafeInteger(freight) ||
+      freight < 0 ||
       !Number.isSafeInteger(plan.commercial.totalCents) ||
-      total > BigInt(Number.MAX_SAFE_INTEGER) ||
-      total !== BigInt(plan.commercial.totalCents)
+      total + BigInt(freight) > BigInt(Number.MAX_SAFE_INTEGER) ||
+      total + BigInt(freight) !== BigInt(plan.commercial.totalCents)
     )
       throw new OlistError('OLIST_RESOURCE_PLAN_INVALID', 400);
     /** @param {any} row */
@@ -380,16 +377,6 @@ export function createOlistResourceResolver({
       try {
         /** @type {any} */ let response;
         try {
-          // Read before the writer takes credentials/write quota. A GET inside
-          // its reservation callback could refresh those credentials or spend
-          // the headroom already claimed for the POST's confirmation reads.
-          if (existingBuyer)
-            await verifyOlistExistingBuyer({
-              client,
-              config,
-              customer,
-              buyerSource: plan.buyerSource,
-            });
           response = await writer.dispatch({
             kind,
             payload,
@@ -468,14 +455,12 @@ export function createOlistResourceResolver({
         opts,
       );
     }
-    let buyerRow = existingBuyer
-      ? null
-      : await repository.bindResource({
-          ...base,
-          kind: 'customer',
-          identity: customer.cpfCnpj,
-          payload: customer,
-        });
+    let buyerRow = await repository.bindResource({
+      ...base,
+      kind: 'customer',
+      identity: customer.cpfCnpj,
+      payload: customer,
+    });
     /** @type {Map<string,any>} */
     const nodes = new Map();
     /** @type {any[]} */
@@ -529,23 +514,14 @@ export function createOlistResourceResolver({
     function canCreate(row) {
       return row.state === 'pending' && !row.latestAttempt;
     }
-    if (existingBuyer)
-      await verifyOlistExistingBuyer({
-        client,
-        config,
-        customer,
-        buyerSource: plan.buyerSource,
-      });
-    else buyerRow = await current(buyerRow);
-    let buyerRemote = existingBuyer
-      ? { id: Number(plan.buyerSource.remoteId) }
-      : observed(buyerRow)
-        ? await reads.contact(
-            remoteNumber(observed(buyerRow)),
-            ticketed(buyerRow),
-          )
-        : await find('findCustomer', customer.cpfCnpj, ticketed(buyerRow));
-    if (buyerRemote && !existingBuyer)
+    buyerRow = await current(buyerRow);
+    let buyerRemote = observed(buyerRow)
+      ? await reads.contact(
+          remoteNumber(observed(buyerRow)),
+          ticketed(buyerRow),
+        )
+      : await find('findCustomer', customer.cpfCnpj, ticketed(buyerRow));
+    if (buyerRemote)
       buyerRemote = verifyCustomer(
         await reads.contact(remoteNumber(buyerRemote.id), ticketed(buyerRow)),
         customer,
@@ -591,8 +567,7 @@ export function createOlistResourceResolver({
         await uncertain(response.reservation);
         throw error;
       }
-    } else if (!existingBuyer)
-      buyerRow = await bindFound(buyerRow, buyerRemote.id);
+    } else buyerRow = await bindFound(buyerRow, buyerRemote.id);
     await onStage?.('product');
     for (const node of nodes.values()) {
       if (!node.remote) {
@@ -719,9 +694,7 @@ export function createOlistResourceResolver({
     }
     return {
       resolved: true,
-      customerId: existingBuyer
-        ? plan.buyerSource.remoteId
-        : String(buyerRow.remote_id),
+      customerId: String(buyerRow.remote_id),
       groups: groups.map((group) => ({
         groupId: group.groupId,
         productId: String(group.node.row.remote_id),

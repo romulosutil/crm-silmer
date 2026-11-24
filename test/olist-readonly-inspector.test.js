@@ -1155,3 +1155,118 @@ test('T09 linked reconciliation rejects reparenting even when sale child IDs and
   });
   assert.equal(f.posts(), 0);
 });
+
+test('OLC-T02 readonly inspector verifies positive valorFrete in existingSale, legacyExistingSale and reconcileSale', async () => {
+  const f = fixture();
+  Object.assign(f.snapshot.commercial, {
+    freightCents: 1500,
+    totalCents: 1800,
+  });
+  f.body.valorFrete = 15;
+  f.body.valorTotalProdutos = 3;
+  f.body.valorTotalPedido = 18;
+  if (f.body.pagamento?.parcelas?.[0]) f.body.pagamento.parcelas[0].valor = 18;
+  const checked = await f.inspect();
+  assert.equal(checked.proof.totalCents, 1800);
+  assert.equal(f.posts(), 0);
+
+  // Absent, divergent or fractional valorFrete when positive freight is expected must be rejected
+  for (const bad of [
+    () => delete f.body.valorFrete,
+    () => {
+      f.body.valorFrete = 14.99;
+    },
+    () => {
+      f.body.valorFrete = 15.005;
+    },
+  ]) {
+    const prev = f.body.valorFrete;
+    bad();
+    await assert.rejects(f.inspect(), { code: 'OLIST_SALE_READBACK_MISMATCH' });
+    f.body.valorFrete = prev;
+  }
+
+  const leg = explicitLegacyFixture();
+  Object.assign(leg.snapshot.commercial, {
+    freightCents: 1500,
+    totalCents: 1800,
+  });
+  leg.body.valorFrete = 15;
+  leg.body.valorTotalProdutos = 3;
+  leg.body.valorTotalPedido = 18;
+  if (leg.body.pagamento?.parcelas?.[0])
+    leg.body.pagamento.parcelas[0].valor = 18;
+  const legacyChecked = await leg.legacy();
+  assert.equal(legacyChecked.proof.totalCents, 1800);
+  assert.equal(leg.posts(), 0);
+
+  for (const bad of [
+    () => delete leg.body.valorFrete,
+    () => {
+      leg.body.valorFrete = 14.99;
+    },
+    () => {
+      leg.body.valorFrete = 15.005;
+    },
+  ]) {
+    const prev = leg.body.valorFrete;
+    bad();
+    await assert.rejects(leg.legacy(), {
+      code: 'OLIST_SALE_READBACK_MISMATCH',
+    });
+    leg.body.valorFrete = prev;
+  }
+
+  const rec = fixture();
+  Object.assign(rec.snapshot.commercial, {
+    freightCents: 1500,
+    totalCents: 1800,
+  });
+  const recPlan = buildOlistSalePayload({
+    snapshot: rec.snapshot,
+    resolved: rec.resources,
+    reference: REFERENCE,
+  });
+  rec.body.valorFrete = 15;
+  rec.body.valorTotalProdutos = 3;
+  rec.body.valorTotalPedido = 18;
+  const operation = {
+    reference: REFERENCE,
+    observed_sale_id: '401',
+    observed_sale_number: '99',
+    snapshot: rec.snapshot,
+    resourceMapping: rec.resources,
+    saleAttempt: {
+      observedRemoteId: '401',
+      observedNumber: '99',
+      requestPayload: { encoded: recPlan.encoded },
+    },
+  };
+  const reconciled = await rec.inspector.reconcileSale({ operation });
+  assert.equal(reconciled.proof.totalCents, 1800);
+  assert.equal(rec.posts(), 0);
+
+  for (const mutate of [
+    () => delete rec.body.valorFrete,
+    () => {
+      rec.body.valorFrete = 14.99;
+    },
+    () => {
+      rec.body.valorFrete = 15.005;
+    },
+    () => {
+      rec.body.valorTotalProdutos = 18;
+    },
+    () => {
+      rec.body.valorTotalPedido = 3;
+    },
+  ]) {
+    const snap = structuredClone(rec.body);
+    mutate();
+    await assert.rejects(rec.inspector.reconcileSale({ operation }), {
+      code: 'OLIST_SALE_READBACK_MISMATCH',
+    });
+    Object.keys(rec.body).forEach((k) => delete rec.body[k]);
+    Object.assign(rec.body, snap);
+  }
+});

@@ -1882,10 +1882,15 @@ test('T13 cancelling the order on its page removes the preview, the conference a
     order: orderFixture,
   });
   await openOrder(page);
-  const controls = page.getByRole('button', {
-    name: /Revisar envio|Vincular venda existente/u,
+  const generationControls = page.getByRole('button', {
+    name: /Gerar no Olist|Revisar envio/u,
   });
-  await expect(controls).toHaveCount(2);
+  await expect(generationControls).toHaveCount(0);
+  const controls = page.getByRole('button', {
+    name: 'Vincular venda existente',
+    exact: true,
+  });
+  await expect(controls).toHaveCount(1);
   await page
     .getByRole('button', { name: 'Mais ações do pedido', exact: true })
     .click();
@@ -1898,6 +1903,7 @@ test('T13 cancelling the order on its page removes the preview, the conference a
   await dialog.getByLabel('Motivo do cancelamento').fill('Cliente desistiu');
   await dialog.getByRole('button', { name: 'Cancelar pedido 41-CRM' }).click();
   await expect(page.locator('.op-status')).toHaveText('Cancelado');
+  await expect(generationControls).toHaveCount(0);
   await expect(controls).toHaveCount(0);
   const panel = page.locator('.olist-preparation');
   await expect(panel).toContainText(

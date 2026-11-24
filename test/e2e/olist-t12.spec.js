@@ -1413,8 +1413,12 @@ test('T12 EDIT-03 an SSE event for another order preserves what is being typed a
     exact: true,
   });
   await input.fill('6,00');
+  const eventDelivered = page.waitForResponse((response) =>
+    response.url().includes('/api/v1/events'),
+  );
   releaseEvent();
-  await expect(page.getByText(/Revise o envio novamente/iu)).toBeVisible();
+  await eventDelivered;
+  await expect(page.getByText(/Revise o envio novamente/iu)).toHaveCount(0);
   await expect(input).toHaveValue('6,00');
   await expect(items).toHaveAttribute('data-items-state', 'edit');
   await expect(input).toBeEditable();

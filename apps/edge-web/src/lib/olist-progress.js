@@ -26,16 +26,22 @@ export const OLIST_RECONCILE_FOLLOW_MS = Object.freeze([3000, 6000, 12000]);
 const STAGE_INDEX = /** @type {Record<string, number>} */ ({
   customer: 0,
   product: 1,
+  products: 1,
   variation: 1,
   sale: 2,
+  order: 2,
   complete: 3,
+  completed: 3,
 });
 const STAGE_LABEL = /** @type {Record<string, string>} */ ({
   customer: 'Cliente',
   product: 'Produto',
+  products: 'Produtos e tamanhos',
   variation: 'Variação',
   sale: 'Venda',
+  order: 'Venda',
   complete: 'Concluída',
+  completed: 'Concluída',
 });
 const STATUS_LABEL = /** @type {Record<string, string>} */ ({
   done: 'Concluída',
@@ -43,6 +49,7 @@ const STATUS_LABEL = /** @type {Record<string, string>} */ ({
   waiting: 'Aguardando',
   blocked: 'Bloqueada por incerteza',
   rejected: 'Rejeitada',
+  failed_safe: 'Interrompida sem envio',
   invalidated: 'Invalidada',
   review_required: 'Conferência pendente',
 });
@@ -71,7 +78,12 @@ const UNCERTAIN_STATES = [
   'reconciliation_required',
 ];
 const UNCERTAIN_CODE =
-  /OUTCOME_UNKNOWN|UNCERTAIN|RECONCILIATION_REQUIRED|DIVERGENT|AMBIGUOUS/u;
+  /OUTCOME_UNKNOWN|UNCERTAIN|RECONCILIATION_REQUIRED|DIVERGENT|AMBIGUOUS|ALREADY_EXISTS|READBACK|MISMATCH|INCOMPLETE_LOOKUP/u;
+const TRANSIENT_RETRY_CODES = new Set([
+  'OLIST_RATE_LIMITED',
+  'OLIST_UNAVAILABLE',
+  'OLIST_REFRESH_IN_PROGRESS',
+]);
 const IN_PROGRESS = ['queued', 'resolving', 'reserved', 'ready'];
 const SAFE_CODE = /^[A-Z][A-Z0-9_]{0,63}$/u;
 const SAFE_REMOTE_ID = /^[A-Za-z0-9._:-]{1,64}$/u;
@@ -127,20 +139,120 @@ export function isAdminInvalidated(operation) {
 /** @param {any} operation */
 export function isOperationUncertain(operation) {
   if (!operation) return false;
-  if (['confirmed', 'linked'].includes(operation.state)) return false;
+  if (['confirmed', 'linked', 'succeeded'].includes(operation.state))
+    return false;
+  if (isAdminInvalidated(operation)) return false;
   return (
     UNCERTAIN_STATES.includes(operation.state) ||
     UNCERTAIN_CODE.test(String(operation.errorCode ?? ''))
   );
+}
+/** Falha segura antes de efeito externo (OLC-10/OLC-14/OLC-16).
+ * @param {any} operation */
+export function isOperationFailedSafe(operation) {
+  if (
+    !operation ||
+    isOperationUncertain(operation) ||
+    isAdminInvalidated(operation) ||
+    isLegacyReviewRequired(operation)
+  )
+    return false;
+  if (operation.state === 'failed_safe') return true;
+  return (
+    ['queued', 'resolving', 'ready'].includes(operation.state) &&
+    (operation.retrySafe === true ||
+      (typeof operation.errorCode === 'string' &&
+        operation.errorCode.length > 0))
+  );
+}
+/** Retomada autorizada apenas quando o servidor comprova ausência de efeito.
+ * @param {any} operation */
+export function canResumeOperation(operation) {
+  if (
+    !operation ||
+    isOperationUncertain(operation) ||
+    isAdminInvalidated(operation) ||
+    isLegacyReviewRequired(operation)
+  )
+    return false;
+  if (
+    ['confirmed', 'linked', 'succeeded', 'reserved'].includes(operation.state)
+  )
+    return false;
+  return operation.retrySafe === true;
 }
 /** Operação ainda andando: vale a releitura limitada do CRM.
  * @param {any} operation */
 export function isOperationInProgress(operation) {
   return (
     Boolean(operation) &&
-    IN_PROGRESS.includes(operation.state) &&
-    !isOperationUncertain(operation)
+    (IN_PROGRESS.includes(operation.state) ||
+      ['resolving_customer', 'resolving_products', 'sending'].includes(
+        operation.state,
+      )) &&
+    !isOperationUncertain(operation) &&
+    !isOperationFailedSafe(operation)
   );
+}
+/** Releitura limitada também acompanha tentativas transitórias enquanto o worker
+ * ainda não encerrou o ciclo (`retrySafe` ainda ausente).
+ * @param {any} operation */
+export function shouldPollOperation(operation) {
+  if (isOperationInProgress(operation)) return true;
+  if (
+    !operation ||
+    isOperationUncertain(operation) ||
+    isAdminInvalidated(operation)
+  )
+    return false;
+  return (
+    ['queued', 'resolving', 'ready'].includes(operation.state) &&
+    operation.retrySafe !== true &&
+    TRANSIENT_RETRY_CODES.has(String(operation.errorCode ?? ''))
+  );
+}
+
+/** Rótulo principal de estado no detalhe do Pedido (OLC-13/OLC-16).
+ * @param {any} operation */
+export function olistOrderDetailStatus(operation) {
+  if (!operation || isAdminInvalidated(operation)) return null;
+  if (isLegacyReviewRequired(operation) || isOperationUncertain(operation))
+    return 'Conferência necessária';
+  const state = String(operation.state ?? '');
+  const stage = String(operation.stage ?? '');
+  if (['confirmed', 'linked', 'succeeded'].includes(state)) {
+    const number =
+      typeof operation.number === 'string' && operation.number.trim()
+        ? operation.number.trim()
+        : null;
+    return number ? `Gerado no Olist · Venda nº ${number}` : 'Gerado no Olist';
+  }
+  if (
+    isOperationFailedSafe(operation) ||
+    state === 'rejected' ||
+    state === 'invalidated'
+  )
+    return 'Não foi possível concluir esta etapa';
+  if (state === 'queued') return 'Aguardando processamento';
+  if (
+    state === 'resolving_customer' ||
+    (state === 'resolving' && stage === 'customer')
+  )
+    return 'Processando… Cliente';
+  if (
+    state === 'resolving_products' ||
+    (state === 'resolving' &&
+      ['product', 'variation', 'products'].includes(stage))
+  )
+    return 'Processando… Produtos e tamanhos';
+  if (
+    state === 'sending' ||
+    state === 'reserved' ||
+    state === 'ready' ||
+    ['sale', 'order'].includes(stage)
+  )
+    return 'Processando… Venda';
+  return 'Aguardando processamento';
 }
 
 /** Rótulo curto da operação; preserva os textos da T12.
@@ -149,10 +261,11 @@ export function olistOperationHeadline(operation) {
   const state = operation?.state;
   if (isLegacyReviewRequired(operation))
     return 'Venda histórica aguarda conferência';
-  if (state === 'confirmed' || state === 'linked')
+  if (state === 'confirmed' || state === 'linked' || state === 'succeeded')
     return 'Venda Olist conferida';
   if (isOperationUncertain(operation))
     return 'Operação bloqueada para conferência administrativa';
+  if (isOperationFailedSafe(operation)) return 'Operação Olist interrompida';
   if (state === 'rejected') return 'Operação Olist rejeitada';
   if (state === 'invalidated') return 'Operação Olist invalidada';
   return 'Operação Olist em acompanhamento';
@@ -248,8 +361,9 @@ export function deriveOlistProgress(operation, resources = null) {
   if (!operation || typeof operation !== 'object') return null;
   const state = String(operation.state ?? '');
   const legacyReview = isLegacyReviewRequired(operation);
-  const complete = state === 'confirmed' || state === 'linked';
+  const complete = ['confirmed', 'linked', 'succeeded'].includes(state);
   const uncertain = isOperationUncertain(operation);
+  const failedSafe = isOperationFailedSafe(operation);
   const current = complete ? 3 : (STAGE_INDEX[operation.stage] ?? 0);
   const counts = countResources(resources);
   const reason = olistOperationReason(operation.errorCode, state);
@@ -259,13 +373,15 @@ export function deriveOlistProgress(operation, resources = null) {
       ? 'done'
       : uncertain
         ? 'blocked'
-        : state === 'rejected'
-          ? 'rejected'
-          : state === 'invalidated'
-            ? 'invalidated'
-            : state === 'queued' || state === 'ready'
-              ? 'waiting'
-              : 'active';
+        : failedSafe
+          ? 'failed_safe'
+          : state === 'rejected'
+            ? 'rejected'
+            : state === 'invalidated'
+              ? 'invalidated'
+              : state === 'queued' || state === 'ready'
+                ? 'waiting'
+                : 'active';
   const currentLabel = OLIST_STEPS[Math.min(current, 2)].label;
   const steps = OLIST_STEPS.map((step, index) => {
     /** @type {string} */
@@ -275,16 +391,28 @@ export function deriveOlistProgress(operation, resources = null) {
     else if (complete || current > index) status = 'done';
     else if (index === current) {
       if (uncertain) status = 'blocked';
+      else if (failedSafe) status = 'failed_safe';
       else if (state === 'rejected') status = 'rejected';
       else if (state === 'invalidated') status = 'invalidated';
-      else if (['resolving', 'reserved'].includes(state)) status = 'active';
+      else if (
+        [
+          'resolving',
+          'resolving_customer',
+          'resolving_products',
+          'sending',
+          'reserved',
+        ].includes(state)
+      )
+        status = 'active';
       else status = 'waiting';
       if (status === 'waiting')
         detail =
           state === 'ready' ? 'Pronta para a venda.' : 'Na fila para iniciar.';
-      if (status === 'active' && state === 'reserved')
+      if (status === 'active' && ['reserved', 'sending'].includes(state))
         detail = 'Envio em andamento; aguarde o resultado sem repetir.';
-      if (['blocked', 'rejected', 'invalidated'].includes(status))
+      if (
+        ['blocked', 'failed_safe', 'rejected', 'invalidated'].includes(status)
+      )
         detail = reason;
     } else if (kind === 'blocked') {
       detail = `Aguarda a conferência da etapa ${currentLabel}.`;
@@ -309,6 +437,12 @@ export function deriveOlistProgress(operation, resources = null) {
     guidance.push(
       'A etapa pode já existir no Olist. Não repita a geração: uma pessoa administradora deve conferir a operação.',
     );
+  if (kind === 'failed_safe')
+    guidance.push(
+      canResumeOperation(operation)
+        ? 'Esta etapa falhou antes de enviar ao Olist. Confira os dados e use Retomar geração para continuar sem duplicar.'
+        : 'Esta etapa foi interrompida antes de enviar ao Olist. Atualize a situação para acompanhar.',
+    );
   if (kind === 'rejected')
     guidance.push(
       'A solicitação foi recusada nesta etapa. O CRM não oferece repetir a geração nem vincular uma venda a este pedido; leve o caso a quem cuida da integração.',
@@ -324,12 +458,14 @@ export function deriveOlistProgress(operation, resources = null) {
       ? operation.number
       : null;
   return {
-    signature: `${state}:${operation.stage ?? ''}:${operation.errorCode ?? ''}`,
+    signature: `${state}:${operation.stage ?? ''}:${operation.errorCode ?? ''}:${operation.retrySafe === true ? '1' : '0'}`,
     kind,
     headline: olistOperationHeadline(operation),
     steps,
     blockedLabel: kind === 'blocked' ? currentLabel : null,
-    reason: ['blocked', 'rejected', 'invalidated'].includes(kind) ? reason : '',
+    reason: ['blocked', 'failed_safe', 'rejected', 'invalidated'].includes(kind)
+      ? reason
+      : '',
     guidance,
     saleNumber,
     origin: state === 'linked' ? 'linked' : null,
@@ -365,7 +501,9 @@ export function progressAnnouncement(previous, next) {
       : 'Operação concluída.';
   const focus =
     next.steps.find((step) =>
-      ['blocked', 'rejected', 'invalidated', 'active'].includes(step.status),
+      ['blocked', 'failed_safe', 'rejected', 'invalidated', 'active'].includes(
+        step.status,
+      ),
     ) ??
     next.steps.find((step) => step.status === 'waiting') ??
     next.steps[0];

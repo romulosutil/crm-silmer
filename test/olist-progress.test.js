@@ -4,19 +4,27 @@ import test from 'node:test';
 import {
   canOfferInvalidate,
   canOfferLink,
+  canResumeOperation,
   countResources,
   deriveOlistProgress,
   isAdminInvalidated,
+  isOperationFailedSafe,
   isOperationInProgress,
   isOperationUncertain,
   olistOperationHeadline,
+  olistOrderDetailStatus,
   progressAnnouncement,
   reconcileTargets,
   safeAttempts,
   safeCode,
   safeRemoteId,
+  shouldPollOperation,
 } from '../apps/edge-web/src/lib/olist-progress.js';
 import {
+  olistFailure,
+  olistIssueCorrectionHint,
+  olistIssueLabel,
+  olistIssueLabels,
   olistOperationReason,
   olistRecoveryFailure,
 } from '../apps/edge-web/src/lib/olist-feedback.js';
@@ -600,5 +608,251 @@ test('invalidation failures are fixed Portuguese copy and never echo the server'
   assert.match(
     olistOperationReason('OLIST_EXPORT_INVALIDATED'),
     /antes de qualquer venda/u,
+  );
+});
+
+test('OLC-T04 order detail status texts and resume eligibility match spec contract', () => {
+  assert.equal(olistOrderDetailStatus(null), null);
+  assert.equal(olistOrderDetailStatus(invalidatedByAdmin()), null);
+  assert.equal(
+    olistOrderDetailStatus(operation('queued', 'customer')),
+    'Aguardando processamento',
+  );
+  assert.equal(
+    olistOrderDetailStatus(operation('resolving', 'customer')),
+    'Processando… Cliente',
+  );
+  assert.equal(
+    olistOrderDetailStatus(operation('resolving_customer', 'customer')),
+    'Processando… Cliente',
+  );
+  assert.equal(
+    olistOrderDetailStatus(operation('resolving', 'product')),
+    'Processando… Produtos e tamanhos',
+  );
+  assert.equal(
+    olistOrderDetailStatus(operation('resolving', 'variation')),
+    'Processando… Produtos e tamanhos',
+  );
+  assert.equal(
+    olistOrderDetailStatus(operation('resolving_products', 'products')),
+    'Processando… Produtos e tamanhos',
+  );
+  assert.equal(
+    olistOrderDetailStatus(operation('ready', 'sale')),
+    'Processando… Venda',
+  );
+  assert.equal(
+    olistOrderDetailStatus(operation('reserved', 'sale')),
+    'Processando… Venda',
+  );
+  assert.equal(
+    olistOrderDetailStatus(operation('sending', 'order')),
+    'Processando… Venda',
+  );
+  assert.equal(
+    olistOrderDetailStatus(
+      operation('confirmed', 'complete', { number: '1234' }),
+    ),
+    'Gerado no Olist · Venda nº 1234',
+  );
+  assert.equal(
+    olistOrderDetailStatus(
+      operation('succeeded', 'completed', { number: '98765' }),
+    ),
+    'Gerado no Olist · Venda nº 98765',
+  );
+  assert.equal(
+    olistOrderDetailStatus(operation('linked', 'complete')),
+    'Gerado no Olist',
+  );
+  assert.equal(
+    olistOrderDetailStatus(operation('outcome_unknown', 'sale')),
+    'Conferência necessária',
+  );
+  assert.equal(
+    olistOrderDetailStatus(operation('reconciliation_required', 'sale')),
+    'Conferência necessária',
+  );
+  assert.equal(
+    olistOrderDetailStatus(operation('legacy_review_required', 'complete')),
+    'Conferência necessária',
+  );
+  assert.equal(
+    olistOrderDetailStatus(
+      operation('queued', 'sale', { errorCode: 'OLIST_SALE_ALREADY_EXISTS' }),
+    ),
+    'Conferência necessária',
+  );
+  assert.equal(
+    olistOrderDetailStatus(
+      operation('failed_safe', 'customer', { retrySafe: true }),
+    ),
+    'Não foi possível concluir esta etapa',
+  );
+  assert.equal(
+    olistOrderDetailStatus(
+      operation('queued', 'customer', {
+        errorCode: 'OLIST_UNAVAILABLE',
+        retrySafe: true,
+      }),
+    ),
+    'Não foi possível concluir esta etapa',
+  );
+
+  // Retomar geração ONLY when operation.retrySafe === true and safe state
+  assert.equal(
+    canResumeOperation(
+      operation('failed_safe', 'customer', { retrySafe: true }),
+    ),
+    true,
+  );
+  assert.equal(
+    canResumeOperation(
+      operation('queued', 'customer', {
+        errorCode: 'OLIST_UNAVAILABLE',
+        retrySafe: true,
+      }),
+    ),
+    true,
+  );
+  assert.equal(canResumeOperation(operation('failed_safe', 'customer')), false);
+  assert.equal(
+    canResumeOperation(
+      operation('failed_safe', 'customer', { retrySafe: false }),
+    ),
+    false,
+  );
+  assert.equal(
+    canResumeOperation(
+      operation('outcome_unknown', 'sale', { retrySafe: true }),
+    ),
+    false,
+  );
+  assert.equal(
+    canResumeOperation(operation('uncertain', 'sale', { retrySafe: true })),
+    false,
+  );
+  assert.equal(
+    canResumeOperation(operation('reserved', 'sale', { retrySafe: true })),
+    false,
+  );
+  assert.equal(
+    isOperationFailedSafe(
+      operation('rejected', 'customer', {
+        errorCode: 'OLIST_UPSTREAM_REJECTED',
+      }),
+    ),
+    false,
+  );
+  assert.equal(
+    shouldPollOperation(
+      operation('queued', 'customer', { errorCode: 'OLIST_UNAVAILABLE' }),
+    ),
+    true,
+  );
+  assert.equal(
+    shouldPollOperation(
+      operation('queued', 'customer', {
+        errorCode: 'OLIST_UNAVAILABLE',
+        retrySafe: true,
+      }),
+    ),
+    false,
+  );
+});
+
+test('OLC-T04 pendingFields translation handles real backend generic labels and identifies origins', () => {
+  const groups = [
+    {
+      id: '11111111-1111-4111-8111-111111111111',
+      lines: [{ id: '22222222-2222-4222-8222-222222222222', size: 'GG' }],
+    },
+  ];
+  // Real backend sends generic label 'Pendência para gerar no Olist.' — UI must translate code/field.
+  assert.equal(
+    olistIssueLabel(
+      {
+        code: 'OLIST_BUYER_REQUIRED',
+        field: 'buyer.registration.document',
+        label: 'Pendência para gerar no Olist.',
+      },
+      groups,
+    ),
+    'Cadastro do comprador: CPF ou CNPJ.',
+  );
+  assert.match(
+    olistIssueLabel(
+      {
+        code: 'OLIST_FRACTIONAL_CENT_UNIT',
+        field:
+          'sizePricing.11111111-1111-4111-8111-111111111111.22222222-2222-4222-8222-222222222222',
+        label: 'Pendência para gerar no Olist.',
+      },
+      groups,
+    ),
+    /^Item 1, tamanho GG: Valor do tamanho não representável no Olist/u,
+  );
+  assert.equal(
+    olistIssueLabel({
+      code: 'LEGACY_PRICE_BREAKDOWN_REQUIRED',
+      field: 'priceBreakdown',
+      label: 'Pendência para gerar no Olist.',
+    }),
+    'Complemento para o Olist: informe os subtotais negociados por tamanho (sem dividir automaticamente o total histórico).',
+  );
+  assert.equal(
+    olistIssueLabel({
+      code: 'OLIST_ORDER_REQUIRED',
+      field: 'items[0].gola',
+      label: 'Pendência para gerar no Olist.',
+    }),
+    'Item 1: complete gola no pedido.',
+  );
+  assert.deepEqual(
+    olistIssueLabels([
+      { code: 'OLIST_BUYER_REQUIRED', field: 'buyer.registration.document' },
+      { code: 'OLIST_BUYER_REQUIRED', field: 'buyer.registration.document' },
+      { code: 'OLIST_BUYER_REQUIRED', field: 'buyer.registration.postalCode' },
+    ]),
+    ['Cadastro do comprador: CPF ou CNPJ.', 'Cadastro do comprador: CEP.'],
+  );
+
+  assert.match(
+    olistIssueCorrectionHint({
+      isStore: false,
+      hasSizePricing: true,
+      issues: [
+        { code: 'OLIST_BUYER_REQUIRED', field: 'buyer.registration.document' },
+      ],
+    }),
+    /vendedor responsável pela conversa \(ou um administrador\).*Inbox/u,
+  );
+  assert.match(
+    olistIssueCorrectionHint({
+      isStore: false,
+      hasSizePricing: false,
+      issues: [
+        { code: 'LEGACY_PRICE_BREAKDOWN_REQUIRED', field: 'priceBreakdown' },
+      ],
+    }),
+    /Complemento para o Olist/u,
+  );
+  assert.match(
+    olistIssueCorrectionHint({
+      isStore: true,
+      hasSizePricing: false,
+      issues: [
+        { code: 'STORE_BUYER_FIELD_REQUIRED', field: 'registration.document' },
+      ],
+    }),
+    /um administrador.*Complemento para o Olist/u,
+  );
+  assert.doesNotMatch(
+    olistFailure(
+      { status: 500, code: 'INTERNAL_ERROR', detail: 'secret-canary' },
+      { direct: true },
+    ),
+    /secret-canary/u,
   );
 });

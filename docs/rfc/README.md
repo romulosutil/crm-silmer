@@ -1,5 +1,10 @@
 # Request for Comments
 
+## Proposta de 24/11/2026
+
+- [075 — CRM Silmer 2.0 centrado no cliente](075-crm-20-centrado-no-cliente.md),
+  com SDD, arquitetura, pré-mortem, regressões e plano de entrega incremental.
+
 ## Decisão de 23/11/2026
 
 - [074 — Link de pagamento do CRM e cobranças que somam](074-link-de-pagamento-do-crm-e-cobrancas-que-somam.md),

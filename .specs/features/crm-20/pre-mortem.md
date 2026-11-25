@@ -1,0 +1,32 @@
+# Pré-mortem do CRM Silmer 2.0
+
+Hipótese de trabalho para o [RFC 075](../../../docs/rfc/075-crm-20-centrado-no-cliente.md).
+Duas semanas após ativar o piloto, a equipe voltou ao fluxo anterior.
+Vendedores viram históricos que não podiam consultar, e alguns atendimentos
+se perderam da fila de trabalho. A tabela descreve causas plausíveis, seus
+sinais e a reação antes da promoção. As hipóteses orientam ensaios e revisão.
+
+| Risco                                   | Como a falha apareceria                                                                          | Prevenção e evidência antes de ativar                                                                                                                                                 | Sinal de parada e reação inicial                                                                                                            | Dono                   |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| PM01 — Associação de pessoas diferentes | Número reciclado, digitado ou compartilhado traz pedidos e preferências de outra pessoa.         | D01 define prova, vigência e saída de conflitos. Ensaiar reversão com histórico e snapshots preservados. T07–T12 · G03/G07/G08.                                                       | Uma associação indevida confirmada pausa novas associações. Isolar a projeção afetada, reverter o vínculo com versão e acionar Privacidade. | Contatos e Privacidade |
+| PM02 — Vazamento por metadado           | Um vendedor infere a conversa de outro pela contagem, pelo alerta ou pelo link de origem.        | Aplicar cada ACL antes de agregar. Comparar o resultado com e sem a conversa oculta. T03, T05, T13 · G02.                                                                             | Uma exposição indevida confirmada pausa a projeção afetada. Revogar acesso, delimitar o incidente e validar a negativa.                     | API e Privacidade      |
+| PM03 — Duplicidade sob carga            | As duas linhas criam contatos diferentes ou eventos fora de ordem criam ciclos repetidos.        | Unicidade mais lock transacional, deduplicação antes de resolver e ensaio com duas conexões e eventos em trânsito. T08–T10 · G03/G04.                                                 | Duplicidade nova com prova suficiente ou replay que produz efeito pausa o fluxo novo. Preservar IDs e chaves para reconciliar.              | Contatos e Integrações |
+| PM04 — Fila perde trabalho              | Fechamento confunde confirmado com concluído, oculta pendência ou antecipa expurgo de mídia.     | Preservar fechamento humano e CP-08. Testar fechamento, arquivo, nova mensagem, Assuntos ativos e mídia. T01, T05, T15 · G01/G04/G10.                                                 | Uma conversa removida incorretamente pausa a capacidade afetada. Reconciliar fila e comunicar Operação antes de retomar.                    | Inbox e Operação       |
+| PM05 — Vendas não conferem              | O mesmo pedido entra duas vezes ou valor vendido é interpretado como recebido.                   | Centavos, conjuntos deduplicados e cenários sintéticos com pedido manual, cancelado, reaberto, loja e múltiplos Assuntos. Confrontar a apuração com Comercial. T02/T03/T06 · G01/G07. | Divergência em centavos sem explicação bloqueia promoção. Retirar o indicador afetado até conferir o universo.                              | Pedidos e Comercial    |
+| PM06 — Bot ou envio no canal errado     | Linha humana ganha IA, eco vira nova saída ou timeout dispara novo envio.                        | Fixar origem e geração, preservar epoch e reserva, testar flag desligada, contrato antigo e resultado incerto. T09/T10/T14 · G04/G09.                                                 | Um envio duplicado ou atribuído a linha errada pausa a capacidade. Preservar o estado incerto e usar reconciliação vigente.                 | Integrações e Operação |
+| PM07 — Migração degrada a Inbox         | Lock da DDL ou consulta 360 satura pool e atrasa ingestão.                                       | Ensaiar upgrade e carga representativa, observar duração de lock, p95, timeouts e atraso do worker. T06/T07/T11/T14 · G06/G08.                                                        | Ultrapassar limite aprovado em D04 pausa lote ou piloto. Verificar retorno ao baseline antes de prosseguir.                                 | Dados e Operação       |
+| PM08 — Rollback agrava o incidente      | Código anterior não sobe ou desfazer a associação retira acesso legítimo e perde fatos externos. | Exercitar código anterior sobre expansão, replay seguro, reversão seletiva, restore isolado e tombstones. T07/T12/T14 · G07/G08.                                                      | Reversão falha ou diferença fica sem causa. Parar escritas e escalar para o runbook de recuperação.                                         | Dados e Tech Lead      |
+| PM09 — Teste verde sem prova            | A suíte crítica é pulada, teve retry até passar ou rodou sobre outra versão.                     | Evidência no SHA final, cenário que falha antes da correção, DB dedicado e workflow versionado. T01/T06/T14 · G00/G04/G09.                                                            | Qualquer gate obrigatório ausente, pulado ou com falha recorrente bloqueia merge ou ativação.                                               | QA e Tech Lead         |
+
+## Como fechar a revisão
+
+Produto, Tech Lead, QA, Privacidade e Operação confirmam os riscos de suas
+fronteiras. Para cada risco crítico, registrar evidência associada ao gate,
+responsável pela parada e procedimento de retorno. D04 fixa os limites
+quantitativos de carga e observação depois de medir o baseline. A regra
+de interrupção por associação errada, exposição indevida, perda de
+mensagem ou efeito duplicado vale desde o primeiro caso confirmado.
+
+A cada incidente de piloto, pausar o efeito afetado, conservar a evidência
+sem PII no repositório, fixar a causa e repetir os gates dependentes. A
+reabertura exige novo aceite do SHA e da configuração de ativação.

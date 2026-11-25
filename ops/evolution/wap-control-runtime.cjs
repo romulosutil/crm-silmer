@@ -371,6 +371,7 @@ function createControlAdapter({
           };
         }
         if (body.action === 'disconnect') {
+          generationRuntime?.revokeSocket?.(body.instance);
           await http(`/instance/logout/${name}`, 'DELETE');
           return {
             outcome: 'succeeded',
@@ -393,17 +394,25 @@ function createControlAdapter({
             bindingVerified: false,
           };
         if (own.length !== 1) throw new Error('WAP_CONTROL_UNKNOWN');
-        const handoff = generationRuntime?.pairingHandoffPending?.(body.instance);
+        const handoff = generationRuntime?.pairingHandoffPending?.(
+          body.instance,
+        );
         const state = await http(`/instance/connectionState/${name}`);
         const webhook = await http(`/webhook/find/${name}`);
         const settings = await http(`/settings/find/${name}`);
         const observedState = unpairedWithoutSocket(own[0], state)
           ? 'close'
           : state?.instance?.state;
-        const providerState = observedState === 'close' &&
-          (handoff || generationRuntime?.pairingHandoffPending?.(body.instance))
-          ? 'connecting'
-          : observedState;
+        const recovery = generationRuntime?.connectionRecoveryPending?.(
+          body.instance,
+        );
+        const providerState =
+          recovery ||
+          (observedState === 'close' &&
+            (handoff ||
+              generationRuntime?.pairingHandoffPending?.(body.instance)))
+            ? 'connecting'
+            : observedState;
         if (!['open', 'close', 'connecting'].includes(providerState))
           throw new Error('WAP_CONTROL_UNKNOWN');
         // WAP-E12: the CRM contract has one routing proof; drifted settings
@@ -436,13 +445,26 @@ function createControlAdapter({
   });
 }
 
-// The middleware runs before the upstream parsers and routes. Only this exact
-// path is consumed. Native routes/authentication are otherwise untouched.
+// The middleware runs before the upstream parsers and routes.
 function createControlMiddleware(options = {}) {
   const env = options.env || process.env;
   const adapter = createControlAdapter(options);
   return async (req, res, next) => {
-    if ((req.url || '').split('?')[0] !== PATH) return next();
+    const path = (req.url || '').split('?')[0];
+    const outbound = /^\/message\/[^/]+\/([A-Za-z0-9_-]{1,64})\/?$/i.exec(path);
+    if (
+      req.method === 'POST' &&
+      outbound &&
+      equal(req.headers?.apikey, env.AUTHENTICATION_API_KEY) &&
+      options.generationRuntime?.connectionRecoveryPending?.(outbound[1])
+    ) {
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Content-Type', 'application/json');
+      res.statusCode = 503;
+      res.end('{"code":"WAP_CONNECTION_RECOVERING"}');
+      return;
+    }
+    if (path !== PATH) return next();
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Content-Type', 'application/json');
     try {

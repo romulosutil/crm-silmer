@@ -170,7 +170,11 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["source", "instance"],
+      "dependentSchemas": {
+        "recovery": { "not": { "required": ["sender"] } }
+      },
       "properties": {
+        "recovery": { "const": true },
         "sender": {
           "type": "string",
           "pattern": "^[0-9]{8,15}@s\\.whatsapp\\.net$"

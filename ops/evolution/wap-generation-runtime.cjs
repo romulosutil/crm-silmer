@@ -13,6 +13,43 @@ const EVENTS = new Set(['connection.update', ...MESSAGE_EVENTS]);
 // Mirrors validateEvolutionEvent: SERVER_ACK is represented by the HTTP result.
 const RECEIPTS = new Set(['ERROR', 'DELIVERY_ACK', 'READ', 'PLAYED']);
 const UNUSED_CHAT = /@(?:g\.us|broadcast|newsletter)$/;
+const RECOVERY_REASONS = new Set([408, 428, 503]);
+const RECOVERY_DELAYS_MS = [0, 1000, 3000];
+const RECOVERY_STABLE_MS = 30_000;
+const RECOVERY_WAIT_MS = 60_000;
+
+async function authorizeRecovery(context, token, env) {
+  const url = new URL(env.SILMER_WAP_CONTROL_WEBHOOK_URL);
+  if (
+    env.SILMER_WAP_CONTROL_ENABLED !== 'true' ||
+    url.protocol !== 'https:' ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    !url.pathname.startsWith('/webhook/silmer/seller-whatsapp/') ||
+    !env.SILMER_EVOLUTION_WEBHOOK_TOKEN
+  )
+    return false;
+  const response = await fetch(url, {
+    method: 'POST',
+    redirect: 'error',
+    signal: AbortSignal.timeout(7000),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Silmer-Evolution-Token': env.SILMER_EVOLUTION_WEBHOOK_TOKEN,
+      [GENERATION_HEADER]: token,
+    },
+    body: JSON.stringify({
+      event: 'connection.update',
+      instance: context.instance,
+      source: context.source,
+      data: { state: 'connecting', recovery: true },
+    }),
+  });
+  await response.body?.cancel();
+  return response.status === 204;
+}
 
 function reject(code) {
   throw new Error(code);
@@ -118,6 +155,14 @@ function createGenerationRuntime(options = {}) {
   const activeSockets = new WeakMap();
   const handoffs = new Map();
   const attemptedHandoffs = new WeakSet();
+  const recoveries = new Map();
+  const recoveryBudgets = new WeakMap();
+  const revoked = new WeakSet();
+  const authorize = options.authorizeRecovery ?? (() => false);
+  const clock = options.clock ?? Date.now;
+  const sleep =
+    options.sleep ??
+    ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   const usedBindings = new Set();
   const usedTokenHashes = new Set();
   const selected = (instance) => allowlist.has(instance);
@@ -128,6 +173,16 @@ function createGenerationRuntime(options = {}) {
   const requireContext = (context) => {
     if (!context || !secrets.has(context))
       reject('WAP_GENERATION_CONTEXT_INVALID');
+  };
+  const active = (instance, socket, context) =>
+    context &&
+    context === capturedByInstance.get(instance) &&
+    context === currentBindings.get(instance) &&
+    socket === activeSockets.get(context);
+  const stopRecovery = (instance) => {
+    const recovery = recoveries.get(instance);
+    if (recovery) clearTimeout(recovery.timer);
+    recoveries.delete(instance);
   };
 
   return Object.freeze({
@@ -165,6 +220,7 @@ function createGenerationRuntime(options = {}) {
       )
         reject('WAP_GENERATION_BINDING_REUSED');
       const context = Object.freeze({ instance, source: snapshot });
+      stopRecovery(instance);
       secrets.set(context, token);
       pending.set(instance, context);
       latest.set(instance, snapshot);
@@ -205,6 +261,7 @@ function createGenerationRuntime(options = {}) {
       const socket = captured && activeSockets.get(captured);
       return Boolean(
         socket &&
+        !revoked.has(captured) &&
         handoffs.get(instance)?.socket !== socket &&
         typeof token === 'string' &&
         Object.keys(snapshot).every(
@@ -217,35 +274,120 @@ function createGenerationRuntime(options = {}) {
     pairingHandoffPending(instance) {
       return handoffs.has(instance);
     },
-    async continueAfterPairing(instance, socket, reason, reconnect) {
+    connectionRecoveryPending(instance) {
+      return recoveries.has(instance);
+    },
+    revokeSocket(instance) {
+      stopRecovery(instance);
+      const context = currentBindings.get(instance);
+      if (context) revoked.add(context);
+    },
+    observeConnection(instance, socket, state, asksForPairing = false) {
+      if (!selected(instance)) return true;
+      const context = sockets.get(socket);
+      const origin = local.getStore();
+      if (!active(instance, socket, context) || origin?.socket !== socket)
+        return false;
+      if (asksForPairing && recoveries.has(instance)) {
+        socket.end(new Error('WAP_RECOVERY_REQUIRES_PAIRING'));
+        return false;
+      }
+      if (state === 'open') {
+        stopRecovery(instance);
+        const budget = recoveryBudgets.get(context);
+        if (budget) budget.openedAt = clock();
+      }
+      if (state === 'close') stopRecovery(instance);
+      return true;
+    },
+    async continueAfterPairing(
+      instance,
+      socket,
+      reason,
+      reconnect,
+      registered = false,
+      closeStalled,
+    ) {
       if (!selected(instance)) return reconnect(false);
       requireSelected(instance);
       const context = sockets.get(socket);
       if (
-        reason !== 515 ||
-        !context ||
-        context !== local.getStore() ||
-        context !== capturedByInstance.get(instance) ||
-        context !== currentBindings.get(instance) ||
-        socket !== activeSockets.get(context) ||
-        handoffs.has(instance) ||
-        attemptedHandoffs.has(context)
+        !active(instance, socket, context) ||
+        local.getStore()?.socket !== socket ||
+        revoked.has(context) ||
+        handoffs.has(instance)
       )
         return;
 
-      // Baileys requires a replacement socket after linking. Reuse only the
-      // existing authenticated binding from this active socket, once.
+      const pairing = reason === 515;
+      let delay = 0;
+      let recovery;
+      if (pairing) {
+        // Baileys requires one replacement socket just after linking.
+        if (attemptedHandoffs.has(context)) return;
+        attemptedHandoffs.add(context);
+      } else {
+        if (!registered || !RECOVERY_REASONS.has(reason)) return;
+        let budget = recoveryBudgets.get(context);
+        if (
+          !budget ||
+          (budget.openedAt !== null &&
+            clock() - budget.openedAt >= RECOVERY_STABLE_MS)
+        ) {
+          budget = { attempts: 0, openedAt: null };
+          recoveryBudgets.set(context, budget);
+        }
+        if (budget.attempts >= RECOVERY_DELAYS_MS.length) return;
+        delay = RECOVERY_DELAYS_MS[budget.attempts++];
+        budget.openedAt = null;
+        recovery = { timer: null };
+        recoveries.set(instance, recovery);
+      }
       const handoff = { instance, socket, context };
-      attemptedHandoffs.add(context);
       handoffs.set(instance, handoff);
       try {
-        await handoffScope.run(handoff, () => reconnect(true));
+        if (recovery) {
+          if (delay) await sleep(delay);
+          if (
+            !active(instance, socket, context) ||
+            !(await authorize(context, secrets.get(context))) ||
+            !active(instance, socket, context) ||
+            recoveries.get(instance) !== recovery
+          )
+            return;
+          recovery.timer = setTimeout(() => {
+            if (recoveries.get(instance) !== recovery) return;
+            stopRecovery(instance);
+            if (handoffs.get(instance) === handoff) handoffs.delete(instance);
+            const successor = activeSockets.get(context);
+            if (successor !== socket && active(instance, successor, context)) {
+              try {
+                closeStalled?.(successor);
+              } catch {
+                /* closed or already replaced */
+              }
+            }
+          }, RECOVERY_WAIT_MS);
+          recovery.timer.unref();
+        }
+        await handoffScope.run(handoff, () => reconnect(pairing));
       } catch {
         // Native async event callbacks cannot propagate an unhandled rejection.
+        if (recovery && recoveries.get(instance) === recovery)
+          stopRecovery(instance);
       } finally {
-        if (activeSockets.get(context) === socket)
+        if (
+          recovery &&
+          (!recovery.timer || activeSockets.get(context) === socket) &&
+          recoveries.get(instance) === recovery
+        )
+          stopRecovery(instance);
+        if (
+          activeSockets.get(context) === socket &&
+          capturedByInstance.get(instance) === context
+        )
           capturedByInstance.delete(instance);
-        handoffs.delete(instance);
+        if (handoffs.get(instance) === handoff) handoffs.delete(instance);
       }
     },
     captureSocket(instance, socket) {
@@ -266,7 +408,8 @@ function createGenerationRuntime(options = {}) {
         if (
           handoff.instance !== instance ||
           handoffs.get(instance) !== handoff ||
-          activeSockets.get(handoff.context) !== handoff.socket
+          revoked.has(handoff.context) ||
+          !active(instance, handoff.socket, handoff.context)
         )
           reject('WAP_GENERATION_BINDING_REQUIRED');
         context = handoff.context;
@@ -289,12 +432,13 @@ function createGenerationRuntime(options = {}) {
       requireContext(context);
       if (typeof callback !== 'function')
         reject('WAP_GENERATION_CALLBACK_REQUIRED');
+      const socket = activeSockets.get(context);
       return function sourceBoundCallback(...args) {
-        return local.run(context, () => callback.apply(this, args));
+        return local.run({ context, socket }, () => callback.apply(this, args));
       };
     },
     current(instance, event) {
-      const context = local.getStore();
+      const context = local.getStore()?.context;
       if (!selected(instance)) {
         if (context) reject('WAP_GENERATION_INSTANCE_MISMATCH');
         return null;
@@ -351,6 +495,8 @@ function fromEnvironment(env) {
   return createGenerationRuntime({
     enabled: env.SILMER_WAP_GENERATION_ENABLED === 'true',
     instances: raw === '' ? [] : raw.split(','),
+    authorizeRecovery: (context, token) =>
+      authorizeRecovery(context, token, env),
   });
 }
 

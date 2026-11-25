@@ -1224,6 +1224,35 @@ test('WAP-E02: gateway middleware defaults off, authenticates exact private path
   assert.equal(app.handlers.length, 1);
 });
 
+test('WAP-11: Evolution fences outbound transport while a personal socket is recovering', async () => {
+  const middleware = createControlMiddleware({
+    env,
+    generationRuntime: {
+      connectionRecoveryPending: (/** @type {string} */ instance) =>
+        instance === 'synthetic-one',
+    },
+  });
+  const response = {
+    statusCode: 0,
+    setHeader() {},
+    end() {},
+  };
+  let next = 0;
+  for (const instance of ['synthetic-general', 'synthetic-one']) {
+    await middleware(
+      {
+        method: 'POST',
+        url: `/message/sendText/${instance}`,
+        headers: { apikey: env.AUTHENTICATION_API_KEY },
+      },
+      response,
+      () => next++,
+    );
+  }
+  assert.equal(next, 1);
+  assert.equal(response.statusCode, 503);
+});
+
 test('WAP-E02: generated workflows are inactive/default-off, shared, authenticated and have no persistence or automatic retries', () => {
   const workflows = createWhatsAppControlWorkflows({
     crmBaseUrl: 'https://crm.synthetic.invalid',

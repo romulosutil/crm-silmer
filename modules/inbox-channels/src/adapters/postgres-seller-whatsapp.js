@@ -1057,6 +1057,9 @@ export class PostgresSellerWhatsAppRepository {
       const stale =
         Number(dispatch.sequence) < Number(latestDispatch.sequence) ||
         Number(line.generation) !== input.generation ||
+        (line.state === 'validating' &&
+          input.effect === 'reconcile' &&
+          new Date(dispatch.created_at) < new Date(line.updated_at)) ||
         Boolean(user?.disabled_at) ||
         role?.function_name !== 'Vendedor' ||
         line.state === 'blocked';
@@ -1101,10 +1104,14 @@ export class PostgresSellerWhatsAppRepository {
         fail('WHATSAPP_OPERATION_UNCERTAIN');
       const conclusive =
         input.outcome === 'succeeded' || input.outcome === 'reconciled';
+      const recovering =
+        line.state === 'validating' && Boolean(line.verified_at);
+      const established =
+        recovering || (line.state === 'connected' && Boolean(line.verified_at));
       let state = line.state;
       let operationState = input.outcome;
       if (input.outcome === 'unknown') {
-        state = 'unknown';
+        if (!recovering) state = 'unknown';
       } else if (input.outcome === 'failed_before_effect') {
         state = op.action === 'disconnect' ? 'unknown' : 'disconnected';
       } else if (conclusive) {
@@ -1157,7 +1164,11 @@ export class PostgresSellerWhatsAppRepository {
           input.providerState === 'connecting' &&
           op.action === 'connect'
         )
-          state = 'awaiting_pairing';
+          state = established
+            ? input.webhookVerified === true
+              ? 'validating'
+              : 'blocked'
+            : 'awaiting_pairing';
         else if (['close', 'absent'].includes(input.providerState))
           state = 'disconnected';
         else {
@@ -1173,14 +1184,16 @@ export class PostgresSellerWhatsAppRepository {
       // original verified_at, which is the inbound cutover for this connection.
       const unchanged =
         state === line.state &&
-        Boolean(line.verified_at) === (state === 'connected');
+        Boolean(line.verified_at) ===
+          (state === 'connected' || state === 'validating');
       const updated = unchanged
         ? line
         : (
             await client.query(
               `UPDATE crm.seller_whatsapp_lines SET state=$2,version=version+1,updated_at=$3,
         confirmed_number_envelope=CASE WHEN $4::jsonb IS NULL THEN confirmed_number_envelope ELSE $4::jsonb END,
-        verified_at=CASE WHEN $2::text='connected' THEN $3::timestamptz ELSE NULL END WHERE id=$1 RETURNING *`,
+        verified_at=CASE WHEN $5::boolean AND $2::text IN ('connected','validating') THEN verified_at
+                         WHEN $2::text='connected' THEN $3::timestamptz ELSE NULL END WHERE id=$1 RETURNING *`,
               [
                 line.id,
                 state,
@@ -1194,6 +1207,7 @@ export class PostgresSellerWhatsAppRepository {
                       ),
                     )
                   : null,
+                established,
               ],
             )
           ).rows[0];
@@ -1222,7 +1236,7 @@ export class PostgresSellerWhatsAppRepository {
           "UPDATE crm.seller_whatsapp_revocations SET state='completed',updated_at=$2 WHERE current_operation_id=$1 AND state='queued'",
           [op.id, this.#clock()],
         );
-      if (!unchanged || state !== 'connected')
+      if (!unchanged || !['connected', 'validating'].includes(state))
         await this.#audit(
           client,
           updated,
@@ -1538,7 +1552,7 @@ export class PostgresSellerWhatsAppRepository {
     });
   }
 
-  /** @param {{source:any,instance:string,token:string,sender?:string}} input */
+  /** @param {{source:any,instance:string,token:string,sender?:string,recovery?:boolean}} input */
   async verifyIngress(input) {
     const source = input.source;
     id(source.bindingId);
@@ -1612,6 +1626,40 @@ export class PostgresSellerWhatsAppRepository {
           )))
       )
         fail('FORBIDDEN', 403);
+      if (input.recovery === true) {
+        if (
+          inactive ||
+          !line.verified_at ||
+          !['connected', 'validating'].includes(line.state)
+        )
+          fail('FORBIDDEN', 403);
+        if (line.state === 'connected') {
+          const op = (
+            await client.query(
+              `SELECT * FROM crm.seller_whatsapp_operations WHERE line_id=$1 AND generation=$2
+               AND action='connect' AND state IN ('succeeded','reconciled') FOR UPDATE`,
+              [line.id, source.generation],
+            )
+          ).rows[0];
+          if (!op) fail('FORBIDDEN', 403);
+          const paused = (
+            await client.query(
+              `UPDATE crm.seller_whatsapp_lines SET state='validating',version=version+1,updated_at=$2
+               WHERE id=$1 RETURNING *`,
+              [line.id, this.#clock()],
+            )
+          ).rows[0];
+          await this.#audit(client, paused, op, 'WHATSAPP_RECOVERY_STARTED');
+          const queued = (
+            await client.query(
+              `SELECT id FROM crm.outbox_jobs WHERE whatsapp_operation_id=$1 AND whatsapp_action='reconcile'
+               AND status IN ('pending','processing','retry')`,
+              [op.id],
+            )
+          ).rows[0];
+          if (!queued) await this.#reconcile(client, op);
+        }
+      }
       return {
         source: {
           bindingId: binding.id,
@@ -1637,7 +1685,7 @@ export class PostgresSellerWhatsAppRepository {
     const connectedCutoff = new Date(now - CONNECTED_RECONCILE_INTERVAL_MS);
     const candidates = (
       await this.#database.query(
-        `SELECT o.id, l.state='connected' AND o.action='connect'
+        `SELECT o.id, l.state IN ('connected','validating') AND o.action='connect'
           AND o.state IN ('succeeded','reconciled') AS connected_check
       FROM crm.seller_whatsapp_operations o
       JOIN crm.seller_whatsapp_lines l ON l.id=o.line_id
@@ -1646,8 +1694,8 @@ export class PostgresSellerWhatsAppRepository {
         AND j.whatsapp_action='reconcile' AND j.status IN ('pending','processing','retry'))
       AND ((o.generation=l.generation AND l.state<>'blocked') OR EXISTS(
         SELECT 1 FROM crm.seller_whatsapp_revocations r WHERE r.previous_operation_id=o.id AND r.state='waiting_reconciliation'))
-      AND (CASE WHEN l.state='connected' AND o.action='connect' AND o.state IN ('succeeded','reconciled')
-      THEN o.generation=l.generation AND o.updated_at<$2
+      AND (CASE WHEN l.state IN ('connected','validating') AND o.action='connect' AND o.state IN ('succeeded','reconciled')
+      THEN o.generation=l.generation AND o.updated_at<(CASE WHEN l.state='validating' THEN $1::timestamptz ELSE $2::timestamptz END)
       ELSE o.updated_at<$1 AND (o.state IN ('dispatching','unknown') OR (o.state='pending' AND EXISTS(
         SELECT 1 FROM crm.outbox_jobs j WHERE j.whatsapp_operation_id=o.id
           AND j.job_type='whatsapp.control.deliver' AND j.status IN ('dead_letter','outcome_unknown','completed')))
@@ -1680,11 +1728,12 @@ export class PostgresSellerWhatsAppRepository {
         const { line, op } = context;
         if (candidate.connected_check) {
           if (
-            line.state !== 'connected' ||
+            !['connected', 'validating'].includes(line.state) ||
             Number(line.generation) !== Number(op.generation) ||
             op.action !== 'connect' ||
             !['succeeded', 'reconciled'].includes(op.state) ||
-            new Date(op.updated_at) >= connectedCutoff
+            new Date(op.updated_at) >=
+              (line.state === 'validating' ? cutoff : connectedCutoff)
           )
             return false;
         } else if (new Date(op.updated_at) >= cutoff) return false;

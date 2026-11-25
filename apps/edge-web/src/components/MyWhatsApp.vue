@@ -502,7 +502,9 @@ onBeforeUnmount(() => {
       <button
         v-if="
           state.available &&
-          ['connected', 'awaiting_pairing', 'blocked'].includes(line.state)
+          ['connected', 'awaiting_pairing', 'validating', 'blocked'].includes(
+            line.state,
+          )
         "
         type="button"
         :aria-disabled="busy ? 'true' : undefined"

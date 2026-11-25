@@ -136,6 +136,29 @@ e corpo diferente conflita.
    sem titular, mas o comando de conexão para antes das escritas. Leituras
    incompletas de instâncias com titular ou marcadas como `open` mantêm a
    operação incerta. [Carregamento no Evolution 2.3.7](https://github.com/evolution-foundation/evolution-api/blob/cd800f2976e1e5b682fbf86a01ee4d85ae61f370/src/api/services/monitor.service.ts#L250-L282).
+
+   **Queda transitória de uma sessão pessoal já verificada (WAP-10/11, WAP-T05-06).**
+   Para os códigos `408`, `428` e `503`, a Evolution usa a prova da geração
+   do socket ativo para solicitar autorização pelo webhook pessoal do n8n.
+   O n8n verifica a origem antes de iniciar qualquer execução e devolve
+   `204` depois que a API confirma o vínculo. A primeira pausa registra
+   `WHATSAPP_RECOVERY_STARTED`.
+   A linha fica em **Validando**, com envios suspensos e o corte temporal
+   preservado. A Evolution também impede despacho pessoal enquanto recupera
+   o socket. São até três tentativas, com esperas de 0, 1 e 3 segundos;
+   30 segundos em `open` repõem esse limite. Um socket substituto travado
+   pode ficar até 60 segundos aguardando abertura antes de ser encerrado.
+   O worker só libera os envios após comprovar novamente estado `open`,
+   identidade, webhook e vínculo. As entradas da mesma geração ainda usam
+   o vínculo ativo durante a validação. Se o provedor confirmar `close` ou a
+   sessão for revogada, a titular volta pelo botão **Reconectar WhatsApp**.
+
+   Para publicar, validar API e worker primeiro, depois a imagem do n8n e
+   por último a imagem da Evolution. O formato dos workflows publicados é
+   mantido. O reinício da Evolution ainda exige reconexão das linhas pessoais
+   previamente ativas. Para reverter, restaurar primeiro a imagem anterior da
+   Evolution e observar a reconciliação das linhas em **Validando** antes de
+   reverter a API ou o worker. A linha geral deve voltar a `open` em cada troca.
 6. Desconectar/inativar revoga geração/desafios e impede novo despacho. Efeito
    iniciado conserva seu recibo antigo; não reabre acesso. Logout que depende
    de efeito incerto aguarda reconciliação, com revogação local imediata.

@@ -745,7 +745,8 @@ export class PostgresN8nIntegrationRepository {
             source.generation === Number(line.generation) - 1
           )
         : binding.revoked_at ||
-          line.state !== 'connected' ||
+          (line.state !== 'connected' &&
+            !(line.state === 'validating' && line.verified_at)) ||
           source.generation !== Number(line.generation)) ||
       Math.floor(Date.parse(input.occurredAt) / 1000) <
         Math.floor(new Date(binding.created_at).getTime() / 1000)

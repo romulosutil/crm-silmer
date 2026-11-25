@@ -86,3 +86,104 @@ de arquitetura serão registradas em RFC/ADR quando aplicável.
   off-host e no drill, conforme a ADR 023. A issue `#29` continua tratando o
   object storage gerenciado; sua conclusão não troca o RustFS sem nova
   decisão.
+
+### POS-002 — CRM Silmer 2.0 centrado no cliente (pausado)
+
+- **Status:** pausado pelo proprietário em 24/11/2026. A proposta está
+  preservada, sem merge, no
+  [PR 463](https://github.com/romulosutil/crm-silmer/pull/463) (rascunho,
+  branch `docs/crm-20-sdd`). O estado completo, os achados pendentes e o
+  roteiro de retomada estão no
+  [checkpoint](https://github.com/romulosutil/crm-silmer/blob/docs/crm-20-sdd/.specs/features/crm-20/checkpoint.md).
+- **Objetivo:** dar ao vendedor o contexto comercial de um cliente recorrente
+  (Pedidos, atendimentos e indicador de vendas sob a ACL por recurso) e, numa
+  segunda fase, reconhecer o mesmo cliente nas linhas geral e pessoal.
+- **Fases propostas:** RFC 075 (leitura comercial, C20-01 a 06) e RFC 076
+  (identidade entre linhas, C20-07 a 12), com 18 tarefas, 11 gates e 7
+  decisões (D01–D07) em `.specs/features/crm-20/` no branch do PR.
+- **Pré-condições para retomar a fase de identidade (RFC 076):**
+  - prova real de titularidade: a linha geral roda pela ponte Evolution/Baileys
+    ([ADR 050](../adr/050-evolution-baileys-como-ponte-do-whatsapp.md)); falta
+    a API oficial da Meta ou uma decisão explícita sobre o Baileys;
+  - ambiente de homologação ou ensaio em produção por allowlist aprovado em
+    ADR, porque a [topologia](../../EASYPANEL-TOPOLOGY.md) eliminou a
+    homologação;
+  - eliminação de dados do titular e backup restaurável comprovado (pendências
+    do [runbook de recuperação](../../ops/recovery/RUNBOOK.md), incluindo o
+    ledger de tombstones T06.3);
+  - permissão própria de revisor com separação de funções e um caminho para
+    desfazer associação feita no ingresso;
+  - volume do problema medido (telefones que existem como Contatos separados
+    entre linhas).
+- **Ao retomar:** conferir se os números RFC 075/076 e ADR 099 continuam
+  livres na `master`, reconferir na ponta atual os fatos citados e checar os
+  itens POS-003 a POS-007, que podem ter sido resolvidos.
+
+### POS-003 — Cadastro manual revela se um telefone existe na base
+
+- **Status:** aberto; achado na revisão do CRM 2.0 em 24/11/2026. Existe hoje
+  em produção.
+- **Prioridade:** alta (privacidade).
+- **Problema:** `POST /api/v1/contacts` devolve 409 `CONTACT_PHONE_MATCH`
+  quando o telefone está em `contacts`, `contact_phone_lookup` ou
+  `site_contact_claims`, sem checar a visibilidade do leitor e sem limite de
+  taxa (`apps/api/src/operation-runtime.js`, bloco `candidates`). Qualquer
+  vendedor consegue testar se um número é cliente, inclusive cliente privado
+  da linha pessoal de outro vendedor ou quem só usou o chat do site.
+- **Direção:** mostrar a colisão só dentro do universo do leitor (o restante
+  segue para revisão sem revelar a existência), colocar limite de taxa e
+  cobrir com teste de autorização por papel.
+
+### POS-004 — Merge de identidade liberado a qualquer vendedor
+
+- **Status:** aberto e latente; achado em 24/11/2026.
+- **Prioridade:** média; vira alta antes de montar qualquer rota de união.
+- **Problema:** `contact.identity.merge` e `contact.identity.unmerge` estão
+  em `OPERATIONAL_ACTIONS`
+  (`modules/identity-access/src/authorization.js`), liberadas a qualquer
+  vendedor ativo. Hoje não há rota montada na API. Uma rota de "associação
+  assistida" sobre essa ação deixaria o vendedor interessado aprovar a
+  própria união e levar cliente e comissão de outro.
+- **Direção:** capacidade própria de revisor, separação de funções (quem tem
+  carteira de um dos lados não aprova) e regra de direção da união, antes de
+  qualquer rota.
+
+### POS-005 — Contexto da IA soma dados de linhas diferentes
+
+- **Status:** aberto; achado em 24/11/2026.
+- **Prioridade:** média (privacidade do cliente na linha pessoal).
+- **Problema:** `#contactContext`
+  (`modules/n8n-integration/src/postgres-repository.js`, VND-CTX-01) conta
+  ciclos anteriores, último fechamento e Pedidos pelo Contato, sem olhar a
+  linha de origem. O primeiro envio pela linha pessoal já anexa identidade
+  pessoal a um Contato da linha geral; nesse estado, o bot da linha geral
+  conta o que o cliente fez em particular com o vendedor. Hoje só saem
+  contagens, sem valores nem números de Pedido.
+- **Direção:** decidir se o agente da linha geral pode saber de ciclos e
+  Pedidos de linha pessoal; se não, filtrar por linha e cobrir com cenário
+  negativo.
+
+### POS-006 — Pedidos do cliente filtrados no navegador
+
+- **Status:** aberto; achado em 24/11/2026.
+- **Prioridade:** média (dado incompleto ao vendedor).
+- **Problema:** `apps/edge-web/src/components/ClientOrders.vue` busca
+  `/api/v1/orders?owner=me&cancellation=all&limit=100` e filtra o Contato no
+  navegador. Uma página pode vir vazia enquanto os Pedidos do cliente estão
+  nas seguintes, e só aparecem os do próprio vendedor. `GET /api/v1/orders`
+  não tem filtro público por Contato.
+- **Direção:** PR curto e independente do CRM 2.0: filtro por Contato na API,
+  sob o mesmo predicado `orderReadable`, com regressão.
+
+### POS-007 — Leituras sensíveis sem auditoria
+
+- **Status:** aberto; achado em 24/11/2026.
+- **Prioridade:** média (RULES.md, item 8).
+- **Problema:** `authorizeOperational` (`apps/api/src/identity-runtime.js`)
+  não grava auditoria de leitura, e `audit_events` só recebe mutações. A
+  conta de supervisão das linhas pessoais
+  ([ADR 095](../adr/095-supervisao-das-linhas-pessoais.md)) lê conversas sem
+  rastro.
+- **Direção:** um ADR decide auditar, de forma pseudônima (ator, recurso,
+  rota, hora), as leituras de supervisão e as leituras comerciais feitas por
+  quem não é dono.

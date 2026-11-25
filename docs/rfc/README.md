@@ -1,5 +1,21 @@
 # Request for Comments
 
+## Proposta de 24/11/2026 (pausada)
+
+Pausadas pelo proprietário em 24/11/2026; ver o
+[checkpoint](../../.specs/features/crm-20/checkpoint.md).
+
+- [075 — CRM Silmer 2.0: leitura comercial do cliente](075-crm-20-centrado-no-cliente.md),
+  preservada no [PR 463](https://github.com/romulosutil/crm-silmer/pull/463):
+  perfil com Pedidos, conversas e indicador de vendas sob a ACL por recurso
+  (C20-01–06, C20-13). D02, D03 e D05 pendentes; documento de produto de
+  origem ainda a registrar.
+- [076 — Identidade do cliente entre linhas de WhatsApp](076-identidade-do-cliente-entre-linhas.md),
+  no mesmo PR: visibilidade pela linha de origem antes de qualquer
+  união (C20-T17), provas aceitas e associação assistida como padrão inicial
+  do piloto (C20-07–12). D06, D01, D04 e D07 pendentes; supersede em parte as
+  ADRs 033 e 090 após o aceite.
+
 ## Decisão de 23/11/2026
 
 - [074 — Link de pagamento do CRM e cobranças que somam](074-link-de-pagamento-do-crm-e-cobrancas-que-somam.md),

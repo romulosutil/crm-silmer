@@ -1,7 +1,10 @@
 # RFC 075 — CRM Silmer 2.0: leitura comercial do cliente
 
-Proposta de 24/11/2026, em revisão no
-[PR 463](https://github.com/romulosutil/crm-silmer/pull/463). Base analisada:
+**Pausado pelo proprietário em 24/11/2026.** Proposta de 24/11/2026,
+preservada sem merge no
+[PR 463](https://github.com/romulosutil/crm-silmer/pull/463); estado, achados
+pendentes e retomada no
+[checkpoint](../../.specs/features/crm-20/checkpoint.md). Base analisada:
 `origin/master` `0c89a1c7`. Este RFC cobre a fase **Leitura comercial** da
 feature [`crm-20`](../../.specs/features/crm-20/spec.md): requisitos C20-01 a
 C20-06 e a evolução C20-13, tarefas C20-T00 a T06, T15 e T16, decisões D02,

@@ -1,7 +1,10 @@
 # RFC 076 — Identidade do cliente entre linhas de WhatsApp
 
-Proposta de 24/11/2026, em revisão no
-[PR 463](https://github.com/romulosutil/crm-silmer/pull/463). Base analisada:
+**Pausado pelo proprietário em 24/11/2026.** Proposta de 24/11/2026,
+preservada sem merge no
+[PR 463](https://github.com/romulosutil/crm-silmer/pull/463); estado, achados
+pendentes e pré-condições de retomada no
+[checkpoint](../../.specs/features/crm-20/checkpoint.md). Base analisada:
 `origin/master` `0c89a1c7`. Este RFC cobre a fase **Identidade entre linhas**
 da feature [`crm-20`](../../.specs/features/crm-20/spec.md): requisitos C20-07
 a C20-12, tarefas C20-T07 a T14 e T17, decisões D06, D01, D04 e D07. A fase

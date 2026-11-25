@@ -284,6 +284,112 @@ test('WAP-E12: the linked socket completes the native 515 handoff once under the
   assert.equal(runtime.captureSocket('synthetic-a', {}).source.generation, 2);
 });
 
+test('WAP-10/11: transient personal recovery keeps the generation and bounds flapping', async () => {
+  const instance = 'synthetic-a';
+  /** @type {number[]} */
+  const delays = [];
+  let approvals = 0;
+  const runtime = createGenerationRuntime({
+    enabled: true,
+    instances: [instance],
+    authorizeRecovery: (
+      /** @type {any} */ context,
+      /** @type {string} */ token,
+    ) => {
+      approvals++;
+      assert.deepEqual(context.source, a1);
+      assert.equal(token, token1);
+      return true;
+    },
+    sleep: async (/** @type {number} */ ms) => {
+      delays.push(ms);
+    },
+  });
+  runtime.bindNextSocket(instance, a1, token1);
+  let socket = {};
+  const binding = runtime.captureSocket(instance, socket);
+  const lateClose = runtime.wrap(binding, () =>
+    runtime.observeConnection(instance, socket, 'close'),
+  );
+  let connects = 0;
+  for (const reason of [408, 428, 503, 408]) {
+    const before = connects;
+    await runtime.wrap(binding, async () => {
+      assert.equal(runtime.observeConnection(instance, socket, 'close'), true);
+      await runtime.continueAfterPairing(
+        instance,
+        socket,
+        reason,
+        async (/** @type {boolean} */ save) => {
+          connects++;
+          assert.equal(save, false);
+          assert.equal(runtime.connectionRecoveryPending(instance), true);
+          socket = {};
+          assert.equal(runtime.captureSocket(instance, socket), binding);
+        },
+        true,
+      );
+    })();
+    if (connects === 1) assert.equal(lateClose(), false);
+    if (connects !== before)
+      await runtime.wrap(binding, () =>
+        runtime.observeConnection(instance, socket, 'open'),
+      )();
+    assert.equal(runtime.connectionRecoveryPending(instance), false);
+    assert.equal(runtime.bindingMatchesSocket(instance, a1, token1), true);
+  }
+  assert.equal(approvals, 3);
+  assert.equal(connects, 3);
+  assert.deepEqual(delays, [1000, 3000]);
+});
+
+test('WAP-10/11: terminal, unregistered and revoked sockets cannot auto-reconnect', async () => {
+  const instance = 'synthetic-a';
+  let approvals = 0;
+  const runtime = createGenerationRuntime({
+    enabled: true,
+    instances: [instance],
+    authorizeRecovery: (/** @type {any} */ context) => {
+      approvals++;
+      assert.deepEqual(context.source, a1);
+      return false;
+    },
+  });
+  runtime.bindNextSocket(instance, a1, token1);
+  const socket = {};
+  const binding = runtime.captureSocket(instance, socket);
+  const unexpected = () =>
+    assert.fail('revoked or unregistered socket started');
+  await runtime.wrap(binding, async () => {
+    for (const reason of [401, 403, 440, 500])
+      await runtime.continueAfterPairing(
+        instance,
+        socket,
+        reason,
+        unexpected,
+        true,
+      );
+    await runtime.continueAfterPairing(
+      instance,
+      socket,
+      408,
+      unexpected,
+      false,
+    );
+    assert.equal(approvals, 0);
+    await runtime.continueAfterPairing(instance, socket, 408, unexpected, true);
+    assert.equal(approvals, 1);
+    assert.equal(runtime.connectionRecoveryPending(instance), false);
+  })();
+  runtime.revokeSocket(instance);
+  assert.equal(runtime.bindingMatchesSocket(instance, a1, token1), false);
+  let general = 0;
+  await runtime.continueAfterPairing('synthetic-general', {}, 408, () => {
+    general++;
+  });
+  assert.equal(general, 1);
+});
+
 test('WAP-E01: delayed native queue callbacks retain their socket generation after reconnect and every await', async () => {
   const runtime = createGenerationRuntime({
     enabled: true,

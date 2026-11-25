@@ -166,7 +166,12 @@ test('WAP-E02: product source uses its own immutable binding and never assigns a
     SILMER_WAP_INGRESS_VERIFY_URL:
       'https://crm.synthetic.invalid/api/v1/integrations/n8n/whatsapp-control/ingress/verify',
   };
-  const make = () =>
+  const make = (
+    data = {
+      state: 'open',
+      recovery: /** @type {true|undefined} */ (undefined),
+    },
+  ) =>
     context({
       parameters: { path: 'silmer/seller-whatsapp/events' },
       req: {
@@ -174,7 +179,7 @@ test('WAP-E02: product source uses its own immutable binding and never assigns a
           event: 'connection.update',
           instance,
           source: binding,
-          data: { state: 'open' },
+          data,
         },
       },
     });
@@ -201,6 +206,40 @@ test('WAP-E02: product source uses its own immutable binding and never assigns a
   );
   assert.equal(stale.response.status, 403);
   assert.equal(stale.req.body.source.generation, 2);
+  const recovering = make({ state: 'connecting', recovery: true });
+  assert.equal(
+    await protectIngress(
+      recovering,
+      config,
+      async (/** @type {string} */ _url, /** @type {any} */ init) => {
+        assert.deepEqual(JSON.parse(init.body), {
+          source: binding,
+          instance,
+          recovery: true,
+        });
+        return verificationResponse({ source: binding, instance });
+      },
+    ),
+    true,
+  );
+  assert.equal(recovering.response.status, 204);
+  assert.deepEqual(recovering.req.headers, {});
+  const revoked = make({ state: 'connecting', recovery: true });
+  assert.equal(
+    await protectIngress(revoked, config, async () =>
+      verificationResponse({}, 403),
+    ),
+    true,
+  );
+  assert.equal(revoked.response.status, 403);
+  const invalid = make({ state: 'open', recovery: true });
+  assert.equal(
+    await protectIngress(invalid, config, async () =>
+      assert.fail('invalid signal passed'),
+    ),
+    true,
+  );
+  assert.equal(invalid.response.status, 403);
 });
 
 /** @param {any} [options] */

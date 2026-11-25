@@ -175,11 +175,13 @@ function eventBody(
       date_time: body.date_time,
     };
   }
-  keys(body.data, ['state']);
+  keys(body.data, ['state', 'recovery']);
   if (
     body.event !== 'connection.update' ||
     !instances.includes(body.instance) ||
-    !['connecting', 'close', 'open'].includes(body.data.state)
+    !['connecting', 'close', 'open'].includes(body.data.state) ||
+    (body.data.recovery !== undefined &&
+      (body.data.recovery !== true || body.data.state !== 'connecting'))
   )
     denied();
   for (const key of ['destination', 'date_time', 'sender', 'server_url']) {
@@ -193,7 +195,10 @@ function eventBody(
     event: body.event,
     instance: body.instance,
     source: sourceBody(body.source),
-    data: { state: body.data.state },
+    data: {
+      state: body.data.state,
+      ...(body.data.recovery === true ? { recovery: true } : {}),
+    },
   };
 }
 const MESSAGE_WRAPPERS = [
@@ -285,7 +290,15 @@ function replaceObject(target, projected) {
   Object.assign(target, projected);
   return target;
 }
-async function verifySource(source, instance, token, env, fetchImpl, sender) {
+async function verifySource(
+  source,
+  instance,
+  token,
+  env,
+  fetchImpl,
+  sender,
+  recovery,
+) {
   const url = trustedVerifier(
     env.SILMER_WAP_INGRESS_VERIFY_URL,
     '/api/v1/integrations/n8n/whatsapp-control/ingress/verify',
@@ -311,7 +324,12 @@ async function verifySource(source, instance, token, env, fetchImpl, sender) {
         [GENERATION_HEADER]: token,
         ...technicalHeaders(source.bindingId, source.bindingId),
       },
-      body: JSON.stringify({ source, instance, ...(sender ? { sender } : {}) }),
+      body: JSON.stringify({
+        source,
+        instance,
+        ...(sender ? { sender } : {}),
+        ...(recovery ? { recovery: true } : {}),
+      }),
     });
   } catch {
     unavailable();
@@ -492,6 +510,7 @@ async function protectIngress(
       denied();
     let body;
     let ignoreTemplate = false;
+    let recovery = false;
     if (
       path.startsWith('silmer/seller-whatsapp/') &&
       ['control', 'challenge'].includes(paths[path])
@@ -509,6 +528,9 @@ async function protectIngress(
       )
         denied();
       body = eventBody(req.body, instances);
+      recovery =
+        body.event === 'connection.update' && body.data.recovery === true;
+      if (recovery && !instances) denied();
       body.source = await verifySource(
         body.source,
         body.instance,
@@ -516,6 +538,7 @@ async function protectIngress(
         env,
         fetchImpl,
         body.sender,
+        recovery,
       );
       ignoreTemplate =
         path.startsWith('silmer/seller-whatsapp/') &&
@@ -538,8 +561,8 @@ async function protectIngress(
     req.body = replaceObject(req.body, body);
     if (Buffer.isBuffer(req.rawBody)) req.rawBody.fill(0);
     delete req.rawBody;
-    if (ignoreTemplate) {
-      response.writeHead(200, { 'Cache-Control': 'no-store' });
+    if (ignoreTemplate || recovery) {
+      response.writeHead(recovery ? 204 : 200, { 'Cache-Control': 'no-store' });
       response.end();
       return true;
     }

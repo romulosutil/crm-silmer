@@ -337,7 +337,33 @@ test(
       const socketRuntime = createGenerationRuntime({
         enabled: true,
         instances,
+        authorizeRecovery: async (
+          /** @type {any} */ context,
+          /** @type {string} */ token,
+        ) => {
+          const response = await S.api.inject({
+            method: 'POST',
+            url: '/api/v1/integrations/n8n/whatsapp-control/ingress/verify',
+            headers: {
+              authorization: n8nAuthorization,
+              'x-silmer-wap-generation-token': token,
+              'idempotency-key': context.source.bindingId,
+              'x-correlation-id': context.source.bindingId,
+              'x-silmer-workflow-key': 'seller-whatsapp-control',
+              'x-silmer-workflow-version': '1.0',
+              'x-silmer-execution-id': `ingress:${context.source.bindingId}`,
+            },
+            payload: {
+              source: context.source,
+              instance: context.instance,
+              recovery: true,
+            },
+          });
+          wiring.recoveryStatus = response.statusCode;
+          return response.statusCode === 200;
+        },
       });
+      wiring.socketRuntime = socketRuntime;
       wiring.adapter = createControlAdapter({
         env: {
           SILMER_WAP_CONTROL_ENABLED: 'true',
@@ -871,6 +897,13 @@ test(
             markEffectStarted: async () => true,
           });
           assert.equal(result.outcome, 'sent', JSON.stringify(result));
+          await S.queue.settle({
+            jobId: job.id,
+            attemptId: job.attemptId,
+            workerId: 'wap-e12-worker',
+            outcome: 'sent',
+            now: new Date(Date.now() + 300_000),
+          });
           ran += 1;
         }
       }
@@ -1506,6 +1539,12 @@ test(
         assert.equal(current.line.generation, 3);
         const a = await lineOf(A);
         assert.equal(a.generation, 3);
+        const originalCutover = (
+          await pool.query(
+            'SELECT verified_at FROM crm.seller_whatsapp_lines WHERE id=$1',
+            [a.id],
+          )
+        ).rows[0].verified_at;
         // A stale callback of generation 1 is an idempotent no-op.
         const lineBefore = await lineOf(A);
         const stale = await S.api.inject(R.connectedCallbackA.request);
@@ -1517,10 +1556,76 @@ test(
         const refused = await inbound(oldSource, 'old-generation', PX);
         assert.equal(refused.statusCode, 409, refused.body);
         assert.equal(code(refused), 'WHATSAPP_GENERATION_STALE');
-        // The customer writes again through generation 3: same conversation.
+        const runtime = wiring.socketRuntime;
+        const live = provider(aInstance);
+        const initialSocket = live.socket;
+        const sourceContext = runtime.captureSocket(aInstance, initialSocket);
+        live.state = 'close';
+        await runtime.wrap(sourceContext, async () => {
+          assert.equal(
+            runtime.observeConnection(aInstance, initialSocket, 'close'),
+            true,
+          );
+          await runtime.continueAfterPairing(
+            aInstance,
+            initialSocket,
+            408,
+            async () => {
+              assert.equal((await me(A)).line.state, 'validating');
+              const rejected = await as(
+                A,
+                'POST',
+                `/api/v1/conversations/${R.convA}/messages`,
+                {
+                  content: { text: 'envio bloqueado em recuperação' },
+                  expectedVersion: await version('conversations', R.convA),
+                  messageType: 'text',
+                  reason: 'synthetic',
+                },
+              );
+              assert.equal(rejected.statusCode, 503, rejected.body);
+              assert.equal(code(rejected), 'WHATSAPP_SEND_UNAVAILABLE');
+              await drainControl();
+              assert.equal((await me(A)).line.state, 'validating');
+              live.socket = {};
+              assert.equal(
+                runtime.captureSocket(aInstance, live.socket),
+                sourceContext,
+              );
+              live.state = 'connecting';
+            },
+            true,
+          );
+        })();
+        assert.equal(wiring.recoveryStatus, 200);
+        assert.notEqual(live.socket, initialSocket);
+        live.state = 'open';
+        runtime.wrap(sourceContext, () =>
+          runtime.observeConnection(aInstance, live.socket, 'open'),
+        )();
+        // Ingress can drain valid messages while the CRM rechecks the same binding.
         const next = body(await inbound(a.source, 'passive-2', PX), 200);
         assert.equal(next.conversation_id, R.convA);
         assert.equal(next.contact_id, R.contactX);
+        const paused = await me(A);
+        await pool.query(
+          "UPDATE crm.seller_whatsapp_operations SET updated_at=updated_at-interval '31 seconds' WHERE id=$1",
+          [paused.operation.id],
+        );
+        assert.equal((await S.control.scheduleReconciliations()).scheduled, 1);
+        await drainControl();
+        const recovered = await lineOf(A);
+        assert.equal(recovered.state, 'connected');
+        assert.deepEqual(recovered.source, a.source);
+        assert.deepEqual(
+          (
+            await pool.query(
+              'SELECT verified_at FROM crm.seller_whatsapp_lines WHERE id=$1',
+              [a.id],
+            )
+          ).rows[0].verified_at,
+          originalCutover,
+        );
 
         /** CRM send from A through the Inbox route. @param {string} text */
         async function send(text) {

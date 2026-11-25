@@ -36,8 +36,12 @@ export function patchEvolutionGeneration(bundle) {
   const replacements = [
     [PRISMA_CREDENTIAL_WRITER, patchedPrismaCredentialWriter()],
     [
+      'async connectionUpdate({qr:e,connection:t,lastDisconnect:o}){',
+      `async connectionUpdate({qr:e,connection:t,lastDisconnect:o}){if(!${runtime}.observeConnection(this.instanceName,this.client,t,Boolean(e)))return;`,
+    ],
+    [
       'await this.connectToWhatsapp(this.phoneNumber)',
-      `await ${runtime}.continueAfterPairing(this.instanceName,this.client,i,async save=>{if(save)await this.instance.authState.saveCreds();return this.connectToWhatsapp(this.phoneNumber)})`,
+      `await ${runtime}.continueAfterPairing(this.instanceName,this.client,i,async save=>{if(save)await this.instance.authState.saveCreds();return this.connectToWhatsapp(this.phoneNumber)},this.instance?.authState?.state?.creds?.registered===true,socket=>{if(this.client===socket)socket.end(new Error('WAP_RECOVERY_TIMEOUT'))})`,
     ],
     [
       's.connectionStatus==="open"||s.connectionStatus==="connecting"?(this.logger.info(`Auto-connecting instance',

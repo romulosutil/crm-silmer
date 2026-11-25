@@ -45,7 +45,8 @@ import {
   PostgresN8nIntegrationRepository,
 } from '../../modules/n8n-integration/src/index.js';
 
-const now = new Date('2026-11-17T21:10:00.000Z');
+// The reader uses the database clock to enforce the media retention window.
+const now = new Date();
 const key = Buffer.alloc(32, 88);
 const sellerA = 'wap-e08-seller-a';
 const sellerB = 'wap-e08-seller-b';

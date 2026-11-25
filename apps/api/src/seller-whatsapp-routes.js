@@ -190,11 +190,16 @@ export function registerSellerWhatsAppRoutes(api, service, contextFor) {
       ingressLimits,
       async (request) => {
         const auth = await technical(request, 'whatsapp.control.read');
-        const body = controlObject(request.body, [
-          'source',
-          'instance',
-          'sender',
-        ]);
+        const body = controlObject(
+          request.body,
+          ['source', 'instance', 'sender', 'recovery'],
+          ['source', 'instance'],
+        );
+        if (
+          body.recovery !== undefined &&
+          (body.recovery !== true || body.sender !== undefined)
+        )
+          throw error();
         if (
           body.sender !== undefined &&
           (typeof body.sender !== 'string' ||

@@ -683,6 +683,10 @@ if (!url) {
             repository.verifyIngress(bindingInput),
             rejects('FORBIDDEN'),
           );
+          await assert.rejects(
+            repository.verifyIngress({ ...bindingInput, recovery: true }),
+            rejects('FORBIDDEN'),
+          );
         },
       );
 

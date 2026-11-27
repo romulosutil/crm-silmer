@@ -1800,7 +1800,7 @@ if (connectionString) {
     assert.equal(await storage.getObject(second.file.objectKey), null);
   });
 
-  test('CAR-02/04/09 and manual delivery: PostgreSQL numbers maps and prevents concurrent assignments', async () => {
+  test('CAR-02/09/10 and manual delivery: numbered maps keep their original PDF and require access to every order', async () => {
     const conversationId = await seedConversation(pool, {
       channel: 'whatsapp',
     });
@@ -1829,39 +1829,46 @@ if (connectionString) {
       fabCode: '01',
       repository,
     });
-    let order = await service.createForContact({
-      actor,
-      contactId,
-      correlationId: 'manual-delivery-create',
-      idempotencyKey: randomUUID(),
-    });
-    assert.equal(order.firstContactAt, order.createdAt);
-    for (const [section, value] of Object.entries({
-      summary: {
-        nome: 'Evento Sintético',
-        data_entrega_confirmada: '2026-10-24',
-      },
-      items: syntheticItems().map((item) => ({ ...item, publico: 'unissex' })),
-      artwork: { feito_pelo_cliente: true, feito_pela_silmer: false },
-    })) {
-      order = await service.patchSection({
+    async function confirmedCutOrder() {
+      let pending = await service.createForContact({
         actor,
-        correlationId: 'manual-delivery-edit',
-        orderId: order.id,
-        expectedVersion: order.version,
-        section,
-        value,
+        contactId,
+        correlationId: 'manual-delivery-create',
+        idempotencyKey: randomUUID(),
+      });
+      assert.equal(pending.firstContactAt, pending.createdAt);
+      for (const [section, value] of Object.entries({
+        summary: {
+          nome: 'Evento Sintético',
+          data_entrega_confirmada: '2026-10-24',
+        },
+        items: syntheticItems().map((item) => ({
+          ...item,
+          publico: 'unissex',
+        })),
+        artwork: { feito_pelo_cliente: true, feito_pela_silmer: false },
+      })) {
+        pending = await service.patchSection({
+          actor,
+          correlationId: 'manual-delivery-edit',
+          orderId: pending.id,
+          expectedVersion: pending.version,
+          section,
+          value,
+        });
+      }
+      pending = await priceDraft(service, pending, 10000, actor);
+      return service.confirm({
+        actor,
+        correlationId: 'manual-delivery-confirm',
+        orderId: pending.id,
+        expectedVersion: pending.version,
+        amountText: '100,00',
+        paymentCondition: 'pix',
       });
     }
-    order = await priceDraft(service, order, 10000, actor);
-    order = await service.confirm({
-      actor,
-      correlationId: 'manual-delivery-confirm',
-      orderId: order.id,
-      expectedVersion: order.version,
-      amountText: '100,00',
-      paymentCondition: 'pix',
-    });
+    let order = await confirmedCutOrder();
+    const companion = await confirmedCutOrder();
     assert.equal(order.productionStage, 'arte');
     assert.equal(
       (await service.cutMap([order.id], actor)).total,
@@ -1885,15 +1892,28 @@ if (connectionString) {
         IDEMPOTENCY_ENVELOPE_KEY: Buffer.alloc(32, 66).toString('base64'),
       },
     });
-    const map = await runtime.getCutMap([order.id], actor);
+    const map = await runtime.getCutMap([order.id, companion.id], actor);
     assert.equal((await runtime.get(order.id, actor)).order.cutMap, null);
     const first = await runtime.reserveCutMapNumber();
     const second = await runtime.reserveCutMapNumber();
     assert.equal(first, '1');
     assert.equal(second, '2');
+    const originalPdf = Buffer.from('%PDF-1.4\nOriginal synthetic cut map.');
     const generations = await Promise.allSettled([
-      runtime.recordCutMapDownload(map, actor, 'cut-first-a', first),
-      runtime.recordCutMapDownload(map, actor, 'cut-first-b', second),
+      runtime.recordCutMapDownload(
+        map,
+        actor,
+        'cut-first-a',
+        first,
+        originalPdf,
+      ),
+      runtime.recordCutMapDownload(
+        map,
+        actor,
+        'cut-first-b',
+        second,
+        originalPdf,
+      ),
     ]);
     assert.equal(
       generations.filter((result) => result.status === 'fulfilled').length,
@@ -1908,6 +1928,32 @@ if (connectionString) {
     assert.equal(afterGeneration.cutMapAvailable, false);
     assert.equal(afterGeneration.cutMap?.number, winner);
     assert.equal(afterGeneration.cutMap?.orderVersion, order.version);
+    const published = await runtime.getIssuedCutMap(winner, actor, false);
+    assert.deepEqual(published, {
+      number: winner,
+      orders: [order.number, companion.number],
+      generatedAt: afterGeneration.cutMap.generatedAt,
+      pdfAvailable: true,
+      pdf: null,
+    });
+    assert.equal(
+      await runtime.getIssuedCutMap(
+        winner,
+        { ...actor, id: 'other-seller' },
+        true,
+      ),
+      null,
+    );
+    const envelope = (
+      await pool.query(
+        'SELECT pdf_envelope FROM crm.order_cut_maps WHERE number = $1',
+        [winner],
+      )
+    ).rows[0].pdf_envelope;
+    assert.equal(envelope.algorithm, 'AES-256-GCM');
+    assert.ok(
+      !JSON.stringify(envelope).includes(originalPdf.toString('base64')),
+    );
     await assert.rejects(runtime.getCutMap([order.id], actor), {
       code: 'CUT_MAP_ALREADY_GENERATED',
       orderIds: [order.id],
@@ -1986,6 +2032,25 @@ if (connectionString) {
       (await runtime.get(order.id, actor)).order.cutMap,
       afterGeneration.cutMap,
     );
+    assert.deepEqual(
+      (await runtime.getIssuedCutMap(winner, actor, true)).pdf,
+      originalPdf,
+    );
+    const otherOwner = 'seller-cut-map-transfer';
+    await pool.query(
+      "INSERT INTO crm.users (id,email,password_hash,name) VALUES ($1,'seller-cut-map-transfer@example.test','$argon2id$synthetic','Outro vendedor sintético')",
+      [otherOwner],
+    );
+    await pool.query(
+      'UPDATE crm.orders SET manual_owner_id = $2 WHERE id = $1',
+      [companion.id, otherOwner],
+    );
+    assert.equal(
+      (await runtime.get(order.id, actor)).order.cutMap.number,
+      winner,
+    );
+    assert.equal(await runtime.getIssuedCutMap(winner, actor, false), null);
+    assert.equal(await runtime.getIssuedCutMap(winner, actor, true), null);
     assert.ok(
       !(await service.deliveryTasks({ actor })).some(
         (item) => item.id === order.id,

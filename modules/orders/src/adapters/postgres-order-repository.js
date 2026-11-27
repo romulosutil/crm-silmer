@@ -62,6 +62,16 @@ const ORDER_COLUMNS = `id, number_sequence, number, conversation_id, origin_subj
 // change the total, the status or the freight of an order that has freight.
 const DECLARE_PRICING_RULE = `SELECT set_config('crm.order_pricing_rule', '${FREIGHT_PRICING_RULE}', true)`;
 
+/** @param {string} order SQL alias */
+function cutOrderReadable(order) {
+  return `${orderReadable(order, '$2')} AND (
+    ($3::boolean AND EXISTS (SELECT 1 FROM crm.user_capabilities
+      WHERE user_id = $2 AND capability = 'COMMERCIAL_ADMIN'))
+    OR ${order}.manual_owner_id = $2 OR EXISTS (
+      SELECT 1 FROM crm.conversations WHERE id = ${order}.conversation_id AND assigned_user_id = $2
+    ))`;
+}
+
 /** @param {string} orderId */
 function fichaAad(orderId) {
   return `order-ficha:${orderId}`;
@@ -877,13 +887,7 @@ export class PostgresOrderRepository {
   async findCutOrders(ids, actor, transaction = this.#database) {
     const { rows } = await transaction.query(
       `SELECT ${ORDER_COLUMNS} FROM crm.orders
-       WHERE id = ANY($1::text[]) AND ${orderReadable('orders', '$2')}
-         AND (($3::boolean AND EXISTS (
-           SELECT 1 FROM crm.user_capabilities
-           WHERE user_id = $2 AND capability = 'COMMERCIAL_ADMIN'
-         )) OR manual_owner_id = $2 OR EXISTS (
-           SELECT 1 FROM crm.conversations WHERE id = orders.conversation_id AND assigned_user_id = $2
-         ))`,
+       WHERE id = ANY($1::text[]) AND ${cutOrderReadable('orders')}`,
       [
         ids,
         actor.id,
@@ -936,11 +940,59 @@ export class PostgresOrderRepository {
     return rows[0].number;
   }
 
-  /** @param {import('../domain/cut-map.js').CutOrderReference[]} orders @param {string} number @param {Queryable} transaction */
-  async insertCutMap(orders, number, transaction) {
+  /** @param {string} number @param {{id:string, capabilities?:readonly string[]}} actor @param {boolean} includePdf */
+  async readIssuedCutMap(number, actor, includePdf) {
+    const {
+      rows: [row],
+    } = await this.#database.query(
+      `WITH members AS MATERIALIZED (
+         SELECT orders.number, orders.number_sequence, (${cutOrderReadable('orders')}) AS allowed
+         FROM crm.order_cut_map_orders membership
+         JOIN crm.orders orders ON orders.id = membership.order_id
+         WHERE membership.map_number = $1
+       )
+       SELECT map.generated_at, map.pdf_envelope IS NOT NULL AS pdf_available,
+         ARRAY(SELECT number FROM members ORDER BY number_sequence) AS orders
+         ${includePdf ? ', map.pdf_envelope' : ''}
+       FROM crm.order_cut_maps map WHERE map.number = $1
+         AND EXISTS (SELECT 1 FROM members)
+         AND NOT EXISTS (SELECT 1 FROM members WHERE allowed IS NOT TRUE)`,
+      [
+        number,
+        actor.id,
+        actor.capabilities?.includes('COMMERCIAL_ADMIN') === true,
+      ],
+    );
+    if (!row) return null;
+    return {
+      number,
+      generatedAt: new Date(row.generated_at).toISOString(),
+      orders: row.orders,
+      pdfAvailable: row.pdf_available,
+      pdf:
+        includePdf && row.pdf_envelope
+          ? Buffer.from(
+              decryptJson(
+                row.pdf_envelope,
+                `cut-map:${number}:pdf`,
+                this.#envelopeKey,
+              ),
+              'base64',
+            )
+          : null,
+    };
+  }
+
+  /** @param {import('../domain/cut-map.js').CutOrderReference[]} orders @param {string} number @param {Buffer} pdf @param {Queryable} transaction */
+  async insertCutMap(orders, number, pdf, transaction) {
+    const envelope = encryptJson(
+      pdf.toString('base64'),
+      `cut-map:${number}:pdf`,
+      this.#envelopeKey,
+    );
     await transaction.query(
-      'INSERT INTO crm.order_cut_maps (number) VALUES ($1)',
-      [number],
+      'INSERT INTO crm.order_cut_maps (number, pdf_envelope) VALUES ($1, $2::jsonb)',
+      [number, JSON.stringify(envelope)],
     );
     await transaction.query(
       `INSERT INTO crm.order_cut_map_orders (order_id, map_number, order_version)

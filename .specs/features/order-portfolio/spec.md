@@ -12,9 +12,10 @@
 | CAR-05    | Soma de quantidades por tamanho sem misturar modelo, cor, público, malha ou outras especificações de corte preenchidas. O público obrigatório no documento pode ser Unissex, Masculino, Feminino ou Infantil. Se faltar dado ou a grade divergir, a prévia identifica o pedido para correção. | CAR-T02 |
 | CAR-06    | A4 privado com números dos pedidos, totais e grade por lote, no estilo da ficha. Sem nomes de clientes ou valores. A versão e o acesso são rechecados antes e depois de renderizar. Download auditado sem primeira impressão ou avanço de etapa.                                              | CAR-T02 |
 | CAR-07    | Homologar uma amostra com a Rose e executar os gates de migração e release antes de disponibilizar a operação em produção.                                                                                                                                                                    | CAR-T03 |
-| CAR-08    | Cada geração bem-sucedida registra todos os pedidos da seleção. A carteira sinaliza os pedidos mapeados e permite consultar a data e a versão do pedido na geração. A prévia desatualizada não pode emitir um mapa.                                                                           | CAR-T04 |
+| CAR-08    | Cada geração bem-sucedida registra todos os pedidos da seleção com suas versões. A carteira sinaliza os pedidos mapeados e permite consultar a data da emissão. A prévia desatualizada não pode emitir um mapa.                                                                               | CAR-T04 |
 | CAR-09    | O mapa tem um número único na carteira e no PDF. Cada pedido pertence a um único mapa. O pedido fica disponível para consulta e sai da seleção. A API recusa toda seleção que contenha um pedido já mapeado, inclusive quando duas gerações concorrem pelo mesmo pedido.                      | CAR-T05 |
+| CAR-10    | A etiqueta numerada abre a composição do mapa e permite baixar exatamente o PDF emitido. Consulta e download exigem acesso a todos os pedidos do mapa, não criam nova emissão e continuam válidos depois de alterações posteriores nos pedidos.                                               | CAR-T06 |
 
 Recebimentos e saldo seguem os contratos de cobrança e da declaração de
-pagamento. A carteira sinaliza a quitação quando registrada. O mapa deve ser
-gerado novamente quando a seleção ou o conteúdo de algum pedido mudar.
+pagamento. A carteira sinaliza a quitação quando registrada. Antes da emissão,
+mudanças na seleção ou nos pedidos exigem uma nova prévia.

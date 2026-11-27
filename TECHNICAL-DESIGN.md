@@ -13,6 +13,9 @@ compara o fingerprint antes e depois de renderizar. A
 `0088`, que cria os mapas numerados e o vínculo único por pedido. O POST do PDF
 com CSRF serializa seleções sobrepostas e grava o mapa, os vínculos e a
 auditoria na transação que revalida versões e acesso.
+Pela [ADR 103](docs/adr/103-pdf-original-do-mapa-de-corte.md), a migration
+`0089` guarda o documento original cifrado na mesma emissão. Consultar o
+mapa ou baixar o PDF usa a autorização atual de todos os pedidos do lote.
 
 ## Link de pagamento do CRM — LPC (23/11/2026)
 

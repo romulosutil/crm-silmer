@@ -2,9 +2,9 @@
 
 O Mapa de corte tem número compartilhado entre o PDF e a carteira. Um vínculo
 único por pedido preserva a geração registrada e garante que o pedido saia da
-seleção. [ADR 102](docs/adr/102-mapas-de-corte-numerados.md)
+seleção. [ADR 103](docs/adr/103-mapas-de-corte-numerados.md)
 O PDF original é guardado cifrado na emissão e recuperado com a autorização
-atual de todos os pedidos do mapa. [ADR 103](docs/adr/103-pdf-original-do-mapa-de-corte.md)
+atual de todos os pedidos do mapa. [ADR 104](docs/adr/104-pdf-original-do-mapa-de-corte.md)
 
 ## Acesso à linha pessoal na liberação de 20/11/2026
 
@@ -663,8 +663,8 @@ A [ADR 096](docs/adr/096-painel-comercial-do-administrador.md) define o Resultad
 ## Pedido e ficha
 
 O redesign da carteira e o Mapa de corte seguem a
-[ADR 100](docs/adr/100-carteira-de-pedidos-e-mapa-de-corte.md) e a
-[RFC 076](docs/rfc/076-carteira-de-pedidos-e-mapa-de-corte.md). A etapa de
+[ADR 101](docs/adr/101-carteira-de-pedidos-e-mapa-de-corte.md) e a
+[RFC 077](docs/rfc/077-carteira-de-pedidos-e-mapa-de-corte.md). A etapa de
 produção é um atributo operacional. O PDF consolida somente as fichas
 confirmadas selecionadas, separando o público e as especificações de corte.
 

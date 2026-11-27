@@ -1,11 +1,11 @@
-# ADR 103 — PDF original do mapa de corte
+# ADR 104 — PDF original do mapa de corte
 
 Aceita para implementação. Complementa a
-[ADR 102](102-mapas-de-corte-numerados.md) e resolve a
-[RFC 079](../rfc/079-consulta-do-mapa-de-corte-emitido.md).
+[ADR 103](103-mapas-de-corte-numerados.md) e resolve a
+[RFC 080](../rfc/080-consulta-do-mapa-de-corte-emitido.md).
 
 O PDF gerado, limitado a 5 MiB, é um artefato do próprio mapa. A migration
-`0089` adiciona seu envelope cifrado, associado ao número do mapa, e indexa
+`0090` adiciona seu envelope cifrado, associado ao número do mapa, e indexa
 os membros por mapa. A mesma transação registra arquivo, número, pedidos e
 auditoria. O banco e seu backup já são a fonte de recuperação do mapa. O
 arquivo inclui referências de pedidos e informações de corte.

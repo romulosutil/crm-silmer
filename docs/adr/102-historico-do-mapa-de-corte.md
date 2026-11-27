@@ -1,8 +1,8 @@
-# ADR 101 — Histórico do Mapa de corte
+# ADR 102 — Histórico do Mapa de corte
 
 Aceita para implementação. Complementa a
-[ADR 100](100-carteira-de-pedidos-e-mapa-de-corte.md) e resolve a
-[RFC 077](../rfc/077-historico-do-mapa-de-corte.md).
+[ADR 101](101-carteira-de-pedidos-e-mapa-de-corte.md) e resolve a
+[RFC 078](../rfc/078-historico-do-mapa-de-corte.md).
 
 1. Eventos imutáveis `order.cut_map.download` são a fonte da última geração
    e do histórico por pedido. A consulta tem índice parcial e paginação.

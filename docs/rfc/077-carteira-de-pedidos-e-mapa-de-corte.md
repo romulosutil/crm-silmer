@@ -1,7 +1,7 @@
-# RFC 076 — Carteira de pedidos e Mapa de corte
+# RFC 077 — Carteira de pedidos e Mapa de corte
 
 Autorizada para implementação local em 27/11/2026 a partir do protótipo da
-carteira. Decisão em [ADR 100](../adr/100-carteira-de-pedidos-e-mapa-de-corte.md).
+carteira. Decisão em [ADR 101](../adr/101-carteira-de-pedidos-e-mapa-de-corte.md).
 
 A carteira reúne vendas do mês, filtros de produção, prazos e ações do pedido.
 O Mapa de corte permite que um vendedor ou administrador confira e imprima uma

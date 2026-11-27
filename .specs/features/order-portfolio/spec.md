@@ -1,7 +1,7 @@
 # Carteira de pedidos e Mapa de corte
 
-[RFC 076](../../../docs/rfc/076-carteira-de-pedidos-e-mapa-de-corte.md) ·
-[ADR 100](../../../docs/adr/100-carteira-de-pedidos-e-mapa-de-corte.md)
+[RFC 077](../../../docs/rfc/077-carteira-de-pedidos-e-mapa-de-corte.md) ·
+[ADR 101](../../../docs/adr/101-carteira-de-pedidos-e-mapa-de-corte.md)
 
 | Requisito | Aceite                                                                                                                                                                                                                                                                                        | Tarefa  |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |

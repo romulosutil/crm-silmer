@@ -1,7 +1,7 @@
-# ADR 100 — Carteira de pedidos e Mapa de corte
+# ADR 101 — Carteira de pedidos e Mapa de corte
 
 Aceita para implementação em 27/11/2026. Origem na
-[RFC 076](../rfc/076-carteira-de-pedidos-e-mapa-de-corte.md).
+[RFC 077](../rfc/077-carteira-de-pedidos-e-mapa-de-corte.md).
 
 1. `production_stage` é uma coluna operacional anulável para pedidos de
    atendimento. A data de entrega segue como fonte de **Entregue**. Na primeira

@@ -800,9 +800,11 @@ test('shows no progress to generate on a confirmed order or a store order (PFI-1
   await expect(
     page.getByRole('region', { name: 'Para gerar o pedido' }),
   ).toHaveCount(0);
-  await expect(page.locator('.op-mobile-action')).toHaveText(
-    'PDF para impressão',
-  );
+  await expect(
+    page
+      .locator('.op-mobile-action')
+      .getByRole('button', { name: 'PDF para impressão', exact: true }),
+  ).toBeVisible();
 
   await page.goto('/pedidos/order-loja');
   await expect(

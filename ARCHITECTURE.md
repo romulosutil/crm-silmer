@@ -727,9 +727,10 @@ a rota HTML segue disponível. Não há envio automático pelo WhatsApp.
 A [ADR 093](docs/adr/093-ficha-de-pedido-para-impressao.md) usa **PDF para
 impressão** como ação principal no detalhe dos pedidos confirmados de
 atendimento. O **PDF detalhado** fica em **Mais ações do pedido**.
-O mesmo snapshot alimenta a grade A4 paisagem com controle de produção e
-referência textual da estampa. O parâmetro `layout=impressao` escolhe o
-formato reduzido.
+O mesmo snapshot alimenta a grade A4 paisagem com referência textual da
+estampa. Em `layout=impressao`, o controle de produção tem uma linha por
+pedido e a prévia da **Arte final** aparece logo abaixo
+([ADR 099](docs/adr/099-arte-final-na-ficha-para-impressao.md)).
 
 Arquivos da arte (até 5 de 10 MB e a arte final) são enviados e baixados
 pela página do pedido e ficam no RustFS interno, só pela API

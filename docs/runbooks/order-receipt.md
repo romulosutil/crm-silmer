@@ -24,6 +24,19 @@ No detalhe de um pedido de atendimento confirmado, a ação principal baixa o
 **PDF para impressão** e o menu **Mais ações do pedido** oferece o **PDF
 detalhado**.
 
+## Ficha para a produção
+
+Em **PDF para impressão**, confira uma linha de controle por pedido e a
+prévia logo abaixo. A imagem vem do arquivo **Arte final**. Para CorelDRAW
+ou outro formato sem prévia, abra o original no capítulo **Arte**. Se a
+ficha indicar falha de leitura, confira se o arquivo abre no pedido. Quando
+só a conversão de PDFs falhar, verifique `pdftoppm -v` na imagem da API.
+
+Valide com um pedido sintético de dois itens, uma imagem final e um rascunho.
+Para PDF da arte, confira a primeira página na ficha e as seguintes nas
+folhas de continuação. Use a correlação para diagnóstico, sem anexar a arte
+a logs ou tickets. O rollback por PR é a reversão de FPI-T08.
+
 ## Gravações e atualização
 
 Ao abrir no detalhe, o fluxo espera as gravações de seções iniciadas no blur,

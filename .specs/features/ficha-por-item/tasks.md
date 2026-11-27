@@ -95,3 +95,12 @@ Requisitos: [spec.md](spec.md). Decisão:
 - Tests: `test/order-routes.test.js`, `test/e2e/ficha-impressao.spec.js` e
   `test/e2e/orders.spec.js`.
 - Gate: checks do projeto, testes no Chromium e `git diff --check`.
+
+### FPI-T08: mostrar a arte final no PDF para impressão
+
+- Layout sintético aprovado pelo solicitante em 26/11/2026. Consolidar o
+  controle em uma linha por pedido e inserir a arte logo abaixo (FPI-15).
+- Usar o arquivo privado de **Arte final**, com auditoria de leitura e
+  revalidação da versão, conforme [ADR 099](../../../docs/adr/099-arte-final-na-ficha-para-impressao.md).
+- Verificar a rota, as continuações e os avisos sem arte, incluindo pedidos
+  com arquivos de referência e formatos sem prévia.

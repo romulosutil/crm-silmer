@@ -1,6 +1,8 @@
 import { readVisibleConversationIds } from './fixtures/order-contexts.js';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import { createApi } from '../apps/api/src/app.js';
@@ -102,7 +104,7 @@ function multipart(parts) {
   };
 }
 
-/** @param {{writeActor?: any, files?: boolean, storage?: any}} [options] */
+/** @param {{writeActor?: any, files?: boolean, storage?: any, pdfRenderer?: (html: string) => Promise<Buffer>}} [options] */
 function harness(options = {}) {
   /** @type {Record<string, string|null>} */
   const assignments = { 'conversation-1': 'seller-1' };
@@ -153,7 +155,10 @@ function harness(options = {}) {
     idFactory: () => `order-${(sequence += 1)}`,
     repository,
   });
-  const api = createApi({}, { orders: runtime });
+  const api = createApi(
+    {},
+    { orders: runtime, orderPdfRenderer: options.pdfRenderer },
+  );
   return { api, assignments, audits, runtime, storage };
 }
 
@@ -241,6 +246,145 @@ function upload(api, orderId, input = {}) {
     url: `/api/v1/orders/${orderId}/files`,
   });
 }
+
+test('FPI-15: the print PDF reads and audits only the final file', async (t) => {
+  let rendered = '';
+  const { api, audits, runtime } = harness({
+    pdfRenderer: async (html) => {
+      rendered = html;
+      return Buffer.from('%PDF-1.7\nsynthetic PDF');
+    },
+  });
+  t.after(() => api.close());
+  const pending = await createPending(runtime);
+  const reference = await upload(api, pending.id, { filename: 'rascunho.png' });
+  const finalImage = Buffer.concat([PNG, Buffer.from('final')]);
+  const artwork = await upload(api, pending.id, {
+    slot: 'final',
+    filename: 'aprovada.png',
+    content: finalImage,
+  });
+  assert.equal(reference.statusCode, 201);
+  assert.equal(artwork.statusCode, 201);
+  const order = await confirm(runtime, pending);
+  const url = `/api/v1/orders/${order.id}/pdf`;
+
+  const head = await api.inject({
+    method: 'HEAD',
+    url: `${url}?layout=impressao`,
+    headers: readHeaders,
+  });
+  assert.equal(head.statusCode, 200);
+  assert.equal(
+    audits.some(({ action }) => action === 'order.file.download'),
+    false,
+  );
+
+  const response = await api.inject({
+    url: `${url}?layout=impressao`,
+    headers: readHeaders,
+  });
+  assert.equal(response.statusCode, 200);
+  assert.ok(
+    rendered.includes(
+      `src="data:image/png;base64,${finalImage.toString('base64')}"`,
+    ),
+  );
+  assert.ok(
+    !rendered.includes(`src="data:image/png;base64,${PNG.toString('base64')}"`),
+  );
+  const downloads = audits.filter(
+    ({ action }) => action === 'order.file.download',
+  );
+  assert.deepEqual(
+    downloads.map(({ version }) => version),
+    [artwork.json().final.id],
+  );
+
+  const detailed = await api.inject({ url, headers: readHeaders });
+  assert.equal(detailed.statusCode, 200);
+  assert.ok(!rendered.includes(finalImage.toString('base64')));
+  assert.equal(
+    audits.filter(({ action }) => action === 'order.file.download').length,
+    1,
+  );
+});
+
+test('FPI-15: a final CorelDRAW file shows a notice and stays unopened', async (t) => {
+  let rendered = '';
+  const { api, audits, runtime } = harness({
+    pdfRenderer: async (html) => {
+      rendered = html;
+      return Buffer.from('%PDF-1.7\nsynthetic PDF');
+    },
+  });
+  t.after(() => api.close());
+  const pending = await createPending(runtime);
+  assert.equal(
+    (
+      await upload(api, pending.id, {
+        slot: 'final',
+        filename: 'arte.cdr',
+        content: CDR_RIFF,
+      })
+    ).statusCode,
+    201,
+  );
+  const order = await confirm(runtime, pending);
+  const response = await api.inject({
+    url: `/api/v1/orders/${order.id}/pdf?layout=impressao`,
+    headers: readHeaders,
+  });
+  assert.equal(response.statusCode, 200);
+  assert.match(rendered, /Este formato não tem prévia para impressão/u);
+  assert.doesNotMatch(rendered, /<img/u);
+  assert.equal(
+    audits.some(({ action }) => action === 'order.file.download'),
+    false,
+  );
+});
+
+test(
+  'FPI-15: a multipage PDF final file includes four raster previews and a notice',
+  {
+    skip:
+      spawnSync('pdftoppm', ['-v']).status === 0
+        ? false
+        : 'poppler-utils unavailable',
+  },
+  async (t) => {
+    let rendered = '';
+    const { api, runtime } = harness({
+      pdfRenderer: async (html) => {
+        rendered = html;
+        return Buffer.from('%PDF-1.7\nsynthetic PDF');
+      },
+    });
+    t.after(() => api.close());
+    const content = await readFile(
+      new URL('../output/pdf/ficha-canonica-sintetica-v9.pdf', import.meta.url),
+    );
+    const pending = await createPending(runtime);
+    assert.equal(
+      (
+        await upload(api, pending.id, {
+          slot: 'final',
+          filename: 'arte.pdf',
+          content,
+        })
+      ).statusCode,
+      201,
+    );
+    const order = await confirm(runtime, pending);
+    const response = await api.inject({
+      url: `/api/v1/orders/${order.id}/pdf?layout=impressao`,
+      headers: readHeaders,
+    });
+    assert.equal(response.statusCode, 200);
+    assert.equal(rendered.match(/src="data:image\/png;base64,/gu)?.length, 4);
+    assert.match(rendered, /Prévia das primeiras quatro páginas/u);
+  },
+);
 
 test('the domain accepts listed formats by content and refuses the rest', () => {
   assert.equal(

@@ -61,7 +61,7 @@ export const PRINT_TEMPLATE = TEMPLATE_V9;
  *
  * @param {any} order
  * @param {string} [template]
- * @param {{printedAt?: Date, layout?: 'impressao'}} [options]
+ * @param {{printedAt?: Date, layout?: 'impressao', artwork?: import('./ficha-para-impressao.js').PrintArtwork}} [options]
  * @returns {string}
  */
 export function renderOrderFicha(
@@ -71,7 +71,10 @@ export function renderOrderFicha(
 ) {
   if (order?.origin === 'loja') return renderStoreFichaHtml(order);
   if (options.layout === 'impressao') {
-    return renderFichaParaImpressao(printSnapshot(order, TEMPLATE_V9).pedido);
+    return renderFichaParaImpressao(
+      printSnapshot(order, TEMPLATE_V9).pedido,
+      options.artwork,
+    );
   }
   const snapshot = printSnapshot(order, template);
   if (template === TEMPLATE_V9) {

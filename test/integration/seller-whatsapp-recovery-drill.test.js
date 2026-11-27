@@ -500,8 +500,11 @@ test(
     const migrations = await loadMigrations();
     await migrate(pool, { migrations });
     // 0081 is a contract phase: apply only it, as the orders runbook says.
+    const subjectContract = migrations.filter(
+      ({ version }) => version === '0081',
+    );
     await migrate(pool, {
-      migrations: migrations.filter(({ version }) => version === '0081'),
+      migrations: subjectContract,
       phase: 'contract',
     });
 
@@ -1232,12 +1235,20 @@ test(
         const start = calls();
         // 1. Migrations are idempotent expand steps; runtimes start with flags off.
         await migrate(pool, { migrations });
-        const versions = (
-          await pool.query(
-            'SELECT max(version) AS v, count(*)::int AS n FROM crm_meta.schema_migrations',
-          )
-        ).rows[0];
-        assert.equal(versions.v, '0085');
+        const versions = await pool.query(
+          'SELECT version FROM crm_meta.schema_migrations ORDER BY version',
+        );
+        assert.deepEqual(
+          versions.rows.map(
+            (/** @type {{version:string}} */ row) => row.version,
+          ),
+          [
+            ...migrations.filter(({ phase }) => phase === 'expand'),
+            ...subjectContract,
+          ]
+            .map(({ version }) => version)
+            .sort(),
+        );
         let R = at(OFF);
         assert.equal(
           await R.store.loadForDelivery(a2.commandId, { now }),

@@ -399,6 +399,63 @@ paths:
                       worker: { enum: [ok, degraded] }
                       queue: { enum: [ok, degraded] }
                       commands: { enum: [ok, degraded] }
+  /orders/item-options:
+    get:
+      operationId: listOrderItemOptions
+      summary: Consultar as opções compartilhadas da ficha
+      description: Exige sessão com acesso comercial aos pedidos.
+      responses:
+        '200':
+          description: Listas de cor, malha e tamanho com os aliases aprovados.
+        '403':
+          description: Acesso comercial indisponível.
+  /orders/{orderId}/item-options:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: addOrderItemOption
+      summary: Adicionar uma opção reutilizável na ficha do pedido
+      description: Exige origem, sessão, CSRF e autoridade para editar um pedido pendente.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [kind, label]
+              properties:
+                kind:
+                  type: string
+                  enum: [color, fabric, size]
+                label:
+                  type: string
+                  minLength: 1
+                  maxLength: 80
+      responses:
+        '200':
+          description: Opção adicionada ou reaproveitada. O rótulo de resposta é o usado pela ficha.
+        '403':
+          description: Ator sem autoridade para editar esse pedido.
+        '409':
+          description: Pedido bloqueado ou chave idempotente conflitante.
+        '422':
+          description: Tipo ou nome inválido.
   /orders/{orderId}/billing:
     $ref: './order-billing.v1.json#/paths/~1orders~1{orderId}~1billing'
   /orders/{orderId}/billing/plan:

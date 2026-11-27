@@ -116,6 +116,11 @@ export {
 } from './domain/ficha.js';
 export { AUDIENCES, parseAudiences } from './domain/audiences.js';
 export { parseSizes } from './domain/sizes.js';
+export {
+  ORDER_ITEM_OPTIONS,
+  ORDER_ITEM_OPTION_ALIASES,
+  parseOrderItemOption,
+} from './domain/order-item-options.js';
 export { formatBrlAmount, parseBrlAmount } from './domain/money.js';
 export {
   FREIGHT_PRICING_RULE,

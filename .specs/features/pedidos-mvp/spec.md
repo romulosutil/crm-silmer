@@ -225,6 +225,11 @@ batem com a ficha impressa, para garantir que o que imprimo está certo.
 12. **PFI-14** Os campos do Resumo e dos itens SHALL ser texto digitado à mão,
     sem lista de opções, até o catálogo de opções ser aprovado (decisão do PO
     em 30/09/2026). A amostra de cor ao lado de uma cor digitada continua.
+    A [ADR 100](../../../docs/adr/100-opcoes-compartilhadas-da-ficha-do-pedido.md)
+    aprova seletores em Cor, quatro cores por parte, Modelo de malha e Tamanho.
+    As cores SHALL compartilhar a lista pesquisável. Os sete campos SHALL
+    permitir adicionar uma opção disponível para pedidos seguintes, com
+    deduplicação pela API. A seleção preserva a colagem de grade (EDIT-06).
 
 **Teste independente:** editar a grade de um item e ver o total do item, do
 pedido e da lista de Pedidos atualizados.

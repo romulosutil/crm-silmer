@@ -206,16 +206,14 @@ if (!url) {
         await pool.query('SELECT id,email FROM crm.users ORDER BY id')
       ).rows;
       const applied = await migrate(pool, { migrations });
-      assert.deepEqual(applied.applied, [
-        '0077',
-        '0078',
-        '0079',
-        '0080',
-        '0082',
-        '0083',
-        '0084',
-        '0085',
-      ]);
+      assert.deepEqual(
+        applied.applied,
+        migrations
+          .filter(
+            ({ phase, version }) => phase === 'expand' && version >= '0077',
+          )
+          .map(({ version }) => version),
+      );
       assert.deepEqual((await migrate(pool, { migrations })).applied, []);
       assert.deepEqual(
         (await pool.query('SELECT id,email FROM crm.users ORDER BY id')).rows,

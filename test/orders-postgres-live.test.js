@@ -257,6 +257,61 @@ if (connectionString) {
         .sort(),
       ['1000-CRM', '999-CRM'],
     );
+    const orderIds = concurrent.map((response) => response.json().order.id);
+    await pool.query(
+      "INSERT INTO crm.user_functions(user_id,function_name) VALUES('other-numbering-seller','Vendedor')",
+    );
+    /** @param {string} orderId @param {string} label @param {string} key @param {string} [kind] */
+    const addOption = (orderId, label, key, kind = 'color') =>
+      api.inject({
+        method: 'POST',
+        url: `/api/v1/orders/${orderId}/item-options`,
+        headers: { 'idempotency-key': key },
+        payload: { kind, label },
+      });
+    const additions = await Promise.all([
+      addOption(orderIds[0], 'Azul bic', 'option-blue-1'),
+      addOption(orderIds[1], 'AZÚL BIC', 'option-blue-2'),
+    ]);
+    for (const response of additions)
+      assert.equal(response.statusCode, 200, response.body);
+    assert.equal(additions[0].json().label, additions[1].json().label);
+    const listed = await api.inject({ url: '/api/v1/orders/item-options' });
+    assert.equal(listed.statusCode, 200);
+    assert.equal(
+      listed
+        .json()
+        .catalog.color.filter(
+          (/** @type {string} */ option) =>
+            option === additions[0].json().label,
+        ).length,
+      1,
+    );
+    assert.equal(
+      (await addOption(orderIds[0], 'Azul bic', 'option-blue-1')).json().label,
+      additions[0].json().label,
+    );
+    assert.equal(
+      (await addOption(orderIds[0], 'Amarelo novo', 'option-blue-1'))
+        .statusCode,
+      409,
+    );
+    assert.equal(
+      (await addOption(orderIds[0], 'nome@example.test', 'option-invalid'))
+        .statusCode,
+      422,
+    );
+    assert.deepEqual(
+      (
+        await addOption(orderIds[0], 'Poliester 100%', 'option-poly', 'fabric')
+      ).json(),
+      { kind: 'fabric', label: 'Poliéster' },
+    );
+    actor = { ...seller, id: 'other-numbering-seller' };
+    assert.equal(
+      (await addOption(orderIds[0], 'Verde novo', 'option-foreign')).statusCode,
+      403,
+    );
     actor = { ...seller, functionName: 'Financeiro' };
     assert.equal((await create('numbering-forbidden')).statusCode, 403);
   });

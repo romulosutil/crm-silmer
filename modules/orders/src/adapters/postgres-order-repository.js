@@ -1308,6 +1308,47 @@ export class PostgresOrderRepository {
     return transaction ? work(transaction) : this.#database.transaction(work);
   }
 
+  async listItemOptions() {
+    return (
+      await this.#database.query(
+        'SELECT kind, label FROM crm.order_item_options ORDER BY kind, option_key',
+      )
+    ).rows;
+  }
+
+  /** @param {any} input @param {Queryable} tx */
+  async authorizeItemOption(input, tx) {
+    if (!tx) throw new TypeError('Catalog commands require a transaction');
+    const order = await this.#sourceAccess(tx, input, true);
+    if (!order) throw new OrderNotFoundError();
+    if (order.origin === 'loja')
+      throw new OrderConflictError('Store orders are locked', 'ORDER_LOCKED');
+    if (order.cancelledAt)
+      throw new OrderConflictError('Order is cancelled', 'ORDER_CANCELLED');
+    if (order.status !== 'pendente')
+      throw new OrderConflictError(
+        'Order is not editable',
+        'ORDER_STATUS_CONFLICT',
+      );
+    await assertOlistCommercialWrite(tx, order, order, 'order.item_option.add');
+  }
+
+  /** @param {{kind: string, key: string, label: string, official: boolean}} option @param {Queryable} tx */
+  async addItemOption(option, tx) {
+    if (option.official) return option.label;
+    const { kind, key, label } = option;
+    await tx.query(
+      `INSERT INTO crm.order_item_options(kind,option_key,label)
+       VALUES ($1,$2,$3) ON CONFLICT (kind,option_key) DO NOTHING`,
+      [kind, key, label],
+    );
+    const { rows } = await tx.query(
+      'SELECT label FROM crm.order_item_options WHERE kind=$1 AND option_key=$2',
+      [kind, key],
+    );
+    return rows[0].label;
+  }
+
   /** OLIST-T23: no network port; cancellation, invalidation and event commit together.
    * @param {any} input @param {Queryable} [transaction] */
   async cancelOrder(input, transaction) {

@@ -5,6 +5,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { brand } from '../../apps/edge-web/src/brand/index.js';
 import {
   confirmedOrder,
+  extraPending,
   eventStreamBody,
   mockOrders,
   ONE_PIXEL_PNG,
@@ -41,6 +42,58 @@ function fileTiles(files) {
 // EDIT-01 (ADR 083, design.md §20): "Itens e especificações" is edited in
 // place — no "Editar itens", no Salvar/Cancelar; each change is one PATCH.
 const ITEMS = 'Itens e especificações';
+
+test('PFI-14 reuses an explicitly added color in the next order and preserves the approved fabric aliases', async ({
+  page,
+}) => {
+  await mockOrders(page, {
+    orders: [pricedPendingOrder, extraPending],
+    itemOptions: true,
+  });
+  await page.goto('/pedidos/order-pendente#itens');
+  const color = page.getByRole('button', { name: /^Cor,/u });
+  await color.click();
+  const search = page.getByRole('searchbox', { name: 'Buscar cor' });
+  await search.fill('azul');
+  const picker = page.getByRole('group', {
+    name: 'Opções de Cor',
+    exact: true,
+  });
+  await expect(picker.locator('[data-choice]')).toHaveText([
+    'Azul',
+    'Azul royal',
+    'Azul turquesa',
+    'Outra cor',
+  ]);
+  await search.fill('Azul bic');
+  await picker.getByRole('button', { name: 'Outra cor' }).click();
+  const created = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      response.url().endsWith('/item-options'),
+  );
+  await picker.getByLabel('Nome da cor').press('Enter');
+  expect((await created).ok()).toBe(true);
+  await expect(color).toHaveText('Azul bic');
+
+  await page.goto('/pedidos/order-pendente-2#itens');
+  await page.getByRole('button', { name: /^Cor,/u }).click();
+  await page.getByRole('searchbox', { name: 'Buscar cor' }).fill('AZUL BIC');
+  await expect(
+    page.getByRole('button', { name: 'Azul bic', exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: /^Modelo de malha,/u }).click();
+  const fabrics = page.getByRole('group', {
+    name: 'Opções de Modelo de malha',
+  });
+  await expect(
+    fabrics.getByRole('button', { name: 'Poliéster', exact: true }),
+  ).toHaveCount(1);
+  await expect(
+    fabrics.getByRole('button', { name: 'Poliéster 100%', exact: true }),
+  ).toHaveCount(0);
+});
 
 /**
  * The section writes the page sent, in order, as `{section, ...body}`.

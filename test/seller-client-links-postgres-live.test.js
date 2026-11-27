@@ -87,15 +87,14 @@ if (!url) {
         "INSERT INTO crm.contacts(id,display_name,provisional,created_at,updated_at) VALUES($1,'Synthetic contact',false,now(),now())",
         [CONTACT],
       );
-      assert.deepEqual((await migrate(pool, { migrations })).applied, [
-        '0078',
-        '0079',
-        '0080',
-        '0082',
-        '0083',
-        '0084',
-        '0085',
-      ]);
+      assert.deepEqual(
+        (await migrate(pool, { migrations })).applied,
+        migrations
+          .filter(
+            ({ phase, version }) => phase === 'expand' && version >= '0078',
+          )
+          .map(({ version }) => version),
+      );
       assert.deepEqual((await migrate(pool, { migrations })).applied, []);
       assert.equal(
         (

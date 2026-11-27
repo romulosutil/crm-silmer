@@ -83,20 +83,14 @@ if (!url) {
         exportId,
       );
       const upgraded = await migrate(pool, { migrations });
-      assert.deepEqual(upgraded.applied, [
-        '0073',
-        '0074',
-        '0075',
-        '0076',
-        '0077',
-        '0078',
-        '0079',
-        '0080',
-        '0082',
-        '0083',
-        '0084',
-        '0085',
-      ]);
+      assert.deepEqual(
+        upgraded.applied,
+        migrations
+          .filter(
+            ({ phase, version }) => phase === 'expand' && version > '0072',
+          )
+          .map(({ version }) => version),
+      );
       assert.deepEqual(
         (
           await pool.query(

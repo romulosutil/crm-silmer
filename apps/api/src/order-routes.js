@@ -3,11 +3,14 @@ import rateLimit from '@fastify/rate-limit';
 import {
   MAX_ORDER_FILE_BYTES,
   OrderFileTooLargeError,
+  PRODUCTION_STAGES,
+  PRODUCTION_FILTERS,
   renderOrderFicha,
 } from '@crm-silmer/orders';
 import { renderOrderPdf } from './order-pdf.js';
 import { loadOrderPrintArtwork } from './order-print-artwork.js';
 import { registerOrderReceiptRoutes } from './order-receipt-routes.js';
+import { registerOrderCutMapRoutes } from './order-cut-map-routes.js';
 
 const ORDER_STATUSES = new Set(['pendente', 'confirmado']);
 const ORDER_ORIGINS = new Set(['atendimento', 'loja']);
@@ -145,6 +148,20 @@ export function registerOrderRoutes(
         return reply.code(200).send(option);
       }),
   );
+  registerOrderCutMapRoutes(api, orders, contextFor, pdfRenderer);
+  api.get('/api/v1/orders/portfolio', async (request, reply) =>
+    respond(reply, async () => {
+      const query = requireObject(request.query ?? {});
+      rejectUnknownKeys(query, ['seller']);
+      const seller =
+        query.seller === undefined
+          ? undefined
+          : requireIdentifier(query.seller, 'SELLER', 128);
+      const { actor } = await authorizeRead(request, orders);
+      privateReadHeaders(reply);
+      return reply.send(await orders.portfolioOverview(actor, seller));
+    }),
+  );
   api.get('/api/v1/orders/commercial-result', async (request, reply) =>
     respond(reply, async () => {
       const query = requireObject(request.query ?? {});
@@ -189,9 +206,7 @@ export function registerOrderRoutes(
       privateReadHeaders(reply);
       return reply
         .code(200)
-        .send(
-          await orders.list(withOwner(input, access.actor.id), access.actor),
-        );
+        .send(await orders.list(withOwner(input, access.actor), access.actor));
     }),
   );
 
@@ -232,7 +247,7 @@ export function registerOrderRoutes(
           .code(200)
           .send(
             await orders.list(
-              withOwner(input, principal.actor.id),
+              withOwner(input, principal.actor),
               principal.actor,
             ),
           );
@@ -927,6 +942,34 @@ export function registerOrderRoutes(
       }),
   );
 
+  api.post('/api/v1/orders/:orderId/production-stage', async (request, reply) =>
+    respond(reply, async () => {
+      const orderId = requireIdentifier(
+        requireObject(request.params).orderId,
+        'ORDER_ID',
+      );
+      const body = requireObject(request.body);
+      rejectUnknownKeys(body, ['expectedVersion', 'stage']);
+      const expectedVersion = requireVersion(body.expectedVersion);
+      if (!PRODUCTION_STAGES.includes(body.stage))
+        throw new OrderRequestError(400, 'INVALID_REQUEST');
+      const command = await authorizeCommand(
+        request,
+        orders,
+        contextFor,
+        'order.milestones',
+      );
+      return reply.send({
+        order: await orders.setProductionStage({
+          ...command,
+          orderId,
+          expectedVersion,
+          stage: body.stage,
+        }),
+      });
+    }),
+  );
+
   api.post(
     '/api/v1/orders/:orderId/delivery-confirmation',
     async (request, reply) =>
@@ -1221,10 +1264,12 @@ function parseListQuery(value) {
     'limit',
     'origin',
     'owner',
+    'seller',
+    'production',
     'q',
     'status',
   ]);
-  /** @type {{cancellation?: 'active'|'cancelled'|'all',status?: string, origin?: string, q?: string, cursor?: string, limit?: number, delivery?: string, owner?: 'me', from?: string, to?: string, credit?: string, firstPrint?: string}} */
+  /** @type {{cancellation?: 'active'|'cancelled'|'all',status?: string, origin?: string, q?: string, cursor?: string, limit?: number, delivery?: string, owner?: 'me', seller?: string, production?: string, from?: string, to?: string, credit?: string, firstPrint?: string}} */
   const input = {};
   for (const key of /** @type {const} */ ([
     'from',
@@ -1246,6 +1291,15 @@ function parseListQuery(value) {
       throw new OrderRequestError(400, 'INVALID_FILTER');
     }
     input.owner = 'me';
+  }
+  if (query.seller !== undefined) {
+    if (input.owner) throw new OrderRequestError(400, 'INVALID_FILTER');
+    input.seller = requireIdentifier(query.seller, 'SELLER', 128);
+  }
+  if (query.production !== undefined) {
+    if (!PRODUCTION_FILTERS.includes(query.production))
+      throw new OrderRequestError(400, 'INVALID_FILTER');
+    input.production = query.production;
   }
   // Painel: confirmed orders whose promised day passed or comes this week.
   if (query.delivery !== undefined) {
@@ -1288,11 +1342,14 @@ function parseListQuery(value) {
 }
 
 /**
- * @param {{owner?: 'me'} & Record<string, unknown>} input
- * @param {string} actorId
+ * @param {{owner?: 'me', seller?:string} & Record<string, unknown>} input
+ * @param {{id:string,capabilities?:string[]}} actor
  */
-function withOwner({ owner, ...input }, actorId) {
-  return owner === 'me' ? { ...input, ownerId: actorId } : input;
+function withOwner({ owner, seller, ...input }, actor) {
+  if (seller && !actor.capabilities?.includes('COMMERCIAL_ADMIN'))
+    throw new OrderRequestError(403, 'FORBIDDEN');
+  const ownerId = owner === 'me' ? actor.id : seller;
+  return ownerId ? { ...input, ownerId } : input;
 }
 
 /** @param {unknown} value */

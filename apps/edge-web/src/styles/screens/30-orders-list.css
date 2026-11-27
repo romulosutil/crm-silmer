@@ -244,6 +244,414 @@
   margin-inline-start: auto;
 }
 
+/* Carteira e mapa de corte (CAR-01–07). */
+.portfolio-sales,
+.portfolio-production,
+.portfolio-deadline-group {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.portfolio-sales,
+.portfolio-production {
+  margin-block-end: var(--space-4);
+}
+
+.portfolio-production-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.portfolio-sales-head,
+.portfolio-selection,
+.portfolio-selection-actions,
+.portfolio-seller,
+.portfolio-overview-error,
+.cut-map-header,
+.cut-map-lot-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.portfolio-sales-head,
+.portfolio-production-head,
+.portfolio-selection,
+.cut-map-header,
+.cut-map-lot-head {
+  justify-content: space-between;
+}
+
+.portfolio-sales h2,
+.portfolio-production h2,
+.portfolio-selection h2,
+.portfolio-deadline-group h3,
+.cut-map-lot h3 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.portfolio-production-head p,
+.portfolio-selection p,
+.portfolio-overview-error p,
+.cut-map-summary p,
+.cut-map-lot p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.portfolio-sales-toggle {
+  display: none;
+}
+
+.portfolio-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.portfolio-metrics > div {
+  min-inline-size: 0;
+  padding: var(--space-3) var(--space-4);
+}
+
+.portfolio-metrics > div + div {
+  border-inline-start: 1px solid var(--color-border-subtle);
+}
+
+.portfolio-metrics dt,
+.portfolio-variation {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.portfolio-metrics dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.portfolio-metrics dd:not(.portfolio-variation) {
+  margin-block: var(--space-1);
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.portfolio-variation[data-change='1'] {
+  color: var(--status-success-text);
+}
+.portfolio-variation[data-change='-1'] {
+  color: var(--status-error-text);
+}
+
+.portfolio-chip-count {
+  min-inline-size: 1.4rem;
+  padding-inline: var(--space-1);
+  background: var(--color-surface-active);
+  border-radius: var(--radius-pill);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.orders-portfolio .orders-search .search-field {
+  position: relative;
+}
+.orders-portfolio .portfolio-clear-search {
+  position: absolute;
+  inset-inline-end: var(--space-1);
+}
+.orders-portfolio .search-field:has(.portfolio-clear-search) input {
+  padding-inline-end: var(--target-min);
+}
+
+.portfolio-seller {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.portfolio-selection {
+  position: sticky;
+  inset-block-start: var(--space-2);
+  z-index: 2;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.portfolio-selection-actions p {
+  color: var(--color-text);
+}
+.portfolio-selection button,
+.portfolio-production button {
+  min-block-size: var(--target-min);
+}
+
+#cut-selection-title:focus,
+#cut-map-title:focus {
+  outline: none;
+}
+
+.portfolio-deadline-group {
+  margin-block-start: var(--space-4);
+}
+.portfolio-deadline-group .order-list {
+  max-block-size: none;
+}
+.portfolio-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+}
+.portfolio-stage .app-icon {
+  flex-shrink: 0;
+  inline-size: 1rem;
+  block-size: 1rem;
+  color: var(--color-text-muted);
+}
+.portfolio-confirmed .portfolio-stage-action {
+  min-block-size: var(--target-min);
+}
+.portfolio-initial-stage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.portfolio-initial-stage > * {
+  min-block-size: var(--target-min);
+}
+.portfolio-confirmed .order-table tr[data-selected] {
+  background: var(--color-selected);
+}
+
+.portfolio-cut-order {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-block-size: var(--target-min);
+  cursor: pointer;
+}
+
+.portfolio-cut-order input {
+  margin: 0;
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  flex-shrink: 0;
+  accent-color: var(--color-link);
+  scroll-margin-block: 8rem;
+}
+
+dialog.cut-map-dialog {
+  inline-size: min(44rem, calc(100% - 2 * var(--space-4)));
+  max-block-size: 88dvh;
+  padding: 0;
+  overflow: hidden;
+}
+
+dialog.cut-map-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.cut-map-header {
+  padding: var(--space-2) var(--space-4);
+}
+.cut-map-header h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+.cut-map-dialog .op-dialog-actions {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  flex-wrap: wrap;
+}
+.cut-map-dialog .op-dialog-actions button {
+  min-block-size: var(--target-min);
+}
+
+.cut-map-body {
+  display: grid;
+  gap: var(--space-3);
+  min-block-size: 0;
+  padding: var(--space-4);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-block: 1px solid var(--color-border-subtle);
+  background: var(--color-page);
+}
+
+.cut-map-summary > strong {
+  display: block;
+  margin-block-end: var(--space-1);
+  font-size: var(--text-xl);
+}
+
+.cut-map-lot {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.cut-map-lot h3 {
+  overflow-wrap: anywhere;
+}
+.cut-map-lot-head p strong {
+  color: var(--color-text);
+}
+
+.cut-map-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(2.5rem, 1fr));
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  background: var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.cut-map-grade > div {
+  min-inline-size: 0;
+  background: var(--color-surface);
+}
+.cut-map-grade dt {
+  padding: var(--space-1);
+  background: var(--color-surface-raised);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+.cut-map-grade dd {
+  margin: 0;
+  padding: var(--space-1);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.cut-map-grade .cut-map-grade-total,
+.cut-map-grade-total dt {
+  background: var(--color-selected);
+}
+
+@media (max-width: 768px) {
+  .portfolio-sales,
+  .portfolio-production {
+    margin-block-end: var(--space-2);
+  }
+  .portfolio-sales-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .portfolio-production .chip-row {
+    gap: var(--space-1);
+  }
+  .portfolio-production .chip {
+    gap: var(--space-1);
+    min-block-size: var(--target-min);
+    padding-inline: var(--space-2);
+    font-size: var(--text-xs);
+  }
+  .portfolio-production .chip .app-icon {
+    inline-size: 0.875rem;
+    block-size: 0.875rem;
+  }
+  .portfolio-chip-count {
+    min-inline-size: 1.15rem;
+  }
+  .orders-portfolio .orders-filter-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .orders-portfolio .orders-chip-row > .chip {
+    display: none;
+  }
+  .orders-portfolio .orders-result-line {
+    margin-block-end: var(--space-2);
+  }
+  .orders-portfolio .section-gap:has(#orders-pending-title) .panel-head > p {
+    display: none;
+  }
+  .orders-portfolio .section-gap:has(#orders-pending-title) {
+    padding: var(--space-3) var(--space-4);
+  }
+  .orders-portfolio .section-gap:has(#orders-pending-title) .panel-head {
+    margin-block-end: var(--space-2);
+  }
+  .portfolio-sales-toggle {
+    display: inline-flex;
+    min-block-size: var(--target-min);
+  }
+  .portfolio-sales[data-expanded='false']:has(.portfolio-sales-toggle)
+    .portfolio-sales-panel {
+    display: none;
+  }
+  .portfolio-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .portfolio-metrics > div:nth-child(3) {
+    border-inline-start: 0;
+  }
+  .portfolio-metrics > div:nth-child(n + 3) {
+    border-block-start: 1px solid var(--color-border-subtle);
+  }
+  .portfolio-seller {
+    grid-column: 1 / -1;
+  }
+  .portfolio-seller select {
+    flex: 1;
+    min-inline-size: 0;
+  }
+  .portfolio-selection {
+    position: static;
+  }
+  .portfolio-selection-actions {
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: calc(
+      var(--mobile-nav-block-size) + env(safe-area-inset-bottom)
+    );
+    z-index: 10;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: var(--space-2) var(--space-4);
+    background: var(--color-surface);
+    border-block-start: 1px solid var(--color-border);
+  }
+  .portfolio-selection-actions p {
+    grid-column: 1 / -1;
+  }
+  .orders-portfolio[data-cut-mode] {
+    padding-block-end: 6rem;
+  }
+  .portfolio-cut-order input {
+    scroll-margin-block: var(--space-3) 10rem;
+  }
+  dialog.cut-map-dialog {
+    position: fixed;
+    inset: auto 0 0;
+    inline-size: 100%;
+    max-inline-size: none;
+    margin: 0;
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+  }
+  .cut-map-dialog .op-dialog-actions {
+    padding-block-end: calc(var(--space-3) + env(safe-area-inset-bottom));
+  }
+}
+
 .order-table .order-badges {
   margin-inline-start: 0;
 }

@@ -613,6 +613,51 @@ export async function mockOrders(page, options = {}) {
       });
       return;
     }
+    if (path === '/api/v1/orders/portfolio') {
+      const figures = {
+        confirmedCount: 1,
+        soldAmountCents: 118000,
+        pieces: 60,
+        averageTicketCents: 118000,
+      };
+      await route.fulfill({
+        json: {
+          production: {
+            late: 0,
+            risk: 0,
+            arte: 0,
+            producao: 0,
+            pronto: 0,
+            cut: orders.filter((order) => order.cutMapAvailable).length,
+          },
+          sales: {
+            current: figures,
+            previous: figures,
+            from: '2026-11-01',
+            to: '2026-11-27',
+          },
+        },
+      });
+      return;
+    }
+    if (path === '/api/v1/users/assignable') {
+      await route.fulfill({ json: { users: [session.user] } });
+      return;
+    }
+    const productionStage =
+      /^\/api\/v1\/orders\/([^/]+)\/production-stage$/u.exec(path);
+    if (productionStage && request.method() === 'POST') {
+      const order = orders.find(({ id }) => id === productionStage[1]);
+      const body = request.postDataJSON();
+      options.onWrite?.({ action: 'production-stage', body });
+      expect(request.headers()['idempotency-key']).toBeTruthy();
+      expect(body.expectedVersion).toBe(order.version);
+      order.productionStage = body.stage;
+      order.cutMapAvailable = ['arte', 'producao'].includes(body.stage);
+      order.version += 1;
+      await route.fulfill({ json: { order } });
+      return;
+    }
     if (path === '/api/v1/orders' && request.method() === 'GET') {
       options.onList?.(url.searchParams);
       const pageIndex = listCalls;
@@ -625,19 +670,32 @@ export async function mockOrders(page, options = {}) {
         });
         return;
       }
+      const production = url.searchParams.get('production');
+      const universe = production
+        ? orders.filter(
+            (order) =>
+              order.status === 'confirmado' &&
+              !order.deliveredOn &&
+              !order.isTest &&
+              (production !== 'cut' || order.cutMapAvailable),
+          )
+        : orders;
       const source = pages
         ? (pages[Math.min(pageIndex, pages.length - 1)] ?? [])
-        : orders.filter(
+        : universe.filter(
             (order) =>
-              !url.searchParams.get('status') ||
-              order.status === url.searchParams.get('status'),
+              (!url.searchParams.get('status') ||
+                order.status === url.searchParams.get('status')) &&
+              (url.searchParams.get('production') !== 'cut' ||
+                order.cutMapAvailable),
           );
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
           counts: {
-            confirmado: orders.filter((o) => o.status === 'confirmado').length,
-            pendente: orders.filter((o) => o.status === 'pendente').length,
+            confirmado: universe.filter((o) => o.status === 'confirmado')
+              .length,
+            pendente: universe.filter((o) => o.status === 'pendente').length,
           },
           items: source,
           nextCursor:

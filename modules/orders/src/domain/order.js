@@ -62,6 +62,7 @@ const orderDateFormat = new Intl.DateTimeFormat('en-CA', {
  *   reopenedAt: string|null, reopenedBy: string|null,
  *   firstContactAt: string|null, paidOn: string|null, deliveredOn: string|null,
  *   paymentReviewRequired?: boolean,
+ *   productionStage?: 'arte'|'producao'|'pronto'|null,
  *   freightCents?: number, freightSource?: 'seller'|'quote'|null,
  *   freightQuoteId?: string|null, freightQuoteServiceId?: number|null,
  *   freightQuotedCents?: number|null, freightSetBy?: string|null,
@@ -378,6 +379,8 @@ export function confirmOrder(order, input) {
     missingFields: [],
     orderDate: orderDateFormat.format(input.now),
     paymentCondition: input.paymentCondition,
+    productionStage:
+      !order.isTest && !order.deliveredOn && !order.confirmedAt ? 'arte' : null,
     status: 'confirmado',
     updatedAt: confirmedAt,
   };
@@ -396,6 +399,7 @@ export function reopenOrder(order, input) {
     ...structuredClone(order),
     reopenedAt,
     reopenedBy: input.actorId,
+    productionStage: null,
     status: 'pendente',
     updatedAt: reopenedAt,
   });

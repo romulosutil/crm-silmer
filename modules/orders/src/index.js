@@ -1,6 +1,13 @@
 export { projectOrderSource, orderSourceView } from './domain/order-source.js';
 export { sizePricingSummary } from './domain/size-pricing-composition.js';
 export {
+  isOpenProductionOrder,
+  isCutMapOrder,
+  PRODUCTION_STAGES,
+  PRODUCTION_FILTERS,
+} from './domain/cut-map.js';
+export { renderCutMapHtml } from './print/cut-map.js';
+export {
   projectOrderReceipt,
   renderOrderReceiptHtml,
 } from './print/order-receipt.js';

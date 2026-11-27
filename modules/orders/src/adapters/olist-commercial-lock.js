@@ -39,7 +39,13 @@ export async function assertOlistCommercialWrite(
       'Historical sale awaits review',
       'ORDER_OLIST_LOCKED',
     );
-  if (!locks.length || eventType === 'order.milestones_saved') return false;
+  if (
+    ['order.milestones_saved', 'order.production_stage_changed'].includes(
+      eventType,
+    ) ||
+    !locks.length
+  )
+    return false;
   if (
     eventType !== 'order.confirmed' ||
     current.status !== 'pendente' ||

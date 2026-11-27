@@ -65,11 +65,13 @@ test('groups orders by status with counts, columns and actions', async ({
     'Entrega',
     'Peças',
     'Valor',
-    'Situação',
+    'Etapa e pagamento',
     'Ações',
   ]);
   // Pesquisa UX 2026-10-15, achado 3: what still needs a person comes first.
-  await expect(page.locator('main section h2')).toHaveText([
+  await expect(page.locator('main section h2:visible')).toHaveText([
+    /^Novembro até hoje/u,
+    /^Produção/u,
     /^\s*Pendentes/u,
     /^\s*Confirmados/u,
   ]);
@@ -121,7 +123,7 @@ test('keeps every desktop order cell on the same row line', async ({
   await mockOrders(page);
   await page.goto('/pedidos');
 
-  for (const group of ['Pedidos pendentes', 'Pedidos confirmados']) {
+  for (const group of ['Pedidos pendentes', /^Confirmados/u]) {
     const row = page.getByRole('region', { name: group }).locator('tbody tr');
     await expect(row).toBeVisible();
     const cells = await row.locator('td').evaluateAll((nodes) =>
@@ -151,7 +153,7 @@ test('recovers the order list after an initial server failure without showing an
   await page.getByRole('button', { name: 'Tentar novamente' }).click();
   await expect(page.getByRole('row', { name: /Colégio Ápice/u })).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: 'Pedidos', exact: true }),
+    page.getByRole('heading', { name: 'Meus pedidos', exact: true }),
   ).toBeFocused();
 });
 
@@ -399,7 +401,7 @@ test('puts pending orders and exceptions first, with the delivery deadline', asy
   await page.goto('/pedidos');
 
   const pending = page.getByRole('region', { name: 'Pedidos pendentes' });
-  const confirmed = page.getByRole('region', { name: 'Pedidos confirmados' });
+  const confirmed = page.getByRole('region', { name: /^Confirmados/u });
   await expect(pending.getByRole('row')).toHaveCount(3);
   // A stalled pending order is an exception: it rides above a calm one even
   // with a later delivery.
@@ -411,6 +413,10 @@ test('puts pending orders and exceptions first, with the delivery deadline', asy
     pending.getByRole('row', { name: /Pendente Parado/u }),
   ).toContainText('Revisar pedido');
   // Late first, then the nearest delivery, no date after, delivered last.
+  await expect(
+    confirmed.getByRole('row', { name: /Clube Entregue/u }),
+  ).toHaveCount(0);
+  await confirmed.getByRole('button', { name: /Entregues/u }).click();
   expect(await customerOrder(confirmed)).toEqual([
     'Escola Atrasada',
     'Pedido de Teste',
@@ -465,10 +471,10 @@ test('filters the orders ready for production, by the nearest delivery', async (
   const chip = page.getByRole('button', { name: 'Prontos para produção' });
   await chip.click();
   await expect(chip).toHaveAttribute('aria-pressed', 'true');
-  await expect.poll(() => calls.at(-1)?.get('status')).toBe('confirmado');
+  await expect.poll(() => calls.at(-1)?.get('production')).toBe('all');
   await expect(page.getByRole('region', { name: /Pendentes/u })).toHaveCount(0);
 
-  const queue = page.getByRole('region', { name: 'Fila de produção' });
+  const queue = page.getByRole('region', { name: /^Prontos para produção/u });
   await expect(
     page.getByRole('heading', { level: 2, name: /Prontos para produção/u }),
   ).toContainText('3');
@@ -506,7 +512,10 @@ test('stacks the orders as cards on a phone, with no sideways scroll', async ({
   await mockOrders(page, { orders: queueOrders });
   await page.goto('/pedidos');
 
-  const confirmed = page.getByRole('region', { name: 'Pedidos confirmados' });
+  const confirmed = page.getByRole('region', {
+    name: 'Mais adiante',
+    exact: true,
+  });
   const card = confirmed.getByRole('row', { name: /Academia Norte/u });
   await expect(card).toBeVisible();
   const layout = await page.evaluate(() => {
@@ -738,7 +747,7 @@ test('UX-FUNC-01: an empty filter has a way back without creating an order', asy
     .click();
   await expect(page).toHaveURL('/pedidos');
   await expect(
-    page.getByRole('region', { name: 'Pedidos confirmados' }),
+    page.getByRole('region', { name: /^Confirmados/u }),
   ).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Filtros', exact: true }),
@@ -812,7 +821,7 @@ test('UX-FUNC-01: an empty search does not declare the production queue empty', 
   await page.getByRole('button', { name: 'Limpar busca', exact: true }).click();
   await expect(production).toHaveAttribute('aria-pressed', 'true');
   await expect(
-    page.getByRole('region', { name: 'Fila de produção' }),
+    page.getByRole('region', { name: /^Prontos para produção/u }),
   ).toBeVisible();
 });
 
@@ -826,11 +835,11 @@ test('PLI-09: on a phone the first order sits whole above the bottom bar, and "F
 
   const first = page.locator('.order-table tbody tr').first();
   await expect(first).toBeVisible();
-  // One line of heading, then five controls: search, three chips, "Filtros".
+  // Search and filters share a row. The production chips are above it.
   await expect(page.locator('.page-heading p')).toHaveCount(0);
   await expect(
-    page.locator('.filter-bar').locator('button, input'),
-  ).toHaveCount(5);
+    page.locator('.orders-filter-bar').locator('button:visible, input:visible'),
+  ).toHaveCount(2);
   const card = await first.boundingBox();
   const nav = await page
     .getByRole('navigation', { name: 'Navegação móvel' })

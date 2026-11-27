@@ -1,5 +1,15 @@
 # TDD — CRM Silmer MVP
 
+## Carteira e Mapa de corte — CAR
+
+O contrato está na [ADR 100](docs/adr/100-carteira-de-pedidos-e-mapa-de-corte.md).
+A migration expand `0086` acrescenta `production_stage` em `crm.orders`.
+Mudanças de etapa incrementam a versão operacional e publicam evento no
+stream do pedido, com a mesma transação de autorização e idempotência das
+declarações de datas. O mapa usa o renderer Chromium atual com HTML escapado,
+fontes embutidas e nenhum recurso externo. A API recalcula a projeção e
+compara o fingerprint antes e depois de renderizar, depois audita o download.
+
 ## Link de pagamento do CRM — LPC (23/11/2026)
 
 [ADR 098](docs/adr/098-link-de-pagamento-do-crm-e-cobrancas-que-somam.md),

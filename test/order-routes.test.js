@@ -46,6 +46,7 @@ const ORDER_KEYS = [
   'conversationId',
   'createdAt',
   'cutMapAvailable',
+  'cutMapGeneratedAt',
   'deliveredOn',
   'effectiveStatus',
   'receiptAvailable',

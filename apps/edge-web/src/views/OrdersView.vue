@@ -22,6 +22,7 @@ import FilterSheet from '../components/FilterSheet.vue';
 import FilterChip from '../components/FilterChip.vue';
 import AppHint from '../components/AppHint.vue';
 import OrderReceiptPreview from '../components/order/OrderReceiptPreview.vue';
+import OrderCutMapHistory from '../components/order/OrderCutMapHistory.vue';
 import OrderCutMapPreview from '../components/order/OrderCutMapPreview.vue';
 import OrderPortfolioOverview from '../components/order/OrderPortfolioOverview.vue';
 import { commandKey, request } from '../lib/api-client.js';
@@ -219,6 +220,7 @@ const portfolioSellerError = ref(false);
 const cutMode = ref(false);
 const cutSelection = ref(new Set());
 const cutPreview = ref(null);
+const cutHistory = ref(null);
 const cutTitle = ref(null);
 let cutTrigger;
 let portfolioController;
@@ -1733,6 +1735,16 @@ onBeforeUnmount(() => {
                     clientWaiting(order)
                   }}</small>
                   <small class="order-context">{{ situation(order) }}</small>
+                  <button
+                    v-if="order.cutMapGeneratedAt"
+                    type="button"
+                    class="portfolio-cut-history"
+                    @click="cutHistory?.open(order, $event.currentTarget)"
+                  >
+                    Mapa de corte gerado<span class="sr-only">
+                      · Histórico do pedido {{ order.number }}</span
+                    >
+                  </button>
                 </td>
                 <td class="order-cell-actions">
                   <div class="row-actions">
@@ -1909,6 +1921,16 @@ onBeforeUnmount(() => {
                       class="order-context"
                       >{{ fichaPrintedLabel(order) }}</small
                     >
+                    <button
+                      v-if="order.cutMapGeneratedAt"
+                      type="button"
+                      class="portfolio-cut-history"
+                      @click="cutHistory?.open(order, $event.currentTarget)"
+                    >
+                      Mapa de corte gerado<span class="sr-only">
+                        · Histórico do pedido {{ order.number }}</span
+                      >
+                    </button>
                   </td>
                   <td class="order-cell-actions">
                     <label
@@ -2012,7 +2034,8 @@ onBeforeUnmount(() => {
       :orders="items"
       :fallback-focus="receiptFocusFallback"
     />
-    <OrderCutMapPreview ref="cutPreview" />
+    <OrderCutMapPreview ref="cutPreview" @history-changed="load(true)" />
+    <OrderCutMapHistory ref="cutHistory" />
   </div>
 </template>
 

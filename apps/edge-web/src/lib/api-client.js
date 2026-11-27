@@ -24,14 +24,15 @@ function readCookie(name) {
 
 /**
  * @param {string} url
- * @param {{method?: string, body?: unknown, idempotencyKey?: string, headers?: Record<string,string>, signal?: AbortSignal}} [options]
+ * @param {{method?: string, body?: unknown, idempotencyKey?: string, headers?: Record<string,string>, signal?: AbortSignal, responseType?: 'pdf'}} [options]
  */
 export async function request(url, options = {}) {
   options.signal?.throwIfAborted();
   const method = options.method ?? 'GET';
   const multipart = options.body instanceof globalThis.FormData;
   const headers = new globalThis.Headers({
-    Accept: 'application/json',
+    Accept:
+      options.responseType === 'pdf' ? 'application/pdf' : 'application/json',
     ...options.headers,
   });
   if (multipart) headers.delete('Content-Type');
@@ -72,6 +73,13 @@ export async function request(url, options = {}) {
   if (response.status === 204)
     return { data: null, etag: response.headers.get('etag') };
   const type = response.headers.get('content-type') ?? '';
+  if (options.responseType === 'pdf' && response.ok) {
+    if (!type.includes('application/pdf'))
+      throw new Error('PDF_INVALID_RESPONSE');
+    const data = await response.blob();
+    options.signal?.throwIfAborted();
+    return { data, serverTime, status: response.status };
+  }
   const data = type.includes('json') ? await response.json() : {};
   // WAP-T02-07: invalidation can occur while a response body is being read.
   options.signal?.throwIfAborted();

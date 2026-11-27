@@ -105,7 +105,7 @@ test('CAR-05: missing audience, a partial grade and non-cut stages block the ent
   }
 });
 
-test('CAR-06: preview and PDF recheck actor and versions, render escaped data, and only audit the successful download', async (t) => {
+test('CAR-06/08: only a fresh, authorized and successful generation creates history', async (t) => {
   const api = Fastify();
   t.after(() => api.close());
   const selected = [
@@ -117,21 +117,61 @@ test('CAR-06: preview and PDF recheck actor and versions, render escaped data, a
   let render = 0;
   let blocked = false;
   let revokeDuringRender = false;
+  let failRender = false;
+  const history = new Map();
+  const authorize = async () => {
+    if (blocked)
+      throw Object.assign(new Error('private'), {
+        statusCode: 403,
+        code: 'FORBIDDEN',
+      });
+    return { actor };
+  };
   registerOrderCutMapRoutes(
     api,
     {
-      authorizeRead: async () => {
-        if (blocked)
-          throw Object.assign(new Error('private'), {
+      authorizeRead: authorize,
+      authorizeWrite: async (
+        /** @type {{csrfToken?: string}} */ { csrfToken },
+      ) => {
+        if (csrfToken !== 'synthetic-csrf')
+          throw Object.assign(new Error('CSRF'), {
             statusCode: 403,
             code: 'FORBIDDEN',
           });
-        return { actor };
+        return authorize();
       },
-      getCutMap: async (/** @type {string[]} */ ids) =>
-        projectCutMap(selected.filter(({ id }) => ids.includes(id))),
-      recordCutMapDownload: async () => {
+      getCutMap: async (/** @type {string[]} */ ids) => {
+        const map = projectCutMap(
+          selected.filter(({ id }) => ids.includes(id)),
+        );
+        return {
+          ...map,
+          orders: map.orders.map((entry) => ({
+            ...entry,
+            cutMapGeneratedAt: history.get(entry.id)?.[0]?.generatedAt ?? null,
+            cutMapGenerationCount: history.get(entry.id)?.length ?? 0,
+          })),
+        };
+      },
+      getCutMapHistory: async (/** @type {string} */ orderId) => ({
+        items: history.get(orderId) ?? [],
+        nextCursor: null,
+      }),
+      recordCutMapDownload: async (
+        /** @type {ReturnType<typeof projectCutMap>} */ map,
+      ) => {
         audit += 1;
+        for (const { id, version } of map.orders) {
+          history.set(id, [
+            {
+              id: `event-${audit}`,
+              generatedAt: '2026-11-27T12:30:00.000Z',
+              orderVersion: version,
+            },
+            ...(history.get(id) ?? []),
+          ]);
+        }
       },
     },
     () => ({ correlationId: 'synthetic-cut-map' }),
@@ -141,6 +181,7 @@ test('CAR-06: preview and PDF recheck actor and versions, render escaped data, a
       assert.doesNotMatch(html, /Cliente fora do PDF|<b>All Star<\/b>/u);
       render += 1;
       if (revokeDuringRender) blocked = true;
+      if (failRender) throw new Error('renderer unavailable');
       return Buffer.from('%PDF-1.4 synthetic');
     },
   );
@@ -153,22 +194,72 @@ test('CAR-06: preview and PDF recheck actor and versions, render escaped data, a
     map.orders.map((/** @type {any} */ entry) => entry.number),
     ['6-CRM', '9-CRM'],
   );
-  const pdf = `/api/v1/orders/cut-map/pdf?orders=item-6,item-9&fingerprint=${fingerprint}`;
+  const pdf = '/api/v1/orders/cut-map/pdf';
+  /** @param {string} proof */
+  const generate = (proof, regenerate = false) =>
+    api.inject({
+      method: 'POST',
+      url: pdf,
+      headers: { 'x-csrf-token': 'synthetic-csrf' },
+      payload: { orders: ['item-6', 'item-9'], fingerprint: proof, regenerate },
+    });
   assert.equal(
     (await api.inject({ method: 'HEAD', url: pdf })).statusCode,
-    200,
+    404,
+  );
+  assert.equal(
+    (
+      await api.inject({
+        method: 'POST',
+        url: pdf,
+        payload: { orders: ['item-6'], fingerprint },
+      })
+    ).statusCode,
+    403,
   );
   assert.equal(render, 0);
   selected[0].version += 1;
-  assert.equal((await api.inject(pdf)).json().error.code, 'CUT_MAP_STALE');
+  assert.equal(
+    (await generate(fingerprint)).json().error.code,
+    'CUT_MAP_STALE',
+  );
   selected[0].version -= 1;
-  const response = await api.inject(pdf);
+  failRender = true;
+  assert.equal((await generate(fingerprint)).statusCode, 503);
+  assert.equal(audit, 0);
+  failRender = false;
+  revokeDuringRender = true;
+  assert.equal((await generate(fingerprint)).statusCode, 403);
+  assert.equal(audit, 0);
+  blocked = revokeDuringRender = false;
+  const response = await generate(fingerprint);
   assert.equal(response.statusCode, 200);
   assert.equal(response.headers['content-type'], 'application/pdf');
   assert.equal(audit, 1);
-  revokeDuringRender = true;
-  assert.equal((await api.inject(pdf)).statusCode, 403);
+  assert.equal(
+    (await generate(fingerprint)).json().error.code,
+    'CUT_MAP_STALE',
+  );
+  const refreshed = (await api.inject(url)).json();
+  assert.equal(refreshed.map.orders[0].cutMapGenerationCount, 1);
+  assert.equal(
+    (await generate(refreshed.fingerprint)).json().error.code,
+    'CUT_MAP_ALREADY_GENERATED',
+  );
   assert.equal(audit, 1);
+  assert.equal((await generate(refreshed.fingerprint, true)).statusCode, 200);
+  assert.equal(audit, 2);
+  const entries = (
+    await api.inject('/api/v1/orders/item-6/cut-map-history')
+  ).json().items;
+  assert.deepEqual(
+    entries.map((/** @type {any} */ entry) => entry.id),
+    ['event-2', 'event-1'],
+  );
+  assert.deepEqual(
+    (await api.inject('/api/v1/orders/item-9/cut-map-history')).json().items,
+    entries,
+  );
   assert.equal(
     (await api.inject('/api/v1/orders/cut-map?orders=')).statusCode,
     400,

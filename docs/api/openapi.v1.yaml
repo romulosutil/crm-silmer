@@ -3611,30 +3611,41 @@ paths:
           }
       responses:
         '200':
-          description: Lotes com público, grade, pedidos de origem e fingerprint.
+          description: Lotes com público, grade, histórico resumido por pedido e fingerprint da prévia.
         '404':
           { description: Pedido inexistente ou fora do escopo do solicitante }
         '409': { description: Pedido fora da fila de corte }
         '422':
           { description: Item com dados de corte ausentes ou grade divergente }
   /orders/cut-map/pdf:
-    get:
+    post:
       tags: [Orders]
-      summary: Gera o PDF da seleção conferida (CAR-06)
+      summary: Gera e registra o PDF da seleção conferida (CAR-06/08)
       parameters:
         - {
-            name: orders,
-            in: query,
+            name: X-CSRF-Token,
+            in: header,
             required: true,
             schema: { type: string },
-            description: 'IDs dos pedidos usados na prévia.',
           }
-        - {
-            name: fingerprint,
-            in: query,
-            required: true,
-            schema: { type: string, pattern: '^[a-f0-9]{64}$' },
-          }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [orders, fingerprint]
+              properties:
+                orders:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items: { type: string }
+                fingerprint: { type: string, pattern: '^[a-f0-9]{64}$' }
+                regenerate:
+                  type: boolean
+                  description: Envie true para confirmar outra geração quando algum pedido já tem histórico.
       responses:
         '200':
           description: PDF A4 privado
@@ -3642,8 +3653,37 @@ paths:
             application/pdf:
               schema: { type: string, format: binary }
         '404': { description: Pedido inexistente ou fora do escopo do solicitante }
-        '409': { description: Prévia desatualizada ou pedido fora da fila de corte }
+        '409':
+          description: Prévia já usada ou desatualizada, pedido fora da fila ou repetição sem confirmação.
         '503': { description: Renderização indisponível }
+  /orders/{orderId}/cut-map-history:
+    get:
+      tags: [Orders]
+      summary: Lista as gerações de mapa do pedido, da mais recente à mais antiga (CAR-08)
+      parameters:
+        - { name: orderId, in: path, required: true, schema: { type: string } }
+        - { name: before, in: query, schema: { type: string }, description: Cursor retornado na página anterior. }
+      responses:
+        '200':
+          description: Até 20 registros de geração do pedido
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, generatedAt, orderVersion]
+                      properties:
+                        id: { type: string }
+                        generatedAt: { type: string, format: date-time }
+                        orderVersion: { type: integer }
+                  nextCursor: { type: [string, 'null'] }
+        '403': { description: Acesso fora do escopo comercial do pedido }
+        '404': { description: Pedido inexistente ou fora do escopo do solicitante }
   /orders/{orderId}/production-stage:
     post:
       tags: [Orders]
@@ -8092,6 +8132,7 @@ components:
           productionStage,
           productionEditable,
           cutMapAvailable,
+          cutMapGeneratedAt,
           seller,
           version,
           createdAt,
@@ -8262,6 +8303,10 @@ components:
           description: Etapa operacional da carteira. Entregue deriva de deliveredOn.
         productionEditable: { type: boolean, description: A pessoa pode registrar a etapa de produção. }
         cutMapAvailable: { type: boolean, description: O pedido pode ser selecionado para o Mapa de corte. }
+        cutMapGeneratedAt:
+          type: [string, 'null']
+          format: date-time
+          description: Data e hora da última geração bem-sucedida para o pedido.
         deliveredOn:
           type: [string, 'null']
           format: date

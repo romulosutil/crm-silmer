@@ -10,6 +10,8 @@ import {
   createOrderFileService,
   createOrderService,
   orderAmounts,
+  isCutMapOrder,
+  isOpenProductionOrder,
   projectOrderReceipt,
   parseFreightCents,
   readFreightCommand,
@@ -82,7 +84,8 @@ import { lockConversationAccess } from '@crm-silmer/inbox-channels';
  *   phoneDigestsFor?: (query: string) => string[],
  *   clock?: () => Date,
  *   idFactory?: () => string,
- *   withMilestoneTransaction?: (method:'confirmPayment'|'confirmDelivery',input:any)=>Promise<any>,
+ *   withMilestoneTransaction?: (method:'confirmPayment'|'confirmDelivery'|'setProductionStage',input:any)=>Promise<any>,
+ *   withCutMapAudit?: (write:(transaction:any)=>Promise<void>)=>Promise<void>,
  *   withCreationTransaction?: (input:any)=>Promise<any>,
  *   subjectCreationAvailable?: (conversationId: string) => Promise<boolean>,
  * }} options
@@ -376,6 +379,19 @@ export function createOrderRuntime(options) {
       paidOn: order.paidOn,
       paymentReviewRequired: order.paymentReviewRequired ?? false,
       paymentCondition: order.paymentCondition,
+      productionStage: order.productionStage ?? null,
+      productionEditable:
+        isOpenProductionOrder(order) &&
+        actor?.kind === 'human' &&
+        ((actor.capabilities ?? []).includes(CAPABILITIES.COMMERCIAL_ADMIN) ||
+          (order.manualOwnerId ?? owners.get(order.conversationId)) ===
+            actor.id),
+      cutMapAvailable:
+        isCutMapOrder(order) &&
+        actor?.kind === 'human' &&
+        ((actor.capabilities ?? []).includes(CAPABILITIES.COMMERCIAL_ADMIN) ||
+          (order.manualOwnerId ?? owners.get(order.conversationId)) ===
+            actor.id),
       reopenedAt: order.reopenedAt,
       reopenedBy: person(order.reopenedBy),
       seller: person(order.manualOwnerId ?? owners.get(order.conversationId)),
@@ -596,6 +612,29 @@ export function createOrderRuntime(options) {
     },
     authorizeRead: access.authorizeRead,
     authorizeWrite: access.authorizeWrite,
+    getCutMap: service.cutMap,
+    portfolioOverview: service.portfolioOverview,
+    /** @param {Awaited<ReturnType<typeof service.cutMap>>} map @param {OrderActor} actor @param {string} correlationId */
+    async recordCutMapDownload(map, actor, correlationId) {
+      /** @param {any} [transaction] */
+      const append = async (transaction) => {
+        for (const order of map.orders) {
+          await options.auditTrail.append(
+            {
+              action: 'order.cut_map.download',
+              actor: actor.id,
+              correlationId,
+              reason: 'order.cut_map.download',
+              target: { type: 'order', id: order.id },
+              version: order.version,
+            },
+            transaction ? { transaction } : undefined,
+          );
+        }
+      };
+      if (options.withCutMapAudit) await options.withCutMapAudit(append);
+      else await append();
+    },
     /** RCP-04/08: authorize before projecting any commercial document data.
      * @param {string} orderId @param {OrderActor} actor */
     async getReceipt(orderId, actor) {
@@ -852,6 +891,22 @@ export function createOrderRuntime(options) {
           target: { id: input.orderId, type: 'order' },
         },
         async () => presentOne(await service.confirmDelivery(input)),
+      );
+    },
+    /** @param {OrderCommand & Parameters<typeof service.setProductionStage>[0]} input */
+    async setProductionStage(input) {
+      if (options.withMilestoneTransaction)
+        return options.withMilestoneTransaction('setProductionStage', input);
+      return run(
+        input,
+        {
+          action: 'order.production_stage.set',
+          command: { stage: input.stage },
+          expectedVersion: input.expectedVersion,
+          target: { id: input.orderId, type: 'order' },
+        },
+        async () =>
+          presentOne(await service.setProductionStage(input), input.actor),
       );
     },
 
@@ -1327,6 +1382,7 @@ export function createOrderApiRuntime(database, options) {
                 milestoneTransactions: false,
               })[method]({ ...input, actor });
             }),
+    withCutMapAudit: (write) => database.transaction(write),
     access: options.access,
     auditTrail: new PostgresAuditTrail(database),
     conversations: new PostgresOrderConversationPort({

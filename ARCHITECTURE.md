@@ -656,6 +656,12 @@ A [ADR 096](docs/adr/096-painel-comercial-do-administrador.md) define o Resultad
 
 ## Pedido e ficha
 
+O redesign da carteira e o Mapa de corte seguem a
+[ADR 100](docs/adr/100-carteira-de-pedidos-e-mapa-de-corte.md) e a
+[RFC 076](docs/rfc/076-carteira-de-pedidos-e-mapa-de-corte.md). A etapa de
+produção é um atributo operacional. O PDF consolida somente as fichas
+confirmadas selecionadas, separando o público e as especificações de corte.
+
 Pedido tem `pendente` e `confirmado`, confirmação/reabertura humanas e
 numeração global `NN-CRM`. Abre por ação humana após confirmação de fechamento
 do cliente (ADR 056); até lá, o agente preenche o briefing da conversa.

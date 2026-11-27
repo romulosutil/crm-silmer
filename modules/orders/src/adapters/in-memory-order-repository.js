@@ -432,6 +432,32 @@ export class InMemoryOrderRepository {
       .map(clone);
   }
 
+  /** @param {{from:string,to:string,creditId:string|null}} input */
+  async portfolioSales({ from, to, creditId }) {
+    const orders = [...this.#orders.values()].filter(
+      (order) =>
+        order.status === 'confirmado' &&
+        !order.isTest &&
+        !order.cancelledAt &&
+        order.orderDate &&
+        order.orderDate >= from &&
+        order.orderDate <= to &&
+        (!creditId || creditId === order.salesOwnerId),
+    );
+    const soldAmountCents = orders.reduce(
+      (total, order) => total + (order.finalAmountCents ?? 0),
+      0,
+    );
+    return {
+      confirmedCount: orders.length,
+      soldAmountCents,
+      pieces: orders.reduce((total, order) => total + order.totalPieces, 0),
+      averageTicketCents: orders.length
+        ? Math.round(soldAmountCents / orders.length)
+        : null,
+    };
+  }
+
   /** @param {import('../ports/contracts.js').OrderListQuery} query */
   async list(query) {
     const {
@@ -477,6 +503,17 @@ export class InMemoryOrderRepository {
             !order.cancelledAt &&
             !order.fichaFirstPrintedAt)) &&
         (origin === undefined || order.origin === origin) &&
+        (query.production === undefined ||
+          (order.origin === 'atendimento' &&
+            order.status === 'confirmado' &&
+            !order.deliveredOn &&
+            !order.isTest &&
+            !order.cancelledAt &&
+            (query.production === 'all' ||
+              (query.production === 'cut' &&
+                ['arte', 'producao'].includes(order.productionStage ?? '')) ||
+              query.productionIds?.includes(order.id) ||
+              query.production === order.productionStage))) &&
         (owner === undefined ||
           order.manualOwnerId === owner.userId ||
           owner.conversationIds.includes(
@@ -1022,12 +1059,27 @@ export class InMemoryOrderRepository {
           missingFields: [...order.missingFields],
           orderDate: order.orderDate,
           paymentCondition: order.paymentCondition,
+          productionStage: order.productionStage ?? null,
           reopenedAt: order.reopenedAt,
           reopenedBy: order.reopenedBy,
           status: order.status,
           updatedAt: order.updatedAt,
         };
       },
+    );
+  }
+
+  /** @param {Order} order @param {OrderWriteOptions} options */
+  async saveProductionStage(order, options) {
+    return this.#write(
+      order.id,
+      options,
+      'order.production_stage_changed',
+      (current) => ({
+        ...current,
+        productionStage: order.productionStage,
+        updatedAt: order.updatedAt,
+      }),
     );
   }
 
@@ -1085,7 +1137,12 @@ export class InMemoryOrderRepository {
         // Payment and delivery days are not commercially exportable content.
         commercialRevision:
           (current.commercialRevision ?? 1) +
-          (eventType === 'order.milestones_saved' ? 0 : 1),
+          ([
+            'order.milestones_saved',
+            'order.production_stage_changed',
+          ].includes(eventType)
+            ? 0
+            : 1),
         version: current.version + 1,
       };
       if (

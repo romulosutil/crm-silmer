@@ -44,6 +44,12 @@ import {
 } from '../domain/order.js';
 import { requireUnlocked } from '../domain/store-order.js';
 import {
+  isOpenProductionOrder,
+  PRODUCTION_FILTERS,
+  PRODUCTION_STAGES,
+  projectCutMap,
+} from '../domain/cut-map.js';
+import {
   MAX_ORDER_PAGE_SIZE,
   assertOrderRepositoryContract,
 } from '../ports/contracts.js';
@@ -121,6 +127,7 @@ const LIST_KEYS = new Set([
   'cancellation',
   'status',
   'origin',
+  'production',
   'q',
   'cursor',
   'limit',
@@ -639,6 +646,135 @@ export function createOrderService(options) {
       }
       return readOne(order);
     },
+    /** @param {string[]} ids @param {OrderActor} actor */
+    async cutMap(ids, actor) {
+      if (actor?.kind !== 'human' || !actor.id) throw new OrderForbiddenError();
+      const unique = [...new Set(ids)];
+      if (!unique.length || unique.length > 50)
+        throw new OrderInputError('Invalid selection');
+      const orders = repository.findCutOrders
+        ? await repository.findCutOrders(unique, actor)
+        : [];
+      if (!repository.findCutOrders) {
+        for (const id of unique) {
+          const order = await repository.findById(id, readerOf(actor));
+          if (!order) throw new OrderNotFoundError();
+          try {
+            await requireOwner(actor, order);
+          } catch (error) {
+            if (
+              error instanceof OrderForbiddenError ||
+              /** @type {any} */ (error)?.statusCode === 403
+            )
+              throw new OrderNotFoundError();
+            throw error;
+          }
+          orders.push(order);
+        }
+      }
+      if (orders.length !== unique.length) throw new OrderNotFoundError();
+      return projectCutMap(orders);
+    },
+
+    /** @param {OrderActor} actor @param {string} [seller] */
+    async portfolioOverview(actor, seller) {
+      if (actor?.kind !== 'human' || !actor.id || !repository.portfolioSales)
+        throw new OrderForbiddenError();
+      const admin = actor.capabilities?.includes('COMMERCIAL_ADMIN');
+      if (seller && !admin) throw new OrderForbiddenError();
+      const owner = admin ? seller : actor.id;
+      const reader = readerOf(actor);
+      const now = clock();
+      const { from, to } = summaryPeriod('mes', now);
+      const previousLast = shiftDay(from, -1);
+      const previousFrom = `${previousLast.slice(0, 7)}-01`;
+      const previousTo = shiftDay(
+        previousFrom,
+        Math.min(Number(to.slice(-2)), Number(previousLast.slice(-2))) - 1,
+      );
+      const salesScope = {
+        visibilityActorId: actor.id,
+        creditId: owner ?? null,
+      };
+      const [current, previous, orders, assignments] = await Promise.all([
+        repository.portfolioSales({ ...salesScope, from, to }),
+        repository.portfolioSales({
+          ...salesScope,
+          from: previousFrom,
+          to: previousTo,
+        }),
+        repository.openDeliveries(reader),
+        owner
+          ? conversations.listAssignedOrderConversationIds?.(owner)
+          : undefined,
+      ]);
+      const conversationsOfOwner = new Set(assignments ?? []);
+      const production = {
+        all: 0,
+        cut: 0,
+        arte: 0,
+        producao: 0,
+        pronto: 0,
+        late: 0,
+        risk: 0,
+      };
+      const riskUntil = shiftDay(to, 3);
+      for (const order of orders) {
+        if (
+          owner &&
+          order.manualOwnerId !== owner &&
+          !conversationsOfOwner.has(order.conversationId ?? '')
+        )
+          continue;
+        const stage = order.productionStage;
+        production.all += 1;
+        if (stage) production[stage] += 1;
+        if (stage === 'arte' || stage === 'producao') production.cut += 1;
+        const day = promisedDeliveryOn(order);
+        if (!day) continue;
+        if (day < to) production.late += 1;
+        else if (day <= riskUntil && stage !== 'pronto') production.risk += 1;
+      }
+      return {
+        production,
+        sales: { current, previous, from, to, previousFrom, previousTo },
+      };
+    },
+
+    /** @param {{orderId:string,stage:typeof PRODUCTION_STAGES[number],expectedVersion:number,actor:OrderActor,correlationId:string}} input */
+    async setProductionStage(input) {
+      const order = await loadForCommand(input);
+      if (
+        !repository.saveProductionStage ||
+        !isOpenProductionOrder(order) ||
+        !PRODUCTION_STAGES.includes(input.stage)
+      ) {
+        throw new OrderConflictError(
+          'Etapa indisponível para o pedido',
+          'ORDER_STATUS_CONFLICT',
+        );
+      }
+      const current = order.productionStage;
+      if (current === input.stage) return order;
+      if (
+        current &&
+        PRODUCTION_STAGES.indexOf(input.stage) !==
+          PRODUCTION_STAGES.indexOf(current) + 1
+      ) {
+        throw new OrderConflictError(
+          'A etapa mudou ou não pode ser pulada',
+          'ORDER_STATUS_CONFLICT',
+        );
+      }
+      return repository.saveProductionStage(
+        {
+          ...order,
+          productionStage: input.stage,
+          updatedAt: clock().toISOString(),
+        },
+        input,
+      );
+    },
     /** @param {any} input */
     async assertCancellationAccess(input) {
       const order = await repository.findById(
@@ -1027,7 +1163,7 @@ export function createOrderService(options) {
      *
      * `ownerId` (Painel, "Meus pedidos") keeps one seller's orders.
      *
-     * @param {{cancellation?: 'active'|'cancelled'|'all', status?: string, origin?: string, q?: string, cursor?: string|null, limit?: number, delivery?: string, ownerId?: string, from?:string, to?:string, credit?:string, firstPrint?:string}} [input]
+     * @param {{cancellation?: 'active'|'cancelled'|'all', status?: string, origin?: string, q?: string, cursor?: string|null, limit?: number, delivery?: string, ownerId?: string, from?:string, to?:string, credit?:string, firstPrint?:string, production?:string}} [input]
      * @param {any} [reader]
      */
     async list(input = {}, reader = {}) {
@@ -1094,6 +1230,7 @@ export function createOrderService(options) {
             'from',
             'to',
             'firstPrint',
+            'production',
           ].some((key) => /** @type {any} */ (input)[key] !== undefined)
         ) {
           throw new OrderInputError('delivery is invalid', ['delivery']);
@@ -1145,6 +1282,33 @@ export function createOrderService(options) {
         credit: input.credit,
         firstPrint: input.firstPrint,
       };
+      if (input.production !== undefined) {
+        const production = /** @type {typeof PRODUCTION_FILTERS[number]} */ (
+          input.production
+        );
+        if (!PRODUCTION_FILTERS.includes(production))
+          throw new OrderInputError('Invalid production filter', [
+            'production',
+          ]);
+        query.production = production;
+        if (production === 'late' || production === 'risk') {
+          const today = operationalDay(clock());
+          const riskUntil = shiftDay(today, 3);
+          query.productionIds = (await repository.openDeliveries(listReader))
+            .filter((order) => {
+              const day = promisedDeliveryOn(order);
+              return (
+                day !== null &&
+                (production === 'late'
+                  ? day < today
+                  : day >= today &&
+                    day <= riskUntil &&
+                    order.productionStage !== 'pronto')
+              );
+            })
+            .map(({ id }) => id);
+        }
+      }
       if (input.origin !== undefined) {
         query.origin = /** @type {any} */ (input.origin);
       }

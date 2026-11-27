@@ -54,7 +54,7 @@ const ORDER_COLUMNS = `id, number_sequence, number, conversation_id, origin_subj
   cancelled_at, cancelled_by, cancellation_reason_envelope,
   freight_cents, freight_source, freight_quote_id, freight_quote_service_id,
   freight_quoted_cents, freight_set_by, freight_set_at, pricing_rule,
-  commercial_revision,
+  commercial_revision, production_stage,
   version, created_at, updated_at`;
 
 // ADR 080 item 14: the freight-aware writer names its calculation rule in the
@@ -372,6 +372,7 @@ export class PostgresOrderRepository {
       paidOn: row.paid_on,
       paymentReviewRequired: row.finance_payment_review_required ?? false,
       paymentCondition: row.payment_condition,
+      productionStage: row.production_stage ?? null,
       reopenedAt: isoOrNull(row.reopened_at),
       reopenedBy: row.reopened_by,
       status: row.status,
@@ -872,6 +873,23 @@ export class PostgresOrderRepository {
     return result.rows[0] ? this.#map(result.rows[0]) : null;
   }
 
+  /** @param {string[]} ids @param {{id:string, capabilities?:readonly string[]}} actor */
+  async findCutOrders(ids, actor) {
+    const { rows } = await this.#database.query(
+      `SELECT ${ORDER_COLUMNS} FROM crm.orders
+       WHERE id = ANY($1::text[]) AND ${orderReadable('orders', '$2')}
+         AND ($3::boolean OR manual_owner_id = $2 OR EXISTS (
+           SELECT 1 FROM crm.conversations WHERE id = orders.conversation_id AND assigned_user_id = $2
+         ))`,
+      [
+        ids,
+        actor.id,
+        actor.capabilities?.includes('COMMERCIAL_ADMIN') === true,
+      ],
+    );
+    return rows.map((row) => this.#map(row));
+  }
+
   /** @param {{from:string,to:string,visibilityActorId:string}} input */
   async commercialSales(input) {
     const { rows } = await this.#database.query(
@@ -889,6 +907,31 @@ export class PostgresOrderRepository {
       confirmedCount: Number(row.count),
       soldAmountCents: Number(row.cents),
     }));
+  }
+
+  /** @param {{from:string,to:string,visibilityActorId:string,creditId:string|null}} input */
+  async portfolioSales(input) {
+    const {
+      rows: [row],
+    } = await this.#database.query(
+      `SELECT count(*)::integer AS count,
+              coalesce(sum(final_amount_cents), 0)::bigint AS cents,
+              coalesce(sum(total_pieces), 0)::bigint AS pieces
+       FROM crm.orders WHERE status='confirmado' AND NOT is_test AND cancelled_at IS NULL
+         AND order_date BETWEEN $1::date AND $2::date AND ${orderReadable('orders', '$3')}
+         AND ($4::text IS NULL OR sales_owner_id=$4)`,
+      [input.from, input.to, input.visibilityActorId, input.creditId],
+    );
+    const confirmedCount = Number(row.count);
+    const soldAmountCents = Number(row.cents);
+    return {
+      confirmedCount,
+      soldAmountCents,
+      pieces: Number(row.pieces),
+      averageTicketCents: confirmedCount
+        ? Math.round(soldAmountCents / confirmedCount)
+        : null,
+    };
   }
 
   /**
@@ -1175,6 +1218,16 @@ export class PostgresOrderRepository {
     if (query.firstPrint === 'pending')
       scope +=
         " AND origin='loja' AND NOT is_test AND cancelled_at IS NULL AND ficha_first_printed_at IS NULL";
+    if (query.production !== undefined) {
+      scope +=
+        " AND origin='atendimento' AND status='confirmado' AND NOT is_test AND cancelled_at IS NULL AND delivered_on IS NULL";
+      if (query.production === 'cut')
+        scope += " AND production_stage IN ('arte', 'producao')";
+      else if (query.productionIds)
+        scope += ` AND id=ANY(${bind(query.productionIds)}::text[])`;
+      else if (query.production !== 'all')
+        scope += ` AND production_stage=${bind(query.production)}`;
+    }
     if (origin !== undefined) scope = `${scope} AND origin = ${bind(origin)}`;
     if (owner !== undefined) {
       scope = `${scope} AND (manual_owner_id = ${bind(owner.userId)}
@@ -1829,6 +1882,7 @@ export class PostgresOrderRepository {
                missing_fields = $10::text[], updated_at = $11,
                ficha_envelope = CASE WHEN $13::boolean THEN ficha_envelope ELSE $12::jsonb END,
                pricing_rule = CASE WHEN $14::boolean THEN $15 ELSE pricing_rule END,
+               production_stage = $16,
                version = version + 1,
                commercial_revision = commercial_revision + 1
            WHERE id = $1
@@ -1852,6 +1906,7 @@ export class PostgresOrderRepository {
               current.olistLocked === true,
             confirming && sized,
             FREIGHT_PRICING_RULE,
+            order.productionStage ?? null,
           ],
         );
         if (confirming) {
@@ -1877,6 +1932,21 @@ export class PostgresOrderRepository {
         }
         return updated;
       },
+    );
+  }
+
+  /** @param {Order} order @param {OrderWriteOptions} options */
+  async saveProductionStage(order, options) {
+    return this.#write(
+      order,
+      options,
+      'order.production_stage_changed',
+      async (_current, tx) =>
+        tx.query(
+          `UPDATE crm.orders SET production_stage=$2, updated_at=$3, version=version+1
+         WHERE id=$1 RETURNING ${ORDER_COLUMNS}`,
+          [order.id, order.productionStage, order.updatedAt],
+        ),
     );
   }
 

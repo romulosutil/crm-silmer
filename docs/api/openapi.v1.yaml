@@ -3477,6 +3477,14 @@ paths:
             dono nunca viaja na URL. Combina com `status` e `q`, não com
             `delivery`.
           schema: { type: string, enum: [me] }
+        - name: seller
+          in: query
+          description: ID do vendedor responsável. Privativo a administradores e exclusivo de owner.
+          schema: { type: string }
+        - name: production
+          in: query
+          description: Fila de atendimento confirmada e não entregue em um recorte de produção. Incompatível com delivery.
+          schema: { type: string, enum: [all, cut, arte, producao, pronto, late, risk] }
         - {
             name: q,
             in: query,
@@ -3571,6 +3579,112 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '429': { description: Limite temporário de buscas privadas excedido }
+  /orders/portfolio:
+    get:
+      tags: [Orders]
+      summary: Números do mês e contagens de produção da carteira (CAR-01–03)
+      parameters:
+        - {
+            name: seller,
+            in: query,
+            schema: { type: string },
+            description: 'Administrador pode filtrar por ID de vendedor.',
+          }
+      responses:
+        '200':
+          {
+            description: Produção e vendas na janela atual e equivalente do mês anterior,
+          }
+        '401': { description: Sessão obrigatória }
+        '403': { description: Consulta fora das permissões do vendedor }
+  /orders/cut-map:
+    get:
+      tags: [Orders]
+      summary: Prévia privada da grade consolidada (CAR-04–06)
+      parameters:
+        - {
+            name: orders,
+            in: query,
+            required: true,
+            schema: { type: string },
+            description: 'Até 50 IDs de pedidos separados por vírgula.',
+          }
+      responses:
+        '200':
+          {
+            description: Lotes com público,
+            grade,
+            pedidos de origem e fingerprint,
+          }
+        '404':
+          { description: Pedido inexistente ou fora do escopo do solicitante }
+        '409': { description: Pedido fora da fila de corte }
+        '422':
+          { description: Item com dados de corte ausentes ou grade divergente }
+  /orders/cut-map/pdf:
+    get:
+      tags: [Orders]
+      summary: Gera o PDF da seleção conferida (CAR-06)
+      parameters:
+        - {
+            name: orders,
+            in: query,
+            required: true,
+            schema: { type: string },
+            description: 'IDs dos pedidos usados na prévia.',
+          }
+        - {
+            name: fingerprint,
+            in: query,
+            required: true,
+            schema: { type: string, pattern: '^[a-f0-9]{64}    get:
+      operationId: getCommercialResult
+      summary: Consulta administrativa de vendas por data comercial e crédito congelado
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/HumanReadOrigin'
+        - { name: period, in: query, required: true, schema: { type: string, enum: [hoje, 7dias, mes] } }
+      responses:
+        '200':
+          description: Total elegível, série diária, composição e intervalos de comparação em São Paulo.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommercialResult' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /orders/{orderId}/production-stage:
+    post:
+      tags: [Orders]
+      summary: Registra a etapa operacional do pedido (CAR-02)
+      parameters:
+        - { name: orderId, in: path, required: true, schema: { type: string } }
+        - {
+            name: Idempotency-Key,
+            in: header,
+            required: true,
+            schema: { type: string },
+          }
+        - {
+            name: X-CSRF-Token,
+            in: header,
+            required: true,
+            schema: { type: string },
+          }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [stage, expectedVersion]
+              properties:
+                stage: { type: string, enum: [arte, producao, pronto] }
+                expectedVersion: { type: integer, minimum: 1 }
+      responses:
+        '200': { description: Pedido atualizado }
+        '403': { description: Operação fora das permissões do solicitante }
+        '409': { description: Versão ou transição de etapa inválida }
   /orders/commercial-result:
     get:
       operationId: getCommercialResult
@@ -7983,6 +8097,9 @@ components:
           firstContactAt,
           paidOn,
           deliveredOn,
+          productionStage,
+          productionEditable,
+          cutMapAvailable,
           seller,
           version,
           createdAt,
@@ -8147,6 +8264,12 @@ components:
         paymentReviewRequired:
           type: boolean
           description: Data manual legada fora do Financeiro até declaração explícita de quitação integral.
+        productionStage:
+          type: [string, 'null']
+          enum: [arte, producao, pronto, null]
+          description: Etapa operacional da carteira. Entregue deriva de deliveredOn.
+        productionEditable: { type: boolean, description: A pessoa pode registrar a etapa de produção. }
+        cutMapAvailable: { type: boolean, description: O pedido pode ser selecionado para o Mapa de corte. }
         deliveredOn:
           type: [string, 'null']
           format: date

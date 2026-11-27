@@ -22,6 +22,8 @@ import FilterSheet from '../components/FilterSheet.vue';
 import FilterChip from '../components/FilterChip.vue';
 import AppHint from '../components/AppHint.vue';
 import OrderReceiptPreview from '../components/order/OrderReceiptPreview.vue';
+import OrderCutMapPreview from '../components/order/OrderCutMapPreview.vue';
+import OrderPortfolioOverview from '../components/order/OrderPortfolioOverview.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import { dateTimeBR, formatPhoneNumber } from '../lib/format.js';
 import { openDialog } from '../lib/ui.js';
@@ -51,6 +53,33 @@ const STORE_FILTER = 'loja';
 // (rule 10: only those print) not delivered yet and not tests, by the
 // promised delivery. The API filters by status; the rest is read here.
 const PRODUCTION_FILTER = 'producao';
+const PORTFOLIO_GROUPS = [
+  { id: 'late', label: 'Atrasados' },
+  { id: 'week', label: 'Próximos 7 dias' },
+  { id: 'later', label: 'Mais adiante' },
+  { id: 'no-date', label: 'Sem data de entrega' },
+  { id: 'delivered', label: 'Entregues' },
+];
+const PRODUCTION_STEPS = {
+  arte: {
+    label: 'Na arte',
+    action: 'Enviar para produção',
+    next: 'producao',
+    icon: 'brush',
+  },
+  producao: {
+    label: 'Na produção',
+    action: 'Marcar como pronto',
+    next: 'pronto',
+    icon: 'scissors',
+  },
+  pronto: {
+    label: 'Pronto',
+    action: 'Marcar como entregue',
+    next: 'delivered',
+    icon: 'package',
+  },
+};
 // Painel ("Meus pedidos pendentes"): the session seller's pending orders.
 const MINE_FILTER = 'meus';
 /** @param {string} label @param {string} value */
@@ -119,6 +148,10 @@ const DELIVERY_FILTERS = Object.freeze({
 });
 
 const liveEvent = inject('liveEvent', ref(null));
+const sessionUser = inject('sessionUser', ref(null));
+const isAdmin = computed(
+  () => sessionUser.value?.capabilities?.includes('COMMERCIAL_ADMIN') === true,
+);
 const router = useRouter();
 const route = useRoute();
 const heading = ref(null);
@@ -177,6 +210,22 @@ const hasLoaded = ref(false);
 const error = ref('');
 const pdfError = ref('');
 const pdfBusyId = ref('');
+const portfolio = ref(null);
+const portfolioError = ref(false);
+const productionFilter = ref('');
+const portfolioSeller = ref('');
+const portfolioSellers = ref([]);
+const portfolioSellerError = ref(false);
+const cutMode = ref(false);
+const cutSelection = ref(new Set());
+const cutPreview = ref(null);
+const cutTitle = ref(null);
+let cutTrigger;
+let portfolioController;
+const productionBusy = ref('');
+const productionError = ref('');
+const productionNotice = ref('');
+const deliveredExpanded = ref(false);
 /** @type {import('vue').Ref<{open:(order:any,trigger:EventTarget|null)=>Promise<void>}|null>} */
 const receiptPreview = ref(null);
 function receiptFocusFallback() {
@@ -191,7 +240,12 @@ let refreshTimer = 0;
 let searchTimer = 0;
 let clockTimer = 0;
 
-const isProductionQueue = computed(() => filter.value === PRODUCTION_FILTER);
+const isProductionQueue = computed(
+  () =>
+    cutMode.value ||
+    Boolean(productionFilter.value) ||
+    filter.value === PRODUCTION_FILTER,
+);
 // Pesquisa UX 2026-10-15, achado 3: exceptions first, then the nearest
 // promised delivery; the server's order breaks the ties.
 const confirmedOrders = computed(() =>
@@ -206,6 +260,34 @@ const confirmedOrders = computed(() =>
 const pendingOrders = computed(() =>
   queueOrder(items.value.filter((order) => order.status === 'pendente')),
 );
+const confirmedGroups = computed(() => {
+  const orders = new Map(PORTFOLIO_GROUPS.map(({ id }) => [id, []]));
+  for (const order of confirmedOrders.value) {
+    const { days } = due(order);
+    const group = order.deliveredOn
+      ? 'delivered'
+      : days === null
+        ? 'no-date'
+        : days < 0
+          ? 'late'
+          : days <= 7
+            ? 'week'
+            : 'later';
+    orders.get(group).push(order);
+  }
+  orders
+    .get('delivered')
+    .sort((a, b) => b.deliveredOn.localeCompare(a.deliveredOn));
+  return PORTFOLIO_GROUPS.map((group) => ({
+    ...group,
+    orders: orders.get(group.id),
+  })).filter((group) => group.orders.length);
+});
+const canOpenCutMode = computed(
+  () =>
+    portfolio.value?.production?.cut > 0 ||
+    items.value.some((order) => order.cutMapAvailable === true),
+);
 const deliveryFilter = computed(
   () =>
     DELIVERY_FILTERS[
@@ -214,20 +296,24 @@ const deliveryFilter = computed(
 );
 const showConfirmed = computed(
   () =>
+    isProductionQueue.value ||
     ['', 'confirmado', PRODUCTION_FILTER, STORE_FILTER].includes(
       filter.value,
-    ) || Boolean(deliveryFilter.value),
+    ) ||
+    Boolean(deliveryFilter.value),
 );
 const confirmedTitle = computed(() =>
-  isProductionQueue.value ? 'Prontos para produção' : 'Confirmados',
+  cutMode.value
+    ? 'Pedidos para corte'
+    : isProductionQueue.value
+      ? 'Prontos para produção'
+      : 'Confirmados',
 );
-const confirmedCount = computed(() =>
-  isProductionQueue.value
-    ? `${confirmedOrders.value.length}${nextCursor.value ? '+' : ''}`
-    : String(counts.value.confirmado),
-);
-const showPending = computed(() =>
-  ['', 'pendente', MINE_FILTER].includes(filter.value),
+const confirmedCount = computed(() => String(counts.value.confirmado));
+const showPending = computed(
+  () =>
+    !isProductionQueue.value &&
+    ['', 'pendente', MINE_FILTER].includes(filter.value),
 );
 // PLI-10: a filter only the sheet offers is named, with a way out.
 const commercialFilters = computed(() => {
@@ -389,7 +475,12 @@ function queueOrder(orders) {
 }
 
 function openOrder(order, event) {
-  if (event.target?.closest?.('a, button, input, select, textarea')) return;
+  if (
+    event.target?.closest?.(
+      'a, button, input, label, select, textarea, summary',
+    )
+  )
+    return;
   void router.push(`/pedidos/${order.id}`);
 }
 
@@ -664,47 +755,172 @@ watch(newContactPhone, () => {
 
 /** @param {string|null} cursor */
 function listRequest(cursor) {
-  if (deliveryFilter.value) {
+  if (!isProductionQueue.value && deliveryFilter.value) {
     return {
       url: `/api/v1/orders?delivery=${deliveryFilter.value}${cursor ? '&cursor=' + encodeURIComponent(cursor) : ''}`,
       options: {},
     };
   }
-  const params = new globalThis.URLSearchParams({ limit: String(PAGE_SIZE) });
-  const status =
-    filter.value === PRODUCTION_FILTER ? 'confirmado' : filter.value;
-  if (filter.value === STORE_FILTER) params.set('origin', STORE_FILTER);
-  else if (filter.value === MINE_FILTER) {
-    params.set('status', 'pendente');
-    params.set('owner', 'me');
-  } else if (status) params.set('status', status);
-  for (const [key, value] of Object.entries(commercialFilters.value))
-    params.set(key, value);
   const needle = query.value.trim();
+  const base = isProductionQueue.value
+    ? { production: cutMode.value ? 'cut' : productionFilter.value || 'all' }
+    : filter.value === STORE_FILTER
+      ? { origin: STORE_FILTER, ...commercialFilters.value }
+      : filter.value === MINE_FILTER
+        ? { owner: 'me', status: 'pendente' }
+        : {
+            ...(filter.value ? { status: filter.value } : {}),
+            ...commercialFilters.value,
+          };
+  if (!base.owner && !base.origin && !commercialFilters.value.from) {
+    if (isAdmin.value && portfolioSeller.value)
+      base.seller = portfolioSeller.value;
+    else if (!isAdmin.value && sessionUser.value?.id) base.owner = 'me';
+  }
+  const fields = {
+    ...base,
+    ...(needle ? { q: needle } : {}),
+    ...(cursor ? { cursor } : {}),
+  };
   if ((needle.match(/\d/gu) ?? []).length >= 8) {
     return {
       url: '/api/v1/orders/search',
       options: {
         method: 'POST',
-        body: {
-          limit: PAGE_SIZE,
-          q: needle,
-          ...commercialFilters.value,
-          ...(filter.value === STORE_FILTER
-            ? { origin: STORE_FILTER }
-            : filter.value === MINE_FILTER
-              ? { owner: 'me', status: 'pendente' }
-              : status
-                ? { status }
-                : {}),
-          ...(cursor ? { cursor } : {}),
-        },
+        body: { ...fields, limit: PAGE_SIZE },
       },
     };
   }
-  if (needle) params.set('q', needle);
-  if (cursor) params.set('cursor', cursor);
+  const params = new globalThis.URLSearchParams({
+    ...fields,
+    limit: String(PAGE_SIZE),
+  });
   return { url: `/api/v1/orders?${params}`, options: {} };
+}
+
+async function loadPortfolio() {
+  portfolioController?.abort();
+  const current = new AbortController();
+  portfolioController = current;
+  const search = portfolioSeller.value
+    ? `?${new URLSearchParams({ seller: portfolioSeller.value })}`
+    : '';
+  portfolioError.value = false;
+  try {
+    const { data } = await request(`/api/v1/orders/portfolio${search}`, {
+      signal: current.signal,
+    });
+    if (!current.signal.aborted) portfolio.value = data;
+  } catch {
+    if (!current.signal.aborted) {
+      portfolio.value = null;
+      portfolioError.value = true;
+    }
+  }
+}
+
+async function loadPortfolioSellers() {
+  if (!isAdmin.value) return;
+  try {
+    const { data } = await request('/api/v1/users/assignable');
+    portfolioSellers.value = data.users ?? [];
+    portfolioSellerError.value = false;
+  } catch {
+    portfolioSellerError.value = true;
+  }
+}
+
+function selectProductionFilter(value) {
+  filter.value = '';
+  productionFilter.value = value;
+  void load();
+}
+
+async function toggleCutMode(event) {
+  if (cutMode.value) {
+    cancelCutMode();
+    return;
+  }
+  cutTrigger = event.currentTarget;
+  cutMode.value = true;
+  cutSelection.value = new Set();
+  void load();
+  await nextTick();
+  cutTitle.value?.focus();
+}
+
+function cancelCutMode() {
+  cutMode.value = false;
+  cutSelection.value = new Set();
+  void load();
+  nextTick(() => cutTrigger?.focus());
+}
+
+function selectForCut(order, event) {
+  if (event.currentTarget.checked) cutSelection.value.add(order.id);
+  else cutSelection.value.delete(order.id);
+}
+
+function openCutPreview(event) {
+  cutPreview.value?.open([...cutSelection.value], event.currentTarget);
+}
+
+function stageFor(order) {
+  return order.productionStage ? PRODUCTION_STEPS[order.productionStage] : null;
+}
+
+function setInitialStage(order, event) {
+  const stage = new FormData(event.currentTarget).get('stage');
+  void changeStage(order, stage);
+}
+
+async function changeStage(order, stage) {
+  if (!stage || productionBusy.value || order.productionEditable !== true)
+    return;
+  productionBusy.value = order.id;
+  productionError.value = '';
+  productionNotice.value = '';
+  try {
+    const path =
+      stage === 'delivered' ? 'delivery-confirmation' : 'production-stage';
+    const { data } = await request(
+      `/api/v1/orders/${encodeURIComponent(order.id)}/${path}`,
+      {
+        method: 'POST',
+        idempotencyKey: commandKey(),
+        body: {
+          expectedVersion: order.version,
+          ...(stage === 'delivered' ? {} : { stage }),
+        },
+      },
+    );
+    items.value = items.value.map((current) =>
+      current.id === order.id ? { ...current, ...data.order } : current,
+    );
+    productionNotice.value = `Etapa do pedido ${order.number} atualizada.`;
+    void loadPortfolio();
+    await load(true);
+    productionBusy.value = '';
+    await nextTick();
+    if (document.activeElement === document.body) {
+      const row = document.querySelector(
+        `[data-production-order="${CSS.escape(order.id)}"]`,
+      );
+      (
+        row?.querySelector(
+          '.portfolio-stage-action button, button.portfolio-stage-action, a',
+        ) ?? heading.value
+      )?.focus();
+    }
+  } catch (cause) {
+    productionError.value =
+      cause?.status === 409
+        ? 'O pedido mudou. Confira a etapa atual antes de tentar novamente.'
+        : 'Não foi possível atualizar a etapa do pedido.';
+    if ([403, 404, 409].includes(cause?.status)) void load(true);
+  } finally {
+    productionBusy.value = '';
+  }
 }
 
 /** @param {boolean} [silent] */
@@ -724,8 +940,7 @@ async function load(silent = false) {
     });
     const retrieved = response.data.items;
     let lastPage = response.data;
-    const desiredLength =
-      silent && deliveryFilter.value ? items.value.length : 0;
+    const desiredLength = silent ? items.value.length : 0;
     while (retrieved.length < desiredLength && lastPage.nextCursor) {
       const subsequent = listRequest(lastPage.nextCursor);
       const result = await request(subsequent.url, {
@@ -819,7 +1034,8 @@ async function generatePdf(order) {
 
 /** @param {string} value */
 function selectFilter(value) {
-  if (filter.value === value) return;
+  if (filter.value === value && !productionFilter.value) return;
+  productionFilter.value = '';
   searchNotice.value = '';
   filter.value = value;
   void load();
@@ -848,6 +1064,10 @@ async function clearSearch() {
  * too; the focus lands on "Filtros", where another filter is chosen.
  */
 async function clearFilter() {
+  if (productionFilter.value) {
+    selectProductionFilter('');
+    return;
+  }
   const rest = { ...route.query };
   const fromRoute = FILTER_QUERY_KEYS.filter((key) => key in rest);
   if (fromRoute.length) {
@@ -868,13 +1088,15 @@ function scheduleLiveRefresh() {
   refreshTimer = globalThis.setTimeout(() => {
     refreshTimer = 0;
     void load(true);
+    void loadPortfolio();
   }, LIVE_REFRESH_DELAY_MS);
 }
 
 watch(query, () => {
+  deliveredExpanded.value = Boolean(query.value.trim());
   // A delivery view is a short list in promised order; a search reads every
   // order again.
-  if (deliveryFilter.value && query.value.trim()) {
+  if (!isProductionQueue.value && deliveryFilter.value && query.value.trim()) {
     filter.value = '';
     searchNotice.value =
       'A busca está em todos os pedidos. A visualização por entrega foi removida.';
@@ -885,6 +1107,13 @@ watch(query, () => {
     searchTimer = 0;
     void load();
   }, SEARCH_DELAY_MS);
+});
+
+watch(portfolioSeller, () => {
+  cutSelection.value = new Set();
+  portfolio.value = null;
+  void load();
+  void loadPortfolio();
 });
 
 // PLI-08: order, conversation and contact changes may change the list's labels
@@ -906,12 +1135,15 @@ onMounted(() => {
   if (carried) /** @type {HTMLElement|null} */ (filtersButton.value)?.focus();
   else heading.value?.focus();
   void load();
+  void loadPortfolio();
+  void loadPortfolioSellers();
   clockTimer = globalThis.setInterval(() => {
     now.value = new Date();
   }, 60_000);
 });
 onBeforeUnmount(() => {
   controller?.abort();
+  portfolioController?.abort();
   contactController?.abort();
   newPhoneController?.abort();
   if (contactSearchTimer) globalThis.clearTimeout(contactSearchTimer);
@@ -923,10 +1155,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page orders-portfolio" :data-cut-mode="cutMode || undefined">
     <!-- RFC 024: one line, so the first order shows on a phone. -->
     <header class="page-heading orders-heading">
-      <h1 ref="heading" tabindex="-1">Pedidos</h1>
+      <h1 ref="heading" tabindex="-1">
+        {{ isAdmin ? 'Pedidos' : 'Meus pedidos' }}
+      </h1>
       <button type="button" class="primary" @click="openNewOrder">
         Novo pedido
       </button>
@@ -1167,7 +1401,17 @@ onBeforeUnmount(() => {
       </div>
     </dialog>
 
-    <!-- RFC 024 (PLI-09): search, three chips and "Filtros" — five controls. -->
+    <OrderPortfolioOverview
+      :overview="portfolio"
+      :error="portfolioError"
+      :active="productionFilter"
+      :cutting="cutMode"
+      :cut-enabled="canOpenCutMode"
+      @filter="selectProductionFilter"
+      @cut="toggleCutMode"
+      @retry="loadPortfolio"
+    />
+
     <div class="filter-bar orders-filter-bar">
       <div class="search-control orders-search" role="search">
         <label for="order-search" class="sr-only"
@@ -1182,9 +1426,19 @@ onBeforeUnmount(() => {
             type="search"
             placeholder="Número, cliente ou telefone"
           />
+          <button
+            v-if="query"
+            type="button"
+            class="quiet icon-button portfolio-clear-search"
+            aria-label="Limpar campo de busca"
+            @click="clearSearch"
+          >
+            <AppIcon name="close" />
+          </button>
         </div>
       </div>
       <div
+        v-if="!cutMode"
         class="chip-row orders-chip-row"
         role="group"
         aria-label="Filtrar pedidos"
@@ -1210,9 +1464,34 @@ onBeforeUnmount(() => {
           Filtros
         </button>
       </div>
+      <label
+        v-if="isAdmin && !deliveryFilter && filter !== STORE_FILTER"
+        class="portfolio-seller"
+      >
+        Vendedor
+        <select v-model="portfolioSeller">
+          <option value="">Todos</option>
+          <option
+            v-for="seller in portfolioSellers"
+            :key="seller.id"
+            :value="seller.id"
+          >
+            {{ seller.name }}
+          </option>
+        </select>
+      </label>
+    </div>
+    <div v-if="portfolioSellerError" class="portfolio-overview-error">
+      <p role="status">Não foi possível carregar os vendedores.</p>
+      <button type="button" class="quiet" @click="loadPortfolioSellers">
+        Tentar novamente
+      </button>
     </div>
     <div class="orders-result-line">
-      <p v-if="sheetFilterLabel" class="orders-active-filter">
+      <p
+        v-if="sheetFilterLabel && !cutMode && !productionFilter"
+        class="orders-active-filter"
+      >
         <span class="sr-only">Filtro: </span>
         <FilterChip
           :label="sheetFilterLabel"
@@ -1265,6 +1544,46 @@ onBeforeUnmount(() => {
       </fieldset>
     </FilterSheet>
 
+    <section
+      v-show="cutMode"
+      id="cut-selection"
+      class="portfolio-selection"
+      aria-labelledby="cut-selection-title"
+    >
+      <div>
+        <h2 id="cut-selection-title" ref="cutTitle" tabindex="-1">
+          Selecione os pedidos para o corte
+        </h2>
+        <p>O mapa aceita pedidos na arte ou na produção.</p>
+      </div>
+      <div class="portfolio-selection-actions">
+        <p role="status">
+          {{
+            cutSelection.size
+              ? `${cutSelection.size} ${cutSelection.size === 1 ? 'pedido selecionado' : 'pedidos selecionados'}`
+              : 'Nenhum pedido selecionado'
+          }}
+        </p>
+        <button type="button" @click="cancelCutMode">Cancelar</button>
+        <button
+          type="button"
+          class="primary"
+          aria-haspopup="dialog"
+          :disabled="!cutSelection.size"
+          @click="openCutPreview"
+        >
+          Conferir mapa
+        </button>
+      </div>
+    </section>
+
+    <p v-if="productionError" class="op-alert" role="alert">
+      {{ productionError }}
+    </p>
+    <p v-if="productionNotice" class="audit-note" role="status">
+      {{ productionNotice }}
+    </p>
+
     <p v-if="pdfError" role="alert" class="op-alert">{{ pdfError }}</p>
     <div v-if="error && hasLoaded" role="alert" class="audit-note">
       <p>{{ error }}</p>
@@ -1289,7 +1608,7 @@ onBeforeUnmount(() => {
       <button type="button" @click="retryInitialLoad">Tentar novamente</button>
     </section>
     <section
-      v-else-if="isEmpty && isProductionQueue && !query.trim()"
+      v-else-if="isEmpty && isProductionQueue && !cutMode && !query.trim()"
       class="surface empty-list"
       aria-live="polite"
     >
@@ -1301,6 +1620,13 @@ onBeforeUnmount(() => {
       <button type="button" class="soft" @click="clearFilter">
         Limpar filtro
       </button>
+    </section>
+    <section
+      v-else-if="isEmpty && cutMode && !query.trim()"
+      class="surface empty-list"
+    >
+      <h2>Nenhum pedido disponível para corte</h2>
+      <p>Confira se há pedidos na arte ou na produção para este vendedor.</p>
     </section>
     <section v-else-if="isEmpty" class="surface empty-list" aria-live="polite">
       <template v-if="query.trim()">
@@ -1433,7 +1759,7 @@ onBeforeUnmount(() => {
 
       <section
         v-if="showConfirmed && confirmedOrders.length"
-        class="surface section-gap"
+        class="surface section-gap portfolio-confirmed"
         aria-labelledby="orders-confirmed-title"
       >
         <div class="panel-head">
@@ -1447,120 +1773,228 @@ onBeforeUnmount(() => {
           <p v-else>valor e forma de pagamento registrados</p>
         </div>
         <div
-          class="table-wrap list-scroll order-list"
-          role="region"
-          tabindex="0"
-          :aria-label="
-            isProductionQueue ? 'Fila de produção' : 'Pedidos confirmados'
-          "
+          v-for="group in confirmedGroups"
+          :key="group.id"
+          class="portfolio-deadline-group"
         >
-          <table class="data-table order-table">
-            <thead>
-              <tr>
-                <th scope="col">Pedido</th>
-                <th scope="col">Cliente</th>
-                <th scope="col">Entrega</th>
-                <th scope="col" class="num">Peças</th>
-                <th scope="col" class="num">Valor</th>
-                <th scope="col">Situação</th>
-                <th scope="col"><span class="sr-only">Ações</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="order in confirmedOrders"
-                :key="order.id"
-                class="clickable-row"
-                :data-exception="isException(order) || undefined"
-                @click="openOrder(order, $event)"
-              >
-                <td class="order-cell-number">
-                  #{{ order.number }}
-                  <span
-                    v-if="isStoreOrder(order) || order.isTest"
-                    class="order-badges"
-                  >
-                    <!-- ADR 028: the shop's number next to the CRM's. -->
+          <h3 v-if="group.id === 'delivered'">
+            <button
+              type="button"
+              class="quiet"
+              :aria-expanded="deliveredExpanded"
+              aria-controls="portfolio-group-delivered"
+              @click="deliveredExpanded = !deliveredExpanded"
+            >
+              <AppIcon name="chevron-down" /> {{ group.label }} ·
+              {{ group.orders.length }}
+            </button>
+          </h3>
+          <h3 v-else>
+            {{ group.label }}
+            <span class="badge">{{ group.orders.length }}</span>
+          </h3>
+          <div
+            v-show="group.id !== 'delivered' || deliveredExpanded"
+            :id="`portfolio-group-${group.id}`"
+            class="table-wrap list-scroll order-list"
+            role="region"
+            tabindex="0"
+            :aria-label="group.label"
+          >
+            <table class="data-table order-table">
+              <thead>
+                <tr>
+                  <th scope="col">Pedido</th>
+                  <th scope="col">Cliente</th>
+                  <th scope="col">Entrega</th>
+                  <th scope="col" class="num">Peças</th>
+                  <th scope="col" class="num">Valor</th>
+                  <th scope="col">
+                    {{ cutMode ? 'Etapa' : 'Etapa e pagamento' }}
+                  </th>
+                  <th scope="col">{{ cutMode ? 'Seleção' : 'Ações' }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="order in group.orders"
+                  :key="order.id"
+                  class="clickable-row"
+                  :data-production-order="order.id"
+                  :data-exception="isException(order) || undefined"
+                  :data-selected="
+                    (cutMode && cutSelection.has(order.id)) || undefined
+                  "
+                  @click="openOrder(order, $event)"
+                >
+                  <td class="order-cell-number">
+                    #{{ order.number }}
                     <span
-                      v-if="isStoreOrder(order)"
-                      class="badge"
-                      data-tone="info"
-                      >{{
-                        order.storeNumber
-                          ? `Loja · ${order.storeNumber}`
-                          : 'Loja'
-                      }}</span
+                      v-if="isStoreOrder(order) || order.isTest"
+                      class="order-badges"
                     >
-                    <span v-if="order.isTest" class="badge" data-tone="warning"
-                      >Teste</span
-                    >
-                    <!-- LOJ-33: a new site order until its first print. -->
+                      <!-- ADR 028: the shop's number next to the CRM's. -->
+                      <span
+                        v-if="isStoreOrder(order)"
+                        class="badge"
+                        data-tone="info"
+                        >{{
+                          order.storeNumber
+                            ? `Loja · ${order.storeNumber}`
+                            : 'Loja'
+                        }}</span
+                      >
+                      <span
+                        v-if="order.isTest"
+                        class="badge"
+                        data-tone="warning"
+                        >Teste</span
+                      >
+                      <!-- LOJ-33: a new site order until its first print. -->
+                      <span
+                        v-if="storeFichaPending(order)"
+                        class="badge"
+                        data-tone="warning"
+                        >Ficha ainda sem PDF</span
+                      >
+                    </span>
+                    <span class="badge order-card-status" data-tone="success">{{
+                      orderStatusLabel(order.status)
+                    }}</span>
+                  </td>
+                  <td class="order-cell-customer">
+                    <strong>{{ customerName(order) }}</strong>
+                    <small class="order-context">{{
+                      customerContext(order)
+                    }}</small>
+                  </td>
+                  <td class="order-cell-due" data-label="Entrega">
+                    <span class="order-due-date num">{{
+                      due(order).date
+                    }}</span>
                     <span
-                      v-if="storeFichaPending(order)"
-                      class="badge"
-                      data-tone="warning"
-                      >Ficha ainda sem PDF</span
+                      v-if="due(order).relative"
+                      class="order-due"
+                      :data-tone="due(order).tone || undefined"
+                      >{{ due(order).relative }}</span
                     >
-                  </span>
-                  <span class="badge order-card-status" data-tone="success">{{
-                    orderStatusLabel(order.status)
-                  }}</span>
-                </td>
-                <td class="order-cell-customer">
-                  <strong>{{ customerName(order) }}</strong>
-                  <small class="order-context">{{
-                    customerContext(order)
-                  }}</small>
-                </td>
-                <td class="order-cell-due" data-label="Entrega">
-                  <span class="order-due-date num">{{ due(order).date }}</span>
-                  <span
-                    v-if="due(order).relative"
-                    class="order-due"
-                    :data-tone="due(order).tone || undefined"
-                    >{{ due(order).relative }}</span
-                  >
-                </td>
-                <td class="num" data-label="Peças">{{ order.totalPieces }}</td>
-                <td class="num" data-label="Valor">
-                  {{ amountLabel(order.finalAmountCents) }}
-                </td>
-                <td class="order-cell-situation">
-                  {{ situation(order) }}
-                  <small
-                    v-if="fichaPrintedLabel(order)"
-                    class="order-context"
-                    >{{ fichaPrintedLabel(order) }}</small
-                  >
-                </td>
-                <td class="order-cell-actions">
-                  <div class="row-actions">
-                    <button
-                      type="button"
-                      :disabled="Boolean(pdfBusyId)"
-                      @click="generatePdf(order)"
+                  </td>
+                  <td class="num" data-label="Peças">
+                    {{ order.totalPieces }}
+                  </td>
+                  <td class="num" data-label="Valor">
+                    {{ amountLabel(order.finalAmountCents) }}
+                  </td>
+                  <td class="order-cell-situation">
+                    <span v-if="order.deliveredOn" class="portfolio-stage"
+                      ><AppIcon name="truck" /> Entregue</span
                     >
-                      {{ pdfBusyId === order.id ? 'Gerando PDF…' : 'Gerar PDF'
-                      }}<span class="sr-only"> {{ order.number }}</span>
-                    </button>
-                    <button
-                      v-if="order.receiptAvailable === true"
-                      type="button"
-                      :disabled="Boolean(pdfBusyId)"
-                      @click="receiptPreview?.open(order, $event.currentTarget)"
+                    <span v-else-if="stageFor(order)" class="portfolio-stage"
+                      ><AppIcon :name="stageFor(order).icon" />
+                      {{ stageFor(order).label }}</span
                     >
-                      Recibo<span class="sr-only"> {{ order.number }}</span>
-                    </button>
-                    <RouterLink class="button-link" :to="`/pedidos/${order.id}`"
-                      >Abrir pedido<span class="sr-only">
-                        {{ order.number }}</span
-                      ></RouterLink
+                    <span
+                      v-else-if="order.productionEditable"
+                      class="portfolio-stage"
+                      >Etapa a confirmar</span
                     >
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                    <template v-else>{{ situation(order) }}</template>
+                    <small v-if="!cutMode" class="order-context">{{
+                      order.paidOn && !order.paymentReviewRequired
+                        ? 'Pago'
+                        : 'Pagamento a conferir'
+                    }}</small>
+                    <small
+                      v-if="fichaPrintedLabel(order)"
+                      class="order-context"
+                      >{{ fichaPrintedLabel(order) }}</small
+                    >
+                  </td>
+                  <td class="order-cell-actions">
+                    <label
+                      v-if="cutMode && order.cutMapAvailable"
+                      class="portfolio-cut-order"
+                    >
+                      <input
+                        type="checkbox"
+                        :checked="cutSelection.has(order.id)"
+                        :disabled="
+                          cutSelection.size >= 50 && !cutSelection.has(order.id)
+                        "
+                        @change="selectForCut(order, $event)"
+                      />
+                      Selecionar pedido
+                      <span class="sr-only">{{ order.number }}</span>
+                    </label>
+                    <span v-else-if="cutMode">Seleção indisponível</span>
+                    <div v-else class="row-actions">
+                      <button
+                        v-if="order.productionEditable && stageFor(order)"
+                        type="button"
+                        class="portfolio-stage-action"
+                        :disabled="Boolean(productionBusy)"
+                        @click="changeStage(order, stageFor(order).next)"
+                      >
+                        {{ stageFor(order).action
+                        }}<span class="sr-only"> {{ order.number }}</span>
+                      </button>
+                      <form
+                        v-else-if="order.productionEditable"
+                        class="portfolio-stage-action portfolio-initial-stage"
+                        @submit.prevent="setInitialStage(order, $event)"
+                      >
+                        <select
+                          name="stage"
+                          required
+                          :aria-label="`Definir etapa do pedido ${order.number}`"
+                          :disabled="Boolean(productionBusy)"
+                        >
+                          <option value="">Definir etapa</option>
+                          <option value="arte">Na arte</option>
+                          <option value="producao">Na produção</option>
+                          <option value="pronto">Pronto</option>
+                        </select>
+                        <button
+                          type="submit"
+                          :disabled="Boolean(productionBusy)"
+                        >
+                          Salvar etapa<span class="sr-only">
+                            do pedido {{ order.number }}</span
+                          >
+                        </button>
+                      </form>
+                      <button
+                        type="button"
+                        :disabled="Boolean(pdfBusyId)"
+                        @click="generatePdf(order)"
+                      >
+                        {{
+                          pdfBusyId === order.id ? 'Gerando PDF…' : 'Gerar PDF'
+                        }}<span class="sr-only"> {{ order.number }}</span>
+                      </button>
+                      <button
+                        v-if="order.receiptAvailable === true"
+                        type="button"
+                        :disabled="Boolean(pdfBusyId)"
+                        @click="
+                          receiptPreview?.open(order, $event.currentTarget)
+                        "
+                      >
+                        Recibo<span class="sr-only"> {{ order.number }}</span>
+                      </button>
+                      <RouterLink
+                        class="button-link"
+                        :to="`/pedidos/${order.id}`"
+                        >Abrir pedido<span class="sr-only">
+                          {{ order.number }}</span
+                        ></RouterLink
+                      >
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     </template>
@@ -1578,6 +2012,7 @@ onBeforeUnmount(() => {
       :orders="items"
       :fallback-focus="receiptFocusFallback"
     />
+    <OrderCutMapPreview ref="cutPreview" />
   </div>
 </template>
 

@@ -1800,7 +1800,7 @@ if (connectionString) {
     assert.equal(await storage.getObject(second.file.objectKey), null);
   });
 
-  test('manual delivery: PostgreSQL permits one concurrent confirmation and preserves payment', async () => {
+  test('CAR-02/04 and manual delivery: PostgreSQL persists production, fences cut selection and permits one concurrent delivery', async () => {
     const conversationId = await seedConversation(pool, {
       channel: 'whatsapp',
     });
@@ -1841,7 +1841,7 @@ if (connectionString) {
         nome: 'Evento Sintético',
         data_entrega_confirmada: '2026-10-24',
       },
-      items: syntheticItems(),
+      items: syntheticItems().map((item) => ({ ...item, publico: 'unissex' })),
       artwork: { feito_pelo_cliente: true, feito_pela_silmer: false },
     })) {
       order = await service.patchSection({
@@ -1861,6 +1861,31 @@ if (connectionString) {
       expectedVersion: order.version,
       amountText: '100,00',
       paymentCondition: 'pix',
+    });
+    assert.equal(order.productionStage, 'arte');
+    assert.equal(
+      (await service.cutMap([order.id], actor)).total,
+      order.totalPieces,
+    );
+    assert.equal(
+      (await repository.findCutOrders([order.id], { id: 'other-seller' }))
+        .length,
+      0,
+    );
+    const frozen = order.commercialRevision;
+    for (const stage of /** @type {const} */ (['producao', 'pronto'])) {
+      order = await service.setProductionStage({
+        actor,
+        correlationId: 'manual-production-step',
+        orderId: order.id,
+        expectedVersion: order.version,
+        stage,
+      });
+      assert.equal(order.productionStage, stage);
+      assert.equal(order.commercialRevision, frozen);
+    }
+    await assert.rejects(service.cutMap([order.id], actor), {
+      code: 'CUT_MAP_NOT_ELIGIBLE',
     });
     order = await service.recordMilestones({
       actor,

@@ -253,7 +253,9 @@ else {
       await t.test(
         '0080 is additive, proves unique backfill and preserves immutable history',
         async () => {
-          await migrate(pool, { migrations });
+          await migrate(pool, {
+            migrations: migrations.filter(({ version }) => version === '0080'),
+          });
           const rows = (
             await pool.query(
               'SELECT id,origin_subject_id FROM crm.orders ORDER BY id',
@@ -308,6 +310,7 @@ else {
           );
         },
       );
+      await migrate(pool, { migrations });
       await conversation('targets');
       await subject('target-a', 'targets');
       await subject('target-b', 'targets');

@@ -7,4 +7,6 @@
 - **CAR-T03** Aprovação operacional da amostra com a Rose, aplicação em
   ambiente de validação e publicação após os gates (CAR-07).
 - **CAR-T04** Histórico por pedido, indicação na carteira e confirmação de
-  nova geração, com prova de prévia consumida na transação (CAR-08).
+  emissão, com prova de prévia consumida na transação (CAR-08).
+- **CAR-T05** Numeração comum ao PDF e à carteira, vínculo único por pedido
+  e bloqueio de novas seleções após a emissão (CAR-09).

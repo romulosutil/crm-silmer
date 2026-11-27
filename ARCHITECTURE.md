@@ -1,8 +1,8 @@
 # Arquitetura — baseline do CRM Silmer
 
-O histórico do Mapa de corte projeta a auditoria imutável por pedido. A
-geração consome a prévia conferida e uma nova geração exige confirmação se
-algum pedido já tiver histórico. [ADR 101](docs/adr/101-historico-do-mapa-de-corte.md)
+O Mapa de corte tem número compartilhado entre o PDF e a carteira. Um vínculo
+único por pedido preserva a geração registrada e garante que o pedido saia da
+seleção. [ADR 102](docs/adr/102-mapas-de-corte-numerados.md)
 
 ## Acesso à linha pessoal na liberação de 20/11/2026
 

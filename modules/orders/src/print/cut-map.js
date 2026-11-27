@@ -54,11 +54,12 @@ function renderLot(lot) {
   </section>`;
 }
 
-/** @param {import('../domain/cut-map.js').CutMap} map @param {Date} [issuedAt] */
-export function renderCutMapHtml(map, issuedAt = new Date()) {
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Mapa de corte</title>
+/** @param {import('../domain/cut-map.js').CutMap} map @param {string} number @param {Date} [issuedAt] */
+export function renderCutMapHtml(map, number, issuedAt = new Date()) {
+  const title = `Mapa de corte ${display(number)}`;
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${title}</title>
     <style>${POPPINS_FONT_FACES}\n${styles}</style></head><body><main>
-    <header><div class="band"><h1>Mapa de corte</h1><strong>${quantity.format(map.total)} ${map.total === 1 ? 'peça a cortar' : 'peças a cortar'}</strong></div>
+    <header><div class="band"><h1>${title}</h1><strong>${quantity.format(map.total)} ${map.total === 1 ? 'peça a cortar' : 'peças a cortar'}</strong></div>
     <div class="meta"><svg viewBox="0 0 442 136" role="img" aria-label="Silmer"><path d="${LOGO_PATH}"/></svg><p>Emissão <strong>${date.format(issuedAt)}</strong></p></div>
     <div class="orders"><strong>${map.orders.length === 1 ? 'Pedido no mapa' : 'Pedidos no mapa'}</strong><p class="sources">${map.orders.map(({ number }) => display(number)).join(', ')}</p></div></header>
     ${map.groups.map(renderLot).join('')}</main></body></html>`;

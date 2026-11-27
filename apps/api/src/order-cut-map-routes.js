@@ -74,6 +74,7 @@ export function registerOrderCutMapRoutes(
           'CUT_MAP_NOT_ELIGIBLE',
           'CUT_MAP_INCOMPLETE',
           'CUT_MAP_STALE',
+          'CUT_MAP_ALREADY_GENERATED',
         ];
         const code = codes.includes(failure?.code)
           ? failure.code
@@ -90,6 +91,9 @@ export function registerOrderCutMapRoutes(
                   itemIndex: failure.itemIndex,
                   fields: failure.fields,
                 }
+              : {}),
+            ...(code === 'CUT_MAP_ALREADY_GENERATED'
+              ? { orderIds: failure.orderIds }
               : {}),
           },
         });
@@ -120,28 +124,6 @@ export function registerOrderCutMapRoutes(
       }),
     );
 
-    scope.get(
-      `${root}/:orderId/cut-map-history`,
-      { config: readLimit },
-      respond(async (request, reply) => {
-        const { orderId } = /** @type {{orderId: string}} */ (request.params);
-        const { before, ...extra } = /** @type {Record<string, unknown>} */ (
-          request.query
-        );
-        if (
-          !identifier.test(orderId) ||
-          Object.keys(extra).length ||
-          (before !== undefined &&
-            (typeof before !== 'string' || !identifier.test(before)))
-        )
-          return reject(reply, 400, 'INVALID_REQUEST');
-        const { actor } = await authorize(request);
-        return reply.send(
-          await orders.getCutMapHistory(orderId, actor, before ?? null),
-        );
-      }),
-    );
-
     scope.post(
       `${root}/cut-map/pdf`,
       { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
@@ -149,12 +131,11 @@ export function registerOrderCutMapRoutes(
         const body = /** @type {Record<string, unknown>} */ (
           request.body ?? {}
         );
-        const { orders: ids, fingerprint: proof, regenerate, ...extra } = body;
+        const { orders: ids, fingerprint: proof, ...extra } = body;
         if (
           !validSelection(ids) ||
           typeof proof !== 'string' ||
           !/^[a-f0-9]{64}$/u.test(proof) ||
-          (regenerate !== undefined && typeof regenerate !== 'boolean') ||
           Object.keys(extra).length
         )
           return reject(reply, 400, 'INVALID_REQUEST');
@@ -163,13 +144,8 @@ export function registerOrderCutMapRoutes(
         const map = await orders.getCutMap(ids, actor);
         if (fingerprint(map, actor.id) !== proof)
           return reject(reply, 409, 'CUT_MAP_STALE');
-        if (
-          regenerate !== true &&
-          map.orders.some((/** @type {any} */ order) => order.cutMapGeneratedAt)
-        )
-          return reject(reply, 409, 'CUT_MAP_ALREADY_GENERATED');
-
-        const bytes = await pdfRenderer(renderCutMapHtml(map));
+        const number = await orders.reserveCutMapNumber();
+        const bytes = await pdfRenderer(renderCutMapHtml(map, number));
         const fresh = await authorize(request, true);
         const current = await orders.getCutMap(ids, fresh.actor);
         if (fingerprint(current, fresh.actor.id) !== proof)
@@ -178,13 +154,15 @@ export function registerOrderCutMapRoutes(
           current,
           fresh.actor,
           contextFor(request).correlationId,
+          number,
         );
 
         return reply
           .header(
             'content-disposition',
-            'attachment; filename="mapa-de-corte.pdf"',
+            `attachment; filename="mapa-de-corte-${number}.pdf"`,
           )
+          .header('x-cut-map-number', number)
           .header('content-security-policy', "default-src 'none'; sandbox")
           .type('application/pdf')
           .send(bytes);

@@ -78,7 +78,12 @@ export async function request(url, options = {}) {
       throw new Error('PDF_INVALID_RESPONSE');
     const data = await response.blob();
     options.signal?.throwIfAborted();
-    return { data, serverTime, status: response.status };
+    return {
+      data,
+      headers: response.headers,
+      serverTime,
+      status: response.status,
+    };
   }
   const data = type.includes('json') ? await response.json() : {};
   // WAP-T02-07: invalidation can occur while a response body is being read.

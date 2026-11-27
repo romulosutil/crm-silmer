@@ -1,24 +1,22 @@
 <script setup>
-import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { inject, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import AppIcon from '../AppIcon.vue';
 import { request } from '../../lib/api-client.js';
 import { downloadPdf } from '../../lib/order-pdf.js';
-import { formatDate, openDialog } from '../../lib/ui.js';
+import { openDialog } from '../../lib/ui.js';
 
-const emit = defineEmits(['history-changed']);
+const emit = defineEmits(['orders-mapped', 'closed']);
 const liveEvent = inject('liveEvent', ref(null));
 const dialog = ref(null);
 const title = ref(null);
-const refresh = ref(null);
+const back = ref(null);
 const map = ref(null);
 const error = ref('');
 const fieldProblem = ref(null);
 const loading = ref(false);
 const busy = ref(false);
-const generated = ref(false);
-const existing = computed(
-  () => map.value?.orders.filter((order) => order.cutMapGeneratedAt) ?? [],
-);
+const generatedNumber = ref(null);
+const selectionChanged = ref(false);
 const number = new Intl.NumberFormat('pt-BR');
 const audienceLabel = {
   unissex: 'Unissex',
@@ -55,12 +53,13 @@ function explain(cause, downloading) {
   } else if ([401, 403, 404].includes(cause?.status)) {
     error.value =
       'Um pedido da seleção ficou indisponível. Atualize a seleção.';
-  } else if (
-    ['CUT_MAP_STALE', 'CUT_MAP_ALREADY_GENERATED'].includes(cause?.code)
-  ) {
+  } else if (cause?.code === 'CUT_MAP_ALREADY_GENERATED') {
     error.value =
-      'Um pedido ou o histórico mudou. Atualize a prévia para conferir o mapa.';
-    emit('history-changed');
+      'Há pedidos desta seleção que já pertencem a outro mapa. Volte à seleção para continuar.';
+    selectionChanged.value = true;
+    emit('orders-mapped', cause.problem.orderIds ?? []);
+  } else if (cause?.code === 'CUT_MAP_STALE') {
+    error.value = 'Um pedido mudou. Atualize a prévia para conferir o mapa.';
   } else {
     error.value = downloading
       ? 'Não foi possível gerar o PDF. Tente novamente.'
@@ -68,7 +67,7 @@ function explain(cause, downloading) {
     return;
   }
   map.value = null;
-  generated.value = false;
+  generatedNumber.value = null;
   fingerprint = '';
 }
 
@@ -82,7 +81,8 @@ async function load() {
   const current = new AbortController();
   controller = current;
   map.value = null;
-  generated.value = false;
+  generatedNumber.value = null;
+  selectionChanged.value = false;
   fingerprint = '';
   error.value = '';
   fieldProblem.value = null;
@@ -119,21 +119,26 @@ async function download() {
   busy.value = true;
   error.value = '';
   try {
-    const { data } = await request('/api/v1/orders/cut-map/pdf', {
+    const { data, headers } = await request('/api/v1/orders/cut-map/pdf', {
       method: 'POST',
-      body: { orders: ids, fingerprint, regenerate: existing.value.length > 0 },
+      body: { orders: ids, fingerprint },
       responseType: 'pdf',
       signal: current.signal,
     });
     if (!current.signal.aborted) {
-      generated.value = true;
+      const number = headers?.get('x-cut-map-number');
+      if (!number || !/^\d+$/u.test(number))
+        throw new Error('PDF_INVALID_RESPONSE');
+      generatedNumber.value = number;
       fingerprint = '';
-      emit('history-changed');
+      emit('orders-mapped', ids);
       downloadPdf(
-        new File([data], 'mapa-de-corte.pdf', { type: 'application/pdf' }),
+        new File([data], `mapa-de-corte-${number}.pdf`, {
+          type: 'application/pdf',
+        }),
       );
       await nextTick();
-      refresh.value?.focus();
+      back.value?.focus();
     }
   } catch (cause) {
     if (!current.signal.aborted) explain(cause, true);
@@ -145,23 +150,26 @@ async function download() {
 function clear() {
   abort();
   map.value = null;
-  generated.value = false;
+  generatedNumber.value = null;
+  selectionChanged.value = false;
   fingerprint = '';
   error.value = '';
   fieldProblem.value = null;
   ids = [];
+  emit('closed');
 }
 
 watch(liveEvent, (event) => {
   if (
     !dialog.value?.open ||
+    generatedNumber.value ||
     (!event?.reset &&
       (event?.type !== 'inbox.order.changed' || !ids.includes(event.orderId)))
   )
     return;
   abort();
   map.value = null;
-  generated.value = false;
+  selectionChanged.value = false;
   fingerprint = '';
   fieldProblem.value = null;
   error.value =
@@ -194,8 +202,8 @@ defineExpose({ open });
     </div>
     <div class="cut-map-body">
       <p v-if="loading" role="status">Carregando mapa de corte…</p>
-      <p v-if="generated" class="cut-map-notice" role="status">
-        Mapa de corte gerado.
+      <p v-if="generatedNumber" class="cut-map-notice" role="status">
+        Mapa de corte {{ generatedNumber }} gerado.
       </p>
       <div v-if="error" class="op-alert" role="alert">
         <p>{{ error }}</p>
@@ -215,20 +223,6 @@ defineExpose({ open });
         </p>
       </div>
       <template v-if="map">
-        <section
-          v-if="existing.length && !generated"
-          class="cut-map-notice cut-map-warning"
-          aria-labelledby="cut-map-warning"
-        >
-          <h3 id="cut-map-warning">Pedidos com mapa de corte já gerado</h3>
-          <p>Confira os pedidos abaixo antes de gerar outro mapa.</p>
-          <ul>
-            <li v-for="order in existing" :key="order.id">
-              <strong>{{ order.number }}</strong> · Última geração em
-              {{ formatDate(order.cutMapGeneratedAt) }}
-            </li>
-          </ul>
-        </section>
         <div class="cut-map-summary">
           <strong
             >{{ number.format(map.total) }}
@@ -277,10 +271,11 @@ defineExpose({ open });
       </template>
     </div>
     <div class="op-dialog-actions">
-      <button type="button" @click="dialog?.close()">Voltar à seleção</button>
+      <button ref="back" type="button" @click="dialog?.close()">
+        Voltar à seleção
+      </button>
       <button
-        v-if="generated || (!map && error && !fieldProblem)"
-        ref="refresh"
+        v-if="!map && error && !fieldProblem && !selectionChanged"
         type="button"
         class="soft"
         @click="load"
@@ -288,20 +283,13 @@ defineExpose({ open });
         Atualizar prévia
       </button>
       <button
-        v-if="map && !generated"
+        v-if="map && !generatedNumber"
         type="button"
         class="primary"
         :aria-disabled="busy || undefined"
-        :aria-describedby="existing.length ? 'cut-map-warning' : undefined"
         @click="download"
       >
-        {{
-          busy
-            ? 'Gerando PDF…'
-            : existing.length
-              ? 'Gerar novamente'
-              : 'Baixar PDF'
-        }}
+        {{ busy ? 'Gerando PDF…' : 'Baixar PDF' }}
       </button>
     </div>
   </dialog>

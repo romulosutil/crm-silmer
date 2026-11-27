@@ -909,42 +909,48 @@ export class PostgresOrderRepository {
   }
 
   /** @param {string[]} ids @param {Queryable} [transaction] */
-  async readCutMapSummaries(ids, transaction = this.#database) {
+  async readCutMapMemberships(ids, transaction = this.#database) {
     const { rows } = await transaction.query(
-      `SELECT target_id, count(*)::integer AS count, max(occurred_at) AS latest
-       FROM crm.audit_events
-       WHERE target_type = 'order' AND action = 'order.cut_map.download'
-         AND target_id = ANY($1::text[])
-       GROUP BY target_id`,
+      `SELECT membership.order_id, membership.order_version, map.number::text, map.generated_at
+       FROM crm.order_cut_map_orders membership
+       JOIN crm.order_cut_maps map ON map.number = membership.map_number
+       WHERE membership.order_id = ANY($1::text[])`,
       [ids],
     );
     return new Map(
       rows.map((row) => [
-        row.target_id,
-        { count: row.count, generatedAt: new Date(row.latest).toISOString() },
+        row.order_id,
+        {
+          number: row.number,
+          generatedAt: new Date(row.generated_at).toISOString(),
+          orderVersion: row.order_version,
+        },
       ]),
     );
   }
 
-  /** @param {string} orderId @param {string|null} before */
-  async readCutMapHistory(orderId, before) {
+  async reserveCutMapNumber() {
     const { rows } = await this.#database.query(
-      `SELECT id, occurred_at, version
-       FROM crm.audit_events
-       WHERE target_type = 'order' AND action = 'order.cut_map.download'
-         AND target_id = $1 AND ($2::text IS NULL OR (occurred_at, id) < (
-           SELECT occurred_at, id FROM crm.audit_events
-           WHERE id = $2 AND target_id = $1
-             AND target_type = 'order' AND action = 'order.cut_map.download'
-         ))
-       ORDER BY occurred_at DESC, id DESC LIMIT 21`,
-      [orderId, before],
+      "SELECT nextval('crm.order_cut_map_number_seq')::text AS number",
     );
-    return rows.map((row) => ({
-      id: row.id,
-      generatedAt: new Date(row.occurred_at).toISOString(),
-      orderVersion: Number(row.version),
-    }));
+    return rows[0].number;
+  }
+
+  /** @param {import('../domain/cut-map.js').CutOrderReference[]} orders @param {string} number @param {Queryable} transaction */
+  async insertCutMap(orders, number, transaction) {
+    await transaction.query(
+      'INSERT INTO crm.order_cut_maps (number) VALUES ($1)',
+      [number],
+    );
+    await transaction.query(
+      `INSERT INTO crm.order_cut_map_orders (order_id, map_number, order_version)
+       SELECT id, $1::bigint, version FROM unnest($2::text[], $3::integer[]) AS item(id, version)`,
+      [
+        number,
+        orders.map(({ id }) => id),
+        orders.map(({ version }) => version),
+      ],
+    );
   }
 
   /** @param {{from:string,to:string,visibilityActorId:string}} input */

@@ -1,18 +1,24 @@
 <script setup>
-import { inject, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import AppIcon from '../AppIcon.vue';
-import { request, ApiError } from '../../lib/api-client.js';
+import { request } from '../../lib/api-client.js';
 import { downloadPdf } from '../../lib/order-pdf.js';
-import { openDialog } from '../../lib/ui.js';
+import { formatDate, openDialog } from '../../lib/ui.js';
 
+const emit = defineEmits(['history-changed']);
 const liveEvent = inject('liveEvent', ref(null));
 const dialog = ref(null);
 const title = ref(null);
+const refresh = ref(null);
 const map = ref(null);
 const error = ref('');
 const fieldProblem = ref(null);
 const loading = ref(false);
 const busy = ref(false);
+const generated = ref(false);
+const existing = computed(
+  () => map.value?.orders.filter((order) => order.cutMapGeneratedAt) ?? [],
+);
 const number = new Intl.NumberFormat('pt-BR');
 const audienceLabel = {
   unissex: 'Unissex',
@@ -49,9 +55,12 @@ function explain(cause, downloading) {
   } else if ([401, 403, 404].includes(cause?.status)) {
     error.value =
       'Um pedido da seleção ficou indisponível. Atualize a seleção.';
-  } else if (cause?.code === 'CUT_MAP_STALE') {
+  } else if (
+    ['CUT_MAP_STALE', 'CUT_MAP_ALREADY_GENERATED'].includes(cause?.code)
+  ) {
     error.value =
-      'Um pedido foi alterado. Atualize a prévia antes de baixar o PDF.';
+      'Um pedido ou o histórico mudou. Atualize a prévia para conferir o mapa.';
+    emit('history-changed');
   } else {
     error.value = downloading
       ? 'Não foi possível gerar o PDF. Tente novamente.'
@@ -59,6 +68,7 @@ function explain(cause, downloading) {
     return;
   }
   map.value = null;
+  generated.value = false;
   fingerprint = '';
 }
 
@@ -72,6 +82,7 @@ async function load() {
   const current = new AbortController();
   controller = current;
   map.value = null;
+  generated.value = false;
   fingerprint = '';
   error.value = '';
   fieldProblem.value = null;
@@ -108,24 +119,22 @@ async function download() {
   busy.value = true;
   error.value = '';
   try {
-    const params = query();
-    params.set('fingerprint', fingerprint);
-    const response = await fetch(`/api/v1/orders/cut-map/pdf?${params}`, {
-      credentials: 'same-origin',
-      headers: { Accept: 'application/pdf' },
+    const { data } = await request('/api/v1/orders/cut-map/pdf', {
+      method: 'POST',
+      body: { orders: ids, fingerprint, regenerate: existing.value.length > 0 },
+      responseType: 'pdf',
       signal: current.signal,
     });
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      throw new ApiError(response.status, body.error ?? {});
-    }
-    if (!response.headers.get('content-type')?.includes('application/pdf'))
-      throw new Error('PDF inválido');
-    const blob = await response.blob();
-    if (!current.signal.aborted)
+    if (!current.signal.aborted) {
+      generated.value = true;
+      fingerprint = '';
+      emit('history-changed');
       downloadPdf(
-        new File([blob], 'mapa-de-corte.pdf', { type: 'application/pdf' }),
+        new File([data], 'mapa-de-corte.pdf', { type: 'application/pdf' }),
       );
+      await nextTick();
+      refresh.value?.focus();
+    }
   } catch (cause) {
     if (!current.signal.aborted) explain(cause, true);
   } finally {
@@ -136,6 +145,7 @@ async function download() {
 function clear() {
   abort();
   map.value = null;
+  generated.value = false;
   fingerprint = '';
   error.value = '';
   fieldProblem.value = null;
@@ -151,6 +161,7 @@ watch(liveEvent, (event) => {
     return;
   abort();
   map.value = null;
+  generated.value = false;
   fingerprint = '';
   fieldProblem.value = null;
   error.value =
@@ -183,6 +194,9 @@ defineExpose({ open });
     </div>
     <div class="cut-map-body">
       <p v-if="loading" role="status">Carregando mapa de corte…</p>
+      <p v-if="generated" class="cut-map-notice" role="status">
+        Mapa de corte gerado.
+      </p>
       <div v-if="error" class="op-alert" role="alert">
         <p>{{ error }}</p>
         <p v-if="fieldProblem?.orderId">
@@ -201,6 +215,20 @@ defineExpose({ open });
         </p>
       </div>
       <template v-if="map">
+        <section
+          v-if="existing.length && !generated"
+          class="cut-map-notice cut-map-warning"
+          aria-labelledby="cut-map-warning"
+        >
+          <h3 id="cut-map-warning">Pedidos com mapa de corte já gerado</h3>
+          <p>Confira os pedidos abaixo antes de gerar outro mapa.</p>
+          <ul>
+            <li v-for="order in existing" :key="order.id">
+              <strong>{{ order.number }}</strong> · Última geração em
+              {{ formatDate(order.cutMapGeneratedAt) }}
+            </li>
+          </ul>
+        </section>
         <div class="cut-map-summary">
           <strong
             >{{ number.format(map.total) }}
@@ -251,7 +279,8 @@ defineExpose({ open });
     <div class="op-dialog-actions">
       <button type="button" @click="dialog?.close()">Voltar à seleção</button>
       <button
-        v-if="!map && error && !fieldProblem"
+        v-if="generated || (!map && error && !fieldProblem)"
+        ref="refresh"
         type="button"
         class="soft"
         @click="load"
@@ -259,13 +288,20 @@ defineExpose({ open });
         Atualizar prévia
       </button>
       <button
-        v-if="map"
+        v-if="map && !generated"
         type="button"
         class="primary"
         :aria-disabled="busy || undefined"
+        :aria-describedby="existing.length ? 'cut-map-warning' : undefined"
         @click="download"
       >
-        {{ busy ? 'Gerando PDF…' : 'Baixar PDF' }}
+        {{
+          busy
+            ? 'Gerando PDF…'
+            : existing.length
+              ? 'Gerar novamente'
+              : 'Baixar PDF'
+        }}
       </button>
     </div>
   </dialog>

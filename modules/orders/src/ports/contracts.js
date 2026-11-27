@@ -169,7 +169,7 @@ import { ORDER_ORIGINS } from '../domain/store-order.js';
  *   saveProductionStage?(order: Order, options: OrderWriteOptions): Promise<Order>,
  *   createPending(input: CreatePendingOrderInput): Promise<Order>,
  *   findById(orderId: string, reader?: {visibilityActorId?: string|null}): Promise<Order|null>,
- *   findCutOrders?(ids: string[], actor: {id:string, capabilities?:readonly string[]}): Promise<Order[]>,
+ *   findCutOrders?(ids: string[], actor: {id:string, capabilities?:readonly string[]}, transaction?: {query: (sql: string, values?: unknown[]) => Promise<{rows: any[]}>}): Promise<Order[]>,
  *   findPendingByConversation(conversationId: string): Promise<Order|null>,
  *   bindSubject?(order: Order, subjectId: string): Promise<Order>,
  *   listByConversation(conversationId: string): Promise<Order[]>,

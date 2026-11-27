@@ -646,14 +646,14 @@ export function createOrderService(options) {
       }
       return readOne(order);
     },
-    /** @param {string[]} ids @param {OrderActor} actor */
-    async cutMap(ids, actor) {
+    /** @param {string[]} ids @param {OrderActor} actor @param {any} [transaction] */
+    async cutMap(ids, actor, transaction) {
       if (actor?.kind !== 'human' || !actor.id) throw new OrderForbiddenError();
       const unique = [...new Set(ids)];
       if (!unique.length || unique.length > 50)
         throw new OrderInputError('Invalid selection');
       const orders = repository.findCutOrders
-        ? await repository.findCutOrders(unique, actor)
+        ? await repository.findCutOrders(unique, actor, transaction)
         : [];
       if (!repository.findCutOrders) {
         for (const id of unique) {

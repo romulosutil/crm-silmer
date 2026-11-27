@@ -8,7 +8,12 @@ Mudanças de etapa incrementam a versão operacional e publicam evento no
 stream do pedido, com a mesma transação de autorização e idempotência das
 declarações de datas. O mapa usa o renderer Chromium atual com HTML escapado,
 fontes embutidas e nenhum recurso externo. A API recalcula a projeção e
-compara o fingerprint antes e depois de renderizar, depois audita o download.
+compara o fingerprint antes e depois de renderizar. A
+[ADR 101](docs/adr/101-historico-do-mapa-de-corte.md) usa os eventos de auditoria
+como histórico consultável por pedido. O POST do PDF com CSRF exige confirmação
+quando a seleção já tem histórico. A migration expand `0087` indexa a consulta.
+A gravação serializa pedidos sobrepostos e revalida as versões, o acesso e o
+histórico dentro da transação.
 
 ## Link de pagamento do CRM — LPC (23/11/2026)
 

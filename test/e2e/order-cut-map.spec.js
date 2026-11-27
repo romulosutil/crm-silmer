@@ -37,42 +37,76 @@ test('CAR-02: a legacy production step requires explicit confirmation and advanc
   ]);
 });
 
-test('CAR-04/06: selections preview and download all audiences on a phone', async ({
+test('CAR-04/06/08: preview, generate, and consult or regenerate a cut map on a phone', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await mockOrders(page, {
-    orders: ['arte', 'producao'].map((stage, index) => ({
-      ...confirmedOrder,
-      productionStage: stage,
-      productionEditable: true,
-      cutMapAvailable: true,
-      id: `order-cut-${index}`,
-      number: `${index + 6}-CRM`,
-      deliveredOn: null,
-    })),
-  });
-  const url = /\/api\/v1\/orders\/cut-map(\/pdf)?\?/u;
+  let generations = 0;
+  const generatedAt = '2026-11-27T14:00:00.000Z';
+  const orders = ['arte', 'producao'].map((stage, index) => ({
+    ...confirmedOrder,
+    productionStage: stage,
+    productionEditable: true,
+    cutMapAvailable: true,
+    id: `order-cut-${index}`,
+    number: `${index + 6}-CRM`,
+    deliveredOn: null,
+  }));
+  await mockOrders(page, { orders });
+  await page.route(/\/api\/v1\/orders(\?|$)/u, (route) =>
+    route.fulfill({
+      json: {
+        counts: { confirmado: 2, pendente: 0 },
+        items: orders.map((order) => ({
+          ...order,
+          cutMapGeneratedAt: generations ? generatedAt : null,
+        })),
+        nextCursor: null,
+      },
+    }),
+  );
+  await page.route('**/api/v1/orders/order-cut-0/cut-map-history', (route) =>
+    route.fulfill({
+      json: {
+        items: Array.from({ length: generations }, (_, index) => ({
+          id: `history-${index}`,
+          generatedAt,
+          orderVersion: 4,
+        })),
+        nextCursor: null,
+      },
+    }),
+  );
+  const url = /\/api\/v1\/orders\/cut-map(\/pdf$|\?)/u;
   await page.route(url, async (route) => {
     const request = new URL(route.request().url());
-    expect(request.searchParams.get('orders')?.split(',').sort()).toEqual([
-      'order-cut-0',
-      'order-cut-1',
-    ]);
     if (request.pathname.endsWith('/pdf')) {
-      expect(request.searchParams.get('fingerprint')).toBe('synthetic-preview');
+      expect(route.request().method()).toBe('POST');
+      const selection = route.request().postDataJSON();
+      expect(selection.orders.sort()).toEqual(['order-cut-0', 'order-cut-1']);
+      expect(selection.fingerprint).toBe('synthetic-preview');
+      expect(selection.regenerate).toBe(generations > 0);
+      generations += 1;
       await route.fulfill({
         contentType: 'application/pdf',
         body: '%PDF-1.4\n% synthetic cut map\n',
       });
       return;
     }
+    expect(request.searchParams.get('orders')?.split(',').sort()).toEqual([
+      'order-cut-0',
+      'order-cut-1',
+    ]);
     await route.fulfill({
       json: {
         fingerprint: 'synthetic-preview',
         map: {
           total: 42,
-          orders: [{ number: '6-CRM' }, { number: '7-CRM' }],
+          orders: orders.map(({ id, number }) => ({
+            id,
+            number,
+            cutMapGeneratedAt: generations ? generatedAt : null,
+          })),
           groups: ['unissex', 'masculino', 'feminino', 'infantil'].map(
             (audience, index) => ({
               audience,
@@ -111,9 +145,34 @@ test('CAR-04/06: selections preview and download all audiences on a phone', asyn
   const download = page.waitForEvent('download');
   await preview.getByRole('button', { name: 'Baixar PDF' }).click();
   expect((await download).suggestedFilename()).toBe('mapa-de-corte.pdf');
+  await expect(preview.getByRole('status')).toHaveText('Mapa de corte gerado.');
   await page.keyboard.press('Escape');
   await expect(review).toBeFocused();
   await expect(
     page.getByRole('checkbox', { name: 'Selecionar pedido 6-CRM' }),
   ).toBeChecked();
+  const badge = page.getByRole('button', {
+    name: 'Mapa de corte gerado · Histórico do pedido 6-CRM',
+  });
+  await expect(badge).toBeVisible();
+  await badge.press('Enter');
+  const history = page.getByRole('dialog', {
+    name: 'Histórico de mapas de corte',
+  });
+  await expect(history.getByRole('listitem')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await expect(badge).toBeFocused();
+
+  await review.press('Enter');
+  const warning = preview.getByRole('region', {
+    name: 'Pedidos com mapa de corte já gerado',
+  });
+  await expect(warning.getByRole('listitem')).toHaveCount(2);
+  const another = page.waitForEvent('download');
+  await preview.getByRole('button', { name: 'Gerar novamente' }).press('Enter');
+  await another;
+  await page.reload();
+  await expect(badge).toBeVisible();
+  await badge.press('Enter');
+  await expect(history.getByRole('listitem')).toHaveCount(2);
 });

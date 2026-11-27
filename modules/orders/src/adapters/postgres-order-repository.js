@@ -873,12 +873,15 @@ export class PostgresOrderRepository {
     return result.rows[0] ? this.#map(result.rows[0]) : null;
   }
 
-  /** @param {string[]} ids @param {{id:string, capabilities?:readonly string[]}} actor */
-  async findCutOrders(ids, actor) {
-    const { rows } = await this.#database.query(
+  /** @param {string[]} ids @param {{id:string, capabilities?:readonly string[]}} actor @param {Queryable} [transaction] */
+  async findCutOrders(ids, actor, transaction = this.#database) {
+    const { rows } = await transaction.query(
       `SELECT ${ORDER_COLUMNS} FROM crm.orders
        WHERE id = ANY($1::text[]) AND ${orderReadable('orders', '$2')}
-         AND ($3::boolean OR manual_owner_id = $2 OR EXISTS (
+         AND (($3::boolean AND EXISTS (
+           SELECT 1 FROM crm.user_capabilities
+           WHERE user_id = $2 AND capability = 'COMMERCIAL_ADMIN'
+         )) OR manual_owner_id = $2 OR EXISTS (
            SELECT 1 FROM crm.conversations WHERE id = orders.conversation_id AND assigned_user_id = $2
          ))`,
       [
@@ -888,6 +891,60 @@ export class PostgresOrderRepository {
       ],
     );
     return rows.map((row) => this.#map(row));
+  }
+
+  /** @param {string[]} ids @param {Queryable} transaction */
+  async lockCutMapOrders(ids, transaction) {
+    // Follow order writes and transfers: conversation first, then order.
+    await transaction.query(
+      `SELECT id FROM crm.conversations WHERE id IN (
+         SELECT conversation_id FROM crm.orders WHERE id = ANY($1::text[])
+       ) ORDER BY id FOR SHARE`,
+      [ids],
+    );
+    await transaction.query(
+      'SELECT id FROM crm.orders WHERE id = ANY($1::text[]) ORDER BY id FOR UPDATE',
+      [ids],
+    );
+  }
+
+  /** @param {string[]} ids @param {Queryable} [transaction] */
+  async readCutMapSummaries(ids, transaction = this.#database) {
+    const { rows } = await transaction.query(
+      `SELECT target_id, count(*)::integer AS count, max(occurred_at) AS latest
+       FROM crm.audit_events
+       WHERE target_type = 'order' AND action = 'order.cut_map.download'
+         AND target_id = ANY($1::text[])
+       GROUP BY target_id`,
+      [ids],
+    );
+    return new Map(
+      rows.map((row) => [
+        row.target_id,
+        { count: row.count, generatedAt: new Date(row.latest).toISOString() },
+      ]),
+    );
+  }
+
+  /** @param {string} orderId @param {string|null} before */
+  async readCutMapHistory(orderId, before) {
+    const { rows } = await this.#database.query(
+      `SELECT id, occurred_at, version
+       FROM crm.audit_events
+       WHERE target_type = 'order' AND action = 'order.cut_map.download'
+         AND target_id = $1 AND ($2::text IS NULL OR (occurred_at, id) < (
+           SELECT occurred_at, id FROM crm.audit_events
+           WHERE id = $2 AND target_id = $1
+             AND target_type = 'order' AND action = 'order.cut_map.download'
+         ))
+       ORDER BY occurred_at DESC, id DESC LIMIT 21`,
+      [orderId, before],
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      generatedAt: new Date(row.occurred_at).toISOString(),
+      orderVersion: Number(row.version),
+    }));
   }
 
   /** @param {{from:string,to:string,visibilityActorId:string}} input */

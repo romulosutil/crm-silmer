@@ -1800,7 +1800,7 @@ if (connectionString) {
     assert.equal(await storage.getObject(second.file.objectKey), null);
   });
 
-  test('CAR-02/04 and manual delivery: PostgreSQL persists production, fences cut selection and permits one concurrent delivery', async () => {
+  test('CAR-02/04/08 and manual delivery: PostgreSQL persists production and cut history and fences concurrent writes', async () => {
     const conversationId = await seedConversation(pool, {
       channel: 'whatsapp',
     });
@@ -1872,6 +1872,58 @@ if (connectionString) {
         .length,
       0,
     );
+    const runtime = createOrderApiRuntime(databaseFor(pool), {
+      access: {
+        authorizeRead: async () => ({ actor }),
+        authorizeWrite: async () => ({ actor }),
+      },
+      environment: {
+        FAB_CODE: '01',
+        N8N_INTEGRATION_ENVELOPE_KEY: ENVELOPE_KEY.toString('base64'),
+        CONTACT_IDENTITY_ENVELOPE_KEY: CONTACT_KEY.toString('base64'),
+        CONTACT_IDENTITY_LOOKUP_KEY: Buffer.alloc(32, 63).toString('base64'),
+        IDEMPOTENCY_ENVELOPE_KEY: Buffer.alloc(32, 66).toString('base64'),
+      },
+    });
+    const map = await runtime.getCutMap([order.id], actor);
+    assert.equal(map.orders[0].cutMapGeneratedAt, null);
+    const generations = await Promise.allSettled([
+      runtime.recordCutMapDownload(map, actor, 'cut-first-a'),
+      runtime.recordCutMapDownload(map, actor, 'cut-first-b'),
+    ]);
+    assert.equal(
+      generations.filter((result) => result.status === 'fulfilled').length,
+      1,
+    );
+    assert.equal(
+      generations.find((result) => result.status === 'rejected')?.reason.code,
+      'CUT_MAP_STALE',
+    );
+    const reopenedMap = await runtime.getCutMap([order.id], actor);
+    assert.equal(reopenedMap.orders[0].cutMapGenerationCount, 1);
+    await runtime.recordCutMapDownload(reopenedMap, actor, 'cut-again');
+    const history = await runtime.getCutMapHistory(order.id, actor, null);
+    assert.equal(history.items.length, 2);
+    assert.notEqual(history.items[0].id, history.items[1].id);
+    assert.equal(history.items[0].orderVersion, order.version);
+    assert.equal(
+      (await runtime.get(order.id, actor)).order.cutMapGeneratedAt,
+      history.items[0].generatedAt,
+    );
+    const page = await runtime.getCutMapHistory(
+      order.id,
+      actor,
+      history.items[0].id,
+    );
+    assert.deepEqual(page.items, [history.items[1]]);
+    await assert.rejects(
+      runtime.getCutMapHistory(
+        order.id,
+        { ...actor, id: 'other-seller' },
+        null,
+      ),
+      (error) => [403, 404].includes(/** @type {any} */ (error).statusCode),
+    );
     const frozen = order.commercialRevision;
     for (const stage of /** @type {const} */ (['producao', 'pronto'])) {
       order = await service.setProductionStage({
@@ -1919,6 +1971,10 @@ if (connectionString) {
     assert.equal(delivered.deliveredOn, '2026-10-21');
     assert.equal(delivered.paidOn, '2026-10-20');
     assert.equal(delivered.version, order.version + 1);
+    assert.deepEqual(
+      await runtime.getCutMapHistory(order.id, actor, null),
+      history,
+    );
     assert.ok(
       !(await service.deliveryTasks({ actor })).some(
         (item) => item.id === order.id,

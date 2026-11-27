@@ -105,7 +105,7 @@ test('CAR-05: missing audience, a partial grade and non-cut stages block the ent
   }
 });
 
-test('CAR-06/09: PDF and membership share a number, and completed orders cannot enter another map', async (t) => {
+test('CAR-06/09/10: numbered maps return the original PDF and prevent repeated assignments', async (t) => {
   const api = Fastify();
   t.after(() => api.close());
   const selected = [
@@ -120,6 +120,7 @@ test('CAR-06/09: PDF and membership share a number, and completed orders cannot 
   let revokeDuringRender = false;
   let failRender = false;
   const history = new Map();
+  const issued = new Map();
   let reserved = 0;
   const authorize = async () => {
     if (blocked)
@@ -154,14 +155,24 @@ test('CAR-06/09: PDF and membership share a number, and completed orders cannot 
         return projectCutMap(selected.filter(({ id }) => ids.includes(id)));
       },
       reserveCutMapNumber: async () => String(++reserved),
+      getIssuedCutMap: async (/** @type {string} */ number) =>
+        issued.get(number),
       recordCutMapDownload: async (
         /** @type {ReturnType<typeof projectCutMap>} */ map,
         /** @type {{ id: string }} */ _actor,
         /** @type {string} */ _correlationId,
         /** @type {string} */ number,
+        /** @type {Buffer} */ pdf,
       ) => {
         audit += 1;
         for (const { id } of map.orders) history.set(id, number);
+        issued.set(number, {
+          number,
+          orders: map.orders.map((order) => order.number),
+          generatedAt: '2026-11-27T12:30:00.000Z',
+          pdfAvailable: true,
+          pdf,
+        });
       },
     },
     () => ({ correlationId: 'synthetic-cut-map' }),
@@ -236,6 +247,33 @@ test('CAR-06/09: PDF and membership share a number, and completed orders cannot 
   assert.equal(history.get('item-6'), '3');
   assert.equal(history.get('item-9'), '3');
   assert.equal(audit, 1);
+  const detailUrl = '/api/v1/orders/cut-map/3';
+  const detail = await api.inject(detailUrl);
+  assert.deepEqual(detail.json().map, {
+    number: '3',
+    orders: ['6-CRM', '9-CRM'],
+    generatedAt: '2026-11-27T12:30:00.000Z',
+    pdfAvailable: true,
+  });
+  const reprint = await api.inject(`${detailUrl}/pdf`);
+  assert.equal(reprint.statusCode, 200);
+  assert.deepEqual(reprint.rawPayload, response.rawPayload);
+  assert.equal(
+    reprint.headers['content-disposition'],
+    response.headers['content-disposition'],
+  );
+  assert.equal(reprint.headers['cache-control'], 'private, no-store');
+  assert.equal(render, 3);
+  assert.equal(audit, 1);
+  assert.equal(
+    (await api.inject('/api/v1/orders/cut-map/999/pdf')).json().error.code,
+    'CUT_MAP_NOT_FOUND',
+  );
+  issued.set('1', { number: '1', pdfAvailable: false, pdf: null });
+  assert.equal(
+    (await api.inject('/api/v1/orders/cut-map/1/pdf')).json().error.code,
+    'CUT_MAP_PDF_UNAVAILABLE',
+  );
   assert.deepEqual((await generate(fingerprint)).json().error, {
     code: 'CUT_MAP_ALREADY_GENERATED',
     orderIds: ['item-6', 'item-9'],

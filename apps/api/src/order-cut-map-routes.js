@@ -4,6 +4,7 @@ import { renderCutMapHtml } from '@crm-silmer/orders';
 
 const root = '/api/v1/orders';
 const identifier = /^[A-Za-z0-9_-]{1,128}$/u;
+const MAX_PDF_BYTES = 5 * 1024 * 1024;
 
 /** @param {unknown} value */
 function validSelection(value) {
@@ -52,6 +53,18 @@ export function registerOrderCutMapRoutes(
   /** @param {import('fastify').FastifyReply} reply @param {number} status @param {string} code */
   const reject = (reply, status, code) =>
     reply.code(status).send({ error: { code } });
+
+  /** @param {import('fastify').FastifyReply} reply @param {string} number @param {Buffer} pdf */
+  const sendPdf = (reply, number, pdf) =>
+    reply
+      .header(
+        'content-disposition',
+        `attachment; filename="mapa-de-corte-${number}.pdf"`,
+      )
+      .header('x-cut-map-number', number)
+      .header('content-security-policy', "default-src 'none'; sandbox")
+      .type('application/pdf')
+      .send(pdf);
 
   /** @param {(request:import('fastify').FastifyRequest,reply:import('fastify').FastifyReply)=>Promise<any>} handler */
   const respond =
@@ -124,6 +137,32 @@ export function registerOrderCutMapRoutes(
       }),
     );
 
+    for (const includePdf of [false, true]) {
+      scope.get(
+        `${root}/cut-map/:number${includePdf ? '/pdf' : ''}`,
+        { config: readLimit, exposeHeadRoute: false },
+        respond(async (request, reply) => {
+          const { number } = /** @type {{number: string}} */ (request.params);
+          if (
+            !/^[1-9][0-9]{0,18}$/u.test(number) ||
+            BigInt(number) > 9223372036854775807n
+          )
+            return reject(reply, 404, 'CUT_MAP_NOT_FOUND');
+          const { actor } = await authorize(request);
+          const issued = await orders.getIssuedCutMap(
+            number,
+            actor,
+            includePdf,
+          );
+          if (!issued) return reject(reply, 404, 'CUT_MAP_NOT_FOUND');
+          const { pdf, ...map } = issued;
+          if (!includePdf) return reply.send({ map });
+          if (!pdf) return reject(reply, 404, 'CUT_MAP_PDF_UNAVAILABLE');
+          return sendPdf(reply, number, pdf);
+        }),
+      );
+    }
+
     scope.post(
       `${root}/cut-map/pdf`,
       { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
@@ -146,6 +185,8 @@ export function registerOrderCutMapRoutes(
           return reject(reply, 409, 'CUT_MAP_STALE');
         const number = await orders.reserveCutMapNumber();
         const bytes = await pdfRenderer(renderCutMapHtml(map, number));
+        if (bytes.length > MAX_PDF_BYTES)
+          return reject(reply, 422, 'CUT_MAP_PDF_TOO_LARGE');
         const fresh = await authorize(request, true);
         const current = await orders.getCutMap(ids, fresh.actor);
         if (fingerprint(current, fresh.actor.id) !== proof)
@@ -155,17 +196,10 @@ export function registerOrderCutMapRoutes(
           fresh.actor,
           contextFor(request).correlationId,
           number,
+          bytes,
         );
 
-        return reply
-          .header(
-            'content-disposition',
-            `attachment; filename="mapa-de-corte-${number}.pdf"`,
-          )
-          .header('x-cut-map-number', number)
-          .header('content-security-policy', "default-src 'none'; sandbox")
-          .type('application/pdf')
-          .send(bytes);
+        return sendPdf(reply, number, bytes);
       }),
     );
   });

@@ -3656,7 +3656,45 @@ paths:
         '404': { description: Pedido inexistente ou fora do escopo do solicitante }
         '409':
           description: Prévia desatualizada, pedido fora da fila ou pedido já incluído em um mapa. CUT_MAP_ALREADY_GENERATED inclui orderIds da seleção que já têm mapa.
+        '422': { description: Item incompleto ou PDF com mais de 5 MiB }
         '503': { description: Renderização indisponível }
+  /orders/cut-map/{number}:
+    get:
+      tags: [Orders]
+      summary: Consulta a composição de um mapa emitido (CAR-10)
+      parameters:
+        - { name: number, in: path, required: true, schema: { type: string, pattern: '^[1-9][0-9]*$' } }
+      responses:
+        '200':
+          description: Número, data de emissão, pedidos incluídos e disponibilidade do PDF original
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [map]
+                properties:
+                  map:
+                    type: object
+                    required: [number, generatedAt, orders, pdfAvailable]
+                    properties:
+                      number: { type: string }
+                      generatedAt: { type: string, format: date-time }
+                      orders: { type: array, items: { type: string } }
+                      pdfAvailable: { type: boolean }
+        '404': { description: Mapa inexistente ou com algum pedido fora do escopo do solicitante }
+  /orders/cut-map/{number}/pdf:
+    get:
+      tags: [Orders]
+      summary: Baixa o PDF emitido originalmente (CAR-10)
+      parameters:
+        - { name: number, in: path, required: true, schema: { type: string, pattern: '^[1-9][0-9]*$' } }
+      responses:
+        '200':
+          description: Arquivo original, sem novo registro de emissão
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '404': { description: Mapa inexistente, fora do escopo ou sem o PDF original armazenado }
   /orders/{orderId}/production-stage:
     post:
       tags: [Orders]

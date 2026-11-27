@@ -117,6 +117,8 @@ export function createOrderRuntime(options) {
   let nextCutMapNumber = 0;
   /** @type {Map<string, {number: string, generatedAt: string, orderVersion: number}>} */
   const memoryCutMaps = new Map();
+  /** @type {Map<string, {generatedAt: string, orders: {id:string, number:string}[], pdf: Buffer}>} */
+  const memoryIssuedCutMaps = new Map();
 
   /** @param {string[]} ids @param {any} [transaction] */
   async function readCutMapMemberships(ids, transaction) {
@@ -663,8 +665,34 @@ export function createOrderRuntime(options) {
       nextCutMapNumber += 1;
       return String(nextCutMapNumber);
     },
-    /** @param {Awaited<ReturnType<typeof getCutMap>>} map @param {OrderActor} actor @param {string} correlationId @param {string} number */
-    async recordCutMapDownload(map, actor, correlationId, number) {
+    /** @param {string} number @param {OrderActor} actor @param {boolean} includePdf */
+    async getIssuedCutMap(number, actor, includePdf) {
+      if (actor?.kind !== 'human' || !actor.id) throw new OrderForbiddenError();
+      if (options.repository.readIssuedCutMap)
+        return options.repository.readIssuedCutMap(number, actor, includePdf);
+      const saved = memoryIssuedCutMaps.get(number);
+      if (!saved) return null;
+      try {
+        for (const { id } of saved.orders)
+          await service.getForReceipt(id, actor);
+      } catch (error) {
+        if (
+          error instanceof OrderForbiddenError ||
+          error instanceof OrderNotFoundError
+        )
+          return null;
+        throw error;
+      }
+      return {
+        number,
+        generatedAt: saved.generatedAt,
+        orders: saved.orders.map((order) => order.number),
+        pdfAvailable: true,
+        pdf: includePdf ? saved.pdf : null,
+      };
+    },
+    /** @param {Awaited<ReturnType<typeof getCutMap>>} map @param {OrderActor} actor @param {string} correlationId @param {string} number @param {Buffer} pdf */
+    async recordCutMapDownload(map, actor, correlationId, number, pdf) {
       /** @param {any} [transaction] */
       const append = async (transaction) => {
         const ids = map.orders.map(({ id }) => id);
@@ -677,6 +705,7 @@ export function createOrderRuntime(options) {
           await options.repository.insertCutMap(
             map.orders,
             number,
+            pdf,
             transaction,
           );
         for (const order of map.orders) {
@@ -694,6 +723,11 @@ export function createOrderRuntime(options) {
         }
         if (!transaction) {
           const generatedAt = (options.clock?.() ?? new Date()).toISOString();
+          memoryIssuedCutMaps.set(number, {
+            generatedAt,
+            orders: map.orders,
+            pdf,
+          });
           for (const { id, version } of map.orders)
             memoryCutMaps.set(id, {
               number,

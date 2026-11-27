@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 import { confirmedOrder, mockOrders } from './support/orders-mock.js';
 
 test('CAR-02: a legacy production step requires explicit confirmation and advances', async ({
@@ -67,6 +68,32 @@ test('CAR-04/06/09: numbered maps can be consulted and their orders cannot be se
       },
     }),
   );
+  const pdfBody = '%PDF-1.4\n% synthetic cut map\n';
+  await page.route(
+    /\/api\/v1\/orders\/cut-map\/[12](\/pdf)?$/u,
+    async (route) => {
+      const parts = new URL(route.request().url()).pathname.split('/');
+      const number = parts[5];
+      const included = orders.filter(
+        ({ id }) => memberships.get(id)?.number === number,
+      );
+      expect(route.request().method()).toBe('GET');
+      if (parts.at(-1) === 'pdf') {
+        await route.fulfill({ contentType: 'application/pdf', body: pdfBody });
+        return;
+      }
+      await route.fulfill({
+        json: {
+          map: {
+            number,
+            generatedAt,
+            orders: included.map((order) => order.number),
+            pdfAvailable: true,
+          },
+        },
+      });
+    },
+  );
   const url = /\/api\/v1\/orders\/cut-map(\/pdf$|\?)/u;
   await page.route(url, async (route) => {
     const request = new URL(route.request().url());
@@ -86,7 +113,7 @@ test('CAR-04/06/09: numbered maps can be consulted and their orders cannot be se
       await route.fulfill({
         contentType: 'application/pdf',
         headers: { 'x-cut-map-number': number },
-        body: '%PDF-1.4\n% synthetic cut map\n',
+        body: pdfBody,
       });
       return;
     }
@@ -118,7 +145,7 @@ test('CAR-04/06/09: numbered maps can be consulted and their orders cannot be se
     });
   });
   await page.goto('/pedidos');
-  await page.getByRole('button', { name: 'Mapa de corte' }).press('Enter');
+  await page.getByRole('button', { name: 'Novo mapa de corte' }).press('Enter');
   await expect(
     page.getByRole('heading', { name: 'Selecione os pedidos para o corte' }),
   ).toBeFocused();
@@ -137,8 +164,11 @@ test('CAR-04/06/09: numbered maps can be consulted and their orders cannot be se
     await expect(preview.getByText(audience, { exact: true })).toHaveCount(1);
   }
   const download = page.waitForEvent('download');
-  await preview.getByRole('button', { name: 'Baixar PDF' }).click();
-  expect((await download).suggestedFilename()).toBe('mapa-de-corte-1.pdf');
+  await preview
+    .getByRole('button', { name: 'Gerar mapa e baixar PDF' })
+    .click();
+  const firstPdf = await download;
+  expect(firstPdf.suggestedFilename()).toBe('mapa-de-corte-1.pdf');
   await expect(preview.getByRole('status')).toHaveText(
     'Mapa de corte 1 gerado.',
   );
@@ -159,6 +189,17 @@ test('CAR-04/06/09: numbered maps can be consulted and their orders cannot be se
   await expect(
     membership.getByText('Pedido 6-CRM', { exact: true }),
   ).toBeVisible();
+  await expect(
+    membership.getByText('Pedido 7-CRM', { exact: true }),
+  ).toBeVisible();
+  const redownload = page.waitForEvent('download');
+  await membership.getByRole('button', { name: 'Baixar PDF' }).press('Enter');
+  const reissued = await redownload;
+  expect(reissued.suggestedFilename()).toBe(firstPdf.suggestedFilename());
+  expect(await readFile(await reissued.path())).toEqual(
+    await readFile(await firstPdf.path()),
+  );
+  expect(generations).toBe(1);
   await page.keyboard.press('Escape');
   await expect(badge).toBeFocused();
 
@@ -167,7 +208,9 @@ test('CAR-04/06/09: numbered maps can be consulted and their orders cannot be se
     .press('Space');
   await review.press('Enter');
   const another = page.waitForEvent('download');
-  await preview.getByRole('button', { name: 'Baixar PDF' }).press('Enter');
+  await preview
+    .getByRole('button', { name: 'Gerar mapa e baixar PDF' })
+    .press('Enter');
   expect((await another).suggestedFilename()).toBe('mapa-de-corte-2.pdf');
   await page.reload();
   await expect(badge).toBeVisible();

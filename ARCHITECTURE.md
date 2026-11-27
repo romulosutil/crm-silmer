@@ -3,6 +3,8 @@
 O Mapa de corte tem número compartilhado entre o PDF e a carteira. Um vínculo
 único por pedido preserva a geração registrada e garante que o pedido saia da
 seleção. [ADR 102](docs/adr/102-mapas-de-corte-numerados.md)
+O PDF original é guardado cifrado na emissão e recuperado com a autorização
+atual de todos os pedidos do mapa. [ADR 103](docs/adr/103-pdf-original-do-mapa-de-corte.md)
 
 ## Acesso à linha pessoal na liberação de 20/11/2026
 

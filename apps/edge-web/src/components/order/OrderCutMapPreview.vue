@@ -60,6 +60,10 @@ function explain(cause, downloading) {
     emit('orders-mapped', cause.problem.orderIds ?? []);
   } else if (cause?.code === 'CUT_MAP_STALE') {
     error.value = 'Um pedido mudou. Atualize a prévia para conferir o mapa.';
+  } else if (cause?.code === 'CUT_MAP_PDF_TOO_LARGE') {
+    error.value =
+      'O PDF excede o limite de 5 MB. Volte à seleção e escolha menos pedidos.';
+    selectionChanged.value = true;
   } else {
     error.value = downloading
       ? 'Não foi possível gerar o PDF. Tente novamente.'
@@ -289,7 +293,7 @@ defineExpose({ open });
         :aria-disabled="busy || undefined"
         @click="download"
       >
-        {{ busy ? 'Gerando PDF…' : 'Baixar PDF' }}
+        {{ busy ? 'Gerando PDF…' : 'Gerar mapa e baixar PDF' }}
       </button>
     </div>
   </dialog>

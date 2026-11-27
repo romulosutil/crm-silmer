@@ -123,7 +123,7 @@ const metrics = computed(() => {
         aria-controls="cut-selection"
         @click="$emit('cut', $event)"
       >
-        <AppIcon name="scissors" /> Mapa de corte
+        <AppIcon name="scissors" /> Novo mapa de corte
       </button>
     </header>
     <div

@@ -230,6 +230,8 @@ batem com a ficha impressa, para garantir que o que imprimo está certo.
     As cores SHALL compartilhar a lista pesquisável. Os sete campos SHALL
     permitir adicionar uma opção disponível para pedidos seguintes, com
     deduplicação pela API. A seleção preserva a colagem de grade (EDIT-06).
+    A consulta de pedidos antigos SHALL exibir os nomes padronizados das malhas
+    reconhecidas pelo catálogo e preservar a grafia gravada na ficha.
 
 **Teste independente:** editar a grade de um item e ver o total do item, do
 pedido e da lista de Pedidos atualizados.

@@ -95,6 +95,42 @@ test('PFI-14 reuses an explicitly added color in the next order and preserves th
   ).toHaveCount(0);
 });
 
+test('PFI-14 displays canonical fabrics on a historical confirmed order without writing the ficha', async ({
+  page,
+}) => {
+  const { ficha } = ownConfirmedOrder;
+  const legacyOrder = {
+    ...ownConfirmedOrder,
+    ficha: {
+      ...ficha,
+      items: [
+        {
+          ...ficha.items[0],
+          malhas: ['ALLSTAR CORRIDA', '100% POLIÉSTER', 'Malha especial'],
+        },
+      ],
+    },
+  };
+  let writes = 0;
+  await mockOrders(page, {
+    orders: [legacyOrder],
+    itemOptions: true,
+    onWrite: () => {
+      writes += 1;
+    },
+  });
+  await page.goto(`/pedidos/${legacyOrder.id}#itens`);
+
+  const items = page.getByRole('region', { name: ITEMS });
+  await expect(items).toHaveAttribute('data-items-state', 'read');
+  const fabric = items
+    .locator('dl.op-points > div')
+    .filter({ has: page.getByText('Modelo de malha', { exact: true }) })
+    .locator('dd');
+  await expect(fabric).toHaveText('All Star / Poliéster / Malha especial');
+  expect(writes).toBe(0);
+});
+
 /**
  * The section writes the page sent, in order, as `{section, ...body}`.
  *

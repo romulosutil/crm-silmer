@@ -320,18 +320,17 @@ const blocked = computed(
 );
 const editable = computed(() => canWrite.value && !blocked.value);
 watch(
-  [() => props.order.id, canWrite],
-  async ([, enabled], _, onCleanup) => {
+  () => props.order.id,
+  async (_, __, onCleanup) => {
     catalog.value = null;
-    catalogLoading.value = enabled;
-    if (!enabled) return;
+    catalogLoading.value = true;
     const controller = new AbortController();
     onCleanup(() => controller.abort());
     try {
       const result = await fetchOrderItemOptions(controller.signal);
       if (!controller.signal.aborted) catalog.value = result;
     } catch {
-      // The previous editor remains available during an API/edge rollout.
+      // The ficha remains readable and editable if the catalog is unavailable.
     } finally {
       if (!controller.signal.aborted) catalogLoading.value = false;
     }
@@ -2613,7 +2612,13 @@ watch(
             </div>
             <div>
               <dt>Modelo de malha</dt>
-              <dd>{{ (card.item.malhas ?? []).join(' / ') || '—' }}</dd>
+              <dd>
+                {{
+                  (card.item.malhas ?? [])
+                    .map((malha) => optionValue('fabric', malha))
+                    .join(' / ') || '—'
+                }}
+              </dd>
             </div>
             <div class="op-point--wide">
               <dt>Tamanhos</dt>

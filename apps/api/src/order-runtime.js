@@ -114,38 +114,19 @@ export function createOrderRuntime(options) {
     idempotencyStore: options.idempotencyStore,
   });
   let pendingCutMap = Promise.resolve();
-
-  /** @param {string[]} ids */
-  async function readMemoryCutMaps(ids) {
-    const events = (await options.auditTrail.list?.()) ?? [];
-    return events
-      .filter(
-        (/** @type {any} */ event) =>
-          event.action === 'order.cut_map.download' &&
-          event.target.type === 'order' &&
-          ids.includes(event.target.id),
-      )
-      .sort(
-        (/** @type {any} */ a, /** @type {any} */ b) =>
-          b.occurredAt.localeCompare(a.occurredAt) || b.id.localeCompare(a.id),
-      );
-  }
+  let nextCutMapNumber = 0;
+  /** @type {Map<string, {number: string, generatedAt: string, orderVersion: number}>} */
+  const memoryCutMaps = new Map();
 
   /** @param {string[]} ids @param {any} [transaction] */
-  async function readCutMapSummaries(ids, transaction) {
-    if (options.repository.readCutMapSummaries)
-      return options.repository.readCutMapSummaries(ids, transaction);
-    const summaries = new Map();
-    for (const event of await readMemoryCutMaps(ids)) {
-      const summary = summaries.get(event.target.id);
-      if (summary) summary.count += 1;
-      else
-        summaries.set(event.target.id, {
-          count: 1,
-          generatedAt: event.occurredAt,
-        });
-    }
-    return summaries;
+  async function readCutMapMemberships(ids, transaction) {
+    return options.repository.readCutMapMemberships
+      ? options.repository.readCutMapMemberships(ids, transaction)
+      : new Map(
+          ids
+            .filter((id) => memoryCutMaps.has(id))
+            .map((id) => [id, memoryCutMaps.get(id)]),
+        );
   }
 
   /** @param {OrderActor} actor @param {string} conversationId */
@@ -275,9 +256,9 @@ export function createOrderRuntime(options) {
           .filter((id) => typeof id === 'string'),
       ),
     ];
-    const cutSummaries =
+    const cutMemberships =
       actor?.kind === 'human'
-        ? await readCutMapSummaries(orders.map((order) => order.id))
+        ? await readCutMapMemberships(orders.map((order) => order.id))
         : new Map();
     const visibleConversations =
       actor && conversationIds.length
@@ -426,16 +407,17 @@ export function createOrderRuntime(options) {
             actor.id),
       cutMapAvailable:
         isCutMapOrder(order) &&
+        !cutMemberships.has(order.id) &&
         actor?.kind === 'human' &&
         ((actor.capabilities ?? []).includes(CAPABILITIES.COMMERCIAL_ADMIN) ||
           (order.manualOwnerId ?? owners.get(order.conversationId)) ===
             actor.id),
-      cutMapGeneratedAt:
+      cutMap:
         actor?.kind === 'human' &&
         ((actor.capabilities ?? []).includes(CAPABILITIES.COMMERCIAL_ADMIN) ||
           (order.manualOwnerId ?? owners.get(order.conversationId)) ===
             actor.id)
-          ? (cutSummaries.get(order.id)?.generatedAt ?? null)
+          ? (cutMemberships.get(order.id) ?? null)
           : null,
       reopenedAt: order.reopenedAt,
       reopenedBy: person(order.reopenedBy),
@@ -558,15 +540,17 @@ export function createOrderRuntime(options) {
   /** @param {string[]} ids @param {OrderActor} actor @param {any} [transaction] */
   async function getCutMap(ids, actor, transaction) {
     const map = await service.cutMap(ids, actor, transaction);
-    const summaries = await readCutMapSummaries(ids, transaction);
-    return {
-      ...map,
-      orders: map.orders.map((order) => ({
-        ...order,
-        cutMapGeneratedAt: summaries.get(order.id)?.generatedAt ?? null,
-        cutMapGenerationCount: summaries.get(order.id)?.count ?? 0,
-      })),
-    };
+    const memberships = await readCutMapMemberships(ids, transaction);
+    if (memberships.size) {
+      throw Object.assign(
+        new OrderConflictError(
+          'Order already belongs to a cut map',
+          'CUT_MAP_ALREADY_GENERATED',
+        ),
+        { orderIds: [...memberships.keys()] },
+      );
+    }
+    return map;
   }
 
   return Object.freeze({
@@ -673,38 +657,14 @@ export function createOrderRuntime(options) {
     authorizeWrite: access.authorizeWrite,
     getCutMap,
     portfolioOverview: service.portfolioOverview,
-    /** @param {string} orderId @param {OrderActor} actor @param {string|null} before */
-    async getCutMapHistory(orderId, actor, before) {
-      await service.getForReceipt(orderId, actor);
-      let entries;
-      if (options.repository.readCutMapHistory) {
-        entries = await options.repository.readCutMapHistory(orderId, before);
-      } else {
-        const events = await readMemoryCutMaps([orderId]);
-        const start = before
-          ? events.findIndex(
-              (/** @type {any} */ event) => event.id === before,
-            ) + 1
-          : 0;
-        entries =
-          before && !start
-            ? []
-            : events
-                .slice(start, start + 21)
-                .map((/** @type {any} */ event) => ({
-                  id: event.id,
-                  generatedAt: event.occurredAt,
-                  orderVersion: Number(event.version),
-                }));
-      }
-      const items = entries.slice(0, 20);
-      return {
-        items,
-        nextCursor: entries.length > 20 ? items.at(-1).id : null,
-      };
+    async reserveCutMapNumber() {
+      if (options.repository.reserveCutMapNumber)
+        return options.repository.reserveCutMapNumber();
+      nextCutMapNumber += 1;
+      return String(nextCutMapNumber);
     },
-    /** @param {Awaited<ReturnType<typeof getCutMap>>} map @param {OrderActor} actor @param {string} correlationId */
-    async recordCutMapDownload(map, actor, correlationId) {
+    /** @param {Awaited<ReturnType<typeof getCutMap>>} map @param {OrderActor} actor @param {string} correlationId @param {string} number */
+    async recordCutMapDownload(map, actor, correlationId, number) {
       /** @param {any} [transaction] */
       const append = async (transaction) => {
         const ids = map.orders.map(({ id }) => id);
@@ -713,6 +673,12 @@ export function createOrderRuntime(options) {
         const current = await getCutMap(ids, actor, transaction);
         if (JSON.stringify(current) !== JSON.stringify(map))
           throw new OrderConflictError('Cut map changed', 'CUT_MAP_STALE');
+        if (transaction)
+          await options.repository.insertCutMap(
+            map.orders,
+            number,
+            transaction,
+          );
         for (const order of map.orders) {
           await options.auditTrail.append(
             {
@@ -725,6 +691,15 @@ export function createOrderRuntime(options) {
             },
             transaction ? { transaction } : undefined,
           );
+        }
+        if (!transaction) {
+          const generatedAt = (options.clock?.() ?? new Date()).toISOString();
+          for (const { id, version } of map.orders)
+            memoryCutMaps.set(id, {
+              number,
+              generatedAt,
+              orderVersion: version,
+            });
         }
       };
       if (options.withCutMapTransaction) {

@@ -1800,7 +1800,7 @@ if (connectionString) {
     assert.equal(await storage.getObject(second.file.objectKey), null);
   });
 
-  test('CAR-02/04/08 and manual delivery: PostgreSQL persists production and cut history and fences concurrent writes', async () => {
+  test('CAR-02/04/09 and manual delivery: PostgreSQL numbers maps and prevents concurrent assignments', async () => {
     const conversationId = await seedConversation(pool, {
       channel: 'whatsapp',
     });
@@ -1886,10 +1886,14 @@ if (connectionString) {
       },
     });
     const map = await runtime.getCutMap([order.id], actor);
-    assert.equal(map.orders[0].cutMapGeneratedAt, null);
+    assert.equal((await runtime.get(order.id, actor)).order.cutMap, null);
+    const first = await runtime.reserveCutMapNumber();
+    const second = await runtime.reserveCutMapNumber();
+    assert.equal(first, '1');
+    assert.equal(second, '2');
     const generations = await Promise.allSettled([
-      runtime.recordCutMapDownload(map, actor, 'cut-first-a'),
-      runtime.recordCutMapDownload(map, actor, 'cut-first-b'),
+      runtime.recordCutMapDownload(map, actor, 'cut-first-a', first),
+      runtime.recordCutMapDownload(map, actor, 'cut-first-b', second),
     ]);
     assert.equal(
       generations.filter((result) => result.status === 'fulfilled').length,
@@ -1897,32 +1901,39 @@ if (connectionString) {
     );
     assert.equal(
       generations.find((result) => result.status === 'rejected')?.reason.code,
-      'CUT_MAP_STALE',
+      'CUT_MAP_ALREADY_GENERATED',
     );
-    const reopenedMap = await runtime.getCutMap([order.id], actor);
-    assert.equal(reopenedMap.orders[0].cutMapGenerationCount, 1);
-    await runtime.recordCutMapDownload(reopenedMap, actor, 'cut-again');
-    const history = await runtime.getCutMapHistory(order.id, actor, null);
-    assert.equal(history.items.length, 2);
-    assert.notEqual(history.items[0].id, history.items[1].id);
-    assert.equal(history.items[0].orderVersion, order.version);
-    assert.equal(
-      (await runtime.get(order.id, actor)).order.cutMapGeneratedAt,
-      history.items[0].generatedAt,
-    );
-    const page = await runtime.getCutMapHistory(
-      order.id,
-      actor,
-      history.items[0].id,
-    );
-    assert.deepEqual(page.items, [history.items[1]]);
+    const winner = generations[0].status === 'fulfilled' ? first : second;
+    const afterGeneration = (await runtime.get(order.id, actor)).order;
+    assert.equal(afterGeneration.cutMapAvailable, false);
+    assert.equal(afterGeneration.cutMap?.number, winner);
+    assert.equal(afterGeneration.cutMap?.orderVersion, order.version);
+    await assert.rejects(runtime.getCutMap([order.id], actor), {
+      code: 'CUT_MAP_ALREADY_GENERATED',
+      orderIds: [order.id],
+    });
     await assert.rejects(
-      runtime.getCutMapHistory(
-        order.id,
-        { ...actor, id: 'other-seller' },
-        null,
-      ),
-      (error) => [403, 404].includes(/** @type {any} */ (error).statusCode),
+      runtime.getCutMap([order.id], { ...actor, id: 'other-seller' }),
+      {
+        code: 'ORDER_NOT_FOUND',
+      },
+    );
+    assert.equal(
+      (
+        await pool.query(
+          'SELECT count(*)::int AS count FROM crm.order_cut_maps',
+        )
+      ).rows[0].count,
+      1,
+    );
+    assert.equal(
+      (
+        await pool.query(
+          "SELECT count(*)::int AS count FROM crm.audit_events WHERE target_id = $1 AND action = 'order.cut_map.download'",
+          [order.id],
+        )
+      ).rows[0].count,
+      1,
     );
     const frozen = order.commercialRevision;
     for (const stage of /** @type {const} */ (['producao', 'pronto'])) {
@@ -1972,8 +1983,8 @@ if (connectionString) {
     assert.equal(delivered.paidOn, '2026-10-20');
     assert.equal(delivered.version, order.version + 1);
     assert.deepEqual(
-      await runtime.getCutMapHistory(order.id, actor, null),
-      history,
+      (await runtime.get(order.id, actor)).order.cutMap,
+      afterGeneration.cutMap,
     );
     assert.ok(
       !(await service.deliveryTasks({ actor })).some(

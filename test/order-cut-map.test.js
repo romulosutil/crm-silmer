@@ -105,12 +105,13 @@ test('CAR-05: missing audience, a partial grade and non-cut stages block the ent
   }
 });
 
-test('CAR-06/08: only a fresh, authorized and successful generation creates history', async (t) => {
+test('CAR-06/09: PDF and membership share a number, and completed orders cannot enter another map', async (t) => {
   const api = Fastify();
   t.after(() => api.close());
   const selected = [
     order(6, 7, 'unissex', { tipo: '<b>All Star</b>' }),
     order(9, 7, 'masculino'),
+    order(11, 4, 'infantil'),
   ];
   const actor = { id: 'seller', kind: 'human' };
   let audit = 0;
@@ -119,6 +120,7 @@ test('CAR-06/08: only a fresh, authorized and successful generation creates hist
   let revokeDuringRender = false;
   let failRender = false;
   const history = new Map();
+  let reserved = 0;
   const authorize = async () => {
     if (blocked)
       throw Object.assign(new Error('private'), {
@@ -142,42 +144,33 @@ test('CAR-06/08: only a fresh, authorized and successful generation creates hist
         return authorize();
       },
       getCutMap: async (/** @type {string[]} */ ids) => {
-        const map = projectCutMap(
-          selected.filter(({ id }) => ids.includes(id)),
-        );
-        return {
-          ...map,
-          orders: map.orders.map((entry) => ({
-            ...entry,
-            cutMapGeneratedAt: history.get(entry.id)?.[0]?.generatedAt ?? null,
-            cutMapGenerationCount: history.get(entry.id)?.length ?? 0,
-          })),
-        };
+        const orderIds = ids.filter((id) => history.has(id));
+        if (orderIds.length)
+          throw Object.assign(new Error('mapped'), {
+            code: 'CUT_MAP_ALREADY_GENERATED',
+            statusCode: 409,
+            orderIds,
+          });
+        return projectCutMap(selected.filter(({ id }) => ids.includes(id)));
       },
-      getCutMapHistory: async (/** @type {string} */ orderId) => ({
-        items: history.get(orderId) ?? [],
-        nextCursor: null,
-      }),
+      reserveCutMapNumber: async () => String(++reserved),
       recordCutMapDownload: async (
         /** @type {ReturnType<typeof projectCutMap>} */ map,
+        /** @type {{ id: string }} */ _actor,
+        /** @type {string} */ _correlationId,
+        /** @type {string} */ number,
       ) => {
         audit += 1;
-        for (const { id, version } of map.orders) {
-          history.set(id, [
-            {
-              id: `event-${audit}`,
-              generatedAt: '2026-11-27T12:30:00.000Z',
-              orderVersion: version,
-            },
-            ...(history.get(id) ?? []),
-          ]);
-        }
+        for (const { id } of map.orders) history.set(id, number);
       },
     },
     () => ({ correlationId: 'synthetic-cut-map' }),
     async (html) => {
-      assert.match(html, /&lt;b&gt;All Star&lt;\/b&gt;/u);
-      assert.match(html, /Masculino/u);
+      if (reserved <= 3) {
+        assert.match(html, /&lt;b&gt;All Star&lt;\/b&gt;/u);
+        assert.match(html, /Masculino/u);
+      }
+      assert.ok(html.includes(`<h1>Mapa de corte ${reserved}</h1>`));
       assert.doesNotMatch(html, /Cliente fora do PDF|<b>All Star<\/b>/u);
       render += 1;
       if (revokeDuringRender) blocked = true;
@@ -195,13 +188,13 @@ test('CAR-06/08: only a fresh, authorized and successful generation creates hist
     ['6-CRM', '9-CRM'],
   );
   const pdf = '/api/v1/orders/cut-map/pdf';
-  /** @param {string} proof */
-  const generate = (proof, regenerate = false) =>
+  /** @param {string} proof @param {string[]} [ids] */
+  const generate = (proof, ids = ['item-6', 'item-9']) =>
     api.inject({
       method: 'POST',
       url: pdf,
       headers: { 'x-csrf-token': 'synthetic-csrf' },
-      payload: { orders: ['item-6', 'item-9'], fingerprint: proof, regenerate },
+      payload: { orders: ids, fingerprint: proof },
     });
   assert.equal(
     (await api.inject({ method: 'HEAD', url: pdf })).statusCode,
@@ -235,31 +228,31 @@ test('CAR-06/08: only a fresh, authorized and successful generation creates hist
   const response = await generate(fingerprint);
   assert.equal(response.statusCode, 200);
   assert.equal(response.headers['content-type'], 'application/pdf');
-  assert.equal(audit, 1);
+  assert.equal(response.headers['x-cut-map-number'], '3');
   assert.equal(
-    (await generate(fingerprint)).json().error.code,
-    'CUT_MAP_STALE',
+    response.headers['content-disposition'],
+    'attachment; filename="mapa-de-corte-3.pdf"',
   );
-  const refreshed = (await api.inject(url)).json();
-  assert.equal(refreshed.map.orders[0].cutMapGenerationCount, 1);
-  assert.equal(
-    (await generate(refreshed.fingerprint)).json().error.code,
-    'CUT_MAP_ALREADY_GENERATED',
+  assert.equal(history.get('item-6'), '3');
+  assert.equal(history.get('item-9'), '3');
+  assert.equal(audit, 1);
+  assert.deepEqual((await generate(fingerprint)).json().error, {
+    code: 'CUT_MAP_ALREADY_GENERATED',
+    orderIds: ['item-6', 'item-9'],
+  });
+  assert.deepEqual(
+    (await api.inject('/api/v1/orders/cut-map?orders=item-6,item-11')).json()
+      .error,
+    { code: 'CUT_MAP_ALREADY_GENERATED', orderIds: ['item-6'] },
   );
   assert.equal(audit, 1);
-  assert.equal((await generate(refreshed.fingerprint, true)).statusCode, 200);
+  const next = (
+    await api.inject('/api/v1/orders/cut-map?orders=item-11')
+  ).json();
+  const nextPdf = await generate(next.fingerprint, ['item-11']);
+  assert.equal(nextPdf.headers['x-cut-map-number'], '4');
+  assert.equal(history.get('item-11'), '4');
   assert.equal(audit, 2);
-  const entries = (
-    await api.inject('/api/v1/orders/item-6/cut-map-history')
-  ).json().items;
-  assert.deepEqual(
-    entries.map((/** @type {any} */ entry) => entry.id),
-    ['event-2', 'event-1'],
-  );
-  assert.deepEqual(
-    (await api.inject('/api/v1/orders/item-9/cut-map-history')).json().items,
-    entries,
-  );
   assert.equal(
     (await api.inject('/api/v1/orders/cut-map?orders=')).statusCode,
     400,

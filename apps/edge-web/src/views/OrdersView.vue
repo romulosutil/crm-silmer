@@ -22,7 +22,7 @@ import FilterSheet from '../components/FilterSheet.vue';
 import FilterChip from '../components/FilterChip.vue';
 import AppHint from '../components/AppHint.vue';
 import OrderReceiptPreview from '../components/order/OrderReceiptPreview.vue';
-import OrderCutMapHistory from '../components/order/OrderCutMapHistory.vue';
+import OrderCutMapMembership from '../components/order/OrderCutMapMembership.vue';
 import OrderCutMapPreview from '../components/order/OrderCutMapPreview.vue';
 import OrderPortfolioOverview from '../components/order/OrderPortfolioOverview.vue';
 import { commandKey, request } from '../lib/api-client.js';
@@ -220,7 +220,7 @@ const portfolioSellerError = ref(false);
 const cutMode = ref(false);
 const cutSelection = ref(new Set());
 const cutPreview = ref(null);
-const cutHistory = ref(null);
+const cutMembership = ref(null);
 const cutTitle = ref(null);
 let cutTrigger;
 let portfolioController;
@@ -865,6 +865,20 @@ function selectForCut(order, event) {
 
 function openCutPreview(event) {
   cutPreview.value?.open([...cutSelection.value], event.currentTarget);
+}
+
+function removeMappedOrders(ids) {
+  const mapped = new Set(ids);
+  for (const id of mapped) cutSelection.value.delete(id);
+  items.value = items.value.map((order) =>
+    mapped.has(order.id) ? { ...order, cutMapAvailable: false } : order,
+  );
+  void load(true);
+}
+
+function restoreCutSelectionFocus() {
+  if (cutMode.value && !cutSelection.value.size)
+    nextTick(() => cutTitle.value?.focus());
 }
 
 function stageFor(order) {
@@ -1556,7 +1570,9 @@ onBeforeUnmount(() => {
         <h2 id="cut-selection-title" ref="cutTitle" tabindex="-1">
           Selecione os pedidos para o corte
         </h2>
-        <p>O mapa aceita pedidos na arte ou na produção.</p>
+        <p>
+          Selecione pedidos na arte ou na produção que ainda aguardam um mapa.
+        </p>
       </div>
       <div class="portfolio-selection-actions">
         <p role="status">
@@ -1736,14 +1752,13 @@ onBeforeUnmount(() => {
                   }}</small>
                   <small class="order-context">{{ situation(order) }}</small>
                   <button
-                    v-if="order.cutMapGeneratedAt"
+                    v-if="order.cutMap"
                     type="button"
                     class="portfolio-cut-history"
-                    @click="cutHistory?.open(order, $event.currentTarget)"
+                    @click="cutMembership?.open(order, $event.currentTarget)"
                   >
-                    Mapa de corte gerado<span class="sr-only">
-                      · Histórico do pedido {{ order.number }}</span
-                    >
+                    Mapa de corte {{ order.cutMap.number
+                    }}<span class="sr-only"> · Pedido {{ order.number }}</span>
                   </button>
                 </td>
                 <td class="order-cell-actions">
@@ -1922,13 +1937,14 @@ onBeforeUnmount(() => {
                       >{{ fichaPrintedLabel(order) }}</small
                     >
                     <button
-                      v-if="order.cutMapGeneratedAt"
+                      v-if="order.cutMap"
                       type="button"
                       class="portfolio-cut-history"
-                      @click="cutHistory?.open(order, $event.currentTarget)"
+                      @click="cutMembership?.open(order, $event.currentTarget)"
                     >
-                      Mapa de corte gerado<span class="sr-only">
-                        · Histórico do pedido {{ order.number }}</span
+                      Mapa de corte {{ order.cutMap.number
+                      }}<span class="sr-only">
+                        · Pedido {{ order.number }}</span
                       >
                     </button>
                   </td>
@@ -1948,7 +1964,9 @@ onBeforeUnmount(() => {
                       Selecionar pedido
                       <span class="sr-only">{{ order.number }}</span>
                     </label>
-                    <span v-else-if="cutMode">Seleção indisponível</span>
+                    <span v-else-if="cutMode">{{
+                      order.cutMap ? 'Incluído no mapa' : 'Seleção indisponível'
+                    }}</span>
                     <div v-else class="row-actions">
                       <button
                         v-if="order.productionEditable && stageFor(order)"
@@ -2034,8 +2052,12 @@ onBeforeUnmount(() => {
       :orders="items"
       :fallback-focus="receiptFocusFallback"
     />
-    <OrderCutMapPreview ref="cutPreview" @history-changed="load(true)" />
-    <OrderCutMapHistory ref="cutHistory" />
+    <OrderCutMapPreview
+      ref="cutPreview"
+      @orders-mapped="removeMappedOrders"
+      @closed="restoreCutSelectionFocus"
+    />
+    <OrderCutMapMembership ref="cutMembership" />
   </div>
 </template>
 

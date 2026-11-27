@@ -16,6 +16,9 @@ import {
   sizePricingSummary,
   createStoreOrderCorrectionService,
   ORDER_FILE_LIMITS,
+  ORDER_ITEM_OPTIONS,
+  ORDER_ITEM_OPTION_ALIASES,
+  parseOrderItemOption,
   OrderConflictError,
   OrderForbiddenError,
   OrderInputError,
@@ -492,6 +495,38 @@ export function createOrderRuntime(options) {
   }
 
   return Object.freeze({
+    async listItemOptions() {
+      const catalog = structuredClone(ORDER_ITEM_OPTIONS);
+      const rows = /** @type {{kind: unknown, label: string}[]} */ (
+        await options.repository.listItemOptions()
+      );
+      for (const { kind, label } of rows) {
+        if (kind === 'color' || kind === 'fabric' || kind === 'size')
+          catalog[kind].push(label);
+      }
+      return { catalog, aliases: ORDER_ITEM_OPTION_ALIASES };
+    },
+
+    /** @param {OrderCommand & {orderId:string, kind:unknown, label:unknown}} input */
+    async addItemOption(input) {
+      const option = parseOrderItemOption(input.kind, input.label);
+      return run(
+        input,
+        {
+          action: 'order.item_option.add',
+          command: { kind: option.kind, label: option.label },
+          expectedVersion: 1,
+          target: { type: 'order', id: input.orderId },
+        },
+        async (transaction) => ({
+          kind: option.kind,
+          label: await options.repository.addItemOption(option, transaction),
+        }),
+        (transaction) =>
+          options.repository.authorizeItemOption(input, transaction),
+      );
+    },
+
     /** @param {OrderCommand & {orderId:string, expectedVersion:number, reason:unknown}} input */
     async cancel(input) {
       await service.assertCancellationAccess(input);

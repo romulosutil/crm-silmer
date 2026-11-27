@@ -76,6 +76,8 @@ const PUBLIC_CODES = new Set([
   'SUBJECT_NOT_FOUND',
   'CONVERSATION_CLOSED',
   'ORDER_HUMAN_REQUIRED',
+  'ORDER_ITEM_OPTION_INVALID',
+  'ORDER_OLIST_LOCKED',
 ]);
 
 class OrderRequestError extends Error {
@@ -108,6 +110,41 @@ export function registerOrderRoutes(
   whatsappPdf,
 ) {
   registerOrderReceiptRoutes(api, orders, contextFor, pdfRenderer);
+  api.get('/api/v1/orders/item-options', async (request, reply) =>
+    respond(reply, async () => {
+      await authorizeRead(request, orders);
+      rejectUnknownKeys(requireObject(request.query ?? {}), []);
+      privateReadHeaders(reply);
+      return reply.code(200).send(await orders.listItemOptions());
+    }),
+  );
+  api.post(
+    '/api/v1/orders/:orderId/item-options',
+    { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } },
+    async (request, reply) =>
+      respond(reply, async () => {
+        const orderId = requireIdentifier(
+          requireObject(request.params).orderId,
+          'ORDER_ID',
+        );
+        const body = requireObject(request.body);
+        rejectUnknownKeys(body, ['kind', 'label']);
+        const command = await authorizeCommand(
+          request,
+          orders,
+          contextFor,
+          'order.edit',
+        );
+        privateReadHeaders(reply);
+        const option = await orders.addItemOption({
+          ...command,
+          orderId,
+          kind: body.kind,
+          label: body.label,
+        });
+        return reply.code(200).send(option);
+      }),
+  );
   api.get('/api/v1/orders/commercial-result', async (request, reply) =>
     respond(reply, async () => {
       const query = requireObject(request.query ?? {});

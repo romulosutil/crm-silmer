@@ -11,6 +11,11 @@ import {
 } from 'vue';
 import { colorSwatch } from '../../lib/order-catalog.js';
 import {
+  createOrderItemOption,
+  fetchOrderItemOptions,
+  orderCatalogLabel,
+} from '../../lib/order-item-options.js';
+import {
   amountLabel,
   AUDIENCE_OPTIONS,
   audienceLabel,
@@ -45,6 +50,7 @@ import {
   sizeTakenMessage,
   structuralHint,
 } from '../../lib/order-items-inline.js';
+import OrderCatalogPicker from './OrderCatalogPicker.vue';
 import OrderIcon from './OrderIcon.vue';
 import OrderSheetHead from './OrderSheetHead.vue';
 
@@ -174,6 +180,66 @@ const OPTIONAL_GROUPS = Object.freeze([
   },
 ]);
 
+const catalog = ref(null);
+const catalogLoading = ref(false);
+const catalogEnabled = computed(() => catalog.value !== null);
+const pastingGrade = ref('');
+
+function optionValue(kind, value) {
+  return orderCatalogLabel(
+    kind,
+    String(value ?? ''),
+    catalog.value?.catalog[kind] ?? [],
+    catalog.value?.aliases ?? {},
+  );
+}
+
+function pickerOptions(kind, value) {
+  const choices = catalog.value?.catalog[kind] ?? [];
+  const current = optionValue(kind, value);
+  return current && !choices.includes(current)
+    ? [...choices, current]
+    : choices;
+}
+
+async function includeOption(kind, raw, idempotencyKey) {
+  const orderId = props.order.id;
+  const label = await createOrderItemOption(orderId, kind, raw, idempotencyKey);
+  const choices = catalog.value?.catalog[kind];
+  if (props.order.id === orderId && choices && !choices.includes(label))
+    choices.push(label);
+  return label;
+}
+
+function usesColorPicker(field) {
+  return catalogEnabled.value && field.color && field.key !== 'vies_mangas';
+}
+
+function chooseColor(card, field, value) {
+  setDraft(fieldKey(card.uid, field.key), value);
+  commitField(card, field, value);
+}
+
+function chooseMalha(card, index, value) {
+  setDraft(fieldKey(card.uid, `malhas.${index}`), value);
+  commitMalhas(card);
+}
+
+function chooseSize(card, row, value) {
+  setDraft(lineKey(card, row, 'size'), value);
+  commitSize(card, row, value);
+}
+
+function chooseBlankSize(card, value) {
+  onBlankInput(card, 'size', { target: { value } });
+  focusId(`item-${card.index}-new-qty`);
+}
+
+async function toggleGradePaste(card) {
+  pastingGrade.value = pastingGrade.value === card.uid ? '' : card.uid;
+  await focusFirst(`item-${card.index}-new-size`);
+}
+
 const props = defineProps({
   order: { type: Object, required: true },
 });
@@ -253,6 +319,25 @@ const blocked = computed(
   () => canWrite.value && editing.editingSection.value !== '',
 );
 const editable = computed(() => canWrite.value && !blocked.value);
+watch(
+  [() => props.order.id, canWrite],
+  async ([, enabled], _, onCleanup) => {
+    catalog.value = null;
+    catalogLoading.value = enabled;
+    if (!enabled) return;
+    const controller = new AbortController();
+    onCleanup(() => controller.abort());
+    try {
+      const result = await fetchOrderItemOptions(controller.signal);
+      if (!controller.signal.aborted) catalog.value = result;
+    } catch {
+      // The previous editor remains available during an API/edge rollout.
+    } finally {
+      if (!controller.signal.aborted) catalogLoading.value = false;
+    }
+  },
+  { immediate: true },
+);
 // "Salvo" speaks of the fields; it leaves with them.
 watch(editable, (now) => {
   if (!now) saveState.value = '';
@@ -1451,6 +1536,11 @@ function onBlankFocusOut(card, event) {
 
 /** @param {Record<string, any>} card */
 function sizesHint(card) {
+  if (catalogEnabled.value) {
+    return pastingGrade.value === card.uid
+      ? 'Cole os tamanhos e as quantidades. Exemplo “P 20 M 60 G 50”.'
+      : 'Escolha o tamanho e informe a quantidade.';
+  }
   return card.rows.length > 0
     ? 'A linha em branco é o próximo tamanho.'
     : 'Digite o primeiro tamanho na linha em branco. Para vários de uma vez, cole “P 20 M 60 G 50”.';
@@ -1893,46 +1983,82 @@ watch(
                   field.label
                 }}</label>
                 <div class="op-inline-control">
-                  <input
-                    v-for="(_, malhaIndex) in malhaCount(card)"
-                    :id="`item-${card.index}-malha-${malhaIndex}`"
-                    :key="malhaIndex"
-                    type="text"
-                    maxlength="200"
-                    autocomplete="off"
-                    autocapitalize="characters"
-                    :value="malhaText(card, malhaIndex)"
-                    :aria-label="
-                      malhaIndex > 0
-                        ? `Modelo de malha ${malhaIndex + 1}`
-                        : undefined
-                    "
-                    :aria-required="hasGap(card, 'malhas') ? 'true' : undefined"
-                    :aria-invalid="
-                      errors[fieldKey(card.uid, 'malhas')] ? 'true' : undefined
-                    "
-                    :aria-describedby="
-                      [
+                  <template v-if="catalogEnabled">
+                    <OrderCatalogPicker
+                      v-for="(_, malhaIndex) in malhaCount(card)"
+                      :id="`item-${card.index}-malha-${malhaIndex}`"
+                      :key="malhaIndex"
+                      :label="
+                        malhaIndex === 0
+                          ? field.label
+                          : `Modelo de malha ${malhaIndex + 1}`
+                      "
+                      kind="fabric"
+                      :value="
+                        optionValue('fabric', malhaText(card, malhaIndex))
+                      "
+                      :options="
+                        pickerOptions('fabric', malhaText(card, malhaIndex))
+                      "
+                      :invalid="Boolean(errors[fieldKey(card.uid, 'malhas')])"
+                      :described-by="
                         hasGap(card, 'malhas')
                           ? `item-${card.index}-malha-gap`
-                          : '',
+                          : undefined
+                      "
+                      @choose="chooseMalha(card, malhaIndex, $event)"
+                      :create-option="
+                        (label, key) => includeOption('fabric', label, key)
+                      "
+                    />
+                  </template>
+                  <template v-else>
+                    <input
+                      v-for="(_, malhaIndex) in malhaCount(card)"
+                      :id="`item-${card.index}-malha-${malhaIndex}`"
+                      :key="malhaIndex"
+                      type="text"
+                      maxlength="200"
+                      autocomplete="off"
+                      autocapitalize="characters"
+                      :readonly="catalogLoading"
+                      :value="malhaText(card, malhaIndex)"
+                      :aria-label="
+                        malhaIndex > 0
+                          ? `Modelo de malha ${malhaIndex + 1}`
+                          : undefined
+                      "
+                      :aria-required="
+                        hasGap(card, 'malhas') ? 'true' : undefined
+                      "
+                      :aria-invalid="
                         errors[fieldKey(card.uid, 'malhas')]
-                          ? `item-${card.index}-malha-error`
-                          : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ') || undefined
-                    "
-                    @input="
-                      setDraft(
-                        fieldKey(card.uid, `malhas.${malhaIndex}`),
-                        $event.target.value,
-                      )
-                    "
-                    @change="commitMalhas(card)"
-                    @blur="onMalhaBlur(card, malhaIndex)"
-                    @keydown.enter.prevent="commitMalhas(card)"
-                  />
+                          ? 'true'
+                          : undefined
+                      "
+                      :aria-describedby="
+                        [
+                          hasGap(card, 'malhas')
+                            ? `item-${card.index}-malha-gap`
+                            : '',
+                          errors[fieldKey(card.uid, 'malhas')]
+                            ? `item-${card.index}-malha-error`
+                            : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ') || undefined
+                      "
+                      @input="
+                        setDraft(
+                          fieldKey(card.uid, `malhas.${malhaIndex}`),
+                          $event.target.value,
+                        )
+                      "
+                      @change="commitMalhas(card)"
+                      @blur="onMalhaBlur(card, malhaIndex)"
+                      @keydown.enter.prevent="commitMalhas(card)"
+                    />
+                  </template>
                   <span
                     v-if="hasGap(card, 'malhas')"
                     :id="`item-${card.index}-malha-gap`"
@@ -2011,7 +2137,24 @@ watch(
                       }"
                       aria-hidden="true"
                     ></span>
+                    <OrderCatalogPicker
+                      v-if="
+                        usesColorPicker(field) && !isNotApplicable(card, field)
+                      "
+                      :id="fieldId(card, field)"
+                      :label="field.label"
+                      kind="color"
+                      :value="optionValue('color', fieldText(card, field))"
+                      :options="pickerOptions('color', fieldText(card, field))"
+                      :invalid="Boolean(errors[fieldKey(card.uid, field.key)])"
+                      :described-by="describedBy(card, field)"
+                      @choose="chooseColor(card, field, $event)"
+                      :create-option="
+                        (label, key) => includeOption('color', label, key)
+                      "
+                    />
                     <input
+                      v-else
                       :id="fieldId(card, field)"
                       type="text"
                       :maxlength="field.kind === 'informed' ? 6 : 200"
@@ -2027,6 +2170,11 @@ watch(
                           : fieldText(card, field)
                       "
                       :disabled="isNotApplicable(card, field)"
+                      :readonly="
+                        catalogLoading &&
+                        field.color &&
+                        field.key !== 'vies_mangas'
+                      "
                       :aria-required="
                         hasGap(card, field.key) ? 'true' : undefined
                       "
@@ -2135,7 +2283,26 @@ watch(
                   isDuplicateSize(card.item.grade, row.size) || undefined
                 "
               >
+                <OrderCatalogPicker
+                  v-if="catalogEnabled"
+                  :id="`item-${card.index}-size-${row.index}`"
+                  :label="`Tamanho, linha ${row.index + 1} do item ${card.n}`"
+                  kind="size"
+                  :value="optionValue('size', lineText(card, row, 'size'))"
+                  :options="pickerOptions('size', lineText(card, row, 'size'))"
+                  :invalid="Boolean(errors[lineKey(card, row, 'size')])"
+                  :described-by="
+                    lineError(card, row)
+                      ? `item-${card.index}-line-${row.index}-note`
+                      : undefined
+                  "
+                  @choose="chooseSize(card, row, $event)"
+                  :create-option="
+                    (label, key) => includeOption('size', label, key)
+                  "
+                />
                 <input
+                  v-else
                   :id="`item-${card.index}-size-${row.index}`"
                   class="op-size-input"
                   type="text"
@@ -2143,6 +2310,7 @@ watch(
                   autocomplete="off"
                   autocapitalize="characters"
                   enterkeyhint="next"
+                  :readonly="catalogLoading"
                   :value="lineText(card, row, 'size')"
                   :aria-label="`Tamanho, linha ${row.index + 1} do item ${card.n}`"
                   :aria-invalid="
@@ -2261,13 +2429,32 @@ watch(
                 data-blank-row
                 @focusout="onBlankFocusOut(card, $event)"
               >
+                <OrderCatalogPicker
+                  v-if="catalogEnabled && pastingGrade !== card.uid"
+                  :id="`item-${card.index}-new-size`"
+                  :label="`Novo tamanho do item ${card.n}`"
+                  kind="size"
+                  :value="optionValue('size', blankOf(card.uid).size)"
+                  :options="pickerOptions('size', blankOf(card.uid).size)"
+                  :invalid="
+                    blankOf(card.uid).errorOn === 'size' ||
+                    Boolean(errors[fieldKey(card.uid, 'blank')])
+                  "
+                  :described-by="`item-${card.index}-sizes-hint`"
+                  @choose="chooseBlankSize(card, $event)"
+                  :create-option="
+                    (label, key) => includeOption('size', label, key)
+                  "
+                />
                 <input
+                  v-else
                   :id="`item-${card.index}-new-size`"
                   class="op-size-input"
                   type="text"
                   autocomplete="off"
                   autocapitalize="characters"
                   enterkeyhint="next"
+                  :readonly="catalogLoading"
                   :value="blankOf(card.uid).size"
                   :aria-label="`Novo tamanho do item ${card.n}`"
                   :aria-required="hasGap(card, 'grade') ? 'true' : undefined"
@@ -2313,6 +2500,18 @@ watch(
               </li>
             </ul>
 
+            <button
+              v-if="catalogEnabled"
+              type="button"
+              class="op-add-inline"
+              @click="toggleGradePaste(card)"
+            >
+              {{
+                pastingGrade === card.uid
+                  ? 'Voltar à lista de tamanhos'
+                  : 'Colar grade'
+              }}
+            </button>
             <div :id="`item-${card.index}-sizes-hint`" class="op-sizes-hint">
               <FieldError
                 v-if="errors[fieldKey(card.uid, 'blank')]"

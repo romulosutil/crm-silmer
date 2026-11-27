@@ -1,5 +1,11 @@
 import { expect } from '@playwright/test';
 
+import {
+  ORDER_ITEM_OPTIONS,
+  ORDER_ITEM_OPTION_ALIASES,
+  orderItemOptionKey,
+  parseOrderItemOption,
+} from '../../../modules/orders/src/domain/order-item-options.js';
 import { OrderError } from '../../../modules/orders/src/domain/errors.js';
 import {
   normalizeFicha,
@@ -520,7 +526,7 @@ async function routeFiles(route, request, match, store, options) {
  * all. The answer is the live list of orders, as the writes left it.
  *
  * @param {import('@playwright/test').Page} page
- * @param {{user?: Record<string, unknown>, orders?: any[], failDetailOnce?: boolean, failListOnce?: boolean, liveEvent?: Record<string, unknown>|null, onDetail?: (orderId: string) => void, onList?: (params: URLSearchParams) => void, onWrite?: (call: {section?: string, action?: string, body: any}) => void, pages?: any[][], writeFailure?: {status: number, body: Record<string, unknown>, persist?: Record<string, unknown>}, sectionFailure?: (call: {section: string, body: any}) => {status: number, body: Record<string, unknown>}|null|undefined|void, files?: Record<string, {final: any, references: any[]}>, onUpload?: (call: {filename: string, hasThumbnail: boolean, slot: string}) => void, onRemove?: (fileId: string) => void, uploadFailure?: {status: number, body: Record<string, unknown>}}} [options]
+ * @param {{user?: Record<string, unknown>, orders?: any[], itemOptions?: boolean, failDetailOnce?: boolean, failListOnce?: boolean, liveEvent?: Record<string, unknown>|null, onDetail?: (orderId: string) => void, onList?: (params: URLSearchParams) => void, onWrite?: (call: {section?: string, action?: string, body: any}) => void, pages?: any[][], writeFailure?: {status: number, body: Record<string, unknown>, persist?: Record<string, unknown>}, sectionFailure?: (call: {section: string, body: any}) => {status: number, body: Record<string, unknown>}|null|undefined|void, files?: Record<string, {final: any, references: any[]}>, onUpload?: (call: {filename: string, hasThumbnail: boolean, slot: string}) => void, onRemove?: (fileId: string) => void, uploadFailure?: {status: number, body: Record<string, unknown>}}} [options]
  */
 export async function mockOrders(page, options = {}) {
   // A write mutates the order it answers with, so each test gets its own
@@ -531,6 +537,9 @@ export async function mockOrders(page, options = {}) {
     JSON.stringify(options.orders ?? [confirmedOrder, pendingOrder]),
   );
   const pages = options.pages ?? null;
+  const itemOptions = options.itemOptions
+    ? structuredClone(ORDER_ITEM_OPTIONS)
+    : null;
   /** @type {Map<string, {final: any, references: any[]}>} */
   const fileStore = new Map(
     Object.entries(JSON.parse(JSON.stringify(options.files ?? {}))),
@@ -543,6 +552,37 @@ export async function mockOrders(page, options = {}) {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname;
+
+    if (itemOptions && path === '/api/v1/orders/item-options') {
+      return route.fulfill({
+        json: { catalog: itemOptions, aliases: ORDER_ITEM_OPTION_ALIASES },
+      });
+    }
+    if (
+      itemOptions &&
+      /^\/api\/v1\/orders\/[^/]+\/item-options$/u.test(path) &&
+      request.method() === 'POST'
+    ) {
+      const { kind, label } = request.postDataJSON();
+      expect(request.headers()['idempotency-key']).toBeTruthy();
+      try {
+        const option = parseOrderItemOption(kind, label);
+        const group = itemOptions[option.kind];
+        const existing = group.find(
+          (value) => orderItemOptionKey(value) === option.key,
+        );
+        if (!existing) group.push(option.label);
+        return route.fulfill({
+          json: { kind: option.kind, label: existing ?? option.label },
+        });
+      } catch (error) {
+        if (!(error instanceof OrderError)) throw error;
+        return route.fulfill({
+          status: error.statusCode,
+          json: { code: error.code },
+        });
+      }
+    }
 
     if (/^\/api\/v1\/orders\/[^/]+\/pdf$/u.test(path)) {
       await route.fulfill({

@@ -63,7 +63,7 @@ WORKDIR /app
 RUN apt-get update \
   && apt-get install -y --no-install-recommends --only-upgrade perl-base \
   && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' perl-base)" ge '5.36.0-7+deb12u4' \
-  && apt-get install -y --no-install-recommends ca-certificates clamav clamav-daemon clamdscan clamav-freshclam file ffmpeg libbrotli1 \
+  && apt-get install -y --no-install-recommends ca-certificates clamav clamav-daemon clamdscan clamav-freshclam file ffmpeg libbrotli1 poppler-utils \
   && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libbrotli1)" ge '1.0.9-2+deb12u1' \
   && rm -rf /var/lib/apt/lists/*
 

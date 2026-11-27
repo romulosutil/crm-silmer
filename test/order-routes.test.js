@@ -1770,7 +1770,7 @@ test('FPI-14: the explicit print layout follows the ficha PDF contract', async (
   assert.match(rendered[0], /size: A4 landscape/u);
   assert.deepEqual(
     guards.map(({ input }) => input.action),
-    ['order.print'],
+    ['order.print', 'order.print'],
   );
 
   const detailed = await api.inject({ headers: readHeaders, url: base });
@@ -1817,6 +1817,30 @@ test('FPI-14: the explicit print layout follows the ficha PDF contract', async (
   assert.equal(refused.statusCode, 409);
   assert.deepEqual(refused.json(), { error: { code: 'ORDER_NOT_CONFIRMED' } });
   assert.equal(rendered.length, 2);
+});
+
+test('FPI-15: a re-opened order cannot return an in-flight production PDF', async (t) => {
+  let duringRender = async () => {};
+  const { api, runtime } = orderHarness({
+    pdfRenderer: async () => {
+      await duringRender();
+      return Buffer.from('%PDF-1.7\nsynthetic PDF');
+    },
+  });
+  t.after(() => api.close());
+  const order = await createConfirmed(runtime, 'conversation-1');
+  duringRender = async () => {
+    await runtime.reopen(
+      seed({ orderId: order.id, expectedVersion: order.version }),
+    );
+  };
+  const response = await api.inject({
+    headers: readHeaders,
+    url: `/api/v1/orders/${order.id}/pdf?layout=impressao`,
+  });
+  assert.equal(response.statusCode, 409);
+  assert.equal(response.json().error.code, 'VERSION_CONFLICT');
+  assert.equal(response.headers['content-disposition'], undefined);
 });
 
 test('PIM-14: PDF generation is limited to ten requests per minute', async (t) => {

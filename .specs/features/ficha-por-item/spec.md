@@ -60,11 +60,15 @@ FPI-08 e "Anotações" e divisão em metades de FPI-11). A v9 está selecionada 
   tamanho com quantidade e espaço de conferência. A grade deve mostrar o
   número uma vez por item, mesmo quando ele tem vários tamanhos. O PDF
   também deve trazer o total calculado, as observações
-  uma vez e sete campos de produção à mão por item. A tabela deve repetir seu
+  uma vez e uma linha de sete campos de produção à mão por pedido. A grade deve repetir seu
   cabeçalho nas continuações. O conteúdo de fábrica e seus bloqueios seguem
-  FPI-10. A ficha deve preservar a referência textual da estampa e excluir
-  imagens. O exemplo sintético da v1 com dois itens e oito tamanhos deve
-  ocupar uma página no Chromium.
+  FPI-10. A ficha deve preservar a referência textual da estampa. Logo abaixo
+  do controle, deve mostrar a prévia da **Arte final** do pedido em PNG, JPEG,
+  WebP ou PDF, com até quatro páginas da arte. As páginas seguintes à primeira
+  aparecem em folhas de continuação. A ficha informa ausência, indisponibilidade,
+  formato sem prévia ou pedido sem estampa. Arquivos de referência ficam fora.
+  O exemplo sintético aprovado em 26/11/2026 com dois itens, sete tamanhos e
+  uma imagem deve ocupar uma página no Chromium.
 - **FPI-16.** Quando o detalhe mostrar um pedido confirmado de atendimento,
   o botão principal no cabeçalho e no rodapé móvel deve baixar **PDF para
   impressão**. **Mais ações do pedido** deve oferecer **PDF detalhado**,

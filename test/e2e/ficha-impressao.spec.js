@@ -44,11 +44,14 @@ function sampleOrder() {
 
 test.use({ javaScriptEnabled: false, viewport: { width: 1046, height: 720 } });
 
-/** @param {import('@playwright/test').Page} page @param {any} order */
-async function open(page, order) {
+/** @param {import('@playwright/test').Page} page @param {any} order @param {string[]} [pages] */
+async function open(page, order, pages) {
   await page.emulateMedia({ media: 'print' });
   await page.setContent(
-    renderOrderFicha(order, undefined, { layout: 'impressao' }),
+    renderOrderFicha(order, undefined, {
+      layout: 'impressao',
+      artwork: { pages },
+    }),
   );
 }
 
@@ -95,9 +98,9 @@ test('FPI-15: the reference order includes its grade and production control on o
   await expect(
     page.getByText(reference.observacoes[1], { exact: true }),
   ).toHaveCount(1);
-  await expect(
-    page.getByRole('table', { name: 'Controle de produção' }).locator('.field'),
-  ).toHaveCount(14);
+  const production = page.getByRole('table', { name: 'Controle de produção' });
+  await expect(production.locator('tbody tr')).toHaveCount(1);
+  await expect(production.locator('.field')).toHaveCount(7);
   expect(await printedPages(page)).toBe(1);
 });
 
@@ -124,7 +127,7 @@ test('FPI-15: a large grade can flow across multiple sheets with its table heade
   ).toBeLessThanOrEqual(1046);
 });
 
-test('FPI-15: the print PDF keeps the art reference and factory guard without fetching or printing images', async ({
+test('FPI-15: an order without final art keeps the reference and factory guard', async ({
   page,
 }) => {
   const order = structuredClone(modernSample);
@@ -139,6 +142,9 @@ test('FPI-15: the print PDF keeps the art reference and factory guard without fe
     page.getByText('Conferir <rascunho> com a equipe.', { exact: true }),
   ).toHaveCount(1);
   await expect(page.locator('img, [src]')).toHaveCount(0);
+  await expect(
+    page.getByText('Nenhuma arte final anexada ao pedido.'),
+  ).toBeVisible();
   expect(requests).toEqual([]);
   order.ficha.observations = ['Pagamento pendente.'];
   expect(() =>
@@ -146,4 +152,39 @@ test('FPI-15: the print PDF keeps the art reference and factory guard without fe
   ).toThrow(
     'Revise o conteúdo financeiro nos textos da ficha antes de imprimir.',
   );
+});
+
+test('FPI-15: approved artwork follows the single production row on the same sheet', async ({
+  page,
+}) => {
+  const order = structuredClone(modernSample);
+  const [jersey, babyLook] = order.ficha.items;
+  jersey.tipo = 'Camiseta manga curta';
+  jersey.grade = jersey.grade.slice(0, 4);
+  babyLook.grade = babyLook.grade.slice(1, 4);
+  order.ficha.items = [jersey, babyLook];
+  order.ficha.observations = order.ficha.observations.slice(0, 2);
+  order.ficha.serviceData = {};
+  const requests = /** @type {string[]} */ ([]);
+  page.on('request', (request) => requests.push(request.url()));
+  await open(page, order, [jersey.artPreview]);
+  const artwork = page.locator('.production + .approved-art');
+  await expect(artwork.getByRole('heading')).toHaveText(
+    'Arte final aprovada pelo cliente',
+  );
+  const image = artwork.getByRole('img');
+  await expect(image).toBeVisible();
+  expect(
+    await image.evaluate(
+      (node) => /** @type {HTMLImageElement} */ (node).naturalWidth,
+    ),
+  ).toBeGreaterThan(100);
+  expect(await printedPages(page)).toBe(1);
+  expect(requests).toEqual([]);
+
+  await open(page, order, [jersey.artPreview, jersey.artPreview]);
+  await expect(
+    page.locator('.art-continuation').getByRole('img'),
+  ).toHaveAccessibleName('Página 2 da arte final do pedido');
+  expect(await printedPages(page)).toBe(2);
 });

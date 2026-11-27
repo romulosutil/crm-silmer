@@ -56,12 +56,12 @@ const ART_PREVIEW =
  * the paper, so the PDF renderer never fetches remote content and no SVG
  * reaches the document. Anything else is not a preview and returns ''.
  *
- * @param {unknown} value
+ * @param {unknown} value @param {number} [maxLength]
  * @returns {string}
  */
-export function safeArtPreview(value) {
+export function safeArtPreview(value, maxLength = ART_PREVIEW_MAX) {
   return typeof value === 'string' &&
-    value.length <= ART_PREVIEW_MAX &&
+    value.length <= maxLength &&
     ART_PREVIEW.test(value)
     ? value
     : '';

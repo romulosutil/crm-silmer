@@ -6,6 +6,7 @@ import {
   renderOrderFicha,
 } from '@crm-silmer/orders';
 import { renderOrderPdf } from './order-pdf.js';
+import { loadOrderPrintArtwork } from './order-print-artwork.js';
 import { registerOrderReceiptRoutes } from './order-receipt-routes.js';
 
 const ORDER_STATUSES = new Set(['pendente', 'confirmado']);
@@ -413,10 +414,22 @@ export function registerOrderRoutes(
             throw new OrderRequestError(400, 'INVALID_REQUEST');
           }
           // A document under review answers 422 without download headers.
-          const html = fichaRenderer(order, undefined, {
-            printedAt: new Date(),
-            layout,
-          });
+          const printOptions = { printedAt: new Date(), layout };
+          let html = fichaRenderer(order, undefined, printOptions);
+          if (layout === 'impressao' && request.method !== 'HEAD') {
+            const artwork = order.ficha?.artwork?.sem_estampa
+              ? { notice: 'Pedido sem estampa.' }
+              : await loadOrderPrintArtwork(orders, {
+                  orderId,
+                  actor: principal.actor,
+                  correlationId: contextFor(request).correlationId,
+                });
+            if (artwork)
+              html = fichaRenderer(order, undefined, {
+                ...printOptions,
+                artwork,
+              });
+          }
           reply.header('cache-control', 'private, no-store');
           reply.header('vary', 'Origin, Cookie');
           reply.header('x-content-type-options', 'nosniff');
@@ -435,11 +448,14 @@ export function registerOrderRoutes(
               .send();
           }
           const pdf = await pdfRenderer(html);
-          if (expectedVersion !== null) {
+          const renderedVersion = layout
+            ? Number(order.version)
+            : expectedVersion;
+          if (renderedVersion !== null) {
             const again = await authorizeRead(request, orders, 'order.print');
             const { order: current } = await orders.get(orderId, again.actor);
             if (
-              Number(current.version) !== expectedVersion ||
+              Number(current.version) !== renderedVersion ||
               current.status !== 'confirmado'
             )
               throw new OrderRequestError(409, 'VERSION_CONFLICT');

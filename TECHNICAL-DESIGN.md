@@ -1110,6 +1110,15 @@ e a validação de conteúdo são os mesmos da ficha detalhada. Layout
 desconhecido ou solicitado para pedido de loja retorna 400. A outra ação
 continua pedindo o PDF detalhado sem parâmetro.
 
+A [ADR 099](docs/adr/099-arte-final-na-ficha-para-impressao.md) consolida o
+controle em uma linha e inclui a prévia da **Arte final**. A API lê o arquivo
+privado pelo fluxo já auditado e verifica tamanho e SHA-256. PNG, JPEG e
+WebP são incorporados como imagens. `pdftoppm` (pacote `poppler-utils` na
+imagem de runtime) converte em memória PDFs de arte em prévias raster, com
+até quatro páginas exibidas, tempo máximo de oito segundos na conversão e
+duas preparações concorrentes. Após renderizar, a API confere novamente a
+versão e o acesso ao pedido. Ausência ou falha de prévia é indicada na ficha.
+
 Pedido da loja (ADRs 027 e 028): `origin = loja`, sem conversa, nasce
 confirmado pelo ator `system:loja-do-site` ao preço de
 `modules/orders/src/domain/store-catalog.js` (R$ 180,00, prazo por cor), com

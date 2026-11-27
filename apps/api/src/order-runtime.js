@@ -825,6 +825,11 @@ export function createOrderRuntime(options) {
       return presentFiles(await requireFiles().list(orderId, actor));
     },
 
+    /** @param {string} orderId @param {OrderActor} actor */
+    async findFinalArtwork(orderId, actor) {
+      return (await requireFiles().list(orderId, actor)).final;
+    },
+
     /**
      * ADR 023: the command fingerprint carries the content hashes, so a
      * retry with the same key and bytes replays the first answer and other
@@ -881,14 +886,19 @@ export function createOrderRuntime(options) {
         input.fileId,
         input.actor,
       );
-      await options.auditTrail.append({
-        action: 'order.file.download',
-        actor: input.actor.id,
-        correlationId: input.correlationId,
-        reason: 'order.file.download',
-        target: { id: input.orderId, type: 'order' },
-        version: input.fileId,
-      });
+      try {
+        await options.auditTrail.append({
+          action: 'order.file.download',
+          actor: input.actor.id,
+          correlationId: input.correlationId,
+          reason: 'order.file.download',
+          target: { id: input.orderId, type: 'order' },
+          version: input.fileId,
+        });
+      } catch (error) {
+        opened.stream.destroy();
+        throw error;
+      }
       return opened;
     },
 

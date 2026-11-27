@@ -3,6 +3,7 @@ import { chromium } from 'playwright';
 const MAX_CONCURRENT_RENDERS = 2;
 let activeRenders = 0;
 
+/* global document */
 /**
  * Render the same approved ficha HTML that the print route serves. No page
  * request may leave the process: the document contains private order data and
@@ -31,6 +32,16 @@ export async function renderOrderPdf(html) {
     const page = await context.newPage();
     page.setDefaultTimeout(15_000);
     await page.setContent(html, { waitUntil: 'load' });
+    if (html.includes('data-art-fallback=')) {
+      await page.evaluate(() => {
+        for (const img of document.querySelectorAll('img[data-art-fallback]')) {
+          if (/** @type {HTMLImageElement} */ (img).naturalWidth) continue;
+          const notice = document.createElement('p');
+          notice.textContent = img.getAttribute('data-art-fallback');
+          img.replaceWith(notice);
+        }
+      });
+    }
     await page.emulateMedia({ media: 'print' });
     return await page.pdf({
       format: 'A4',

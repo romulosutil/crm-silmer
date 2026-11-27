@@ -2,19 +2,19 @@
 
 ## Carteira e Mapa de corte — CAR
 
-O contrato está na [ADR 100](docs/adr/100-carteira-de-pedidos-e-mapa-de-corte.md).
-A migration expand `0086` acrescenta `production_stage` em `crm.orders`.
+O contrato está na [ADR 101](docs/adr/101-carteira-de-pedidos-e-mapa-de-corte.md).
+A migration expand `0087` acrescenta `production_stage` em `crm.orders`.
 Mudanças de etapa incrementam a versão operacional e publicam evento no
 stream do pedido, com a mesma transação de autorização e idempotência das
 declarações de datas. O mapa usa o renderer Chromium atual com HTML escapado,
 fontes embutidas e nenhum recurso externo. A API recalcula a projeção e
 compara o fingerprint antes e depois de renderizar. A
-[ADR 102](docs/adr/102-mapas-de-corte-numerados.md) acrescenta a migration expand
-`0088`, que cria os mapas numerados e o vínculo único por pedido. O POST do PDF
+[ADR 103](docs/adr/103-mapas-de-corte-numerados.md) acrescenta a migration expand
+`0089`, que cria os mapas numerados e o vínculo único por pedido. O POST do PDF
 com CSRF serializa seleções sobrepostas e grava o mapa, os vínculos e a
 auditoria na transação que revalida versões e acesso.
-Pela [ADR 103](docs/adr/103-pdf-original-do-mapa-de-corte.md), a migration
-`0089` guarda o documento original cifrado na mesma emissão. Consultar o
+Pela [ADR 104](docs/adr/104-pdf-original-do-mapa-de-corte.md), a migration
+`0090` guarda o documento original cifrado na mesma emissão. Consultar o
 mapa ou baixar o PDF usa a autorização atual de todos os pedidos do lote.
 
 ## Link de pagamento do CRM — LPC (23/11/2026)

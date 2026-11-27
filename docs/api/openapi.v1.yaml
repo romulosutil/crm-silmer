@@ -3611,11 +3611,7 @@ paths:
           }
       responses:
         '200':
-          {
-            description: Lotes com público,
-            grade,
-            pedidos de origem e fingerprint,
-          }
+          description: Lotes com público, grade, pedidos de origem e fingerprint.
         '404':
           { description: Pedido inexistente ou fora do escopo do solicitante }
         '409': { description: Pedido fora da fila de corte }
@@ -3637,21 +3633,17 @@ paths:
             name: fingerprint,
             in: query,
             required: true,
-            schema: { type: string, pattern: '^[a-f0-9]{64}    get:
-      operationId: getCommercialResult
-      summary: Consulta administrativa de vendas por data comercial e crédito congelado
-      security: [{ sessionCookie: [] }]
-      parameters:
-        - $ref: '#/components/parameters/HumanReadOrigin'
-        - { name: period, in: query, required: true, schema: { type: string, enum: [hoje, 7dias, mes] } }
+            schema: { type: string, pattern: '^[a-f0-9]{64}$' },
+          }
       responses:
         '200':
-          description: Total elegível, série diária, composição e intervalos de comparação em São Paulo.
+          description: PDF A4 privado
           content:
-            application/json:
-              schema: { $ref: '#/components/schemas/CommercialResult' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+            application/pdf:
+              schema: { type: string, format: binary }
+        '404': { description: Pedido inexistente ou fora do escopo do solicitante }
+        '409': { description: Prévia desatualizada ou pedido fora da fila de corte }
+        '503': { description: Renderização indisponível }
   /orders/{orderId}/production-stage:
     post:
       tags: [Orders]

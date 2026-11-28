@@ -25,6 +25,11 @@ números dos pedidos e disponibilidade do arquivo. **Baixar PDF** usa a rota
 do documento original e revalida o acesso. Mapas legados com vínculo e sem
 arquivo mostram **PDF indisponível**.
 
+O parâmetro `q` (CAR-12, CAR-T08) busca um número exato em todo o histórico.
+Um número sem sufixo pode encontrar o mapa com esse número e o mapa que
+contém o pedido correspondente. Com `-CRM`, consulta somente pelo pedido.
+A autorização da lista continua a exigir acesso a todos os pedidos do mapa.
+
 ## Link de pagamento do CRM — LPC (23/11/2026)
 
 [ADR 098](docs/adr/098-link-de-pagamento-do-crm-e-cobrancas-que-somam.md),

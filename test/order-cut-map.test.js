@@ -121,6 +121,8 @@ test('CAR-06/09/10: numbered maps return the original PDF and prevent repeated a
   let failRender = false;
   const history = new Map();
   const issued = new Map();
+  /** @type {({number: string, orderOnly: boolean}|null)[]} */
+  const searches = [];
   let reserved = 0;
   const authorize = async () => {
     if (blocked)
@@ -160,9 +162,11 @@ test('CAR-06/09/10: numbered maps return the original PDF and prevent repeated a
       listIssuedCutMaps: async (
         /** @type {{id: string}} */ principal,
         /** @type {string|null} */ before,
+        /** @type {{number:string, orderOnly:boolean}|null} */ search,
       ) => {
         assert.equal(principal.id, actor.id);
         assert.ok(before === null || before === '3');
+        searches.push(search);
         return {
           items: [...issued.values()]
             .filter(({ number }) => before === null || number < before)
@@ -285,11 +289,23 @@ test('CAR-06/09/10: numbered maps return the original PDF and prevent repeated a
     items: [],
     nextCursor: null,
   });
+  for (const [query, expected] of [
+    ['q=0003', { number: '3', orderOnly: false }],
+    ['q=%2006-crm%20&before=3', { number: '6', orderOnly: true }],
+  ]) {
+    assert.equal((await api.inject(`${historyUrl}?${query}`)).statusCode, 200);
+    assert.deepEqual(searches.at(-1), expected);
+  }
   for (const query of [
     'before=0',
     'before=9223372036854775808',
     'before=2&before=3',
     'seller=other',
+    'q=0',
+    'q=',
+    'q=6-CRM&q=3',
+    'q=9223372036854775808',
+    'q=cliente',
   ]) {
     assert.equal((await api.inject(`${historyUrl}?${query}`)).statusCode, 400);
   }

@@ -16,6 +16,17 @@ function validMapNumber(value) {
 }
 
 /** @param {unknown} value */
+function parseMapSearch(value) {
+  if (typeof value !== 'string' || value.length > 32) return null;
+  const match = /^(\d+)(-CRM)?$/iu.exec(value.trim());
+  if (!match) return null;
+  const number = match[1].replace(/^0+/u, '');
+  return validMapNumber(number)
+    ? { number, orderOnly: Boolean(match[2]) }
+    : null;
+}
+
+/** @param {unknown} value */
 function validSelection(value) {
   return (
     Array.isArray(value) &&
@@ -136,15 +147,17 @@ export function registerOrderCutMapRoutes(
       { config: readLimit, exposeHeadRoute: false },
       respond(async (request, reply) => {
         const query = /** @type {Record<string, unknown>} */ (request.query);
-        const { before } = query;
+        const { before, q } = query;
+        const search = parseMapSearch(q);
         if (
-          Object.keys(query).some((key) => key !== 'before') ||
-          (before !== undefined && !validMapNumber(before))
+          Object.keys(query).some((key) => key !== 'before' && key !== 'q') ||
+          (before !== undefined && !validMapNumber(before)) ||
+          (q !== undefined && !search)
         )
           return reject(reply, 400, 'INVALID_REQUEST');
         const { actor } = await authorize(request);
         return reply.send(
-          await orders.listIssuedCutMaps(actor, before ?? null),
+          await orders.listIssuedCutMaps(actor, before ?? null, search),
         );
       }),
     );

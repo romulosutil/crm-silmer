@@ -958,14 +958,23 @@ export class PostgresOrderRepository {
     return rows[0].number;
   }
 
-  /** @param {{id:string, capabilities?:readonly string[]}} actor @param {string|null} before @param {number} limit */
-  async listIssuedCutMaps(actor, before, limit) {
+  /** @param {{id:string, capabilities?:readonly string[]}} actor @param {string|null} before @param {number} limit @param {{number:string, orderOnly:boolean}|null} [search] */
+  async listIssuedCutMaps(actor, before, limit, search = null) {
     const { rows } = await this.#database.query(
       `SELECT map.number::text, map.generated_at, members.orders,
          map.pdf_envelope IS NOT NULL AS pdf_available
        FROM crm.order_cut_maps map
        ${READABLE_CUT_MAP_MEMBERS}
-       WHERE $1::bigint IS NULL OR map.number < $1::bigint
+       WHERE ($1::bigint IS NULL OR map.number < $1::bigint)
+       ${
+         search
+           ? `AND map.number = ANY(ARRAY[$5::bigint, (
+         SELECT membership.map_number FROM crm.orders searched_order
+         JOIN crm.order_cut_map_orders membership ON membership.order_id = searched_order.id
+         WHERE searched_order.number_sequence = $6::bigint
+       )])`
+           : ''
+       }
        ORDER BY map.number DESC
        LIMIT $4`,
       [
@@ -973,6 +982,9 @@ export class PostgresOrderRepository {
         actor.id,
         actor.capabilities?.includes('COMMERCIAL_ADMIN') === true,
         limit,
+        ...(search
+          ? [search.orderOnly ? null : search.number, search.number]
+          : []),
       ],
     );
     return rows.map(issuedCutMapSummary);

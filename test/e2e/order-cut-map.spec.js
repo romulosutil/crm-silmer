@@ -117,6 +117,98 @@ test('CAR-11: consults the history and downloads the original PDF without findin
   ).toBeVisible();
 });
 
+test('CAR-12: searches the full history by map number or an included order number', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockOrders(page, { orders: [] });
+  const generatedAt = '2026-11-27T14:00:00.000Z';
+  const recent = {
+    number: '24',
+    generatedAt,
+    orders: ['19-CRM'],
+    pdfAvailable: true,
+  };
+  const old = {
+    number: '3',
+    generatedAt,
+    orders: ['07-CRM', '15-CRM'],
+    pdfAvailable: true,
+  };
+  /** @type {(string|null)[]} */
+  const queries = [];
+  await page.route(/\/api\/v1\/orders\/cut-maps(\?|$)/u, async (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    expect(params.get('before')).toBeNull();
+    const query = params.get('q');
+    queries.push(query);
+    if (query === 'cliente') {
+      await route.fulfill({
+        status: 400,
+        json: { error: { code: 'INVALID_REQUEST' } },
+      });
+      return;
+    }
+    const items =
+      query === null ? [recent] : ['3', '07-CRM'].includes(query) ? [old] : [];
+    await route.fulfill({
+      json: { items, nextCursor: query === null ? '24' : null },
+    });
+  });
+  await page.goto('/pedidos');
+  await page
+    .getByRole('button', { name: 'Mapas de corte', exact: true })
+    .press('Enter');
+  const history = page.getByRole('region', {
+    name: 'Histórico de mapas de corte',
+  });
+  const query = history.getByRole('searchbox', {
+    name: 'Número do mapa ou do pedido',
+  });
+  const olderMap = history.getByRole('heading', {
+    name: 'Mapa de corte 3',
+    exact: true,
+  });
+  const recentMap = history.getByRole('heading', { name: 'Mapa de corte 24' });
+  await expect(recentMap).toBeVisible();
+  await expect(olderMap).toHaveCount(0);
+
+  await query.fill('3');
+  await query.press('Enter');
+  await expect(olderMap).toBeVisible();
+  await expect(recentMap).toHaveCount(0);
+  await expect(query).toBeFocused();
+
+  await query.fill('07-CRM');
+  await history
+    .getByRole('button', { name: 'Buscar', exact: true })
+    .press('Enter');
+  await expect(history.getByText('07-CRM, 15-CRM')).toBeVisible();
+  await expect(
+    history.getByRole('button', { name: 'Baixar PDF do mapa de corte 3' }),
+  ).toBeVisible();
+
+  await query.fill('999');
+  await query.press('Enter');
+  await expect(history.getByRole('status')).toHaveText(
+    'Nenhum mapa de corte encontrado para essa busca.',
+  );
+  await query.fill('cliente');
+  await query.press('Enter');
+  await expect(query).toHaveAttribute('aria-invalid', 'true');
+  await expect(history.getByRole('alert')).toContainText(
+    'Digite um número de mapa ou de pedido',
+  );
+
+  await history
+    .getByRole('button', { name: 'Limpar busca de mapas de corte' })
+    .press('Enter');
+  await expect(query).toHaveValue('');
+  await expect(query).toBeFocused();
+  await expect(recentMap).toBeVisible();
+  expect(queries).toEqual([null, '3', '07-CRM', '999', 'cliente', null]);
+});
+
 test('CAR-02: a legacy production step requires explicit confirmation and advances', async ({
   page,
 }) => {

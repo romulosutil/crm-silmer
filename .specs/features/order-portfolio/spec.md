@@ -16,6 +16,7 @@
 | CAR-09    | O mapa tem um número único na carteira e no PDF. Cada pedido pertence a um único mapa. O pedido fica disponível para consulta e sai da seleção. A API recusa toda seleção que contenha um pedido já mapeado, inclusive quando duas gerações concorrem pelo mesmo pedido.                      | CAR-T05 |
 | CAR-10    | A etiqueta numerada abre a composição do mapa e permite baixar exatamente o PDF emitido. Consulta e download exigem acesso a todos os pedidos do mapa, não criam nova emissão e continuam válidos depois de alterações posteriores nos pedidos.                                               | CAR-T06 |
 | CAR-11    | O histórico na Carteira lista os mapas emitidos por número decrescente, com data de emissão, números dos pedidos e download do PDF original quando disponível. Mapas antigos sem arquivo continuam consultáveis. A lista é paginada e inclui somente mapas para os quais a pessoa tem acesso a todos os pedidos. | CAR-T07 |
+| CAR-12    | A busca no histórico consulta todos os mapas autorizados pelo número exato do mapa ou de um pedido incluído, mesmo fora da página carregada. Um número sem sufixo consulta os dois identificadores. Com `-CRM`, consulta o pedido. O resultado preserva todos os pedidos do mapa e o PDF original disponível. | CAR-T08 |
 
 Recebimentos e saldo seguem os contratos de cobrança e da declaração de
 pagamento no detalhe do pedido. A coluna Valor da carteira exibe o total do

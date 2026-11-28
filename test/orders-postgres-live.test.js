@@ -1800,7 +1800,7 @@ if (connectionString) {
     assert.equal(await storage.getObject(second.file.objectKey), null);
   });
 
-  test('CAR-02/09/10/11 and manual delivery: issued maps and PDFs require access to every order', async () => {
+  test('CAR-02/09/10/11/12 and manual delivery: issued maps and PDFs require access to every order', async () => {
     const conversationId = await seedConversation(pool, {
       channel: 'whatsapp',
     });
@@ -2055,6 +2055,13 @@ if (connectionString) {
       items: [],
       nextCursor: null,
     });
+    const byMap = { number: winner, orderOnly: false };
+    const byOrder = { number: String(order.numberSequence), orderOnly: true };
+    for (const search of [byMap, byOrder])
+      assert.deepEqual(await runtime.listIssuedCutMaps(actor, null, search), {
+        items: [],
+        nextCursor: null,
+      });
     const legacyOrder = await confirmedCutOrder();
     const legacyNumber = await runtime.reserveCutMapNumber();
     await pool.query('INSERT INTO crm.order_cut_maps (number) VALUES ($1)', [
@@ -2089,7 +2096,7 @@ if (connectionString) {
       ),
       [legacyNumber],
     );
-    assert.deepEqual(await runtime.listIssuedCutMaps(actor, legacyNumber), {
+    const expectedHistory = {
       items: [
         {
           number: winner,
@@ -2099,7 +2106,16 @@ if (connectionString) {
         },
       ],
       nextCursor: null,
-    });
+    };
+    assert.deepEqual(
+      await runtime.listIssuedCutMaps(actor, legacyNumber),
+      expectedHistory,
+    );
+    for (const search of [byMap, byOrder])
+      assert.deepEqual(
+        await runtime.listIssuedCutMaps(actor, null, search),
+        expectedHistory,
+      );
     await pool.query(
       'UPDATE crm.orders SET manual_owner_id = $2 WHERE id = $1',
       [companion.id, otherOwner],

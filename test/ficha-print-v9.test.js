@@ -63,6 +63,24 @@ const head = (page) =>
   /<header class="head">[\s\S]*?<\/header>/u.exec(page)?.[0] ?? '';
 const NOTICE = /Observações do pedido continuam na folha (\d+) de (\d+)/u;
 
+test('FPI-16: both PDFs display approved fabric aliases without changing the ficha', () => {
+  const order = shortOrder();
+  order.ficha.items[0].malhas = [
+    'ALLSTAR CORRIDA',
+    '100% POLIÉSTER',
+    'Poliéster 100%',
+    'Poliéster leve',
+  ];
+  const original = structuredClone(order);
+
+  for (const layout of /** @type {const} */ ([undefined, 'impressao'])) {
+    const text = visible(renderOrderFicha(order, undefined, { layout }));
+    assert.match(text, /All Star \/ Poliéster \/ Poliéster \/ Poliéster leve/u);
+    assert.doesNotMatch(text, /ALLSTAR CORRIDA|100% POLIÉSTER|Poliéster 100%/u);
+    assert.deepEqual(order, original);
+  }
+});
+
 test('FPI-12: each item prints a front and a back, in that order, before any extra sheet', () => {
   const html = renderOrderFicha(sample.order, TEMPLATE_V9);
   const pages = sheets(html);

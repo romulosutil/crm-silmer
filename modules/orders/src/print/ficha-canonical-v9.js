@@ -7,7 +7,7 @@ import { POPPINS_FONT_FACES } from './ficha-v8-fonts.js';
 import { gradeLayout } from './ficha-v8-pages.js';
 import { planFichaV9, splitNotes } from './ficha-v9-pages.js';
 import { safeArtPreview } from './ficha-v8-content.js';
-import { filledText } from './html.js';
+import { filledText, printedFabric } from './html.js';
 import { NOT_APPLICABLE } from '../domain/ficha.js';
 
 /** The seven production fields of the back of the item (FPI-07, FPI-12). */
@@ -203,6 +203,7 @@ function sheetItem(item) {
     aplicacao: printed(item.tipo_servico),
     malha: printed(
       (Array.isArray(item.malhas) ? item.malhas : [])
+        .map(printedFabric)
         .map(humanized)
         .join(' / '),
     ),

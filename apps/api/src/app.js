@@ -13,7 +13,10 @@ import {
   MetaWebhookPayloadError,
   WebhookEventConflictError,
 } from '@crm-silmer/integration-reliability';
-import { N8nNotFoundError } from '@crm-silmer/n8n-integration';
+import {
+  N8nConflictError,
+  N8nNotFoundError,
+} from '@crm-silmer/n8n-integration';
 import { registerConversationRoutes } from './conversation-routes.js';
 import { registerChatMediaUploadRoutes } from './chat-media-upload-routes.js';
 import { registerChatMediaStatusRoutes } from './chat-media-status-routes.js';
@@ -168,7 +171,9 @@ export function createApi(options = {}, runtime = {}) {
       return;
     }
     const diagnosticCode =
-      error instanceof N8nNotFoundError ? error.diagnosticCode : undefined;
+      error instanceof N8nNotFoundError || error instanceof N8nConflictError
+        ? error.diagnosticCode
+        : undefined;
     logger.error('api_request_failed', {
       correlation_id: context?.correlationId,
       error_code:

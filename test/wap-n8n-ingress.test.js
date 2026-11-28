@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
+import { setImmediate as tick } from 'node:timers/promises';
 import test from 'node:test';
 import vm from 'node:vm';
 import {
@@ -62,6 +63,42 @@ const CONTROLLER_FIXTURE = `class Controller {
         return this.workflowExecutionService.executeManually(dbWorkflow, body);
   }
 } Controller;`;
+const EXECUTIONS_FIXTURE = `class ActiveExecutions { async add(executionData, existingExecution) {
+        let executionStatus = existingExecution ? 'running' : 'new';
+        const capacityReservation = { release() {} };
+        try {
+            await this.persist(executionData);
+        }
+        catch (error) {
+            capacityReservation.release();
+            throw error;
+        }
+        void this.completion(executionData)
+            .catch(() => {})
+            .finally(() => {
+            capacityReservation.release();
+        });
+        return executionStatus;
+}} ActiveExecutions;`;
+
+/** @param {Record<string,string>} runtimeEnv */
+function executionWriter(runtimeEnv) {
+  const Writer = vm.runInNewContext(
+    patchExecutionsSource(
+      EXECUTIONS_FIXTURE,
+      createHash('sha256').update(EXECUTIONS_FIXTURE).digest('hex'),
+    ),
+    {
+      require: () => ({
+        guardInitialExecution: (
+          /** @type {any} */ data,
+          /** @type {any} */ existing,
+        ) => guardInitialExecution(data, existing, runtimeEnv),
+      }),
+    },
+  );
+  return new Writer();
+}
 
 test('WAP-E02: product metadata is authoritatively compared before the first n8n input can contain IDs', async () => {
   const envelope = {
@@ -297,6 +334,148 @@ function verificationResponse(value, status = 200) {
   };
 }
 
+test('WAP-09/12: an 855-event reconnect burst preserves the general send path and bounds personal execution writes', async () => {
+  const path = 'silmer/seller-whatsapp/events';
+  const instance = 'wap_synthetic_personal';
+  const config = {
+    ...env,
+    SILMER_WAP_INGRESS_PATHS: JSON.stringify({ [path]: 'event' }),
+    SILMER_WAP_INGRESS_INSTANCES: instance,
+  };
+  const binding = () => ({ ...source, bindingId: randomUUID() });
+  const first = binding();
+  const second = binding();
+  const third = binding();
+  const cutover = 1_795_872_000;
+  const writer = executionWriter(config);
+  let personalWrites = 0;
+  let generalWrites = 0;
+  let failNextWrite = false;
+  /** @type {Array<{finish: Function, cancel: Function}>} */
+  const running = [];
+  writer.persist = (/** @type {any} */ data) => {
+    if (failNextWrite) {
+      failNextWrite = false;
+      throw new Error('synthetic write failure');
+    }
+    if (data.workflowData.nodes.length) personalWrites++;
+    else generalWrites++;
+  };
+  writer.completion = (/** @type {any} */ data) =>
+    data.workflowData.nodes.length
+      ? new Promise((finish, cancel) => running.push({ finish, cancel }))
+      : Promise.resolve();
+  /** @param {any} body */
+  const execution = (body) => ({
+    workflowData: {
+      name: 'Silmer seller WhatsApp inbound',
+      settings,
+      nodes: [{ type: 'n8n-nodes-base.webhook', parameters: { path } }],
+    },
+    executionMode: 'webhook',
+    executionData: {
+      executionData: {
+        nodeExecutionStack: [{ data: { main: [[{ json: { body } }]] } }],
+      },
+    },
+  });
+  /** @param {ReturnType<typeof binding>} origin @param {number} index @param {number} [timestamp] @param {number} [verifierStatus] */
+  async function receive(origin, index, timestamp, verifierStatus = 200) {
+    const key = {
+      fromMe: timestamp === undefined || index % 2 === 0,
+      remoteJid: '5511990000082@s.whatsapp.net',
+    };
+    const event = {
+      event: timestamp === undefined ? 'messages.update' : 'messages.upsert',
+      instance,
+      source: origin,
+      sender: '5511990000081@s.whatsapp.net',
+      date_time: '2026-11-28T13:36:00.000Z',
+      data:
+        timestamp === undefined
+          ? { ...key, keyId: `synthetic-${index}`, status: 'READ' }
+          : {
+              key: { ...key, id: `synthetic-${index}` },
+              messageTimestamp: timestamp,
+              message: { conversation: 'fixture' },
+            },
+    };
+    const ctx = context({ parameters: { path }, req: { body: event } });
+    const shortCircuited = await protectIngress(
+      ctx,
+      config,
+      async (/** @type {string} */ _url, /** @type {any} */ init) => {
+        const verifiedInput = JSON.parse(init.body);
+        const seconds =
+          timestamp === undefined
+            ? undefined
+            : Math.floor(timestamp > 1e12 ? timestamp / 1000 : timestamp);
+        assert.equal(verifiedInput.messageTimestamp, seconds);
+        return verificationResponse(
+          {
+            instance,
+            source: origin,
+            ...(seconds !== undefined && seconds < cutover
+              ? { ignored: 'before_cutover' }
+              : {}),
+          },
+          verifierStatus,
+        );
+      },
+    );
+    if (shortCircuited) return ctx.response.status;
+    assert.equal(Object.hasOwn(ctx.req.body, 'ignored'), false);
+    return writer.add(execution(ctx.req.body));
+  }
+  const old = await Promise.all(
+    Array.from({ length: 464 }, (_, i) => receive(first, i, cutover - 1)),
+  );
+  assert.deepEqual(new Set(old), new Set([204]));
+  assert.equal(personalWrites, 0);
+  assert.equal(await receive(first, 0, cutover - 1, 403), 403);
+
+  const receipts = await Promise.allSettled(
+    Array.from({ length: 391 }, (_, i) => receive(first, i)),
+  );
+  assert.equal(personalWrites, 4);
+  assert.equal(receipts.filter((r) => r.status === 'fulfilled').length, 4);
+  for (const r of receipts)
+    if (r.status === 'rejected')
+      assert.match(r.reason.message, /WAP_INGRESS_UNAVAILABLE/u);
+  await Promise.all(
+    Array.from({ length: 4 }, (_, i) =>
+      receive(second, i, cutover * 1000 + 500),
+    ),
+  );
+  assert.equal(personalWrites, 8);
+  await assert.rejects(receive(third, 1, cutover), /WAP_INGRESS_UNAVAILABLE/u);
+  assert.equal(
+    guardInitialExecution(
+      execution({ event: 'connection.update' }),
+      undefined,
+      config,
+    ),
+    undefined,
+  );
+  assert.equal(
+    await writer.add({ workflowData: { name: 'General send', nodes: [] } }),
+    'new',
+  );
+  assert.equal(generalWrites, 1);
+
+  running.shift()?.cancel(new Error('synthetic cancellation'));
+  await tick();
+  failNextWrite = true;
+  await assert.rejects(receive(first, 1, cutover), /synthetic write failure/u);
+  assert.equal(await receive(first, 2, cutover), 'new');
+  running.shift()?.finish();
+  await tick();
+  assert.equal(await receive(third, 1, cutover), 'new');
+  for (const hold of running) hold.finish();
+  await tick();
+  assert.equal(personalWrites, 10);
+});
+
 test('WAP-09: personal ingress acknowledges standalone incoming business templates without creating Inbox events', async () => {
   const path = 'silmer/seller-whatsapp/events';
   const instance = 'wap_synthetic_personal';
@@ -459,6 +638,7 @@ test('WAP-E04: personal message projection precedes persistence and removes gene
           source: origin,
           instance,
           sender: raw.sender,
+          messageTimestamp: raw.data.messageTimestamp,
         });
         return verificationResponse({ source: origin, instance });
       },
@@ -1186,25 +1366,7 @@ test('WAP-E01: image patch is hash/anchor guarded and native authentication stil
       ),
     /WAP_N8N_SOURCE_MISMATCH/u,
   );
-  const writer = `class ActiveExecutions { async add(executionData, existingExecution) {
-        let executionStatus = existingExecution ? 'running' : 'new';
-        return this.persist(executionData);
-  }} ActiveExecutions;`;
-  const Writer = vm.runInNewContext(
-    patchExecutionsSource(
-      writer,
-      createHash('sha256').update(writer).digest('hex'),
-    ),
-    {
-      require: () => ({
-        guardInitialExecution: (
-          /** @type {any} */ data,
-          /** @type {any} */ existing,
-        ) => guardInitialExecution(data, existing, env),
-      }),
-    },
-  );
-  const instance = new Writer();
+  const instance = executionWriter(env);
   let writes = 0;
   instance.persist = () => {
     writes++;

@@ -39,12 +39,24 @@ export function patchWebhookSource(source, expected = WEBHOOK_SHA256) {
 export function patchExecutionsSource(source, expected = EXECUTIONS_SHA256) {
   const anchor =
     "        let executionStatus = existingExecution ? 'running' : 'new';";
-  return inject(
+  const releases = [
+    '        catch (error) {\n            capacityReservation.release();',
+    '            .finally(() => {\n            capacityReservation.release();',
+  ];
+  if (releases.some((release) => source.split(release).length !== 2))
+    throw new Error('WAP_N8N_SOURCE_MISMATCH');
+  let patched = inject(
     source,
     expected,
     anchor,
-    `        require('${helper}').guardInitialExecution(executionData, existingExecution);\n`,
+    `        const releaseWapIngress = require('${helper}').guardInitialExecution(executionData, existingExecution);\n`,
   );
+  for (const release of releases)
+    patched = patched.replace(
+      release,
+      release + '\n            releaseWapIngress?.();',
+    );
+  return patched;
 }
 /** @param {string} source @param {string} [expected] */
 export function patchControllerSource(source, expected = CONTROLLER_SHA256) {

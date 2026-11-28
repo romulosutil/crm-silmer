@@ -370,16 +370,44 @@ else {
             { code: 'WHATSAPP_GENERATION_STALE' },
           );
           const next = { ...a.source, bindingId: randomUUID(), generation: 2 };
+          const nextToken = 'synthetic-generation-2-token-0000000';
           await pool.query(
             `INSERT INTO crm.seller_whatsapp_bindings(id,line_id,account_id,instance_name,generation,token_hash,token_envelope,created_at)
             SELECT $1,line_id,account_id,instance_name,2,$2,token_envelope,created_at FROM crm.seller_whatsapp_bindings WHERE id=$3`,
             [
               next.bindingId,
-              createHash('sha256')
-                .update('synthetic-generation-2')
-                .digest('hex'),
+              createHash('sha256').update(nextToken).digest('hex'),
               a.source.bindingId,
             ],
+          );
+          const verify = {
+            source: next,
+            instance: a.instance,
+            token: nextToken,
+            sender: a.number + '@s.whatsapp.net',
+          };
+          const cutover = Math.floor(NOW.getTime() / 1000);
+          assert.deepEqual(
+            await control.verifyIngress({
+              ...verify,
+              messageTimestamp: cutover - 1,
+            }),
+            { source: next, instance: a.instance, ignored: 'before_cutover' },
+          );
+          assert.deepEqual(
+            await control.verifyIngress({
+              ...verify,
+              messageTimestamp: cutover,
+            }),
+            { source: next, instance: a.instance },
+          );
+          await assert.rejects(
+            control.verifyIngress({
+              ...verify,
+              token: TOKEN + A,
+              messageTimestamp: cutover - 1,
+            }),
+            { code: 'FORBIDDEN' },
           );
           const relabeled = inbound(a, 'race-1', { source: next });
           relabeled.technical.idempotencyKey = 'relabel-old-event';

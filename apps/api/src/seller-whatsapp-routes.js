@@ -192,12 +192,21 @@ export function registerSellerWhatsAppRoutes(api, service, contextFor) {
         const auth = await technical(request, 'whatsapp.control.read');
         const body = controlObject(
           request.body,
-          ['source', 'instance', 'sender', 'recovery'],
+          ['source', 'instance', 'sender', 'recovery', 'messageTimestamp'],
           ['source', 'instance'],
         );
         if (
           body.recovery !== undefined &&
-          (body.recovery !== true || body.sender !== undefined)
+          (body.recovery !== true ||
+            body.sender !== undefined ||
+            body.messageTimestamp !== undefined)
+        )
+          throw error();
+        if (
+          body.messageTimestamp !== undefined &&
+          (!Number.isSafeInteger(body.messageTimestamp) ||
+            body.messageTimestamp <= 0 ||
+            body.sender === undefined)
         )
           throw error();
         if (

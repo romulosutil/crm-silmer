@@ -154,7 +154,13 @@ function fixture(options = {}) {
     verifyIngress: async (/** @type {any} */ input) => {
       calls.ingress++;
       assert.equal(input.token, 'synthetic-ingress-token');
-      return { source: input.source, instance: input.instance };
+      return {
+        source: input.source,
+        instance: input.instance,
+        ...(input.messageTimestamp === 1_795_872_000
+          ? { ignored: 'before_cutover' }
+          : {}),
+      };
     },
     result: async () => {
       calls.result++;
@@ -248,6 +254,43 @@ test('WAP-T05: ingress admits a 243-event reconnect burst for one binding', asyn
     assert.deepEqual(response.json(), payload);
   }
   assert.equal(calls.ingress, 243);
+});
+
+test('WAP-T05: ingress verifier accepts whole epoch seconds only for authenticated message events', async (t) => {
+  const { api, calls } = fixture();
+  t.after(() => api.close());
+  const bindingId = randomUUID();
+  const payload = {
+    source: { bindingId, lineId, accountId: randomUUID(), generation },
+    instance: 'opaque-instance',
+    sender: '5511990000081@s.whatsapp.net',
+    messageTimestamp: 1_795_872_000,
+  };
+  const request = (/** @type {any} */ body) =>
+    api.inject({
+      method: 'POST',
+      url: '/api/v1/integrations/n8n/whatsapp-control/ingress/verify',
+      headers: technicalHeaders(bindingId, {
+        'x-correlation-id': bindingId,
+        'x-silmer-wap-generation-token': 'synthetic-ingress-token',
+      }),
+      payload: body,
+    });
+  const accepted = await request(payload);
+  assert.equal(accepted.statusCode, 200);
+  assert.deepEqual(accepted.json(), {
+    source: payload.source,
+    instance: payload.instance,
+    ignored: 'before_cutover',
+  });
+  for (const invalid of [
+    { ...payload, messageTimestamp: 1.5 },
+    { ...payload, messageTimestamp: '1795872000' },
+    { ...payload, sender: undefined },
+    { ...payload, sender: undefined, recovery: true },
+  ])
+    assert.equal((await request(invalid)).statusCode, 400);
+  assert.equal(calls.ingress, 1);
 });
 
 test('WAP control and configuration are default off, and new capabilities stay deny-by-default', async () => {

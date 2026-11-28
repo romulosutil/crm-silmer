@@ -1552,7 +1552,7 @@ export class PostgresSellerWhatsAppRepository {
     });
   }
 
-  /** @param {{source:any,instance:string,token:string,sender?:string,recovery?:boolean}} input */
+  /** @param {{source:any,instance:string,token:string,sender?:string,recovery?:boolean,messageTimestamp?:number}} input */
   async verifyIngress(input) {
     const source = input.source;
     id(source.bindingId);
@@ -1668,6 +1668,11 @@ export class PostgresSellerWhatsAppRepository {
           generation: source.generation,
         },
         instance: line.instance_name,
+        ...(input.messageTimestamp !== undefined &&
+        input.messageTimestamp <
+          Math.floor(new Date(binding.created_at).getTime() / 1000)
+          ? { ignored: 'before_cutover' }
+          : {}),
       };
     });
   }

@@ -14,3 +14,5 @@
   e bloqueio de novas seleções após a emissão (CAR-09).
 - **CAR-T06** Consulta à composição do mapa e download do arquivo original
   com autorização de todos os pedidos vinculados (CAR-10).
+- **CAR-T07** Histórico paginado na Carteira com número, emissão, pedidos e
+  download do PDF original sob a mesma autorização (CAR-11).

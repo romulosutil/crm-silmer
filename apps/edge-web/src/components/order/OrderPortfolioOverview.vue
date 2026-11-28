@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import AppIcon from '../AppIcon.vue';
+import OrderCutMapHistory from './OrderCutMapHistory.vue';
 import { amountLabel } from '../../lib/order-format.js';
 
 const props = defineProps({
@@ -13,6 +14,7 @@ const props = defineProps({
 defineEmits(['filter', 'cut', 'retry']);
 
 const expanded = ref(false);
+const historyOpen = ref(false);
 const fmt = new Intl.NumberFormat('pt-BR');
 const month = new Intl.DateTimeFormat('pt-BR', {
   month: 'long',
@@ -109,20 +111,52 @@ const metrics = computed(() => {
   <section
     class="portfolio-production"
     aria-labelledby="portfolio-production-title"
+    :data-show-cut-action="historyOpen || cutting"
   >
     <header class="portfolio-production-head">
       <h2 id="portfolio-production-title">Produção</h2>
-      <button
-        type="button"
-        class="soft"
-        :disabled="!cutEnabled && !cutting"
-        :aria-expanded="cutting"
-        aria-controls="cut-selection"
-        @click="$emit('cut', $event)"
-      >
-        <AppIcon name="scissors" /> Novo mapa de corte
-      </button>
+      <div class="portfolio-production-actions">
+        <button
+          v-if="!cutting"
+          type="button"
+          class="quiet portfolio-mobile-cut-maps"
+          :aria-expanded="historyOpen"
+          aria-controls="cut-map-history"
+          @click="historyOpen = !historyOpen"
+        >
+          <AppIcon name="scissors" /> Mapas de corte
+        </button>
+        <button
+          type="button"
+          class="soft portfolio-cut-new"
+          :disabled="!cutEnabled && !cutting"
+          :aria-expanded="cutting"
+          aria-label="Novo mapa de corte"
+          aria-controls="cut-selection"
+          @click="$emit('cut', $event)"
+        >
+          <AppIcon name="scissors" />
+          <span
+            >Novo mapa<span class="portfolio-production-action-detail">
+              de corte</span
+            ></span
+          >
+        </button>
+        <button
+          v-if="!cutting"
+          type="button"
+          class="quiet portfolio-desktop-cut-history"
+          :aria-expanded="historyOpen"
+          aria-controls="cut-map-history"
+          @click="historyOpen = !historyOpen"
+        >
+          Histórico de mapas de corte
+        </button>
+      </div>
     </header>
+    <div id="cut-map-history" :hidden="!historyOpen || cutting">
+      <OrderCutMapHistory v-if="historyOpen && !cutting" />
+    </div>
     <div
       v-if="!cutting"
       class="chip-row"

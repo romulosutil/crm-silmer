@@ -157,6 +157,24 @@ test('CAR-06/09/10: numbered maps return the original PDF and prevent repeated a
       reserveCutMapNumber: async () => String(++reserved),
       getIssuedCutMap: async (/** @type {string} */ number) =>
         issued.get(number),
+      listIssuedCutMaps: async (
+        /** @type {{id: string}} */ principal,
+        /** @type {string|null} */ before,
+      ) => {
+        assert.equal(principal.id, actor.id);
+        assert.ok(before === null || before === '3');
+        return {
+          items: [...issued.values()]
+            .filter(({ number }) => before === null || number < before)
+            .map(({ number, orders, generatedAt, pdfAvailable }) => ({
+              number,
+              orders,
+              generatedAt,
+              pdfAvailable,
+            })),
+          nextCursor: null,
+        };
+      },
       recordCutMapDownload: async (
         /** @type {ReturnType<typeof projectCutMap>} */ map,
         /** @type {{ id: string }} */ _actor,
@@ -255,6 +273,29 @@ test('CAR-06/09/10: numbered maps return the original PDF and prevent repeated a
     generatedAt: '2026-11-27T12:30:00.000Z',
     pdfAvailable: true,
   });
+  const historyUrl = '/api/v1/orders/cut-maps';
+  const listed = await api.inject(historyUrl);
+  assert.equal(listed.statusCode, 200);
+  assert.equal(listed.headers['cache-control'], 'private, no-store');
+  assert.deepEqual(listed.json(), {
+    items: [detail.json().map],
+    nextCursor: null,
+  });
+  assert.deepEqual((await api.inject(`${historyUrl}?before=3`)).json(), {
+    items: [],
+    nextCursor: null,
+  });
+  for (const query of [
+    'before=0',
+    'before=9223372036854775808',
+    'before=2&before=3',
+    'seller=other',
+  ]) {
+    assert.equal((await api.inject(`${historyUrl}?${query}`)).statusCode, 400);
+  }
+  blocked = true;
+  assert.equal((await api.inject(historyUrl)).statusCode, 403);
+  blocked = false;
   const reprint = await api.inject(`${detailUrl}/pdf`);
   assert.equal(reprint.statusCode, 200);
   assert.deepEqual(reprint.rawPayload, response.rawPayload);

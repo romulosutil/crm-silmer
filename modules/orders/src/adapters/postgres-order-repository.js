@@ -72,6 +72,24 @@ function cutOrderReadable(order) {
     ))`;
 }
 
+const READABLE_CUT_MAP_MEMBERS = `JOIN LATERAL (
+  SELECT array_agg(orders.number ORDER BY orders.number_sequence) AS orders
+  FROM crm.order_cut_map_orders membership
+  JOIN crm.orders orders ON orders.id = membership.order_id
+  WHERE membership.map_number = map.number
+  HAVING bool_and((${cutOrderReadable('orders')}) IS TRUE)
+) members ON true`;
+
+/** @param {{number:string, generated_at:Date|string, orders:string[], pdf_available:boolean}} row */
+function issuedCutMapSummary(row) {
+  return {
+    number: row.number,
+    generatedAt: new Date(row.generated_at).toISOString(),
+    orders: row.orders,
+    pdfAvailable: row.pdf_available,
+  };
+}
+
 /** @param {string} orderId */
 function fichaAad(orderId) {
   return `order-ficha:${orderId}`;
@@ -940,23 +958,37 @@ export class PostgresOrderRepository {
     return rows[0].number;
   }
 
+  /** @param {{id:string, capabilities?:readonly string[]}} actor @param {string|null} before @param {number} limit */
+  async listIssuedCutMaps(actor, before, limit) {
+    const { rows } = await this.#database.query(
+      `SELECT map.number::text, map.generated_at, members.orders,
+         map.pdf_envelope IS NOT NULL AS pdf_available
+       FROM crm.order_cut_maps map
+       ${READABLE_CUT_MAP_MEMBERS}
+       WHERE $1::bigint IS NULL OR map.number < $1::bigint
+       ORDER BY map.number DESC
+       LIMIT $4`,
+      [
+        before,
+        actor.id,
+        actor.capabilities?.includes('COMMERCIAL_ADMIN') === true,
+        limit,
+      ],
+    );
+    return rows.map(issuedCutMapSummary);
+  }
+
   /** @param {string} number @param {{id:string, capabilities?:readonly string[]}} actor @param {boolean} includePdf */
   async readIssuedCutMap(number, actor, includePdf) {
     const {
       rows: [row],
     } = await this.#database.query(
-      `WITH members AS MATERIALIZED (
-         SELECT orders.number, orders.number_sequence, (${cutOrderReadable('orders')}) AS allowed
-         FROM crm.order_cut_map_orders membership
-         JOIN crm.orders orders ON orders.id = membership.order_id
-         WHERE membership.map_number = $1
-       )
-       SELECT map.generated_at, map.pdf_envelope IS NOT NULL AS pdf_available,
-         ARRAY(SELECT number FROM members ORDER BY number_sequence) AS orders
+      `SELECT map.number::text, map.generated_at, members.orders,
+         map.pdf_envelope IS NOT NULL AS pdf_available
          ${includePdf ? ', map.pdf_envelope' : ''}
-       FROM crm.order_cut_maps map WHERE map.number = $1
-         AND EXISTS (SELECT 1 FROM members)
-         AND NOT EXISTS (SELECT 1 FROM members WHERE allowed IS NOT TRUE)`,
+       FROM crm.order_cut_maps map
+       ${READABLE_CUT_MAP_MEMBERS}
+       WHERE map.number = $1`,
       [
         number,
         actor.id,
@@ -965,10 +997,7 @@ export class PostgresOrderRepository {
     );
     if (!row) return null;
     return {
-      number,
-      generatedAt: new Date(row.generated_at).toISOString(),
-      orders: row.orders,
-      pdfAvailable: row.pdf_available,
+      ...issuedCutMapSummary(row),
       pdf:
         includePdf && row.pdf_envelope
           ? Buffer.from(

@@ -555,6 +555,28 @@ export function createOrderRuntime(options) {
     return map;
   }
 
+  /** @param {string} number @param {OrderActor} actor */
+  async function readMemoryCutMapSummary(number, actor) {
+    const saved = memoryIssuedCutMaps.get(number);
+    if (!saved) return null;
+    try {
+      for (const { id } of saved.orders) await service.getForReceipt(id, actor);
+    } catch (error) {
+      if (
+        error instanceof OrderForbiddenError ||
+        error instanceof OrderNotFoundError
+      )
+        return null;
+      throw error;
+    }
+    return {
+      number,
+      generatedAt: saved.generatedAt,
+      orders: saved.orders.map((order) => order.number),
+      pdfAvailable: true,
+    };
+  }
+
   return Object.freeze({
     async listItemOptions() {
       const catalog = structuredClone(ORDER_ITEM_OPTIONS);
@@ -665,31 +687,46 @@ export function createOrderRuntime(options) {
       nextCutMapNumber += 1;
       return String(nextCutMapNumber);
     },
+    /** @param {OrderActor} actor @param {string|null} before */
+    async listIssuedCutMaps(actor, before) {
+      if (actor?.kind !== 'human' || !actor.id) throw new OrderForbiddenError();
+      const pageSize = 20;
+      /** @type {{number:string, generatedAt:string, orders:string[], pdfAvailable:boolean}[]} */
+      let items = [];
+      if (options.repository.listIssuedCutMaps) {
+        items = await options.repository.listIssuedCutMaps(
+          actor,
+          before,
+          pageSize + 1,
+        );
+      } else {
+        const numbers = [...memoryIssuedCutMaps.keys()].sort(
+          (left, right) => Number(right) - Number(left),
+        );
+        for (const number of numbers) {
+          if (before !== null && BigInt(number) >= BigInt(before)) continue;
+          const summary = await readMemoryCutMapSummary(number, actor);
+          if (summary) items.push(summary);
+          if (items.length > pageSize) break;
+        }
+      }
+      return {
+        items: items.slice(0, pageSize),
+        nextCursor: items.length > pageSize ? items[pageSize - 1].number : null,
+      };
+    },
     /** @param {string} number @param {OrderActor} actor @param {boolean} includePdf */
     async getIssuedCutMap(number, actor, includePdf) {
       if (actor?.kind !== 'human' || !actor.id) throw new OrderForbiddenError();
       if (options.repository.readIssuedCutMap)
         return options.repository.readIssuedCutMap(number, actor, includePdf);
-      const saved = memoryIssuedCutMaps.get(number);
-      if (!saved) return null;
-      try {
-        for (const { id } of saved.orders)
-          await service.getForReceipt(id, actor);
-      } catch (error) {
-        if (
-          error instanceof OrderForbiddenError ||
-          error instanceof OrderNotFoundError
-        )
-          return null;
-        throw error;
-      }
-      return {
-        number,
-        generatedAt: saved.generatedAt,
-        orders: saved.orders.map((order) => order.number),
-        pdfAvailable: true,
-        pdf: includePdf ? saved.pdf : null,
-      };
+      const summary = await readMemoryCutMapSummary(number, actor);
+      return (
+        summary && {
+          ...summary,
+          pdf: includePdf ? memoryIssuedCutMaps.get(number)?.pdf : null,
+        }
+      );
     },
     /** @param {Awaited<ReturnType<typeof getCutMap>>} map @param {OrderActor} actor @param {string} correlationId @param {string} number @param {Buffer} pdf */
     async recordCutMapDownload(map, actor, correlationId, number, pdf) {

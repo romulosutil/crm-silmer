@@ -468,6 +468,32 @@ if (connectionString) {
         true,
       ]);
 
+      // Missing correlation and a known conversation without the outbound
+      // receipt target are distinct diagnoses with the same HTTP contract.
+      for (const [conversationId, diagnosticCode] of [
+        [null, 'N8N_EVENT_TARGET_NOT_FOUND'],
+        [first.conversation_id, 'N8N_OUTBOUND_RECEIPT_NOT_FOUND'],
+      ]) {
+        const eventId = `synthetic-missing-receipt-${diagnosticCode}`;
+        await assert.rejects(
+          service.recordEvent({
+            conversation_id: conversationId,
+            event_id: eventId,
+            event_type: 'message.delivered',
+            external_message_id: 'synthetic-unknown-outbound',
+            occurred_at: NOW.toISOString(),
+            schema_version: '1.0',
+            technical: technical(eventId, eventId),
+          }),
+          { code: 'N8N_NOT_FOUND', diagnosticCode, statusCode: 404 },
+        );
+        const receipt = await pool.query(
+          'SELECT 1 FROM crm.n8n_events WHERE external_event_id=$1',
+          [eventId],
+        );
+        assert.equal(receipt.rowCount, 0);
+      }
+
       // The Inbox goes live off crm.domain_events. This integration owns its
       // own persistence path, so an inbound message that lands here without an
       // event leaves every open panel silently stale.

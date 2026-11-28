@@ -3264,7 +3264,10 @@ async function resolveEventConversation(client, input, allowMissing = false) {
   }
   if (rows.length === 0) {
     if (allowMissing) return null;
-    throw new N8nNotFoundError('Event target was not found');
+    throw new N8nNotFoundError(
+      'Event target was not found',
+      'N8N_EVENT_TARGET_NOT_FOUND',
+    );
   }
   if (rows.length !== 1) {
     throw new N8nConflictError(
@@ -3871,7 +3874,11 @@ async function updateDeliveryStatus(client, input) {
       ],
     )
   ).rows[0];
-  if (!message) throw new N8nNotFoundError('Outbound message was not found');
+  if (!message)
+    throw new N8nNotFoundError(
+      'Outbound message was not found',
+      'N8N_OUTBOUND_RECEIPT_NOT_FOUND',
+    );
   const externalOnly =
     message.author_kind === 'system' &&
     message.command_id?.startsWith('external:');

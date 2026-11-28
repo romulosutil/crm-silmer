@@ -118,6 +118,34 @@ continua sem `source`, com `conversation_id: null` e código controlado. A
 verificação em produção depende de uma nova ocorrência natural e do registro
 correspondente no CRM. Para reverter, republicar a versão anterior do principal.
 
+### Recibos sem alvo e recusas do n8n
+
+OPS-ERR-04/08. Use os arquivos rotacionados do event bus no volume privado
+para comparar os quatro workflows do WhatsApp. Execute com Node e informe a
+janela UTC desejada e os arquivos disponíveis, incluindo os rotacionados.
+
+```bash
+node ops/n8n/report-workflow-health.mjs 2026-11-27T00:00:00Z 2026-11-28T00:00:00Z /home/node/.n8n/n8nEventLog*.log
+```
+
+O relatório retorna somente horários, contagens e categorias fixas. Ele
+deduplica registros repetidos na rotação e conta falhas do próprio tratador
+como `ERROR_WORKFLOW_FAILED`. `logBoundsCoverWindow` informa se há registros
+nos dois limites solicitados, sem provar que não existem lacunas internas.
+Use o Insights para as contagens mais antigas. Em 27/11 os quatro arquivos
+disponíveis começavam em 25/11 e não havia execuções com falha retidas nos
+workflows principal, entrada pessoal ou desafio durante a janela examinada.
+
+Para uma nova recusa, procure a correlação nos logs técnicos da API.
+`N8N_EVENT_TARGET_NOT_FOUND` indica que a API não resolveu a conversa pelo
+identificador recebido. `N8N_OUTBOUND_RECEIPT_NOT_FOUND` indica que, com uma
+conversa resolvida, a mensagem de saída não foi encontrada naquele escopo.
+As duas respostas HTTP continuam `404 N8N_NOT_FOUND`. Recusas de validação
+registram códigos fixos, como `N8N_INVALID` ou `UNSUPPORTED_EVENT_TYPE`.
+Esses registros não incluem corpo, mensagem do erro ou cabeçalhos do n8n.
+Recibo não conciliado exige evidência de origem e ordem dos eventos antes de
+alterar o contrato. Não reexecutar callbacks históricos para verificar a causa.
+
 Cada grupo reúne uma origem e um código técnico controlado, com contagem,
 primeira e última ocorrência e histórico. **Em análise** registra que a conta
 operadora assumiu a investigação. **Resolver** encerra a triagem; **Reabrir**

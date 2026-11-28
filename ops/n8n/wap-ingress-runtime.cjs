@@ -6,6 +6,10 @@ const RESERVED_PATH = /^(?:wap-e01-|silmer\/seller-whatsapp\/)/;
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const GENERATION_HEADER = 'x-silmer-wap-generation-token';
 const VERIFY_URL = 'http://wap-provider-fixture:8080/ingress/verify';
+const EVENT_EXECUTIONS_PER_BINDING = 4;
+const EVENT_EXECUTIONS_TOTAL = 8;
+const activeEventBindings = new Map();
+let activeEventExecutions = 0;
 const MODES = new Set([
   'qr',
   'code',
@@ -298,6 +302,7 @@ async function verifySource(
   fetchImpl,
   sender,
   recovery,
+  messageTimestamp,
 ) {
   const url = trustedVerifier(
     env.SILMER_WAP_INGRESS_VERIFY_URL,
@@ -329,6 +334,7 @@ async function verifySource(
         instance,
         ...(sender ? { sender } : {}),
         ...(recovery ? { recovery: true } : {}),
+        ...(messageTimestamp === undefined ? {} : { messageTimestamp }),
       }),
     });
   } catch {
@@ -350,14 +356,19 @@ async function verifySource(
     unavailable();
   }
   const parsed = JSON.parse(Buffer.concat(chunks).toString());
-  keys(parsed, ['source', 'instance']);
+  keys(parsed, ['source', 'instance', 'ignored']);
   const canonical = sourceBody(parsed.source);
   if (
     parsed.instance !== instance ||
-    Object.keys(source).some((key) => canonical[key] !== source[key])
+    Object.keys(source).some((key) => canonical[key] !== source[key]) ||
+    (parsed.ignored !== undefined &&
+      (messageTimestamp === undefined || parsed.ignored !== 'before_cutover'))
   )
     denied();
-  return canonical;
+  return {
+    source: canonical,
+    beforeCutover: parsed.ignored === 'before_cutover',
+  };
 }
 
 function trustedVerifier(raw, path, synthetic) {
@@ -511,6 +522,7 @@ async function protectIngress(
     let body;
     let ignoreTemplate = false;
     let recovery = false;
+    let beforeCutover = false;
     if (
       path.startsWith('silmer/seller-whatsapp/') &&
       ['control', 'challenge'].includes(paths[path])
@@ -531,7 +543,15 @@ async function protectIngress(
       recovery =
         body.event === 'connection.update' && body.data.recovery === true;
       if (recovery && !instances) denied();
-      body.source = await verifySource(
+      let messageTimestamp;
+      if (instances && body.event === 'messages.upsert') {
+        const raw = body.data.messageTimestamp;
+        // Apply the same seconds normalization as the workflow converter.
+        messageTimestamp = Math.floor(raw > 1e12 ? raw / 1000 : raw);
+        if (!Number.isSafeInteger(messageTimestamp) || messageTimestamp <= 0)
+          denied();
+      }
+      const verified = await verifySource(
         body.source,
         body.instance,
         req.headers?.[GENERATION_HEADER],
@@ -539,7 +559,10 @@ async function protectIngress(
         fetchImpl,
         body.sender,
         recovery,
+        messageTimestamp,
       );
+      body.source = verified.source;
+      beforeCutover = verified.beforeCutover;
       ignoreTemplate =
         path.startsWith('silmer/seller-whatsapp/') &&
         body.event === 'messages.upsert' &&
@@ -561,8 +584,10 @@ async function protectIngress(
     req.body = replaceObject(req.body, body);
     if (Buffer.isBuffer(req.rawBody)) req.rawBody.fill(0);
     delete req.rawBody;
-    if (ignoreTemplate || recovery) {
-      response.writeHead(recovery ? 204 : 200, { 'Cache-Control': 'no-store' });
+    if (ignoreTemplate || recovery || beforeCutover) {
+      response.writeHead(recovery || beforeCutover ? 204 : 200, {
+        'Cache-Control': 'no-store',
+      });
       response.end();
       return true;
     }
@@ -592,6 +617,23 @@ function scopedWorkflow(workflow) {
   );
 }
 
+function reserveEventExecution(bindingId) {
+  const active = activeEventBindings.get(bindingId) ?? 0;
+  if (
+    active >= EVENT_EXECUTIONS_PER_BINDING ||
+    activeEventExecutions >= EVENT_EXECUTIONS_TOTAL
+  )
+    unavailable();
+  activeEventBindings.set(bindingId, active + 1);
+  activeEventExecutions++;
+  return () => {
+    const remaining = activeEventBindings.get(bindingId) - 1;
+    if (remaining === 0) activeEventBindings.delete(bindingId);
+    else activeEventBindings.set(bindingId, remaining);
+    activeEventExecutions--;
+  };
+}
+
 function guardInitialExecution(
   executionData,
   existingExecution,
@@ -599,7 +641,7 @@ function guardInitialExecution(
 ) {
   const workflow = executionData?.workflowData;
   if (!scopedWorkflow(workflow)) return;
-  configuration(env);
+  const paths = configuration(env);
   workflowSettings(workflow);
   if (
     existingExecution !== undefined ||
@@ -626,6 +668,23 @@ function guardInitialExecution(
           if (!empty(item.json)) denied();
         }
     }
+  } else if (
+    workflow.nodes?.some((node) => {
+      const path = node.parameters?.path;
+      return (
+        node.type === 'n8n-nodes-base.webhook' &&
+        typeof path === 'string' &&
+        path.startsWith('silmer/seller-whatsapp/') &&
+        paths[path] === 'event'
+      );
+    })
+  ) {
+    const body =
+      initial?.executionData?.nodeExecutionStack?.[0]?.data?.main?.[0]?.[0]
+        ?.json?.body;
+    if (body?.event === 'connection.update') return;
+    if (!['messages.upsert', 'messages.update'].includes(body?.event)) denied();
+    return reserveEventExecution(sourceBody(body.source).bindingId);
   }
 }
 

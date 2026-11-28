@@ -127,6 +127,38 @@ Naquele ensaio os limites eram operacionais e o piloto abrangia até dois
 vendedores sob observação. Os achados da medição estão em
 [validation-etapa1](../../.specs/features/seller-whatsapp/validation-etapa1.md#findings).
 
+### Rajada após pareamento de 28/11/2026
+
+WAP-09/10/12 e WAP-T05/06. Das 855 execuções pessoais que permaneceram em
+`new` ou `running`, todas pertenciam a um vínculo criado às 10h33min43s
+de Brasília. O input inicial de 464 execuções continha mensagens de dias
+anteriores ao pareamento, incluindo entradas e ecos de saída. As outras
+391 eram recibos sem o horário de origem da mensagem. O event bus registrou
+falha para 194 IDs que ainda apareciam ativos no banco. No mesmo intervalo,
+cinco envios humanos da linha geral ficaram com confirmação incerta.
+
+O ingresso pessoal usa o horário da mensagem original no verificador do CRM.
+Depois de validar token, vínculo e origem, o verificador reconhece mensagens
+anteriores à criação do vínculo. O n8n responde 204 e encerra esses eventos
+antes de criar uma execução. A comparação usa segundos, como o contrato de
+gravação do CRM. Eventos válidos no segundo do corte seguem para o workflow.
+
+O n8n admite até quatro execuções de mensagens ou recibos em paralelo por
+vínculo e oito no processo, antes da primeira gravação. O limite libera
+capacidade ao terminar a execução, inclusive nos caminhos de falha e
+cancelamento. Excedentes recebem 5xx para o retry já existente do Evolution.
+O limite fica restrito ao webhook pessoal e preserva a capacidade para os
+envios da linha geral e os callbacks de conexão. Os recibos sem horário da
+mensagem continuam sujeitos à validação do workflow e ao limite de admissão.
+
+O teste sintético reproduz as 855 chamadas, verifica a admissão da linha
+geral enquanto o ingresso pessoal está cheio, a liberação de vagas e a
+autorização. O CI aplica o patch à imagem n8n fixada e roda o teste de corte no
+PostgreSQL dedicado. Publicar primeiro a API do CRM e depois a imagem n8n
+gerada de `ops/n8n/wap-ingress-Dockerfile.inline`. Para rollback, restaurar
+primeiro a fonte da imagem anterior do n8n. Preservar as execuções históricas
+e manter os envios de resultado incerto em conferência individual.
+
 ## Ordem de publicação
 
 1. PR com CI verde: checks estáticos, E2E, PostgreSQL (incluindo as suítes de

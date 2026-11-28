@@ -147,6 +147,14 @@ jobs:
           fi
 
           if has_changes "$PR_BASE_SHA" "$PR_HEAD_SHA" \
+            ops/n8n/wap-ingress-Dockerfile \
+            ops/n8n/wap-ingress-Dockerfile.inline \
+            ops/n8n/wap-ingress-patch.mjs \
+            ops/n8n/wap-ingress-runtime.cjs; then
+            echo 'wap_ingress_image_required=true' >> "$GITHUB_OUTPUT"
+          fi
+
+          if has_changes "$PR_BASE_SHA" "$PR_HEAD_SHA" \
             .github/workflows/ci.yml \
             apps/api \
             apps/worker \
@@ -189,6 +197,13 @@ jobs:
         run: npm ci
       - name: Run static, unit and build gates
         run: npm run validate
+      - name: Apply and check the admission patch on the pinned n8n image
+        if: steps.image_scope.outputs.wap_ingress_image_required == 'true'
+        timeout-minutes: 8
+        run: |
+          docker build -t crm-wap-ingress-test -f ops/n8n/wap-ingress-Dockerfile.inline ops/n8n
+          docker run --rm --network none --entrypoint node crm-wap-ingress-test \
+            --check /usr/local/lib/node_modules/n8n/dist/active-executions.js
       - name: Restore Playwright browsers
         if: steps.image_scope.outputs.e2e_required == 'true'
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3

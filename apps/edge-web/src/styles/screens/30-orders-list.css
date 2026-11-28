@@ -110,45 +110,19 @@
   font-size: var(--text-xs);
 }
 
-/*
- * Pesquisa UX 2026-10-15, achado 3: the promised delivery and how far it is.
- * The tone repeats what the words already say (late, today, this week).
- */
 .order-due-date {
-  display: block;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   text-align: start;
 }
 
-.order-due {
-  display: block;
-  margin-block-start: 0.15rem;
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-}
-
-.order-due[data-tone] {
-  font-weight: var(--weight-medium);
-}
-
-.order-due[data-tone='error'] {
+.order-due-date[data-tone='error'] {
   color: var(--status-error-text);
-  --order-due-surface: var(--status-error-surface);
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
 }
 
-.order-due[data-tone='warning'] {
-  color: var(--status-warning-text);
-  --order-due-surface: var(--status-warning-surface);
-}
-
-.order-due[data-tone='info'] {
-  color: var(--status-info-text);
-  --order-due-surface: var(--status-info-surface);
-}
-
-.order-due[data-tone='success'] {
+.order-due-date[data-tone='success'] {
   color: var(--status-success-text);
-  --order-due-surface: var(--status-success-surface);
 }
 
 /*
@@ -222,11 +196,11 @@
 }
 
 .order-table td.order-cell-due {
-  grid-column: 1 / 3;
+  grid-column: 1;
 }
 
 .order-table td.order-cell-situation {
-  grid-column: 3 / -1;
+  grid-column: 2 / -1;
 }
 
 .order-table td.order-cell-quantity {
@@ -281,6 +255,7 @@
 .portfolio-production-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
 }
 
 .portfolio-sales-head,
@@ -314,7 +289,6 @@
   font-weight: 600;
 }
 
-.portfolio-production-head p,
 .portfolio-selection p,
 .portfolio-overview-error p,
 .cut-map-summary p,
@@ -423,6 +397,29 @@
 .portfolio-deadline-group {
   margin-block-start: var(--space-4);
 }
+
+.portfolio-deadline-group + .portfolio-deadline-group {
+  margin-block-start: var(--space-5);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--color-border);
+}
+
+.portfolio-deadline-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+}
+
+.portfolio-deadline-group[data-deadline-group='late']
+  .portfolio-deadline-heading {
+  color: var(--status-error-text);
+  background: var(--status-error-surface);
+}
+
 .portfolio-deadline-group .order-list {
   max-block-size: none;
 }
@@ -662,12 +659,6 @@ dialog.cut-map-dialog[open] {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
   }
-  .portfolio-production-head {
-    align-items: center;
-  }
-  .portfolio-production-head p {
-    display: none;
-  }
   .portfolio-production .chip-row {
     display: grid;
     grid-auto-flow: column;
@@ -701,9 +692,6 @@ dialog.cut-map-dialog[open] {
   }
   .orders-portfolio .orders-result-line {
     margin-block-end: var(--space-2);
-  }
-  .orders-portfolio .section-gap:has(#orders-pending-title) .panel-head > p {
-    display: none;
   }
   .orders-portfolio .section-gap:has(#orders-pending-title) {
     padding: var(--space-3) var(--space-4);
@@ -826,7 +814,7 @@ dialog.cut-map-dialog[open] {
   }
 
   .order-table th.order-cell-due {
-    inline-size: 12%;
+    inline-size: 5.5rem;
   }
 
   .order-table th.order-cell-quantity {
@@ -884,7 +872,7 @@ dialog.cut-map-dialog[open] {
   }
 
   .list-scroll .order-table th {
-    background: var(--color-surface-raised);
+    background: var(--color-surface);
   }
 
   .order-table tbody tr:focus-within {
@@ -915,18 +903,11 @@ dialog.cut-map-dialog[open] {
 
 @container order-list (width >= 60rem) {
   .order-table th.order-cell-due {
-    inline-size: 15%;
+    inline-size: 6.5rem;
   }
 
   .order-table th.order-cell-situation {
     inline-size: 18%;
-  }
-
-  .order-table .order-due[data-tone] {
-    display: inline-flex;
-    padding-inline: var(--space-2);
-    background: var(--order-due-surface);
-    border-radius: var(--radius-pill);
   }
 }
 

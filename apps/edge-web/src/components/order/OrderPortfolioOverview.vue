@@ -111,10 +111,7 @@ const metrics = computed(() => {
     aria-labelledby="portfolio-production-title"
   >
     <header class="portfolio-production-head">
-      <div>
-        <h2 id="portfolio-production-title">Produção</h2>
-        <p>Pedidos confirmados ainda não entregues</p>
-      </div>
+      <h2 id="portfolio-production-title">Produção</h2>
       <button
         type="button"
         class="soft"

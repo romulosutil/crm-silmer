@@ -25,6 +25,7 @@ import OrderReceiptPreview from '../components/order/OrderReceiptPreview.vue';
 import OrderCutMapMembership from '../components/order/OrderCutMapMembership.vue';
 import OrderCutMapPreview from '../components/order/OrderCutMapPreview.vue';
 import OrderListActions from '../components/order/OrderListActions.vue';
+import OrderListDeadline from '../components/order/OrderListDeadline.vue';
 import OrderPortfolioOverview from '../components/order/OrderPortfolioOverview.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import { dateTimeBR, formatPhoneNumber } from '../lib/format.js';
@@ -1728,13 +1729,7 @@ onBeforeUnmount(() => {
                   }}</small>
                 </td>
                 <td class="order-cell-due" data-label="Entrega">
-                  <span class="order-due-date num">{{ due(order).date }}</span>
-                  <span
-                    v-if="due(order).relative"
-                    class="order-due"
-                    :data-tone="due(order).tone || undefined"
-                    >{{ due(order).relative }}</span
-                  >
+                  <OrderListDeadline :deadline="due(order)" />
                 </td>
                 <td class="order-cell-situation" data-label="Situação">
                   <span
@@ -1789,14 +1784,12 @@ onBeforeUnmount(() => {
             {{ confirmedTitle }}
             <span class="badge" data-tone="success">{{ confirmedCount }}</span>
           </h2>
-          <p v-if="isProductionQueue">
-            confirmados e ainda não entregues, pela entrega mais próxima
-          </p>
         </div>
         <div
           v-for="group in confirmedGroups"
           :key="group.id"
           class="portfolio-deadline-group"
+          :data-deadline-group="group.id"
         >
           <h3 v-if="group.id === 'delivered'">
             <button
@@ -1810,7 +1803,7 @@ onBeforeUnmount(() => {
               {{ group.orders.length }}
             </button>
           </h3>
-          <h3 v-else>
+          <h3 v-else class="portfolio-deadline-heading">
             {{ group.label }}
             <span class="badge">{{ group.orders.length }}</span>
           </h3>
@@ -1895,15 +1888,7 @@ onBeforeUnmount(() => {
                     }}</small>
                   </td>
                   <td class="order-cell-due" data-label="Entrega">
-                    <span class="order-due-date num">{{
-                      due(order).date
-                    }}</span>
-                    <span
-                      v-if="due(order).relative"
-                      class="order-due"
-                      :data-tone="due(order).tone || undefined"
-                      >{{ due(order).relative }}</span
-                    >
+                    <OrderListDeadline :deadline="due(order)" />
                   </td>
                   <td class="order-cell-situation" data-label="Etapa">
                     <span v-if="order.deliveredOn" class="portfolio-stage"
@@ -1943,11 +1928,6 @@ onBeforeUnmount(() => {
                     <span class="order-amount">{{
                       amountLabel(order.finalAmountCents)
                     }}</span>
-                    <small v-if="!cutMode" class="order-context">{{
-                      order.paidOn && !order.paymentReviewRequired
-                        ? 'Pago'
-                        : 'Pagamento a conferir'
-                    }}</small>
                   </td>
                   <td class="order-cell-actions">
                     <label

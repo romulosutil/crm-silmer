@@ -17,5 +17,6 @@
 | CAR-10    | A etiqueta numerada abre a composição do mapa e permite baixar exatamente o PDF emitido. Consulta e download exigem acesso a todos os pedidos do mapa, não criam nova emissão e continuam válidos depois de alterações posteriores nos pedidos.                                               | CAR-T06 |
 
 Recebimentos e saldo seguem os contratos de cobrança e da declaração de
-pagamento. A carteira sinaliza a quitação quando registrada. Antes da emissão,
-mudanças na seleção ou nos pedidos exigem uma nova prévia.
+pagamento no detalhe do pedido. A coluna Valor da carteira exibe o total do
+pedido. Antes da emissão, mudanças na seleção ou nos pedidos exigem uma nova
+prévia.

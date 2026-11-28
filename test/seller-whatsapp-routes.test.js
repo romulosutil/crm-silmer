@@ -69,6 +69,7 @@ function fixture(options = {}) {
     submit: 0,
     reserve: 0,
     verify: 0,
+    ingress: 0,
     result: 0,
     begin: 0,
     finish: /** @type {any[]} */ ([]),
@@ -150,6 +151,11 @@ function fixture(options = {}) {
       calls.verify++;
       return input.envelope;
     },
+    verifyIngress: async (/** @type {any} */ input) => {
+      calls.ingress++;
+      assert.equal(input.token, 'synthetic-ingress-token');
+      return { source: input.source, instance: input.instance };
+    },
     result: async () => {
       calls.result++;
       return { accepted: true };
@@ -215,6 +221,34 @@ function technicalHeaders(id, extra = {}) {
     ...extra,
   };
 }
+
+test('WAP-T05: ingress admits a 243-event reconnect burst for one binding', async (t) => {
+  const { api, calls } = fixture();
+  t.after(() => api.close());
+  const bindingId = randomUUID();
+  const payload = {
+    source: { bindingId, lineId, accountId: randomUUID(), generation },
+    instance: 'opaque-instance',
+  };
+  const responses = await Promise.all(
+    Array.from({ length: 243 }, () =>
+      api.inject({
+        method: 'POST',
+        url: '/api/v1/integrations/n8n/whatsapp-control/ingress/verify',
+        headers: technicalHeaders(bindingId, {
+          'x-correlation-id': bindingId,
+          'x-silmer-wap-generation-token': 'synthetic-ingress-token',
+        }),
+        payload,
+      }),
+    ),
+  );
+  for (const response of responses) {
+    assert.equal(response.statusCode, 200, response.body);
+    assert.deepEqual(response.json(), payload);
+  }
+  assert.equal(calls.ingress, 243);
+});
 
 test('WAP control and configuration are default off, and new capabilities stay deny-by-default', async () => {
   assert.equal(sellerWhatsAppConfiguration({}).enabled, false);

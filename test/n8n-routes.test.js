@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  N8nConflictError,
   N8nNotFoundError,
   N8nValidationError,
 } from '@crm-silmer/n8n-integration';
@@ -300,7 +301,7 @@ test('n8n events route accepts the optional turn and still refuses unknown field
   assert.equal(calls.length, 1);
 });
 
-test('OPS-ERR-04: n8n refusal logs distinguish receipt targets and validation without changing the HTTP problem', async (t) => {
+test('OPS-ERR-04: n8n refusal logs distinguish causes without changing the HTTP problem', async (t) => {
   const canary = 'PRIVATE_ERROR_DETAIL';
   const cases = [
     [
@@ -316,6 +317,24 @@ test('OPS-ERR-04: n8n refusal logs distinguish receipt targets and validation wi
       404,
       'N8N_NOT_FOUND',
       'N8N_OUTBOUND_RECEIPT_NOT_FOUND',
+    ],
+    [
+      'message.delivered',
+      new N8nConflictError(canary, 'WHATSAPP_GENERATION_STALE'),
+      409,
+      'WHATSAPP_GENERATION_STALE',
+      'WHATSAPP_GENERATION_STALE',
+    ],
+    [
+      'message.delivered',
+      new N8nConflictError(
+        canary,
+        'WHATSAPP_GENERATION_STALE',
+        'WHATSAPP_EVENT_BEFORE_CUTOVER',
+      ),
+      409,
+      'WHATSAPP_GENERATION_STALE',
+      'WHATSAPP_EVENT_BEFORE_CUTOVER',
     ],
     [
       'handoff.requested',

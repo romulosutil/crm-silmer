@@ -146,6 +146,15 @@ Esses registros não incluem corpo, mensagem do erro ou cabeçalhos do n8n.
 Recibo não conciliado exige evidência de origem e ordem dos eventos antes de
 alterar o contrato. Não reexecutar callbacks históricos para verificar a causa.
 
+WAP-09/10, WAP-T05/06. Na entrada pessoal, `WHATSAPP_EVENT_BEFORE_CUTOVER`
+indica que o evento chegou com vínculo vigente, mas seu horário de origem
+precede a criação do vínculo. `WHATSAPP_GENERATION_STALE` indica que a leitura
+identificou uma origem fora da geração ou do vínculo vigente. A API devolve
+`409 WHATSAPP_GENERATION_STALE` nos dois casos. Compare os códigos no log técnico
+com o horário do pareamento ao investigar novas rajadas. O teste de integração
+com PostgreSQL cobre uma rajada sintética com eventos antigos, válidos e
+duplicados. O teste demonstra o comportamento atual do CRM.
+
 Cada grupo reúne uma origem e um código técnico controlado, com contagem,
 primeira e última ocorrência e histórico. **Em análise** registra que a conta
 operadora assumiu a investigação. **Resolver** encerra a triagem; **Reabrir**

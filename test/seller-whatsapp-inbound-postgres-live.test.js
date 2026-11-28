@@ -356,7 +356,7 @@ else {
       );
       await t.test(
         'reconnect rejects old inbound and old delivery callback; never relabels source',
-        async () => {
+        async (reconnect) => {
           await pool.query(
             "UPDATE crm.seller_whatsapp_lines SET generation=2,version=2,state='connected' WHERE id=$1",
             [a.source.lineId],
@@ -406,6 +406,87 @@ else {
               )
             ).rows[0].generation,
             1,
+          );
+
+          await reconnect.test(
+            'WAP-09/10: mixed reconnect burst keeps old events out and saves each new event once',
+            async () => {
+              const preCutover = new Date(NOW.getTime() - 1_000).toISOString();
+              const burst = Array.from({ length: 63 }, (_, index) => {
+                const batch = [
+                  inbound(a, `reconnect-burst-revoked-${index}`),
+                  inbound(a, `reconnect-burst-before-${index}-a`, {
+                    source: next,
+                    occurred_at: preCutover,
+                  }),
+                  inbound(a, `reconnect-burst-before-${index}-b`, {
+                    source: next,
+                    occurred_at: preCutover,
+                  }),
+                ];
+                if (index < 27) {
+                  const id = `reconnect-burst-current-${index}`;
+                  batch.push(
+                    inbound(a, id, { source: next }),
+                    inbound(a, id, { source: next }),
+                  );
+                }
+                return batch;
+              }).flat();
+
+              const counts = {
+                revoked: 0,
+                beforeCutover: 0,
+                saved: 0,
+                duplicate: 0,
+              };
+              for (let offset = 0; offset < burst.length; offset += 8) {
+                const outcomes = await Promise.allSettled(
+                  burst
+                    .slice(offset, offset + 8)
+                    .map((event) => service.receiveInbound(event)),
+                );
+                for (const outcome of outcomes) {
+                  if (outcome.status === 'fulfilled') {
+                    assert.equal(outcome.value.accepted, true);
+                    counts[outcome.value.duplicate ? 'duplicate' : 'saved']++;
+                  } else {
+                    assert.equal(
+                      outcome.reason.code,
+                      'WHATSAPP_GENERATION_STALE',
+                    );
+                    if (outcome.reason.diagnosticCode === undefined)
+                      counts.revoked++;
+                    else {
+                      assert.equal(
+                        outcome.reason.diagnosticCode,
+                        'WHATSAPP_EVENT_BEFORE_CUTOVER',
+                      );
+                      counts.beforeCutover++;
+                    }
+                  }
+                }
+              }
+              assert.deepEqual(counts, {
+                revoked: 63,
+                beforeCutover: 126,
+                saved: 27,
+                duplicate: 27,
+              });
+
+              const { rows } = await pool.query(
+                `SELECT p.generation::int AS generation, count(*)::int AS count,
+                      bool_and(m.external_message_id LIKE 'reconnect-burst-current-%') AS current_only
+               FROM crm.messages m
+               JOIN crm.personal_whatsapp_inbound p ON p.message_id = m.id
+               WHERE m.provider_account_id = $1 AND m.external_message_id LIKE $2
+               GROUP BY p.generation`,
+                [next.accountId, 'reconnect-burst-%'],
+              );
+              assert.deepEqual(rows, [
+                { generation: 2, count: 27, current_only: true },
+              ]);
+            },
           );
         },
       );

@@ -36,12 +36,18 @@ export class N8nNotFoundError extends N8nIntegrationError {
 }
 
 export class N8nConflictError extends N8nIntegrationError {
-  /** @param {string} [message] @param {string} [code] */
+  /**
+   * @param {string} [message]
+   * @param {string} [code]
+   * @param {'WHATSAPP_EVENT_BEFORE_CUTOVER'} [diagnosticCode]
+   */
   constructor(
     message = 'n8n integration command conflicts with current state',
     code = 'N8N_CONFLICT',
+    diagnosticCode,
   ) {
     super(message, code, 409);
+    this.diagnosticCode = diagnosticCode;
   }
 }
 

@@ -747,13 +747,20 @@ export class PostgresN8nIntegrationRepository {
         : binding.revoked_at ||
           (line.state !== 'connected' &&
             !(line.state === 'validating' && line.verified_at)) ||
-          source.generation !== Number(line.generation)) ||
-      Math.floor(Date.parse(input.occurredAt) / 1000) <
-        Math.floor(new Date(binding.created_at).getTime() / 1000)
+          source.generation !== Number(line.generation))
     )
       throw new N8nConflictError(
         'WhatsApp generation is no longer current',
         'WHATSAPP_GENERATION_STALE',
+      );
+    if (
+      Math.floor(Date.parse(input.occurredAt) / 1000) <
+      Math.floor(new Date(binding.created_at).getTime() / 1000)
+    )
+      throw new N8nConflictError(
+        'WhatsApp event predates the binding',
+        'WHATSAPP_GENERATION_STALE',
+        'WHATSAPP_EVENT_BEFORE_CUTOVER',
       );
     return { sellerId: line.seller_id, lineId: line.id, pending };
   }

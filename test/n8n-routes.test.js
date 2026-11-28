@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import {
+  N8nNotFoundError,
+  N8nValidationError,
+} from '@crm-silmer/n8n-integration';
+import { createSafeLogger, SERVICES } from '@crm-silmer/shared';
 import { createApi } from '../apps/api/src/app.js';
 
 const technicalHeaders = Object.freeze({
@@ -13,7 +18,8 @@ const technicalHeaders = Object.freeze({
   'x-silmer-workflow-version': '98f96069-ede2-4900-aa5c-7fec0d3b80cb',
 });
 
-function harness() {
+/** @param {{failure?: Error, logger?: ReturnType<typeof createSafeLogger>}} [options] */
+function harness({ failure, logger } = {}) {
   /** @type {Array<{method: string, input: Record<string, unknown>}>} */
   const calls = [];
   /** @type {string[]} */
@@ -35,6 +41,7 @@ function harness() {
           }
         }
         calls.push({ input, method });
+        if (failure) throw failure;
         return { accepted: true, method };
       },
     ]),
@@ -42,6 +49,7 @@ function harness() {
   const api = createApi(
     {},
     {
+      logger,
       automationAuth: {
         async authorize(/** @type {Record<string, unknown>} */ input) {
           assert.equal(
@@ -290,6 +298,83 @@ test('n8n events route accepts the optional turn and still refuses unknown field
   assert.equal(unknown.statusCode, 400);
   assert.equal(unknown.json().error.code, 'UNKNOWN_REQUEST_FIELD');
   assert.equal(calls.length, 1);
+});
+
+test('OPS-ERR-04: n8n refusal logs distinguish receipt targets and validation without changing the HTTP problem', async (t) => {
+  const canary = 'PRIVATE_ERROR_DETAIL';
+  const cases = [
+    [
+      'message.delivered',
+      new N8nNotFoundError(canary, 'N8N_EVENT_TARGET_NOT_FOUND'),
+      404,
+      'N8N_NOT_FOUND',
+      'N8N_EVENT_TARGET_NOT_FOUND',
+    ],
+    [
+      'message.read',
+      new N8nNotFoundError(canary, 'N8N_OUTBOUND_RECEIPT_NOT_FOUND'),
+      404,
+      'N8N_NOT_FOUND',
+      'N8N_OUTBOUND_RECEIPT_NOT_FOUND',
+    ],
+    [
+      'handoff.requested',
+      new N8nValidationError(canary),
+      400,
+      'N8N_INVALID',
+      'N8N_INVALID',
+    ],
+    [
+      'unknown.event',
+      undefined,
+      422,
+      'UNSUPPORTED_EVENT_TYPE',
+      'UNSUPPORTED_EVENT_TYPE',
+    ],
+  ];
+  for (const [
+    eventType,
+    failure,
+    status,
+    publicCode,
+    logCode,
+  ] of /** @type {Array<[string, Error | undefined, number, string, string]>} */ (
+    cases
+  )) {
+    /** @type {Array<Record<string, unknown>>} */
+    const records = [];
+    const { api } = harness({
+      failure,
+      logger: createSafeLogger({
+        service: SERVICES.api,
+        sink: (record) => records.push(record),
+      }),
+    });
+    t.after(() => api.close());
+
+    const response = await api.inject({
+      method: 'POST',
+      url: '/api/v1/integrations/n8n/events',
+      headers: technicalHeaders,
+      payload: {
+        schema_version: '1.0',
+        event_type: eventType,
+        event_id: canary,
+      },
+    });
+    assert.equal(response.statusCode, status);
+    assert.equal(response.json().error.code, publicCode);
+    const failureRecord = records.find(
+      (record) => record.event === 'api_request_failed',
+    );
+    assert.equal(failureRecord?.error_code, logCode);
+    assert.equal(
+      failureRecord?.correlation_id,
+      technicalHeaders['x-correlation-id'],
+    );
+    assert.doesNotMatch(JSON.stringify(records), /PRIVATE_ERROR_DETAIL/u);
+    assert.doesNotMatch(response.body, /PRIVATE_ERROR_DETAIL/u);
+  }
 });
 
 test('n8n events route accepts message.transcribed under the event action (INBOX-AUDIO-TRANSCRIPT-01)', async (t) => {

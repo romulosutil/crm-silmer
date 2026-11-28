@@ -22,9 +22,16 @@ export class N8nForbiddenError extends N8nIntegrationError {
 }
 
 export class N8nNotFoundError extends N8nIntegrationError {
-  /** @param {string} [message] */
-  constructor(message = 'n8n integration resource was not found') {
+  /**
+   * @param {string} [message]
+   * @param {'N8N_EVENT_TARGET_NOT_FOUND' | 'N8N_OUTBOUND_RECEIPT_NOT_FOUND'} [diagnosticCode]
+   */
+  constructor(
+    message = 'n8n integration resource was not found',
+    diagnosticCode,
+  ) {
     super(message, 'N8N_NOT_FOUND', 404);
+    this.diagnosticCode = diagnosticCode;
   }
 }
 

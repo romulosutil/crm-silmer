@@ -13,6 +13,7 @@ import {
   MetaWebhookPayloadError,
   WebhookEventConflictError,
 } from '@crm-silmer/integration-reliability';
+import { N8nNotFoundError } from '@crm-silmer/n8n-integration';
 import { registerConversationRoutes } from './conversation-routes.js';
 import { registerChatMediaUploadRoutes } from './chat-media-upload-routes.js';
 import { registerChatMediaStatusRoutes } from './chat-media-status-routes.js';
@@ -166,10 +167,13 @@ export function createApi(options = {}, runtime = {}) {
       });
       return;
     }
+    const diagnosticCode =
+      error instanceof N8nNotFoundError ? error.diagnosticCode : undefined;
     logger.error('api_request_failed', {
       correlation_id: context?.correlationId,
       error_code:
-        typeof error.code === 'string' ? error.code : 'UNHANDLED_ERROR',
+        diagnosticCode ??
+        (typeof error.code === 'string' ? error.code : 'UNHANDLED_ERROR'),
       request_id: context?.requestId,
     });
   });

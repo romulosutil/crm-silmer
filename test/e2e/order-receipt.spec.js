@@ -89,7 +89,27 @@ async function setup(page, options = {}) {
   return { ...state, control };
 }
 
-test('RCP-01/02/12: list action is between PDF/open and returns to the same filtered row and scroll', async ({
+/**
+ * @param {import('@playwright/test').Page} page
+ * @param {string} number
+ */
+async function openListReceipt(page, number) {
+  await page
+    .getByRole('button', {
+      name: 'Mais ações do pedido ' + number,
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole('dialog', {
+      name: 'Ações do pedido ' + number,
+      exact: true,
+    })
+    .getByRole('button', { name: 'Recibo ' + number, exact: true })
+    .click();
+}
+
+test('RCP-01/02/12: list menu opens the receipt and returns to the same filtered row and scroll', async ({
   page,
 }) => {
   const many = Array.from({ length: 35 }, (_, i) => ({
@@ -107,12 +127,16 @@ test('RCP-01/02/12: list action is between PDF/open and returns to the same filt
   await setup(page, { orders: [ownConfirmedOrder, ...many] });
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/pedidos');
-  const confirmed = page
-    .locator('.order-table tbody tr')
-    .filter({ hasText: '05-CRM' });
-  await expect(confirmed.locator('.row-actions')).toHaveText(
-    /Gerar PDF\s*05-CRM\s*Recibo\s*05-CRM\s*Abrir pedido/u,
-  );
+  const confirmed = page.getByRole('row', { name: /05-CRM/u });
+  await expect(
+    confirmed.getByRole('button', { name: 'Gerar PDF 05-CRM' }),
+  ).toBeVisible();
+  await expect(
+    confirmed.getByRole('link', { name: 'Abrir pedido 05-CRM' }),
+  ).toBeVisible();
+  await expect(
+    confirmed.getByRole('button', { name: 'Recibo 05-CRM' }),
+  ).toHaveCount(0);
   const search = page.getByRole('searchbox');
   const filtered = page.waitForResponse((response) => {
     const url = new URL(response.url());
@@ -126,12 +150,16 @@ test('RCP-01/02/12: list action is between PDF/open and returns to the same filt
   await expect(search).toHaveValue('Cliente');
   const list = page.getByRole('region', { name: 'Pedidos pendentes' });
   const button = list.getByRole('button', {
-    name: 'Recibo 44-CRM',
+    name: 'Mais ações do pedido 44-CRM',
     exact: true,
   });
   await button.focus();
   const before = await list.evaluate((el) => el.scrollTop);
   expect(before).toBeGreaterThan(0);
+  await page.keyboard.press('Enter');
+  await expect(
+    page.getByRole('button', { name: 'Recibo 44-CRM' }),
+  ).toBeFocused();
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('dialog', DIALOG);
   await expect(dialog).toBeVisible();
@@ -150,7 +178,7 @@ test('RCP-01/03/06: list downloads a confirmed receipt and keeps the factory PDF
   const { control } = await setup(page);
   await page.goto('/pedidos');
   const row = page.locator('tbody tr').filter({ hasText: '05-CRM' });
-  await row.getByRole('button', { name: 'Recibo 05-CRM', exact: true }).click();
+  await openListReceipt(page, '05-CRM');
   const dialog = page.getByRole('dialog', DIALOG);
   await expect(dialog.getByRole('article')).toContainText('Pedido confirmado');
   await expect(dialog.getByRole('article')).not.toContainText('provisório');
@@ -215,7 +243,9 @@ test('RCP-08: absent/false receiptAvailable never gains access from owner, admin
     user: { capabilities: ['COMMERCIAL_ADMIN'], olistEnabled: true },
   });
   await page.goto('/pedidos');
-  await expect(page.getByRole('button', { name: /^Recibo/u })).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: /^Mais ações do pedido/u }),
+  ).toHaveCount(0);
   await page.goto('/pedidos/order-confirmado');
   await expect(
     page.getByRole('button', { name: 'Recibo do pedido' }),
@@ -227,7 +257,7 @@ test('RCP-07/09: PDF failure permits explicit retry; stale preview discards data
 }) => {
   const { control, orders } = await setup(page);
   await page.goto('/pedidos');
-  await page.getByRole('button', { name: 'Recibo 05-CRM' }).click();
+  await openListReceipt(page, '05-CRM');
   const dialog = page.getByRole('dialog', DIALOG);
   control.pdfStatus = 503;
   await dialog.getByRole('button', { name: 'Baixar PDF' }).click();
@@ -255,7 +285,7 @@ test('RCP-08: permission loss during download removes content and does not retry
 }) => {
   const { control } = await setup(page);
   await page.goto('/pedidos');
-  await page.getByRole('button', { name: 'Recibo 05-CRM' }).click();
+  await openListReceipt(page, '05-CRM');
   const dialog = page.getByRole('dialog', DIALOG);
   control.pdfStatus = 403;
   await dialog.getByRole('button', { name: 'Baixar PDF' }).click();
@@ -272,7 +302,7 @@ test('RCP-09: preview read failure allows explicit retry', async ({ page }) => {
   const { control } = await setup(page);
   control.previewStatus = 503;
   await page.goto('/pedidos');
-  await page.getByRole('button', { name: 'Recibo 05-CRM' }).click();
+  await openListReceipt(page, '05-CRM');
   const dialog = page.getByRole('dialog', DIALOG);
   await expect(dialog.getByRole('alert')).toHaveText(
     'Não foi possível carregar o recibo. Tente novamente.',
@@ -314,7 +344,7 @@ for (const type of [
       });
     });
     await page.goto('/pedidos');
-    await page.getByRole('button', { name: 'Recibo 05-CRM' }).click();
+    await openListReceipt(page, '05-CRM');
     const dialog = page.getByRole('dialog', DIALOG);
     await expect(dialog.getByRole('article')).toContainText('Buffet Casa Rosa');
     const before = reads;
@@ -345,7 +375,7 @@ test('RCP-07/08: relevant SSE and refreshed access metadata discard the document
     });
   });
   await page.goto('/pedidos');
-  await page.getByRole('button', { name: 'Recibo 05-CRM' }).click();
+  await openListReceipt(page, '05-CRM');
   const dialog = page.getByRole('dialog', DIALOG);
   await expect(dialog.getByRole('article')).toContainText('Buffet Casa Rosa');
   orders[0].receiptAvailable = false;
@@ -368,12 +398,12 @@ test('RCP-07: closing a loading preview and opening another target rejects the l
     release = () => resolve(undefined);
   });
   await page.goto('/pedidos');
-  await page.getByRole('button', { name: 'Recibo 05-CRM' }).click();
+  await openListReceipt(page, '05-CRM');
   const dialog = page.getByRole('dialog', DIALOG);
   await expect(dialog.getByRole('status')).toHaveText('Carregando recibo…');
   await dialog.getByRole('button', { name: 'Fechar' }).click();
   control.previewGate = null;
-  await page.getByRole('button', { name: 'Recibo 07-CRM' }).click();
+  await openListReceipt(page, '07-CRM');
   await expect(dialog.getByRole('article')).toContainText('Colégio Ápice');
   release();
   await expect(dialog.getByRole('article')).not.toContainText(
@@ -395,14 +425,14 @@ test('RCP-07: closing an in-flight download never downloads prepared bytes into 
   let downloads = 0;
   page.on('download', () => downloads++);
   await page.goto('/pedidos');
-  await page.getByRole('button', { name: 'Recibo 05-CRM' }).click();
+  await openListReceipt(page, '05-CRM');
   const dialog = page.getByRole('dialog', DIALOG);
   await dialog.getByRole('button', { name: 'Baixar PDF' }).click();
   await expect(
     dialog.getByRole('button', { name: 'Gerando PDF…' }),
   ).toBeDisabled();
   await dialog.getByRole('button', { name: 'Fechar' }).click();
-  await page.getByRole('button', { name: 'Recibo 07-CRM' }).click();
+  await openListReceipt(page, '07-CRM');
   await expect(dialog.getByRole('article')).toContainText('Colégio Ápice');
   release();
   await expect.poll(() => control.pdfReads).toBe(1);

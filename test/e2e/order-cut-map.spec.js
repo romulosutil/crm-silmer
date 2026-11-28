@@ -17,18 +17,36 @@ test('CAR-02: a legacy production step requires explicit confirmation and advanc
   await expect(
     page.getByText('Etapa a confirmar', { exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole('combobox', { name: 'Definir etapa do pedido 05-CRM' })
-    .selectOption('arte');
+  const more = page.getByRole('button', {
+    name: 'Mais ações do pedido 05-CRM',
+  });
+  const select = page.getByRole('combobox', {
+    name: 'Definir etapa do pedido 05-CRM',
+  });
+  await expect(select).toHaveCount(0);
+  await more.focus();
+  await page.keyboard.press('Enter');
+  await expect(select).toBeFocused();
+  await select.selectOption('arte');
+  await page.keyboard.press('Escape');
+  await expect(more).toBeFocused();
+  await expect(select).toHaveCount(0);
   expect(writes).toEqual([]);
+  await page.keyboard.press('Enter');
+  await select.selectOption('arte');
   await page
     .getByRole('button', { name: 'Salvar etapa do pedido 05-CRM' })
     .click();
   const advance = page.getByRole('button', {
     name: 'Enviar para produção 05-CRM',
   });
+  await expect(page.getByText('Na arte', { exact: true })).toBeVisible();
+  await expect(more).toBeFocused();
+  await more.click();
   await expect(advance).toBeVisible();
   await advance.click();
+  await expect(page.getByText('Na produção', { exact: true })).toBeVisible();
+  await more.click();
   await expect(
     page.getByRole('button', { name: 'Marcar como pronto 05-CRM' }),
   ).toBeVisible();

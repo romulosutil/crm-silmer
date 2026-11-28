@@ -101,6 +101,23 @@ Somente recibo natural novo pode validar o caminho completo. O histórico de
 falhas permanece e o comando Evolution antigo continua incerto/em análise;
 publicar a correção não é confirmação de entrega desse comando.
 
+### Falha no registro de diagnósticos em 27/11/2026
+
+OPS-INBOX-ACK-04 / OPS-ERR-04. Nos registros recentes do n8n, 29 execuções
+do tratador `Preparar workflow.failed (MVP)` falharam com `command is not
+defined`. O gerador de envios pessoais inseria a projeção de origem nesse
+nó porque o mapa de diagnóstico contém o nome do nó de reserva. O gerador
+agora exige uma declaração de `command` e uma referência à reserva para
+alterar eventos de envio, preservando a declaração própria do nó de reserva.
+
+Para aplicar ao workflow principal já publicado, guardar o export privado da
+versão ativa e remover somente a expansão `...(command.whatsapp_target ?
+{source: …} : {}),` do objeto `payload` em **Preparar workflow.failed (MVP)**.
+Conferir que o delta muda somente o código desse nó e que o evento geral
+continua sem `source`, com `conversation_id: null` e código controlado. A
+verificação em produção depende de uma nova ocorrência natural e do registro
+correspondente no CRM. Para reverter, republicar a versão anterior do principal.
+
 Cada grupo reúne uma origem e um código técnico controlado, com contagem,
 primeira e última ocorrência e histórico. **Em análise** registra que a conta
 operadora assumiu a investigação. **Resolver** encerra a triagem; **Reabrir**

@@ -103,7 +103,8 @@ export function configurePersonalSend(workflow, lineIds) {
     const code = node.parameters?.jsCode;
     if (
       typeof code !== 'string' ||
-      (!code.includes(RESERVE) && node.name !== RESERVE) ||
+      !/^\s*const command\s*=/mu.test(code) ||
+      (!code.includes(COMMAND) && node.name !== RESERVE) ||
       !/event_type: '(message\.sent|message\.send\.requested|message\.send\.unknown|workflow\.failed)'/.test(
         code,
       )

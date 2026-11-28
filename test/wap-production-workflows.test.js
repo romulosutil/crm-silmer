@@ -552,6 +552,65 @@ test('WAP-E12: personal send preserves the native panel fast path', () => {
   );
 });
 
+test('OPS-INBOX-ACK-04: general workflow failures do not depend on a personal send command', () => {
+  const generalFailure = 'Preparar workflow.failed (MVP)';
+  const personalFailure = 'Falha de preflight da midia (MVP)';
+  const source = {
+    bindingId: 'synthetic-binding',
+    lineId: lineA,
+    accountId: 'synthetic-account',
+    generation: 3,
+  };
+  const command = {
+    command_id: 'synthetic-command',
+    conversation_id: 'synthetic-conversation',
+    automation_epoch: 7,
+    source_revision: 9,
+    whatsapp_target: { source: { ...source, instance: instances[0] } },
+  };
+  const find = (/** @type {any} */ workflow, /** @type {string} */ name) =>
+    workflow.nodes.find((/** @type {any} */ node) => node.name === name);
+  const run = (/** @type {string} */ code, /** @type {object} */ context) =>
+    JSON.parse(
+      JSON.stringify(
+        vm.runInNewContext(`(() => {${code}})()`, context, { timeout: 500 }),
+      ),
+    ).json;
+  for (const input of [
+    main(),
+    patchPanelReservationFastPath(main()).workflow,
+  ]) {
+    const workflow = buildWapProductionWorkflows(input, config())[
+      'main-personal-send'
+    ];
+    const handler = find(workflow, generalFailure);
+    const diagnostic = run(handler.parameters.jsCode, {
+      $json: {
+        execution: {
+          id: '12345',
+          lastNodeExecuted: 'CRM - Registrar status de entrega (MVP)',
+          error: { message: 'PRIVATE_ERROR_DETAIL' },
+        },
+      },
+      $execution: { id: '12346' },
+    });
+    assert.equal(diagnostic.payload.event_type, 'workflow.failed');
+    assert.equal(diagnostic.payload.conversation_id, null);
+    assert.equal(diagnostic.idempotency_key, 'workflow-failed:12345');
+    assert.match(diagnostic.payload.failure.code, /^WORKFLOW_NODE_[A-F0-9]+$/u);
+    assert.equal('source' in diagnostic.payload, false);
+    assert.doesNotMatch(JSON.stringify(diagnostic), /PRIVATE_ERROR_DETAIL/u);
+    assert.deepEqual(handler, find(input, generalFailure));
+
+    const failure = run(find(workflow, personalFailure).parameters.jsCode, {
+      $: () => ({ item: { json: { command } } }),
+      $execution: { id: '12347' },
+    });
+    assert.equal(failure.payload.failure.phase, 'before_message_send');
+    assert.deepEqual(failure.payload.source, source);
+  }
+});
+
 test('WAP-E12: summary fingerprints the input and proposes env the real loaders accept', async () => {
   const reference = JSON.parse(
     readFileSync(

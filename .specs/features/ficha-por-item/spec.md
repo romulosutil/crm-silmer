@@ -73,7 +73,9 @@ FPI-08 e "Anotações" e divisão em metades de FPI-11). A v9 está selecionada 
   o botão principal no cabeçalho e no rodapé móvel deve baixar **PDF para
   impressão**. **Mais ações do pedido** deve oferecer **PDF detalhado**,
   acionável por teclado, com retorno de foco ao botão do menu. O
-  compartilhamento segue usando o PDF detalhado.
+  compartilhamento segue usando o PDF detalhado. Os dois formatos aplicam as
+  equivalências de malha do catálogo na exibição e preservam os valores gravados
+  na ficha (PFI-14).
 
 ## Notas
 

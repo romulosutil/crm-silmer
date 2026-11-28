@@ -1,6 +1,6 @@
 import { MAX_ORDER_FILE_BYTES } from '../domain/order-files.js';
 import { safeArtPreview } from './ficha-v8-content.js';
-import { display, filledText } from './html.js';
+import { display, filledText, printedFabric } from './html.js';
 
 /** @typedef {{pages?: string[], notice?: string}} PrintArtwork */
 const MAX_ART_URI_LENGTH = Math.ceil(MAX_ORDER_FILE_BYTES / 3) * 4 + 32;
@@ -67,7 +67,7 @@ function detail(label, value) {
 function specifications(item, rows) {
   const audience = filledText(item.publico);
   const malhas = Array.isArray(item.malhas)
-    ? item.malhas.map(filledText).filter(Boolean).join(' / ')
+    ? item.malhas.map(printedFabric).filter(Boolean).join(' / ')
     : '';
   return [
     `<b>${text(item.tipo)}</b>${detail('Detalhe', item.modelo)}${detail('Cor', item.cor)}${audience ? `<div>${display(audience[0].toUpperCase() + audience.slice(1))}</div>` : ''}`,

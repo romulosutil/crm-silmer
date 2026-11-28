@@ -9,6 +9,7 @@ import {
 import {
   createOrderFileService,
   createOrderService,
+  formatOrderNumber,
   orderAmounts,
   isCutMapOrder,
   isOpenProductionOrder,
@@ -687,8 +688,8 @@ export function createOrderRuntime(options) {
       nextCutMapNumber += 1;
       return String(nextCutMapNumber);
     },
-    /** @param {OrderActor} actor @param {string|null} before */
-    async listIssuedCutMaps(actor, before) {
+    /** @param {OrderActor} actor @param {string|null} before @param {{number:string, orderOnly:boolean}|null} [search] */
+    async listIssuedCutMaps(actor, before, search = null) {
       if (actor?.kind !== 'human' || !actor.id) throw new OrderForbiddenError();
       const pageSize = 20;
       /** @type {{number:string, generatedAt:string, orders:string[], pdfAvailable:boolean}[]} */
@@ -698,13 +699,25 @@ export function createOrderRuntime(options) {
           actor,
           before,
           pageSize + 1,
+          search,
         );
       } else {
         const numbers = [...memoryIssuedCutMaps.keys()].sort(
           (left, right) => Number(right) - Number(left),
         );
+        const sequence = Number(search?.number);
+        const orderNumber = Number.isSafeInteger(sequence)
+          ? formatOrderNumber(sequence)
+          : null;
         for (const number of numbers) {
           if (before !== null && BigInt(number) >= BigInt(before)) continue;
+          const saved = memoryIssuedCutMaps.get(number);
+          if (
+            search &&
+            (search.orderOnly || number !== search.number) &&
+            !saved?.orders.some((order) => order.number === orderNumber)
+          )
+            continue;
           const summary = await readMemoryCutMapSummary(number, actor);
           if (summary) items.push(summary);
           if (items.length > pageSize) break;

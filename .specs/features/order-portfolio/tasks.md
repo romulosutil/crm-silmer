@@ -16,3 +16,5 @@
   com autorização de todos os pedidos vinculados (CAR-10).
 - **CAR-T07** Histórico paginado na Carteira com número, emissão, pedidos e
   download do PDF original sob a mesma autorização (CAR-11).
+- **CAR-T08** Busca por número do mapa ou do pedido no histórico autorizado
+  (CAR-12).

@@ -33,7 +33,7 @@ conferir os dados e baixar o PDF sem alterar a venda.
 
 Acceptance Criteria:
 
-1. WHEN há acesso comercial humano THEN o sistema SHALL oferecer Recibo na lista após Gerar PDF, quando existir, e antes de Abrir pedido, e uma ação no cabeçalho do detalhe, sem seção duplicada (RCP-01/12).
+1. WHEN há acesso comercial humano THEN o sistema SHALL oferecer Recibo no menu Mais ações da linha e uma ação no cabeçalho do detalhe, sem seção duplicada (RCP-01/12).
 2. WHEN a prévia fecha THEN a interface SHALL preservar lista/filtros/rolagem e devolver foco ao acionador conectado ou a um destino previsível (RCP-02).
 3. WHEN o pedido é pendente/reaberto ou cancelado THEN cada página SHALL identificar respectivamente o caráter provisório ou o cancelamento; confirmado SHALL não exibir aviso provisório (RCP-03).
 4. WHEN dados ou preços estão ausentes THEN o recibo SHALL usar Não informado/A definir, sem transformar ausência em zero ou total parcial contratado (RCP-04).

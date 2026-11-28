@@ -5,9 +5,9 @@ Contrato: [ADR 089](../adr/089-recibo-comercial-na-lista-e-no-pedido.md),
 
 ## Uso e disponibilidade
 
-Na lista de Pedidos, **Recibo** fica depois de **Gerar PDF**, quando este
-existe, e antes de **Abrir pedido**. No detalhe há **Recibo do pedido** no
-cabeçalho. O modal permite conferir a prévia e selecionar **Baixar PDF**;
+Na lista de Pedidos, abra **Mais ações** na linha e escolha **Recibo**.
+No detalhe, **Recibo do pedido** fica no cabeçalho. No modal, confira a
+prévia e selecione **Baixar PDF**.
 **Fechar** ou Escape devolve o foco ao acionador e conserva a lista e os
 filtros. Se a linha saiu da lista, o foco retorna à busca; no detalhe, ao título.
 

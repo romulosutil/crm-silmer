@@ -63,9 +63,9 @@ test('groups orders by status with counts, columns and actions', async ({
     'Pedido',
     'Cliente',
     'Entrega',
+    'Etapa',
     'Peças',
     'Valor',
-    'Etapa e pagamento',
     'Ações',
   ]);
   // Pesquisa UX 2026-10-15, achado 3: what still needs a person comes first.
@@ -126,7 +126,7 @@ test('uses the same columns for pending, overdue and upcoming orders on desktop'
       pendingOrder,
       orderAt(
         'order-overdue',
-        { ...editable, number: '21-CRM' },
+        { ...editable, number: '21-CRM', finalAmountCents: 200000 },
         { data_entrega_confirmada: '2026-10-10' },
       ),
       orderAt(
@@ -136,6 +136,11 @@ test('uses the same columns for pending, overdue and upcoming orders on desktop'
           cliente: 'Associação Esportiva de Santa Luzia',
           data_entrega_confirmada: '2026-10-18',
         },
+      ),
+      orderAt(
+        'order-overdue-pdf-only',
+        { number: '23-CRM' },
+        { data_entrega_confirmada: '2026-10-11' },
       ),
     ],
   });
@@ -147,7 +152,7 @@ test('uses the same columns for pending, overdue and upcoming orders on desktop'
     const columns = [];
     for (const name of ['Pedidos pendentes', 'Atrasados', 'Próximos 7 dias']) {
       const region = page.getByRole('region', { name, exact: true });
-      const row = region.locator('tbody tr');
+      const row = region.locator('tbody tr').first();
       await expect(row).toBeVisible();
       const cells = await row.locator('td').evaluateAll((nodes) =>
         nodes.map((node) => {
@@ -168,22 +173,37 @@ test('uses the same columns for pending, overdue and upcoming orders on desktop'
     }
     expect(columns[1]).toEqual(columns[0]);
     expect(columns[2]).toEqual(columns[0]);
+    const amount = page
+      .getByRole('region', { name: 'Atrasados' })
+      .locator('.order-amount')
+      .first();
+    await expect(amount).toHaveText('R$ 2.000,00');
+    expect(await amount.evaluate((node) => node.getClientRects().length)).toBe(
+      1,
+    );
   }
 
   const row = page
     .getByRole('region', { name: 'Atrasados' })
-    .locator('tbody tr');
+    .locator('tbody tr')
+    .first();
   const controls = await row.locator('select, button, a').evaluateAll((nodes) =>
     nodes.map((node) => {
       const { top, height } = node.getBoundingClientRect();
       return { top, height };
     }),
   );
-  expect(controls).toHaveLength(5);
+  expect(controls).toHaveLength(3);
   expect(controls.every((control) => control.height >= 44)).toBe(true);
-  expect(controls[0].top).toBe(controls[1].top);
-  expect(controls[2].top).toBe(controls[3].top);
-  expect(controls[2].top).toBe(controls[4].top);
+  expect(controls[1].top).toBe(controls[2].top);
+  const editablePdf = await page
+    .getByRole('button', { name: 'Gerar PDF 21-CRM' })
+    .boundingBox();
+  const otherPdf = await page
+    .getByRole('button', { name: 'Gerar PDF 23-CRM' })
+    .boundingBox();
+  expect(editablePdf).not.toBeNull();
+  expect(otherPdf?.x).toBe(editablePdf?.x);
 });
 
 test('recovers the order list after an initial server failure without showing an empty wallet', async ({

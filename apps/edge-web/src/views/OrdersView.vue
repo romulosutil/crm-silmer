@@ -24,6 +24,7 @@ import AppHint from '../components/AppHint.vue';
 import OrderReceiptPreview from '../components/order/OrderReceiptPreview.vue';
 import OrderCutMapMembership from '../components/order/OrderCutMapMembership.vue';
 import OrderCutMapPreview from '../components/order/OrderCutMapPreview.vue';
+import OrderListActions from '../components/order/OrderListActions.vue';
 import OrderPortfolioOverview from '../components/order/OrderPortfolioOverview.vue';
 import { commandKey, request } from '../lib/api-client.js';
 import { dateTimeBR, formatPhoneNumber } from '../lib/format.js';
@@ -885,11 +886,6 @@ function stageFor(order) {
   return order.productionStage ? PRODUCTION_STEPS[order.productionStage] : null;
 }
 
-function setInitialStage(order, event) {
-  const stage = new FormData(event.currentTarget).get('stage');
-  void changeStage(order, stage);
-}
-
 async function changeStage(order, stage) {
   if (!stage || productionBusy.value || order.productionEditable !== true)
     return;
@@ -923,9 +919,9 @@ async function changeStage(order, stage) {
         `[data-production-order="${CSS.escape(order.id)}"]`,
       );
       (
-        row?.querySelector(
-          '.portfolio-stage-action button, button.portfolio-stage-action, a',
-        ) ?? heading.value
+        row?.querySelector('.order-row-menu-trigger') ??
+        row?.querySelector('.order-number-link') ??
+        heading.value
       )?.focus();
     }
   } catch (cause) {
@@ -1687,7 +1683,6 @@ onBeforeUnmount(() => {
             Pendentes
             <span class="badge" data-tone="warning">{{ counts.pendente }}</span>
           </h2>
-          <p>o vendedor responsável ou administrador pode continuar</p>
         </div>
         <div
           class="table-wrap list-scroll order-list"
@@ -1701,9 +1696,9 @@ onBeforeUnmount(() => {
                 <th scope="col" class="order-cell-number">Pedido</th>
                 <th scope="col">Cliente</th>
                 <th scope="col" class="order-cell-due">Entrega</th>
+                <th scope="col" class="order-cell-situation">Situação</th>
                 <th scope="col" class="num order-cell-quantity">Peças</th>
                 <th scope="col" class="num order-cell-value">Valor</th>
-                <th scope="col" class="order-cell-situation">Situação</th>
                 <th scope="col" class="order-cell-actions">Ações</th>
               </tr>
             </thead>
@@ -1716,7 +1711,12 @@ onBeforeUnmount(() => {
                 @click="openOrder(order, $event)"
               >
                 <td class="order-cell-number">
-                  #{{ order.number }}
+                  <RouterLink
+                    class="order-number-link"
+                    :to="`/pedidos/${order.id}`"
+                    :aria-label="`Abrir pedido ${order.number}`"
+                    >#{{ order.number }}</RouterLink
+                  >
                   <span class="badge order-card-status" data-tone="warning">{{
                     orderStatusLabel(order.status)
                   }}</span>
@@ -1736,11 +1736,7 @@ onBeforeUnmount(() => {
                     >{{ due(order).relative }}</span
                   >
                 </td>
-                <td class="num" data-label="Peças">{{ order.totalPieces }}</td>
-                <td class="num order-cell-value" data-label="Valor">
-                  {{ amountLabel(order.finalAmountCents) }}
-                </td>
-                <td class="order-cell-situation">
+                <td class="order-cell-situation" data-label="Situação">
                   <span
                     v-if="priority(order)"
                     class="badge"
@@ -1761,22 +1757,21 @@ onBeforeUnmount(() => {
                     }}<span class="sr-only"> · Pedido {{ order.number }}</span>
                   </button>
                 </td>
+                <td class="num order-cell-quantity" data-label="Peças">
+                  {{ order.totalPieces }}
+                </td>
+                <td class="num order-cell-value" data-label="Valor">
+                  <span class="order-amount">{{
+                    amountLabel(order.finalAmountCents)
+                  }}</span>
+                </td>
                 <td class="order-cell-actions">
-                  <div class="row-actions order-row-links">
-                    <button
-                      v-if="order.receiptAvailable === true"
-                      type="button"
-                      :disabled="Boolean(pdfBusyId)"
-                      @click="receiptPreview?.open(order, $event.currentTarget)"
-                    >
-                      Recibo<span class="sr-only"> {{ order.number }}</span>
-                    </button>
-                    <RouterLink class="button-link" :to="`/pedidos/${order.id}`"
-                      >Abrir pedido<span class="sr-only">
-                        {{ order.number }}</span
-                      ></RouterLink
-                    >
-                  </div>
+                  <OrderListActions
+                    v-if="order.receiptAvailable === true"
+                    :order="order"
+                    :pdf-busy-id="pdfBusyId"
+                    @receipt="receiptPreview?.open(order, $event)"
+                  />
                 </td>
               </tr>
             </tbody>
@@ -1797,7 +1792,6 @@ onBeforeUnmount(() => {
           <p v-if="isProductionQueue">
             confirmados e ainda não entregues, pela entrega mais próxima
           </p>
-          <p v-else>valor e forma de pagamento registrados</p>
         </div>
         <div
           v-for="group in confirmedGroups"
@@ -1834,11 +1828,9 @@ onBeforeUnmount(() => {
                   <th scope="col" class="order-cell-number">Pedido</th>
                   <th scope="col">Cliente</th>
                   <th scope="col" class="order-cell-due">Entrega</th>
+                  <th scope="col" class="order-cell-situation">Etapa</th>
                   <th scope="col" class="num order-cell-quantity">Peças</th>
                   <th scope="col" class="num order-cell-value">Valor</th>
-                  <th scope="col" class="order-cell-situation">
-                    {{ cutMode ? 'Etapa' : 'Etapa e pagamento' }}
-                  </th>
                   <th scope="col" class="order-cell-actions">
                     {{ cutMode ? 'Seleção' : 'Ações' }}
                   </th>
@@ -1857,7 +1849,12 @@ onBeforeUnmount(() => {
                   @click="openOrder(order, $event)"
                 >
                   <td class="order-cell-number">
-                    #{{ order.number }}
+                    <RouterLink
+                      class="order-number-link"
+                      :to="`/pedidos/${order.id}`"
+                      :aria-label="`Abrir pedido ${order.number}`"
+                      >#{{ order.number }}</RouterLink
+                    >
                     <span
                       v-if="isStoreOrder(order) || order.isTest"
                       class="order-badges"
@@ -1908,13 +1905,7 @@ onBeforeUnmount(() => {
                       >{{ due(order).relative }}</span
                     >
                   </td>
-                  <td class="num" data-label="Peças">
-                    {{ order.totalPieces }}
-                  </td>
-                  <td class="num order-cell-value" data-label="Valor">
-                    {{ amountLabel(order.finalAmountCents) }}
-                  </td>
-                  <td class="order-cell-situation">
+                  <td class="order-cell-situation" data-label="Etapa">
                     <span v-if="order.deliveredOn" class="portfolio-stage"
                       ><AppIcon name="truck" /> Entregue</span
                     >
@@ -1928,11 +1919,6 @@ onBeforeUnmount(() => {
                       >Etapa a confirmar</span
                     >
                     <template v-else>{{ situation(order) }}</template>
-                    <small v-if="!cutMode" class="order-context">{{
-                      order.paidOn && !order.paymentReviewRequired
-                        ? 'Pago'
-                        : 'Pagamento a conferir'
-                    }}</small>
                     <small
                       v-if="fichaPrintedLabel(order)"
                       class="order-context"
@@ -1949,6 +1935,19 @@ onBeforeUnmount(() => {
                         · Pedido {{ order.number }}</span
                       >
                     </button>
+                  </td>
+                  <td class="num order-cell-quantity" data-label="Peças">
+                    {{ order.totalPieces }}
+                  </td>
+                  <td class="num order-cell-value" data-label="Valor">
+                    <span class="order-amount">{{
+                      amountLabel(order.finalAmountCents)
+                    }}</span>
+                    <small v-if="!cutMode" class="order-context">{{
+                      order.paidOn && !order.paymentReviewRequired
+                        ? 'Pago'
+                        : 'Pagamento a conferir'
+                    }}</small>
                   </td>
                   <td class="order-cell-actions">
                     <label
@@ -1969,73 +1968,16 @@ onBeforeUnmount(() => {
                     <span v-else-if="cutMode">{{
                       order.cutMap ? 'Incluído no mapa' : 'Seleção indisponível'
                     }}</span>
-                    <div v-else class="order-row-actions">
-                      <button
-                        v-if="order.productionEditable && stageFor(order)"
-                        type="button"
-                        class="portfolio-stage-action"
-                        :disabled="Boolean(productionBusy)"
-                        @click="changeStage(order, stageFor(order).next)"
-                      >
-                        {{ stageFor(order).action
-                        }}<span class="sr-only"> {{ order.number }}</span>
-                      </button>
-                      <form
-                        v-else-if="order.productionEditable"
-                        class="portfolio-stage-action portfolio-initial-stage"
-                        @submit.prevent="setInitialStage(order, $event)"
-                      >
-                        <select
-                          name="stage"
-                          required
-                          :aria-label="`Definir etapa do pedido ${order.number}`"
-                          :disabled="Boolean(productionBusy)"
-                        >
-                          <option value="">Definir etapa</option>
-                          <option value="arte">Na arte</option>
-                          <option value="producao">Na produção</option>
-                          <option value="pronto">Pronto</option>
-                        </select>
-                        <button
-                          type="submit"
-                          :disabled="Boolean(productionBusy)"
-                        >
-                          Salvar etapa<span class="sr-only">
-                            do pedido {{ order.number }}</span
-                          >
-                        </button>
-                      </form>
-                      <div class="row-actions order-row-links">
-                        <button
-                          type="button"
-                          :disabled="Boolean(pdfBusyId)"
-                          @click="generatePdf(order)"
-                        >
-                          {{
-                            pdfBusyId === order.id
-                              ? 'Gerando PDF…'
-                              : 'Gerar PDF'
-                          }}<span class="sr-only"> {{ order.number }}</span>
-                        </button>
-                        <button
-                          v-if="order.receiptAvailable === true"
-                          type="button"
-                          :disabled="Boolean(pdfBusyId)"
-                          @click="
-                            receiptPreview?.open(order, $event.currentTarget)
-                          "
-                        >
-                          Recibo<span class="sr-only"> {{ order.number }}</span>
-                        </button>
-                        <RouterLink
-                          class="button-link"
-                          :to="`/pedidos/${order.id}`"
-                          >Abrir pedido<span class="sr-only">
-                            {{ order.number }}</span
-                          ></RouterLink
-                        >
-                      </div>
-                    </div>
+                    <OrderListActions
+                      v-else
+                      :order="order"
+                      :stage="stageFor(order)"
+                      :stage-busy="Boolean(productionBusy)"
+                      :pdf-busy-id="pdfBusyId"
+                      @pdf="generatePdf(order)"
+                      @receipt="receiptPreview?.open(order, $event)"
+                      @stage="changeStage(order, $event)"
+                    />
                   </td>
                 </tr>
               </tbody>

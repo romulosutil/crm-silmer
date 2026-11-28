@@ -180,8 +180,10 @@
 
 .order-table tr {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr) minmax(0, 1fr);
-  gap: var(--space-2) var(--space-3);
+  grid-template-columns:
+    minmax(3.5rem, 1fr) minmax(0, 0.85fr) minmax(0, 1fr)
+    6rem;
+  row-gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -210,14 +212,42 @@
   text-align: start;
 }
 
-td.order-cell-value {
+.order-amount {
   font-weight: var(--weight-semibold);
 }
 
 .order-table .order-cell-number,
-.order-table .order-cell-customer,
-.order-table .order-cell-situation,
-.order-table .order-cell-actions {
+.order-table .order-cell-customer {
+  grid-column: 1 / -1;
+}
+
+.order-table td.order-cell-due {
+  grid-column: 1 / 3;
+}
+
+.order-table td.order-cell-situation {
+  grid-column: 3 / -1;
+}
+
+.order-table td.order-cell-quantity {
+  grid-column: 1;
+}
+
+.order-table td.order-cell-value {
+  grid-column: 2 / 4;
+}
+
+.order-table td.order-cell-due,
+.order-table td.order-cell-value {
+  padding-inline-end: var(--space-2);
+}
+
+.order-table td.order-cell-actions {
+  grid-column: 4;
+  align-self: end;
+}
+
+.orders-portfolio[data-cut-mode] .order-table td.order-cell-actions {
   grid-column: 1 / -1;
 }
 
@@ -420,54 +450,78 @@ td.order-cell-value {
   color: var(--status-success-text);
   text-align: start;
 }
-.order-row-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: start;
-  gap: var(--space-2);
-}
-
-.order-row-links,
-.portfolio-initial-stage {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: flex-start;
-  gap: var(--space-2);
-  inline-size: 100%;
-}
-
-.order-row-links > *,
-button.portfolio-stage-action,
-.portfolio-initial-stage > * {
-  max-inline-size: 100%;
+.order-number-link {
+  display: inline-flex;
+  align-items: center;
+  min-inline-size: var(--target-min);
   min-block-size: var(--target-min);
-  padding-inline: var(--space-2);
-  white-space: normal;
-}
-
-.order-row-links > * {
-  flex: 1 1 auto;
-  font-size: var(--text-xs);
-}
-
-.order-row-links .button-link {
   color: var(--color-link);
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.2em;
 }
 
-.order-row-links .button-link:hover {
+.order-number-link:is(:hover, :focus-visible) {
+  text-decoration-color: currentColor;
+}
+
+.order-row-tools {
+  display: grid;
+  grid-template-columns: repeat(2, var(--target-min));
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.order-row-pdf {
+  grid-column: 1;
+}
+
+.order-row-menu-trigger {
+  grid-column: 2;
+}
+
+.order-row-tools button.order-row-icon {
+  inline-size: var(--target-min);
+  min-block-size: var(--target-min);
+  padding: 0;
+  border: 1px solid transparent;
+  color: var(--color-text-muted);
+}
+
+.order-row-icon .app-icon,
+.order-row-menu-item .app-icon {
+  flex-shrink: 0;
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+}
+
+.order-row-tools
+  button.order-row-icon:is(:hover, [aria-expanded='true']):not(:disabled) {
+  color: var(--color-text);
   background: var(--color-selected);
   border-color: transparent;
 }
 
-.portfolio-initial-stage select {
-  flex: 1 1 7.5rem;
-  min-inline-size: 0;
-  inline-size: 0;
-  white-space: nowrap;
+.order-row-popover form {
+  gap: var(--space-2);
+  padding: var(--space-2);
+}
+
+.order-row-popover form + .order-row-menu-item {
+  margin-block-start: var(--space-2);
+  border-block-start: 1px solid var(--color-border-subtle);
+}
+
+.order-row-popover :is(button, select) {
+  min-block-size: var(--target-min);
+}
+
+.order-row-popover .order-row-menu-item {
+  justify-content: flex-start;
+  inline-size: 100%;
+  padding-inline: var(--space-2);
+  text-align: start;
 }
 
 .portfolio-confirmed .order-table tr[data-selected] {
@@ -732,6 +786,16 @@ dialog.cut-map-dialog[open] {
   font-weight: 500;
 }
 
+@media (width < 22rem) {
+  .order-table td.order-cell-value {
+    grid-column: 2 / -1;
+  }
+
+  .order-table td.order-cell-actions {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (width >= 54rem) {
   .table-wrap.order-list {
     max-block-size: min(36rem, 65dvh);
@@ -770,15 +834,21 @@ dialog.cut-map-dialog[open] {
   }
 
   .order-table th.order-cell-value {
-    inline-size: 5.75rem;
+    inline-size: 8.25rem;
   }
 
   .order-table th.order-cell-situation {
-    inline-size: 14%;
+    inline-size: 16%;
   }
 
   .order-table th.order-cell-actions {
-    inline-size: 25%;
+    inline-size: 7rem;
+    text-align: center;
+  }
+
+  .orders-portfolio[data-cut-mode] .order-table th.order-cell-actions {
+    inline-size: 10rem;
+    text-align: start;
   }
 
   .order-table tbody {
@@ -841,29 +911,15 @@ dialog.cut-map-dialog[open] {
   .order-table td[data-label]::before {
     content: none;
   }
-
-  .order-row-links > * {
-    flex: 0 1 auto;
-  }
-
-  .order-row-links .button-link {
-    padding-inline: var(--space-1);
-  }
-
-  .portfolio-initial-stage > * {
-    font-size: var(--text-xs);
-  }
-}
-
-@container order-list (width >= 56rem) {
-  .order-table th.order-cell-actions {
-    inline-size: 17rem;
-  }
 }
 
 @container order-list (width >= 60rem) {
   .order-table th.order-cell-due {
-    inline-size: 11rem;
+    inline-size: 15%;
+  }
+
+  .order-table th.order-cell-situation {
+    inline-size: 18%;
   }
 
   .order-table .order-due[data-tone] {

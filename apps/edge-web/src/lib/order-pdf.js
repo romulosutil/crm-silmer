@@ -1,3 +1,5 @@
+import { request } from './api-client.js';
+
 /** The API's error code, when the failure carries a JSON body. @param {Response} response */
 async function errorCode(response) {
   try {
@@ -52,6 +54,20 @@ export function downloadPdf(file) {
   link.click();
   link.remove();
   globalThis.setTimeout(() => globalThis.URL.revokeObjectURL(url), 60_000);
+}
+
+/** @param {string} number @param {AbortSignal} signal */
+export async function downloadIssuedCutMap(number, signal) {
+  const { data } = await request(
+    `/api/v1/orders/cut-map/${encodeURIComponent(number)}/pdf`,
+    { responseType: 'pdf', signal },
+  );
+  if (!signal.aborted)
+    downloadPdf(
+      new globalThis.File([data], `mapa-de-corte-${number}.pdf`, {
+        type: 'application/pdf',
+      }),
+    );
 }
 
 export function canSharePdf() {

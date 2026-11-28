@@ -252,13 +252,9 @@
   margin-block-end: var(--space-4);
 }
 
-.portfolio-production-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-}
-
 .portfolio-sales-head,
+.portfolio-production-head,
+.portfolio-production-actions,
 .portfolio-selection,
 .portfolio-selection-actions,
 .portfolio-seller,
@@ -283,10 +279,69 @@
 .portfolio-production h2,
 .portfolio-selection h2,
 .portfolio-deadline-group h3,
+.cut-map-history h3,
 .cut-map-lot h3 {
   margin: 0;
   font-size: var(--text-base);
   font-weight: 600;
+}
+
+.cut-map-history {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.cut-map-history-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cut-map-history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) 9rem;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  overflow-wrap: anywhere;
+}
+
+.cut-map-history-row + .cut-map-history-row,
+.cut-map-history-list + .cut-map-history-status {
+  border-block-start: 1px solid var(--color-border-subtle);
+}
+
+.cut-map-history-row button {
+  justify-self: start;
+}
+
+.cut-map-history p {
+  margin: 0;
+}
+
+.cut-map-history time,
+.cut-map-history-unavailable {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.cut-map-history strong {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.cut-map-history-error {
+  grid-column: 1 / -1;
+}
+
+.cut-map-history-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
 }
 
 .portfolio-selection p,
@@ -387,6 +442,26 @@
 .portfolio-selection button,
 .portfolio-production button {
   min-block-size: var(--target-min);
+}
+
+.portfolio-production .portfolio-mobile-cut-maps {
+  display: none;
+}
+
+@media (width <= 32rem) {
+  .portfolio-production .portfolio-desktop-cut-history,
+  .portfolio-production[data-show-cut-action='false'] .portfolio-cut-new,
+  .portfolio-production-action-detail {
+    display: none;
+  }
+
+  .portfolio-production .portfolio-mobile-cut-maps {
+    display: inline-flex;
+  }
+
+  .portfolio-production .portfolio-production-actions button {
+    padding-inline: var(--space-3);
+  }
 }
 
 #cut-selection-title:focus,
@@ -658,6 +733,9 @@ dialog.cut-map-dialog[open] {
   .portfolio-sales-head {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .cut-map-history-row {
+    grid-template-columns: minmax(0, 1fr);
   }
   .portfolio-production .chip-row {
     display: grid;

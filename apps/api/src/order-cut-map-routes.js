@@ -7,6 +7,15 @@ const identifier = /^[A-Za-z0-9_-]{1,128}$/u;
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
 
 /** @param {unknown} value */
+function validMapNumber(value) {
+  return (
+    typeof value === 'string' &&
+    /^[1-9][0-9]{0,18}$/u.test(value) &&
+    BigInt(value) <= 9223372036854775807n
+  );
+}
+
+/** @param {unknown} value */
 function validSelection(value) {
   return (
     Array.isArray(value) &&
@@ -123,6 +132,24 @@ export function registerOrderCutMapRoutes(
     const readLimit = { rateLimit: { max: 30, timeWindow: '1 minute' } };
 
     scope.get(
+      `${root}/cut-maps`,
+      { config: readLimit, exposeHeadRoute: false },
+      respond(async (request, reply) => {
+        const query = /** @type {Record<string, unknown>} */ (request.query);
+        const { before } = query;
+        if (
+          Object.keys(query).some((key) => key !== 'before') ||
+          (before !== undefined && !validMapNumber(before))
+        )
+          return reject(reply, 400, 'INVALID_REQUEST');
+        const { actor } = await authorize(request);
+        return reply.send(
+          await orders.listIssuedCutMaps(actor, before ?? null),
+        );
+      }),
+    );
+
+    scope.get(
       `${root}/cut-map`,
       { config: readLimit },
       respond(async (request, reply) => {
@@ -143,10 +170,7 @@ export function registerOrderCutMapRoutes(
         { config: readLimit, exposeHeadRoute: false },
         respond(async (request, reply) => {
           const { number } = /** @type {{number: string}} */ (request.params);
-          if (
-            !/^[1-9][0-9]{0,18}$/u.test(number) ||
-            BigInt(number) > 9223372036854775807n
-          )
+          if (!validMapNumber(number))
             return reject(reply, 404, 'CUT_MAP_NOT_FOUND');
           const { actor } = await authorize(request);
           const issued = await orders.getIssuedCutMap(

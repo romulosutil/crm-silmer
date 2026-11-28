@@ -3,7 +3,7 @@ import { nextTick, onBeforeUnmount, ref } from 'vue';
 import AppIcon from '../AppIcon.vue';
 import { openDialog } from '../../lib/ui.js';
 import { request } from '../../lib/api-client.js';
-import { downloadPdf } from '../../lib/order-pdf.js';
+import { downloadIssuedCutMap } from '../../lib/order-pdf.js';
 
 const dialog = ref(null);
 const title = ref(null);
@@ -59,19 +59,7 @@ async function download() {
   downloading.value = true;
   error.value = '';
   try {
-    const { data } = await request(
-      `/api/v1/orders/cut-map/${number.value}/pdf`,
-      {
-        responseType: 'pdf',
-        signal: current.signal,
-      },
-    );
-    if (!current.signal.aborted)
-      downloadPdf(
-        new File([data], `mapa-de-corte-${number.value}.pdf`, {
-          type: 'application/pdf',
-        }),
-      );
+    await downloadIssuedCutMap(number.value, current.signal);
   } catch (cause) {
     if (current.signal.aborted) return;
     if ([401, 403, 404].includes(cause?.status)) {

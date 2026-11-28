@@ -17,6 +17,14 @@ Pela [ADR 104](docs/adr/104-pdf-original-do-mapa-de-corte.md), a migration
 `0090` guarda o documento original cifrado na mesma emissão. Consultar o
 mapa ou baixar o PDF usa a autorização atual de todos os pedidos do lote.
 
+O histórico (CAR-11, CAR-T07) fica em **Carteira de Pedidos → Produção →
+Histórico de mapas de corte**. No celular, o botão **Mapas de corte** abre o
+histórico e dá acesso à criação. A API `GET /api/v1/orders/cut-maps` pagina por
+número decrescente em páginas de 20 mapas autorizados. A lista inclui data,
+números dos pedidos e disponibilidade do arquivo. **Baixar PDF** usa a rota
+do documento original e revalida o acesso. Mapas legados com vínculo e sem
+arquivo mostram **PDF indisponível**.
+
 ## Link de pagamento do CRM — LPC (23/11/2026)
 
 [ADR 098](docs/adr/098-link-de-pagamento-do-crm-e-cobrancas-que-somam.md),

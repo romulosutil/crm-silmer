@@ -1800,7 +1800,7 @@ if (connectionString) {
     assert.equal(await storage.getObject(second.file.objectKey), null);
   });
 
-  test('CAR-02/09/10 and manual delivery: numbered maps keep their original PDF and require access to every order', async () => {
+  test('CAR-02/09/10/11 and manual delivery: issued maps and PDFs require access to every order', async () => {
     const conversationId = await seedConversation(pool, {
       channel: 'whatsapp',
     });
@@ -2051,6 +2051,59 @@ if (connectionString) {
     );
     assert.equal(await runtime.getIssuedCutMap(winner, actor, false), null);
     assert.equal(await runtime.getIssuedCutMap(winner, actor, true), null);
+    assert.deepEqual(await runtime.listIssuedCutMaps(actor, null), {
+      items: [],
+      nextCursor: null,
+    });
+    const legacyOrder = await confirmedCutOrder();
+    const legacyNumber = await runtime.reserveCutMapNumber();
+    await pool.query('INSERT INTO crm.order_cut_maps (number) VALUES ($1)', [
+      legacyNumber,
+    ]);
+    await pool.query(
+      'INSERT INTO crm.order_cut_map_orders (order_id, map_number, order_version) VALUES ($1, $2, $3)',
+      [legacyOrder.id, legacyNumber, legacyOrder.version],
+    );
+    const history = await runtime.listIssuedCutMaps(actor, null);
+    assert.deepEqual(
+      history.items.map(({ number, orders, pdfAvailable }) => ({
+        number,
+        orders,
+        pdfAvailable,
+      })),
+      [
+        {
+          number: legacyNumber,
+          orders: [legacyOrder.number],
+          pdfAvailable: false,
+        },
+      ],
+    );
+    await pool.query(
+      'UPDATE crm.orders SET manual_owner_id = $2 WHERE id = $1',
+      [companion.id, actor.id],
+    );
+    assert.deepEqual(
+      (await repository.listIssuedCutMaps(actor, null, 1)).map(
+        ({ number }) => number,
+      ),
+      [legacyNumber],
+    );
+    assert.deepEqual(await runtime.listIssuedCutMaps(actor, legacyNumber), {
+      items: [
+        {
+          number: winner,
+          orders: [order.number, companion.number],
+          generatedAt: afterGeneration.cutMap.generatedAt,
+          pdfAvailable: true,
+        },
+      ],
+      nextCursor: null,
+    });
+    await pool.query(
+      'UPDATE crm.orders SET manual_owner_id = $2 WHERE id = $1',
+      [companion.id, otherOwner],
+    );
     assert.ok(
       !(await service.deliveryTasks({ actor })).some(
         (item) => item.id === order.id,

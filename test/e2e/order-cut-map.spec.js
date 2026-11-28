@@ -2,6 +2,121 @@ import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { confirmedOrder, mockOrders } from './support/orders-mock.js';
 
+test('CAR-11: consults the history and downloads the original PDF without finding an order', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockOrders(page, { orders: [] });
+  const generatedAt = '2026-11-27T14:00:00.000Z';
+  const original = '%PDF-1.4\n% original synthetic cut map\n';
+  let historyRequests = 0;
+  await page.route(/\/api\/v1\/orders\/cut-maps(\?|$)/u, async (route) => {
+    historyRequests += 1;
+    const before = new URL(route.request().url()).searchParams.get('before');
+    if (historyRequests === 1) {
+      await route.fulfill({
+        status: 503,
+        json: { error: { code: 'SERVICE_UNAVAILABLE' } },
+      });
+    } else if (before === '24') {
+      await route.fulfill({
+        json: {
+          items: [
+            {
+              number: '23',
+              generatedAt,
+              orders: ['17-CRM'],
+              pdfAvailable: false,
+            },
+          ],
+          nextCursor: null,
+        },
+      });
+    } else {
+      expect(before).toBeNull();
+      await route.fulfill({
+        json: {
+          items: [
+            {
+              number: '24',
+              generatedAt,
+              orders: ['18-CRM', '19-CRM'],
+              pdfAvailable: true,
+            },
+          ],
+          nextCursor: '24',
+        },
+      });
+    }
+  });
+  await page.route('**/api/v1/orders/cut-map/24/pdf', (route) => {
+    expect(route.request().method()).toBe('GET');
+    return route.fulfill({ contentType: 'application/pdf', body: original });
+  });
+
+  await page.goto('/pedidos');
+  const toggle = page.getByRole('button', {
+    name: 'Mapas de corte',
+    exact: true,
+  });
+  const history = page.getByRole('region', {
+    name: 'Histórico de mapas de corte',
+  });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(historyRequests).toBe(0);
+  await toggle.press('Enter');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(history.getByRole('alert')).toHaveText(
+    'Não foi possível carregar o histórico.',
+  );
+  await history
+    .getByRole('button', { name: 'Tentar novamente' })
+    .press('Enter');
+  await expect(
+    history.getByRole('heading', { name: 'Mapa de corte 24' }),
+  ).toBeFocused();
+  await expect(history.locator('time')).toHaveAttribute(
+    'datetime',
+    generatedAt,
+  );
+  await expect(history.locator('time')).toContainText('27/11/2026');
+  await expect(history.getByText('18-CRM, 19-CRM')).toBeVisible();
+
+  const download = page.waitForEvent('download');
+  await history
+    .getByRole('button', { name: 'Baixar PDF do mapa de corte 24' })
+    .press('Enter');
+  const pdf = await download;
+  expect(pdf.suggestedFilename()).toBe('mapa-de-corte-24.pdf');
+  expect(await readFile(await pdf.path(), 'utf8')).toBe(original);
+  await history
+    .getByRole('button', { name: 'Carregar mais mapas' })
+    .press('Enter');
+  const legacy = history
+    .getByRole('listitem')
+    .filter({ hasText: 'Mapa de corte 23' });
+  await expect(legacy.getByRole('heading')).toBeFocused();
+  await expect(legacy.getByText('17-CRM')).toBeVisible();
+  await expect(legacy.getByText('PDF indisponível')).toBeVisible();
+  await expect(legacy.getByRole('button')).toHaveCount(0);
+  await expect(
+    history.getByRole('button', { name: 'Carregar mais mapas' }),
+  ).toHaveCount(0);
+  expect(
+    await history.evaluate(
+      (region) => region.scrollWidth <= region.clientWidth,
+    ),
+  ).toBe(true);
+
+  await toggle.press('Enter');
+  await expect(toggle).toBeFocused();
+  await expect(history).toBeHidden();
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await expect(
+    page.getByRole('button', { name: 'Histórico de mapas de corte' }),
+  ).toBeVisible();
+});
+
 test('CAR-02: a legacy production step requires explicit confirmation and advances', async ({
   page,
 }) => {
@@ -73,6 +188,9 @@ test('CAR-04/06/09: numbered maps can be consulted and their orders cannot be se
     deliveredOn: null,
   }));
   await mockOrders(page, { orders });
+  await page.route('**/api/v1/orders/cut-maps', (route) =>
+    route.fulfill({ json: { items: [], nextCursor: null } }),
+  );
   await page.route(/\/api\/v1\/orders(\?|$)/u, (route) =>
     route.fulfill({
       json: {
@@ -163,6 +281,9 @@ test('CAR-04/06/09: numbered maps can be consulted and their orders cannot be se
     });
   });
   await page.goto('/pedidos');
+  await page
+    .getByRole('button', { name: 'Mapas de corte', exact: true })
+    .press('Enter');
   await page.getByRole('button', { name: 'Novo mapa de corte' }).press('Enter');
   await expect(
     page.getByRole('heading', { name: 'Selecione os pedidos para o corte' }),

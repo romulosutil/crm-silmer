@@ -82,7 +82,9 @@ test('groups orders by status with counts, columns and actions', async ({
   await expect(confirmedRow).toContainText('Aventais e camisetas');
   await expect(confirmedRow).toContainText('Ricardo Lima');
   await expect(confirmedRow).toContainText('60');
-  await expect(confirmedRow).toContainText('R$ 1.180,00');
+  await expect(confirmedRow.locator('.order-cell-value')).toHaveText(
+    'R$ 1.180,00',
+  );
   await expect(confirmedRow).toContainText('24/10');
   await expect(confirmedRow).toContainText('Confirmado por Ricardo Lima');
 
@@ -491,34 +493,34 @@ test('puts pending orders and exceptions first, with the delivery deadline', asy
     'Clube Entregue',
   ]);
   const late = confirmed.getByRole('row', { name: /Escola Atrasada/u });
-  await expect(late.locator('td').nth(2)).toHaveText(
-    /13\/10\s*Atrasada há 2 dias/u,
+  await expect(late.locator('.order-due-date')).toHaveText('13/10');
+  await expect(late.locator('.order-due-date')).toHaveAttribute(
+    'data-tone',
+    'error',
+  );
+  await expect(late.locator('.order-cell-due .sr-only')).toHaveText(
+    '· Atrasada há 2 dias',
   );
   await expect(late).toHaveAttribute('data-exception', 'true');
+  for (const [customer, date, detail] of [
+    ['Pedido de Teste', '16/10', 'No prazo · Amanhã'],
+    ['Academia Norte', '24/10', 'No prazo · em 9 dias'],
+    ['Time Sem Data', 'Sem data', ''],
+    ['Clube Entregue', '11/10', 'Entregue em 10/10'],
+  ]) {
+    const row = confirmed.getByRole('row').filter({ hasText: customer });
+    await expect(row.locator('.order-due-date')).toHaveText(date);
+    if (detail) {
+      await expect(row.locator('.order-cell-due .sr-only')).toHaveText(
+        `· ${detail}`,
+      );
+    }
+  }
   await expect(
     confirmed
-      .getByRole('row', { name: /Pedido de Teste/u })
-      .locator('td')
-      .nth(2),
-  ).toHaveText(/16\/10\s*Amanhã/u);
-  await expect(
-    confirmed
-      .getByRole('row', { name: /Academia Norte/u })
-      .locator('td')
-      .nth(2),
-  ).toHaveText(/24\/10\s*em 9 dias/u);
-  await expect(
-    confirmed
-      .getByRole('row', { name: /Time Sem Data/u })
-      .locator('td')
-      .nth(2),
-  ).toHaveText('Sem data');
-  await expect(
-    confirmed
-      .getByRole('row', { name: /Clube Entregue/u })
-      .locator('td')
-      .nth(2),
-  ).toHaveText(/Entregue em 10\/10/u);
+      .getByRole('region', { name: 'Próximos 7 dias' })
+      .locator('.order-due-date'),
+  ).toHaveAttribute('data-tone', 'success');
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
@@ -600,7 +602,10 @@ test('stacks the orders as cards on a phone, with no sideways scroll', async ({
   // The column names travel with the values; the header row is not drawn.
   const header = await confirmed.locator('thead').boundingBox();
   expect(header?.height ?? 0).toBeLessThanOrEqual(1);
-  await expect(card.locator('td').nth(2)).toHaveText(/24\/10\s*em 9 dias/u);
+  await expect(card.locator('.order-due-date')).toHaveText('24/10');
+  await expect(card.locator('.order-cell-due .sr-only')).toHaveText(
+    '· No prazo · em 9 dias',
+  );
   const open = card.getByRole('link', { name: 'Abrir pedido 11-CRM' });
   await open.focus();
   await expect(open).toBeInViewport();

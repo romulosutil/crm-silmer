@@ -116,28 +116,74 @@ test('groups orders by status with counts, columns and actions', async ({
   expect(results.violations).toEqual([]);
 });
 
-test('keeps every desktop order cell on the same row line', async ({
+test('uses the same columns for pending, overdue and upcoming orders on desktop', async ({
   page,
 }) => {
+  await page.clock.setFixedTime(TODAY);
+  const editable = { productionEditable: true, receiptAvailable: true };
+  await mockOrders(page, {
+    orders: [
+      pendingOrder,
+      orderAt(
+        'order-overdue',
+        { ...editable, number: '21-CRM' },
+        { data_entrega_confirmada: '2026-10-10' },
+      ),
+      orderAt(
+        'order-upcoming',
+        { ...editable, number: '22-CRM' },
+        {
+          cliente: 'Associação Esportiva de Santa Luzia',
+          data_entrega_confirmada: '2026-10-18',
+        },
+      ),
+    ],
+  });
   await page.setViewportSize({ width: 900, height: 700 });
-  await mockOrders(page);
   await page.goto('/pedidos');
 
-  for (const group of ['Pedidos pendentes', /^Confirmados/u]) {
-    const row = page.getByRole('region', { name: group }).locator('tbody tr');
-    await expect(row).toBeVisible();
-    const cells = await row.locator('td').evaluateAll((nodes) =>
-      nodes.map((node) => ({
-        bottom: node.getBoundingClientRect().bottom,
-        display: globalThis.getComputedStyle(node).display,
-      })),
-    );
-    expect(cells.every((cell) => cell.display === 'table-cell')).toBe(true);
-    expect(
-      Math.max(...cells.map((cell) => cell.bottom)) -
-        Math.min(...cells.map((cell) => cell.bottom)),
-    ).toBeLessThan(1);
+  for (const width of [900, 1366]) {
+    await page.setViewportSize({ width, height: 700 });
+    const columns = [];
+    for (const name of ['Pedidos pendentes', 'Atrasados', 'Próximos 7 dias']) {
+      const region = page.getByRole('region', { name, exact: true });
+      const row = region.locator('tbody tr');
+      await expect(row).toBeVisible();
+      const cells = await row.locator('td').evaluateAll((nodes) =>
+        nodes.map((node) => {
+          const { bottom, left } = node.getBoundingClientRect();
+          return {
+            bottom,
+            left,
+            display: globalThis.getComputedStyle(node).display,
+          };
+        }),
+      );
+      expect(cells.every((cell) => cell.display === 'table-cell')).toBe(true);
+      expect(cells.every((cell) => cell.bottom === cells[0].bottom)).toBe(true);
+      expect(
+        await region.evaluate((node) => node.scrollWidth - node.clientWidth),
+      ).toBe(0);
+      columns.push(cells.map((cell) => cell.left));
+    }
+    expect(columns[1]).toEqual(columns[0]);
+    expect(columns[2]).toEqual(columns[0]);
   }
+
+  const row = page
+    .getByRole('region', { name: 'Atrasados' })
+    .locator('tbody tr');
+  const controls = await row.locator('select, button, a').evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const { top, height } = node.getBoundingClientRect();
+      return { top, height };
+    }),
+  );
+  expect(controls).toHaveLength(5);
+  expect(controls.every((control) => control.height >= 44)).toBe(true);
+  expect(controls[0].top).toBe(controls[1].top);
+  expect(controls[2].top).toBe(controls[3].top);
+  expect(controls[2].top).toBe(controls[4].top);
 });
 
 test('recovers the order list after an initial server failure without showing an empty wallet', async ({

@@ -86,18 +86,6 @@
   margin-block-end: var(--space-3);
 }
 
-/* Row navigation stays below the task action and never looks elevated. */
-.order-cell-actions .button-link {
-  color: var(--color-link);
-  background: transparent;
-  border-color: transparent;
-  font-weight: var(--weight-medium);
-}
-.order-cell-actions .button-link:hover {
-  background: var(--color-selected);
-  border-color: transparent;
-}
-
 @media (width >= 48rem) {
   .filter-bar.orders-filter-bar {
     display: flex;
@@ -140,38 +128,35 @@
 }
 
 .order-due[data-tone] {
-  display: inline-flex;
-  padding: 0.1rem 0.5rem;
-  font-weight: 600;
-  border-radius: var(--radius-pill);
+  font-weight: var(--weight-medium);
 }
 
 .order-due[data-tone='error'] {
   color: var(--status-error-text);
-  background: var(--status-error-surface);
+  --order-due-surface: var(--status-error-surface);
 }
 
 .order-due[data-tone='warning'] {
   color: var(--status-warning-text);
-  background: var(--status-warning-surface);
+  --order-due-surface: var(--status-warning-surface);
 }
 
 .order-due[data-tone='info'] {
   color: var(--status-info-text);
-  background: var(--status-info-surface);
+  --order-due-surface: var(--status-info-surface);
 }
 
 .order-due[data-tone='success'] {
   color: var(--status-success-text);
-  background: var(--status-success-surface);
+  --order-due-surface: var(--status-success-surface);
 }
 
 /*
  * Mobile first (PO, 15/10/2026: sellers live on their phones). The order
  * tables are stacked cards by default — number and status, customer, then
  * delivery, pieces and amount, the situation and the actions — with no
- * sideways scroll and the page scrolling instead of a nested region. From
- * 769px they are tables again, matching the shell. Semantics are preserved.
+ * sideways scroll and the page scrolling instead of a nested region.
+ * Tables need room for all seven columns, including the stage controls.
  */
 .table-wrap.order-list {
   max-block-size: none;
@@ -195,7 +180,7 @@
 
 .order-table tr {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr) minmax(0, 1fr);
   gap: var(--space-2) var(--space-3);
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border);
@@ -218,10 +203,15 @@
   padding: 0;
   border: 0;
   white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .data-table.order-table td.num {
   text-align: start;
+}
+
+td.order-cell-value {
+  font-weight: var(--weight-semibold);
 }
 
 .order-table .order-cell-number,
@@ -430,18 +420,56 @@
   color: var(--status-success-text);
   text-align: start;
 }
-.portfolio-confirmed .portfolio-stage-action {
-  min-block-size: var(--target-min);
+.order-row-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+  gap: var(--space-2);
 }
+
+.order-row-links,
 .portfolio-initial-stage {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   gap: var(--space-2);
+  inline-size: 100%;
 }
+
+.order-row-links > *,
+button.portfolio-stage-action,
 .portfolio-initial-stage > * {
+  max-inline-size: 100%;
   min-block-size: var(--target-min);
+  padding-inline: var(--space-2);
+  white-space: normal;
 }
+
+.order-row-links > * {
+  flex: 1 1 auto;
+  font-size: var(--text-xs);
+}
+
+.order-row-links .button-link {
+  color: var(--color-link);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.order-row-links .button-link:hover {
+  background: var(--color-selected);
+  border-color: transparent;
+}
+
+.portfolio-initial-stage select {
+  flex: 1 1 7.5rem;
+  min-inline-size: 0;
+  inline-size: 0;
+  white-space: nowrap;
+}
+
 .portfolio-confirmed .order-table tr[data-selected] {
   background: var(--color-selected);
 }
@@ -704,21 +732,13 @@ dialog.cut-map-dialog[open] {
   font-weight: 500;
 }
 
-.order-table .order-cell-actions .row-actions {
-  justify-content: stretch;
-}
-
-.order-table .order-cell-actions .row-actions > * {
-  flex: 1 1 9rem;
-  justify-content: center;
-  min-block-size: var(--target-min);
-}
-
-@media (min-width: 769px) {
+@media (width >= 54rem) {
   .table-wrap.order-list {
     max-block-size: min(36rem, 65dvh);
     overflow: auto;
+    scroll-padding-block-start: 4rem;
     scrollbar-gutter: stable;
+    container: order-list / inline-size;
   }
 
   .order-table thead {
@@ -727,11 +747,38 @@ dialog.cut-map-dialog[open] {
     block-size: auto;
     overflow: visible;
     clip-path: none;
+    white-space: normal;
     display: table-header-group;
   }
 
   .order-table {
     display: table;
+    table-layout: fixed;
+  }
+
+  /* Share widths across status and delivery groups. Cliente gets the remainder. */
+  .order-table th.order-cell-number {
+    inline-size: 5.5rem;
+  }
+
+  .order-table th.order-cell-due {
+    inline-size: 12%;
+  }
+
+  .order-table th.order-cell-quantity {
+    inline-size: 3.25rem;
+  }
+
+  .order-table th.order-cell-value {
+    inline-size: 5.75rem;
+  }
+
+  .order-table th.order-cell-situation {
+    inline-size: 14%;
+  }
+
+  .order-table th.order-cell-actions {
+    inline-size: 25%;
   }
 
   .order-table tbody {
@@ -749,9 +796,12 @@ dialog.cut-map-dialog[open] {
     margin-block-start: 0;
   }
 
-  .data-table.order-table td {
+  .data-table.order-table :is(th, td) {
     display: table-cell;
-    padding: 0.75rem;
+    padding: var(--space-2);
+  }
+
+  .data-table.order-table td {
     border-block-end: 1px solid var(--color-border-subtle);
   }
 
@@ -763,18 +813,25 @@ dialog.cut-map-dialog[open] {
     text-align: end;
   }
 
-  .data-table.order-table td.num,
-  .data-table.order-table td.order-cell-due,
-  .data-table.order-table td.order-cell-number {
-    white-space: nowrap;
+  .list-scroll .order-table th {
+    background: var(--color-surface-raised);
   }
 
-  .order-table .order-cell-number {
-    font-weight: 400;
+  .order-table tbody tr:focus-within {
+    background: var(--color-surface-raised);
+  }
+
+  .order-table td.order-cell-number {
+    font-variant-numeric: tabular-nums;
   }
 
   .order-table .order-badges {
-    margin-inline-start: 0.5rem;
+    display: flex;
+    margin-block-start: var(--space-1);
+  }
+
+  .order-table .order-badges .badge {
+    white-space: normal;
   }
 
   .order-card-status {
@@ -785,22 +842,35 @@ dialog.cut-map-dialog[open] {
     content: none;
   }
 
-  .order-table .order-cell-actions .row-actions {
-    justify-content: flex-end;
+  .order-row-links > * {
+    flex: 0 1 auto;
   }
 
-  .order-table .order-cell-actions .row-actions > * {
-    flex: none;
+  .order-row-links .button-link {
+    padding-inline: var(--space-1);
+  }
+
+  .portfolio-initial-stage > * {
+    font-size: var(--text-xs);
   }
 }
 
-@media (max-width: 768px) {
-  /* A deadline is a fact, not a compact status chip squeezed into a column. */
+@container order-list (width >= 56rem) {
+  .order-table th.order-cell-actions {
+    inline-size: 17rem;
+  }
+}
+
+@container order-list (width >= 60rem) {
+  .order-table th.order-cell-due {
+    inline-size: 11rem;
+  }
+
   .order-table .order-due[data-tone] {
-    padding: 0;
-    background: transparent;
-    border-radius: 0;
-    font-weight: var(--weight-medium);
+    display: inline-flex;
+    padding-inline: var(--space-2);
+    background: var(--order-due-surface);
+    border-radius: var(--radius-pill);
   }
 }
 

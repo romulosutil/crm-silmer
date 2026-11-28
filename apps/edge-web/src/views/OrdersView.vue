@@ -1698,13 +1698,13 @@ onBeforeUnmount(() => {
           <table class="data-table order-table">
             <thead>
               <tr>
-                <th scope="col">Pedido</th>
+                <th scope="col" class="order-cell-number">Pedido</th>
                 <th scope="col">Cliente</th>
-                <th scope="col">Entrega</th>
-                <th scope="col" class="num">Peças</th>
-                <th scope="col" class="num">Valor</th>
-                <th scope="col">Situação</th>
-                <th scope="col"><span class="sr-only">Ações</span></th>
+                <th scope="col" class="order-cell-due">Entrega</th>
+                <th scope="col" class="num order-cell-quantity">Peças</th>
+                <th scope="col" class="num order-cell-value">Valor</th>
+                <th scope="col" class="order-cell-situation">Situação</th>
+                <th scope="col" class="order-cell-actions">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -1737,7 +1737,7 @@ onBeforeUnmount(() => {
                   >
                 </td>
                 <td class="num" data-label="Peças">{{ order.totalPieces }}</td>
-                <td class="num" data-label="Valor">
+                <td class="num order-cell-value" data-label="Valor">
                   {{ amountLabel(order.finalAmountCents) }}
                 </td>
                 <td class="order-cell-situation">
@@ -1762,7 +1762,7 @@ onBeforeUnmount(() => {
                   </button>
                 </td>
                 <td class="order-cell-actions">
-                  <div class="row-actions">
+                  <div class="row-actions order-row-links">
                     <button
                       v-if="order.receiptAvailable === true"
                       type="button"
@@ -1831,15 +1831,17 @@ onBeforeUnmount(() => {
             <table class="data-table order-table">
               <thead>
                 <tr>
-                  <th scope="col">Pedido</th>
+                  <th scope="col" class="order-cell-number">Pedido</th>
                   <th scope="col">Cliente</th>
-                  <th scope="col">Entrega</th>
-                  <th scope="col" class="num">Peças</th>
-                  <th scope="col" class="num">Valor</th>
-                  <th scope="col">
+                  <th scope="col" class="order-cell-due">Entrega</th>
+                  <th scope="col" class="num order-cell-quantity">Peças</th>
+                  <th scope="col" class="num order-cell-value">Valor</th>
+                  <th scope="col" class="order-cell-situation">
                     {{ cutMode ? 'Etapa' : 'Etapa e pagamento' }}
                   </th>
-                  <th scope="col">{{ cutMode ? 'Seleção' : 'Ações' }}</th>
+                  <th scope="col" class="order-cell-actions">
+                    {{ cutMode ? 'Seleção' : 'Ações' }}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -1909,7 +1911,7 @@ onBeforeUnmount(() => {
                   <td class="num" data-label="Peças">
                     {{ order.totalPieces }}
                   </td>
-                  <td class="num" data-label="Valor">
+                  <td class="num order-cell-value" data-label="Valor">
                     {{ amountLabel(order.finalAmountCents) }}
                   </td>
                   <td class="order-cell-situation">
@@ -1967,7 +1969,7 @@ onBeforeUnmount(() => {
                     <span v-else-if="cutMode">{{
                       order.cutMap ? 'Incluído no mapa' : 'Seleção indisponível'
                     }}</span>
-                    <div v-else class="row-actions">
+                    <div v-else class="order-row-actions">
                       <button
                         v-if="order.productionEditable && stageFor(order)"
                         type="button"
@@ -2003,32 +2005,36 @@ onBeforeUnmount(() => {
                           >
                         </button>
                       </form>
-                      <button
-                        type="button"
-                        :disabled="Boolean(pdfBusyId)"
-                        @click="generatePdf(order)"
-                      >
-                        {{
-                          pdfBusyId === order.id ? 'Gerando PDF…' : 'Gerar PDF'
-                        }}<span class="sr-only"> {{ order.number }}</span>
-                      </button>
-                      <button
-                        v-if="order.receiptAvailable === true"
-                        type="button"
-                        :disabled="Boolean(pdfBusyId)"
-                        @click="
-                          receiptPreview?.open(order, $event.currentTarget)
-                        "
-                      >
-                        Recibo<span class="sr-only"> {{ order.number }}</span>
-                      </button>
-                      <RouterLink
-                        class="button-link"
-                        :to="`/pedidos/${order.id}`"
-                        >Abrir pedido<span class="sr-only">
-                          {{ order.number }}</span
-                        ></RouterLink
-                      >
+                      <div class="row-actions order-row-links">
+                        <button
+                          type="button"
+                          :disabled="Boolean(pdfBusyId)"
+                          @click="generatePdf(order)"
+                        >
+                          {{
+                            pdfBusyId === order.id
+                              ? 'Gerando PDF…'
+                              : 'Gerar PDF'
+                          }}<span class="sr-only"> {{ order.number }}</span>
+                        </button>
+                        <button
+                          v-if="order.receiptAvailable === true"
+                          type="button"
+                          :disabled="Boolean(pdfBusyId)"
+                          @click="
+                            receiptPreview?.open(order, $event.currentTarget)
+                          "
+                        >
+                          Recibo<span class="sr-only"> {{ order.number }}</span>
+                        </button>
+                        <RouterLink
+                          class="button-link"
+                          :to="`/pedidos/${order.id}`"
+                          >Abrir pedido<span class="sr-only">
+                            {{ order.number }}</span
+                          ></RouterLink
+                        >
+                      </div>
                     </div>
                   </td>
                 </tr>
